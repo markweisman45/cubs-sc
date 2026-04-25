@@ -2234,6 +2234,8 @@ body {
 
 
 
+
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -11336,7 +11338,7 @@ function handleStatcastUpload(input) {
   const reader = new FileReader();
   reader.onload = e => {
     const rows = parseCSV(e.target.result);
-    parsedStatcastRows = [];
+    // Merge new rows — keep existing data
 
     // Filter to roster players only
     rows.forEach(row => {
@@ -11616,6 +11618,18 @@ function applyHittingData() {
   logImport(`Hitting data applied: ${applied} records.`, applied>0?'success':'warn');
   showStatus(`✅ Hitting data applied for ${applied} record${applied!==1?'s':''}.`);
   persistImportedData();
+  // Sync hitting data to Supabase
+  if (typeof sbPost === 'function') {
+    var hitRows = importedData.hitting || {};
+    Object.keys(hitRows).forEach(function(player) {
+      (hitRows[player] || []).forEach(function(h) {
+        sbPost('statcast', {
+          player_name: player, date: h.date,
+          bat_speed: h.bat || null, exit_velo: h.exit || null, throw_velo: h.throwV || null
+        });
+      });
+    });
+  }
   renderDashboard();
 }
 
@@ -13601,6 +13615,17 @@ async function sbLoadAll() {
           parsedStatcastRows.push(r);
         }
       });
+      // Populate hitting data from statcast rows
+      if (!importedData.hitting) importedData.hitting = {};
+      statcast.forEach(function(r) {
+        if (!r.bat_speed && !r.exit_velo && !r.throw_velo) return;
+        if (!importedData.hitting[r.player_name]) importedData.hitting[r.player_name] = [];
+        if (!importedData.hitting[r.player_name].find(function(x){ return x.date === r.date; })) {
+          importedData.hitting[r.player_name].push({
+            date: r.date, bat: r.bat_speed, exit: r.exit_velo, throwV: r.throw_velo
+          });
+        }
+      });
       try { localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(importedData)); } catch(e){}
     }
 
@@ -13687,6 +13712,19 @@ async function migrateToCloud() {
     }
   }
 
+  // Hitting data
+  var hitData2 = (JSON.parse(localStorage.getItem('cubs_sc_imported_data_v1') || '{}')).hitting || {};
+  var allHitRows2 = [];
+  for (var _hp2 in hitData2) {
+    (hitData2[_hp2] || []).forEach(function(h) {
+      allHitRows2.push({ player_name: _hp2, date: h.date,
+        bat_speed: h.bat || null, exit_velo: h.exit || null, throw_velo: h.throwV || null });
+    });
+  }
+  for (var hi2 = 0; hi2 < allHitRows2.length; hi2 += 50) {
+    await sbPost('statcast', allHitRows2.slice(hi2, hi2+50));
+    count += Math.min(50, allHitRows2.length - hi2);
+  }
   var ap = JSON.parse(localStorage.getItem('cubs_sc_athlete_programs_v1') || '{}');
   for (var pp in ap) {
     for (var pi = 0; pi < (ap[pp]||[]).length; pi++) {
@@ -13759,6 +13797,8 @@ async function migrateToCloud() {
 
 init();
 loadCubsSchedule();
+
+
 
 
 
