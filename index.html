@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cubs S&C — Athlete Readiness Dashboard</title>
-  <meta name="description" content="Chicago Cubs S&C Athlete Readiness Dashboard">
-  <link rel="canonical" href="https://markweisman45.github.io/cubs-sc/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -2221,6 +2219,7 @@ body {
 </div><!-- /app -->
 
 <script>
+
 
 
 
@@ -9220,8 +9219,8 @@ function showAIPromptModal(prompt, athlete, scope) {
     + '</div>'
     + '<div style="padding:20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:16px;">'
     + '<div style="text-align:center;">'
-    + '<button id="ai-generate-btn" onclick="runAIGenerate()" style="padding:14px 32px;background:linear-gradient(135deg,var(--blue),#7c3aed);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">📋 Copy Prompt &amp; Open Claude.ai</button>'
-    + '<div style="font-size:12px;color:var(--text3);margin-top:8px;line-height:1.6;">1. Click above to copy the prompt &amp; open Claude.ai<br>2. Paste the prompt into Claude.ai (Ctrl+V)<br>3. Copy the HTML response it gives back<br>4. Paste it below and click Apply</div>'
+    + '<button id="ai-generate-btn" onclick="runAIGenerate()" style="padding:14px 32px;background:linear-gradient(135deg,var(--blue),#7c3aed);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">✨ Generate with AI</button>'
+    + '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Powered by Claude — generates a complete program based on athlete data, readiness, ACWR &amp; 1RM</div>'
     + '</div>'
     + '<div id="ai-loading" style="display:none;text-align:center;padding:20px;">'
     + '<div style="font-size:24px;margin-bottom:8px;">⏳</div>'
@@ -9248,29 +9247,47 @@ function showAIPromptModal(prompt, athlete, scope) {
 
 async function runAIGenerate() {
   if (!window._currentAIPrompt) { alert('No prompt available.'); return; }
-  var btn = document.getElementById('ai-generate-btn');
-  if (btn) { btn.textContent = '✅ Prompt Copied! Now paste into Claude.ai'; btn.style.background = 'rgba(34,197,94,0.3)'; }
+  var btn     = document.getElementById('ai-generate-btn');
+  var loading = document.getElementById('ai-loading');
+  var preview = document.getElementById('ai-result-preview');
+  var content = document.getElementById('ai-result-content');
+  if (btn)     { btn.style.display = 'none'; }
+  if (loading) { loading.style.display = 'block'; }
+  if (preview) { preview.style.display = 'none'; }
 
-  function doOpen() { window.open('https://claude.ai/new', '_blank'); }
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(window._currentAIPrompt).then(doOpen).catch(function() {
-      var ta = document.createElement('textarea');
-      ta.value = window._currentAIPrompt;
-      document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); document.body.removeChild(ta);
-      doOpen();
-    });
-  } else {
-    var ta = document.createElement('textarea');
-    ta.value = window._currentAIPrompt;
-    document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    doOpen();
-  }
-
-  var pasteBox = document.getElementById('ai-result-paste');
-  if (pasteBox) pasteBox.placeholder = 'Paste Claude HTML response here, then click Apply ✅';
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4000,
+      messages: [{ role: 'user', content: window._currentAIPrompt }]
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    var result = (data.content || []).map(function(b){ return b.text || ''; }).join('');
+    var clean  = result.replace(/```html/g,'').replace(/```/g,'').trim();
+    window._currentAIResult = clean;
+    if (loading) loading.style.display = 'none';
+    if (preview) preview.style.display = 'block';
+    if (content) content.innerHTML = clean;
+    var pasteBox = document.getElementById('ai-result-paste');
+    if (pasteBox) pasteBox.value = clean;
+  })
+  .catch(function(err) {
+    if (loading) loading.style.display = 'none';
+    if (btn)     btn.style.display = 'block';
+    // Fallback: copy prompt and open Claude.ai
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window._currentAIPrompt).then(function(){
+        window.open('https://claude.ai/new', '_blank');
+        showStatus('Prompt copied — paste into Claude.ai, then paste the HTML result below');
+      });
+    } else {
+      alert('Could not reach API. Use copy prompt button instead.');
+    }
+  });
 }
 function copyAIPrompt() {
   if (window._currentAIPrompt) {
@@ -13349,6 +13366,7 @@ function importAllData(input) {
 
 init();
 loadCubsSchedule();
+
 
 
 
