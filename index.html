@@ -2230,6 +2230,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -11295,6 +11296,19 @@ function applyCMJData() {
   showStatus(`✅ CMJ data applied for ${applied} player${applied!==1?'s':''}.`);
   rebuildCMJTrends();
   persistImportedData();
+  // Sync new statcast rows to Supabase
+  if (typeof sbPost === 'function') {
+    Object.keys(importedData.statcast || {}).forEach(function(player) {
+      (importedData.statcast[player] || []).forEach(function(row) {
+        sbPost('statcast', {
+          player_name: player, date: row.date,
+          speed: row.speed || null, he_dist: row.heDist || null,
+          total_dist: row.dist || null, bat_speed: row.bat || null,
+          exit_velo: row.exit || null, throw_velo: row.throwV || null
+        });
+      });
+    });
+  }
   renderDashboard();
   clearCMJPreview();
 }
@@ -13552,6 +13566,47 @@ async function sbLoadAll() {
     console.log('[SB] Loaded ' + loaded + ' records from cloud');
 
     // Re-render with merged data
+    // Statcast game data
+    var statcast = await sbGet('statcast', 'order=date.asc&limit=5000');
+    if (statcast && statcast.length) {
+      if (!importedData.statcast) importedData.statcast = {};
+      statcast.forEach(function(r) {
+        if (!importedData.statcast[r.player_name]) importedData.statcast[r.player_name] = [];
+        if (!importedData.statcast[r.player_name].find(function(x){ return x.date === r.date; })) {
+          importedData.statcast[r.player_name].push({
+            date: r.date, speed: r.speed, heDist: r.he_dist,
+            dist: r.total_dist, midEff: r.mid_eff, highEff: r.high_eff,
+            bat: r.bat_speed, exit: r.exit_velo, throwV: r.throw_velo
+          });
+          loaded++;
+        }
+      });
+      try { localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(importedData)); } catch(e){}
+    }
+
+    // CMJ + ABCMJ data
+    var cmjData = await sbGet('cmj', 'order=date.asc&limit=2000');
+    if (cmjData && cmjData.length) {
+      if (!importedData.cmj)   importedData.cmj   = {};
+      if (!importedData.abcmj) importedData.abcmj = {};
+      cmjData.forEach(function(r) {
+        var target = (r.test_type === 'ABCMJ') ? importedData.abcmj : importedData.cmj;
+        if (!target[r.player_name]) target[r.player_name] = [];
+        if (!target[r.player_name].find(function(x){ return x.rawDate === r.raw_date; })) {
+          target[r.player_name].push({
+            date: r.date, rawDate: r.raw_date,
+            jump: r.jump_height, ppbm: r.pp_bm
+          });
+          loaded++;
+        }
+      });
+      try { localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(importedData)); } catch(e){}
+    }
+
+    // Re-apply statcast data to PLAYERS
+    if (typeof applyStatcastData === 'function') applyStatcastData();
+    if (typeof rebuildCMJTrends === 'function')  rebuildCMJTrends();
+
     if (typeof buildPlayerList === 'function') buildPlayerList();
     if (typeof renderDashboard === 'function') renderDashboard();
     showStatus('☁️ Cloud data synced (' + loaded + ' records)');
@@ -13622,6 +13677,54 @@ async function migrateToCloud() {
     }
   }
 
+  // Statcast game data
+  var impData = JSON.parse(localStorage.getItem('cubs_sc_imported_data_v1') || '{}');
+  var statRows = impData.statcast || {};
+  for (var sp in statRows) {
+    var rows = statRows[sp] || [];
+    for (var si = 0; si < rows.length; si++) {
+      var row = rows[si];
+      await sbPost('statcast', {
+        player_name: sp, date: row.date,
+        speed: row.speed || null, he_dist: row.heDist || null,
+        total_dist: row.dist || null, mid_eff: row.midEff || null,
+        high_eff: row.highEff || null, bat_speed: row.bat || null,
+        exit_velo: row.exit || null, throw_velo: row.throwV || null
+      });
+      count++;
+    }
+  }
+
+  // CMJ data
+  var cmjRows = impData.cmj || {};
+  for (var cp2 in cmjRows) {
+    var crows = cmjRows[cp2] || [];
+    for (var ci = 0; ci < crows.length; ci++) {
+      var crow = crows[ci];
+      await sbPost('cmj', {
+        player_name: cp2, date: crow.date || crow.rawDate,
+        test_type: 'CMJ', jump_height: crow.jump || null,
+        pp_bm: crow.ppbm || null, raw_date: crow.rawDate || null
+      });
+      count++;
+    }
+  }
+
+  // ABCMJ data
+  var abRows = impData.abcmj || {};
+  for (var ap2 in abRows) {
+    var abcrows = abRows[ap2] || [];
+    for (var ai = 0; ai < abcrows.length; ai++) {
+      var acrow = abcrows[ai];
+      await sbPost('cmj', {
+        player_name: ap2, date: acrow.date || acrow.rawDate,
+        test_type: 'ABCMJ', jump_height: acrow.jump || null,
+        pp_bm: acrow.ppbm || null, raw_date: acrow.rawDate || null
+      });
+      count++;
+    }
+  }
+
   if (btn) { btn.textContent = 'Cloud Sync'; btn.disabled = false; }
   showStatus('☁️ Sync complete — ' + count + ' records saved to cloud');
   alert('Done! ' + count + ' records synced to Supabase.\nYour data is now in the cloud and will load on any browser.');
@@ -13629,6 +13732,7 @@ async function migrateToCloud() {
 
 init();
 loadCubsSchedule();
+
 
 
 
