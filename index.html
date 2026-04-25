@@ -2236,6 +2236,8 @@ body {
 
 
 
+
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13649,10 +13651,8 @@ async function sbLoadAll() {
       try { localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(importedData)); } catch(e){}
     }
 
-    // Re-apply statcast data to PLAYERS
-    console.log('[SB] parsedStatcastRows before apply:', parsedStatcastRows.length);
+    // Apply statcast + hitting data to PLAYERS (hitting is now populated above)
     if (typeof applyStatcastData === 'function') applyStatcastData();
-    console.log('[SB] parsedStatcastRows after apply:', parsedStatcastRows.length);
     if (typeof rebuildCMJTrends === 'function')  rebuildCMJTrends();
 
     if (typeof buildPlayerList === 'function') buildPlayerList();
@@ -13797,6 +13797,8 @@ async function migrateToCloud() {
 
 init();
 loadCubsSchedule();
+
+
 
 
 
