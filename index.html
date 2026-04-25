@@ -2226,6 +2226,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -7920,17 +7921,33 @@ const EXERCISE_DB_KEY = 'cubs_sc_exercise_db_v1';
 
 function persistExerciseDB() {
   try {
-    const toSave = JSON.stringify(EXERCISE_DB);
-    localStorage.setItem(EXERCISE_DB_KEY, toSave);
-    console.log('[persistExerciseDB] saved', EXERCISE_DB.length, 'exercises (' + Math.round(toSave.length/1024) + 'KB)');
+    // Save all exercises that are either:
+    // 1. Not in the original default set (new custom exercises)
+    // 2. Have a video URL added (modified defaults)
+    // 3. Have notes added
+    var defaultNames = new Set((_defaultExerciseNames || []).map(function(n){ return (n||'').toLowerCase(); }));
+    var toSave = EXERCISE_DB.filter(function(e) {
+      if (!e || !e.name) return false;
+      var isDefault = defaultNames.has(e.name.toLowerCase());
+      if (!isDefault) return true;           // new exercise — always save
+      if (e.video && e.video.length > 0) return true;   // has video — save
+      if (e.notes && e.notes.length > 0) return true;   // has notes — save
+      return false;
+    });
+    var json = JSON.stringify(toSave);
+    localStorage.setItem(EXERCISE_DB_KEY, json);
+    console.log('[persistExerciseDB] saved', toSave.length, 'custom/modified exercises (' + Math.round(json.length/1024) + 'KB)');
+    // Sync to Supabase in background
+    if (typeof sbSyncExercise === 'function') {
+      toSave.forEach(function(ex){ sbSyncExercise(ex); });
+    }
   } catch(e) {
     console.error('[persistExerciseDB] error:', e);
-    alert('Could not save exercise library: ' + e.message);
+    if (e.name === 'QuotaExceededError') {
+      alert('Storage full. Try clearing old browser data.');
+    }
   }
 }
-
-
-// ── IMPORT EXERCISE LIBRARY FROM XLSX / CSV ─────────────────
 function importExerciseLibraryXLSX(input) {
   const file = input.files[0];
   if (!file) return;
@@ -8058,28 +8075,31 @@ function importExerciseLibrary(input) {
 
 function loadExerciseDB() {
   try {
-    const saved = localStorage.getItem(EXERCISE_DB_KEY);
+    var saved = localStorage.getItem(EXERCISE_DB_KEY);
     if (!saved) return;
-    const savedDB = JSON.parse(saved);
-    if (!Array.isArray(savedDB)) return;
-    // Merge: saved entries override defaults by name; new saved entries are added
-    savedDB.forEach(savedEx => {
-      const idx = EXERCISE_DB.findIndex(e => e.name.toLowerCase() === savedEx.name.toLowerCase());
+    var savedDB = JSON.parse(saved);
+    if (!Array.isArray(savedDB) || !savedDB.length) return;
+    var added = 0, updated = 0;
+    savedDB.forEach(function(savedEx) {
+      if (!savedEx || !savedEx.name) return;
+      var idx = EXERCISE_DB.findIndex(function(e) {
+        return e && e.name.toLowerCase() === savedEx.name.toLowerCase();
+      });
       if (idx >= 0) {
-        // Update existing: preserve saved video, notes, liftKey, category
-        Object.assign(EXERCISE_DB[idx], savedEx);
+        // Update existing — preserve video, notes, category
+        if (savedEx.video) EXERCISE_DB[idx].video = savedEx.video;
+        if (savedEx.notes) EXERCISE_DB[idx].notes = savedEx.notes;
+        if (savedEx.cat)   EXERCISE_DB[idx].cat   = savedEx.cat;
+        updated++;
       } else {
-        // New custom exercise added by user — always add
-        if (savedEx.name && savedEx.cat) EXERCISE_DB.push(savedEx);
+        // New exercise — add to DB
+        EXERCISE_DB.push(savedEx);
+        added++;
       }
     });
-    console.log('[loadExerciseDB] merged', savedDB.length, 'saved exercises, DB now has', EXERCISE_DB.length);
-  } catch(e) { console.error('[loadExerciseDB] error:', e); }
+    console.log('[loadExerciseDB] restored ' + added + ' new + ' + updated + ' modified. Total: ' + EXERCISE_DB.length);
+  } catch(e) { console.error('[loadExerciseDB]', e); }
 }
-
-
-let editingExIdx = null; // index into EXERCISE_DB when editing
-
 function getExerciseByName(name) {
   return EXERCISE_DB.find(e => e.name === name) || null;
 }
@@ -13366,6 +13386,7 @@ function importAllData(input) {
 
 init();
 loadCubsSchedule();
+
 
 
 
