@@ -2232,6 +2232,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13569,6 +13570,7 @@ async function sbLoadAll() {
     // Re-render with merged data
     // Statcast game data
     var statcast = await sbGet('statcast', 'order=date.asc&limit=5000');
+    console.log('[SB] statcast rows from cloud:', statcast ? statcast.length : 'null');
     if (statcast && statcast.length) {
       if (!importedData.statcast) importedData.statcast = {};
       // Also rebuild parsedStatcastRows so applyStatcastData works correctly
@@ -13622,7 +13624,9 @@ async function sbLoadAll() {
     }
 
     // Re-apply statcast data to PLAYERS
+    console.log('[SB] parsedStatcastRows before apply:', parsedStatcastRows.length);
     if (typeof applyStatcastData === 'function') applyStatcastData();
+    console.log('[SB] parsedStatcastRows after apply:', parsedStatcastRows.length);
     if (typeof rebuildCMJTrends === 'function')  rebuildCMJTrends();
 
     if (typeof buildPlayerList === 'function') buildPlayerList();
@@ -13750,6 +13754,7 @@ async function migrateToCloud() {
 
 init();
 loadCubsSchedule();
+
 
 
 
