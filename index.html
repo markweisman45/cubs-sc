@@ -641,8 +641,9 @@ body {
     <div style="margin-top:16px;padding:10px;background:rgba(34,197,94,0.1);border:2px solid rgba(34,197,94,0.4);border-radius:10px;">
       <div style="font-size:10px;color:#22c55e;font-weight:700;text-transform:uppercase;margin-bottom:8px;text-align:center;">Data Backup</div>
       <button onclick="exportAllData()" style="display:block;width:100%;padding:9px;background:#22c55e;color:#000;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">Download Backup</button>
-      <button onclick="document.getElementById('restoreInput').click()" style="display:block;width:100%;padding:9px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.5);color:#f59e0b;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">Restore Backup</button>
+      <button onclick="document.getElementById('restoreInput').click()" style="display:block;width:100%;padding:9px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.5);color:#f59e0b;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">Restore Backup</button>
       <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="importAllData(this)">
+      <button id="migrate-btn" onclick="migrateToCloud()" style="display:block;width:100%;padding:9px;background:rgba(168,85,247,0.2);border:1px solid rgba(168,85,247,0.5);color:#a855f7;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">☁️ Sync to Cloud</button>
     </div>
   </div>
 </aside>
@@ -2219,6 +2220,8 @@ body {
 </div><!-- /app -->
 
 <script>
+
+
 
 
 
@@ -5187,6 +5190,7 @@ function init() {
   // Init day structure editors with defaults
   updateDayStructure();
   updateMesoDayStructure();
+  setTimeout(function(){ sbLoadAll(); }, 2000);
 }
 
 function nameToId(name) { return name.replace(/[^a-zA-Z0-9]/g, '-'); }
@@ -6241,6 +6245,7 @@ function logWellness() {
   wellnessLog[currentPlayer].push(entry);
 
   persistWellness();
+  if(typeof sbSyncWellness==="function") sbSyncWellness(currentPlayer, entry);
   const msg = document.getElementById('wellnessLogMsg');
   msg.textContent = `✓ Logged — Readiness: ${newReadiness.toFixed(3)} (${newStatus}) for ${currentPlayer}`;
   setTimeout(()=>{ msg.textContent=''; }, 4000);
@@ -6481,6 +6486,7 @@ const RM_KEY = 'cubs_sc_1rm_v1';
 
 function persist1RM() {
   try { localStorage.setItem(RM_KEY, JSON.stringify(ATHLETE_1RM)); } catch(e) {}
+  if(typeof sbSync1RM==="function"){ for(var _p in ATHLETE_1RM){ for(var _l in ATHLETE_1RM[_p]){ sbSync1RM(_p,_l,ATHLETE_1RM[_p][_l]); } } }
 }
 
 function load1RM() {
@@ -13384,8 +13390,247 @@ function importAllData(input) {
   reader.readAsText(file);
 }
 
+
+// ══════════════════════════════════════════════
+// SUPABASE — cloud storage & sync
+// ══════════════════════════════════════════════
+const SB_URL = 'https://umcdnbnvzwedrlidzaqg.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtY2RuYm52endlZHJsaWR6YXFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjMwNjUsImV4cCI6MjA5MjYzOTA2NX0.g4t2GaT33M03b6-stee9Aiy2We1KdJpw5KVEKwScwJM';
+
+async function sbPost(table, body) {
+  try {
+    var res = await fetch(SB_URL + '/rest/v1/' + table, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) console.warn('[SB] POST', table, res.status);
+  } catch(e) { /* silent — localStorage is primary */ }
+}
+
+async function sbGet(table, query) {
+  try {
+    var res = await fetch(SB_URL + '/rest/v1/' + table + (query ? '?' + query : ''), {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    if (res.ok) return await res.json();
+  } catch(e) {}
+  return null;
+}
+
+// ── Save functions (called after localStorage saves) ──
+function sbSyncWellness(player, entry) {
+  sbPost('wellness', {
+    player_name: player, date: entry.date,
+    soreness: entry.soreness, energy: entry.energy, sleep: entry.sleep,
+    bw: entry.bw || null, swing_workload: entry.swingWorkload || 'normal',
+    readiness: entry.readiness || null
+  });
+}
+function sbSync1RM(player, lift, weight) {
+  sbPost('one_rm', { player_name: player, lift: lift, weight: weight });
+}
+function sbSyncCoachNote(player, date, note) {
+  sbPost('coach_notes', { player_name: player, date: date, note: note });
+}
+function sbSyncExercise(ex) {
+  if (!ex || !ex.name) return;
+  sbPost('exercises', {
+    name: ex.name, category: ex.cat || '',
+    lift_key: ex.liftKey || '', video_url: ex.video || '', notes: ex.notes || ''
+  });
+}
+function sbSyncProgram(player, prog) {
+  sbPost('programs', {
+    player_name: player, name: prog.name,
+    type: prog.type || '', phase: prog.phase || '',
+    notes: prog.notes || '', content: (prog.content || '').substring(0, 50000)
+  });
+}
+function sbSyncPerioPlan(plan) {
+  sbPost('perio_plans', {
+    player_name: plan.athlete, name: plan.name, phase: plan.phase,
+    weeks: plan.weeks, sessions_pw: plan.sessPerWk || 3,
+    deload: plan.deload || '', exercises: plan.exercises
+  });
+}
+
+// ── LOAD — pull all cloud data into app on startup ──
+async function sbLoadAll() {
+  try {
+    console.log('[SB] Loading from cloud...');
+    var loaded = 0;
+
+    // Wellness
+    var wellness = await sbGet('wellness', 'order=date.asc&limit=2000');
+    if (wellness && wellness.length) {
+      wellness.forEach(function(w) {
+        if (!wellnessLog[w.player_name]) wellnessLog[w.player_name] = [];
+        if (!wellnessLog[w.player_name].find(function(e){ return e.date === w.date; })) {
+          wellnessLog[w.player_name].push({
+            date: w.date, soreness: w.soreness, energy: w.energy,
+            sleep: w.sleep, bw: w.bw, swingWorkload: w.swing_workload,
+            readiness: w.readiness
+          });
+          loaded++;
+        }
+      });
+      // Persist merged wellness back to localStorage
+      try { localStorage.setItem('cubs_sc_wellness_v1', JSON.stringify(wellnessLog)); } catch(e){}
+    }
+
+    // 1RM
+    var rms = await sbGet('one_rm');
+    if (rms && rms.length) {
+      rms.forEach(function(r) {
+        if (!ATHLETE_1RM[r.player_name]) ATHLETE_1RM[r.player_name] = {};
+        ATHLETE_1RM[r.player_name][r.lift] = r.weight;
+        loaded++;
+      });
+      try { localStorage.setItem('cubs_sc_1rm_v1', JSON.stringify(ATHLETE_1RM)); } catch(e){}
+    }
+
+    // Coach notes
+    var notes = await sbGet('coach_notes');
+    if (notes && notes.length) {
+      notes.forEach(function(n) {
+        if (!coachNotesDB[n.player_name]) coachNotesDB[n.player_name] = {};
+        coachNotesDB[n.player_name][n.date] = n.note;
+        loaded++;
+      });
+      try { localStorage.setItem('cubs_sc_coach_notes_v1', JSON.stringify(coachNotesDB)); } catch(e){}
+    }
+
+    // Custom exercises
+    var exes = await sbGet('exercises');
+    if (exes && exes.length) {
+      exes.forEach(function(e) {
+        var idx = EXERCISE_DB.findIndex(function(x){ return x && x.name.toLowerCase() === e.name.toLowerCase(); });
+        var entry = { name:e.name, cat:e.category||'', liftKey:e.lift_key||'', video:e.video_url||'', notes:e.notes||'' };
+        if (idx >= 0) { if (e.video_url) EXERCISE_DB[idx].video = e.video_url; }
+        else { EXERCISE_DB.push(entry); loaded++; }
+      });
+    }
+
+    // Programs
+    var progs = await sbGet('programs', 'order=created_at.desc&limit=200');
+    if (progs && progs.length) {
+      progs.forEach(function(p) {
+        if (!p.player_name) return;
+        if (!athletePrograms[p.player_name]) athletePrograms[p.player_name] = [];
+        if (!athletePrograms[p.player_name].find(function(x){ return x.name === p.name; })) {
+          athletePrograms[p.player_name].push({
+            id: p.id, name: p.name, type: p.type, phase: p.phase,
+            notes: p.notes, content: p.content, created: p.created_at
+          });
+          loaded++;
+        }
+      });
+      try { localStorage.setItem('cubs_sc_athlete_programs_v1', JSON.stringify(athletePrograms)); } catch(e){}
+    }
+
+    // Perio plans
+    var plans = await sbGet('perio_plans', 'order=created_at.desc&limit=50');
+    if (plans && plans.length) {
+      var mapped = plans.map(function(p) {
+        return {
+          id: p.id, name: p.name, athlete: p.player_name,
+          phase: p.phase, phaseLabel: p.phase, weeks: p.weeks,
+          sessPerWk: p.sessions_pw, deload: p.deload,
+          exercises: p.exercises || [], created: p.created_at
+        };
+      });
+      try { localStorage.setItem('cubs_sc_perio_plans_v1', JSON.stringify(mapped)); } catch(e){}
+      loaded += plans.length;
+    }
+
+    console.log('[SB] Loaded ' + loaded + ' records from cloud');
+
+    // Re-render with merged data
+    if (typeof buildPlayerList === 'function') buildPlayerList();
+    if (typeof renderDashboard === 'function') renderDashboard();
+    showStatus('☁️ Cloud data synced (' + loaded + ' records)');
+
+  } catch(err) {
+    console.warn('[SB] Cloud load failed — using local data:', err.message);
+  }
+}
+
+// ── One-time migration: push localStorage → Supabase ──
+async function migrateToCloud() {
+  var btn = document.getElementById('migrate-btn');
+  if (btn) { btn.textContent = 'Syncing...'; btn.disabled = true; }
+  showStatus('☁️ Syncing to cloud...');
+  var count = 0;
+
+  var wl = JSON.parse(localStorage.getItem('cubs_sc_wellness_v1') || '{}');
+  for (var wp in wl) {
+    for (var i = 0; i < (wl[wp]||[]).length; i++) {
+      await sbPost('wellness', {
+        player_name: wp, date: wl[wp][i].date,
+        soreness: wl[wp][i].soreness, energy: wl[wp][i].energy,
+        sleep: wl[wp][i].sleep, bw: wl[wp][i].bw || null,
+        swing_workload: wl[wp][i].swingWorkload || 'normal',
+        readiness: wl[wp][i].readiness || null
+      });
+      count++;
+    }
+  }
+
+  var rm = JSON.parse(localStorage.getItem('cubs_sc_1rm_v1') || '{}');
+  for (var rp in rm) {
+    for (var rl in rm[rp]) {
+      await sbPost('one_rm', { player_name: rp, lift: rl, weight: rm[rp][rl] });
+      count++;
+    }
+  }
+
+  var cn = JSON.parse(localStorage.getItem('cubs_sc_coach_notes_v1') || '{}');
+  for (var cp in cn) {
+    for (var cd in cn[cp]) {
+      await sbPost('coach_notes', { player_name: cp, date: cd, note: cn[cp][cd] });
+      count++;
+    }
+  }
+
+  var ex = JSON.parse(localStorage.getItem('cubs_sc_exercise_db_v1') || '[]');
+  for (var ei = 0; ei < ex.length; ei++) {
+    if (ex[ei] && ex[ei].name) {
+      await sbPost('exercises', {
+        name: ex[ei].name, category: ex[ei].cat || '',
+        lift_key: ex[ei].liftKey || '', video_url: ex[ei].video || ''
+      });
+      count++;
+    }
+  }
+
+  var ap = JSON.parse(localStorage.getItem('cubs_sc_athlete_programs_v1') || '{}');
+  for (var pp in ap) {
+    for (var pi = 0; pi < (ap[pp]||[]).length; pi++) {
+      await sbPost('programs', {
+        player_name: pp, name: ap[pp][pi].name,
+        type: ap[pp][pi].type || '', phase: ap[pp][pi].phase || '',
+        notes: ap[pp][pi].notes || '',
+        content: (ap[pp][pi].content || '').substring(0, 50000)
+      });
+      count++;
+    }
+  }
+
+  if (btn) { btn.textContent = 'Cloud Sync'; btn.disabled = false; }
+  showStatus('☁️ Sync complete — ' + count + ' records saved to cloud');
+  alert('Done! ' + count + ' records synced to Supabase.\nYour data is now in the cloud and will load on any browser.');
+}
+
 init();
 loadCubsSchedule();
+
+
 
 
 
