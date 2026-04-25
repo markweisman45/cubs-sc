@@ -2231,6 +2231,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13570,15 +13571,31 @@ async function sbLoadAll() {
     var statcast = await sbGet('statcast', 'order=date.asc&limit=5000');
     if (statcast && statcast.length) {
       if (!importedData.statcast) importedData.statcast = {};
+      // Also rebuild parsedStatcastRows so applyStatcastData works correctly
+      var sbStatcastRows = [];
       statcast.forEach(function(r) {
         if (!importedData.statcast[r.player_name]) importedData.statcast[r.player_name] = [];
+        var row = {
+          date: r.date, speed: r.speed || 0, heDist: r.he_dist || 0,
+          dist: r.total_dist || 0, midEff: r.mid_eff || 0, highEff: r.high_eff || 0,
+          bat: r.bat_speed || 0, exit: r.exit_velo || 0, throwV: r.throw_velo || 0
+        };
         if (!importedData.statcast[r.player_name].find(function(x){ return x.date === r.date; })) {
-          importedData.statcast[r.player_name].push({
-            date: r.date, speed: r.speed, heDist: r.he_dist,
-            dist: r.total_dist, midEff: r.mid_eff, highEff: r.high_eff,
-            bat: r.bat_speed, exit: r.exit_velo, throwV: r.throw_velo
-          });
+          importedData.statcast[r.player_name].push(row);
           loaded++;
+        }
+        // Add to parsedStatcastRows format (name field required by applyStatcastData)
+        sbStatcastRows.push({
+          name: r.player_name, date: r.date,
+          speed: r.speed || 0, heDist: r.he_dist || 0,
+          dist: r.total_dist || 0, midEff: r.mid_eff || 0, highEff: r.high_eff || 0,
+          bat: r.bat_speed || 0, exit: r.exit_velo || 0, throwV: r.throw_velo || 0
+        });
+      });
+      // Merge into parsedStatcastRows (avoiding dupes by player+date)
+      sbStatcastRows.forEach(function(r) {
+        if (!parsedStatcastRows.find(function(x){ return x.name === r.name && x.date === r.date; })) {
+          parsedStatcastRows.push(r);
         }
       });
       try { localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(importedData)); } catch(e){}
@@ -13595,7 +13612,8 @@ async function sbLoadAll() {
         if (!target[r.player_name].find(function(x){ return x.rawDate === r.raw_date; })) {
           target[r.player_name].push({
             date: r.date, rawDate: r.raw_date,
-            jump: r.jump_height, ppbm: r.pp_bm
+            jump: r.jump_height, ppbm: r.pp_bm,
+            type: r.test_type
           });
           loaded++;
         }
@@ -13732,6 +13750,7 @@ async function migrateToCloud() {
 
 init();
 loadCubsSchedule();
+
 
 
 
