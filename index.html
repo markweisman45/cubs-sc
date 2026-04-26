@@ -2243,6 +2243,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -5203,7 +5204,10 @@ function init() {
   // Init day structure editors with defaults
   updateDayStructure();
   updateMesoDayStructure();
-  setTimeout(function(){ sbLoadAll(); }, 2000);
+  // If localStorage is empty (incognito/new browser), load from cloud immediately
+  // Otherwise wait 1s to let local render happen first
+  var hasLocalData = localStorage.getItem('cubs_sc_imported_data_v1') || localStorage.getItem('cubs_sc_wellness_v1');
+  setTimeout(function(){ sbLoadAll(); }, hasLocalData ? 1000 : 100);
 }
 
 function nameToId(name) { return name.replace(/[^a-zA-Z0-9]/g, '-'); }
@@ -13675,7 +13679,8 @@ async function sbLoadAll() {
     if (typeof rebuildCMJTrends === 'function')  rebuildCMJTrends();
 
     if (typeof buildPlayerList === 'function') buildPlayerList();
-    if (typeof renderDashboard === 'function') renderDashboard();
+    // Re-select current player to force full re-render with new data
+    if (typeof selectPlayer === 'function') selectPlayer(currentPlayer);
     showStatus('☁️ Cloud data synced (' + loaded + ' records)');
 
   } catch(err) {
@@ -13859,6 +13864,7 @@ async function fixSupabaseDates() {
 
 init();
 loadCubsSchedule();
+
 
 
 
