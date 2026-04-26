@@ -2182,6 +2182,8 @@ body {
           <button onclick="document.getElementById('hittingCSVInput').click()" style="padding:8px 16px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:8px;color:var(--green);font-size:13px;font-weight:600;cursor:pointer;">&#128202; Import Hitting CSV</button>
           <input type="file" id="hittingCSVInput" accept=".csv" style="display:none" onchange="handleHittingCSVUpload(this)">
           <span style="font-size:11px;color:var(--text3);">Batter / Game / EV / BSp format — auto-groups by player+date</span>
+          <button onclick="document.getElementById('throwCSVInput').click()" style="padding:8px 16px;background:rgba(59,122,196,0.15);border:1px solid rgba(59,122,196,0.4);border-radius:8px;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;">&#128202; Import Throw Velo CSV</button>
+          <input type="file" id="throwCSVInput" accept=".csv" style="display:none" onchange="handleThrowCSVUpload(this)">
         </div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
           Or enter manually — bat speed, exit velocity, and throw velocity per player per game date.
@@ -2226,6 +2228,7 @@ body {
 </div><!-- /app -->
 
 <script>
+
 
 
 
@@ -13622,8 +13625,90 @@ function handleHittingCSVUpload(input) {
   reader.readAsText(file);
 }
 
+
+function handleThrowCSVUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var rows = parseCSV(e.target.result);
+      if (!rows.length) { alert('No data found'); return; }
+
+      // Group by Player + Game, take max ARM
+      var grouped = {};
+      rows.forEach(function(row) {
+        var player = (row['Player'] || '').trim();
+        var date   = (row['Game']   || '').trim();
+        var arm    = parseFloat(row['ARM'] || 0);
+        if (!player || !date) return;
+        var key = player + '|' + date;
+        if (!grouped[key]) grouped[key] = { player: player, date: date, arm: 0 };
+        if (arm > grouped[key].arm) grouped[key].arm = arm;
+      });
+
+      if (!importedData.hitting) importedData.hitting = {};
+      var applied = 0, skipped = 0;
+
+      Object.values(grouped).forEach(function(g) {
+        var rosterName = HITTING_NAME_MAP[g.player];
+        if (!rosterName) { skipped++; return; }
+        if (!importedData.hitting[rosterName]) importedData.hitting[rosterName] = [];
+
+        var idx = importedData.hitting[rosterName].findIndex(function(x) {
+          return fmtDate(x.date) === fmtDate(g.date);
+        });
+        if (idx >= 0) {
+          importedData.hitting[rosterName][idx].throwV = g.arm;
+        } else {
+          importedData.hitting[rosterName].push({ date: g.date, bat: 0, exit: 0, throwV: g.arm });
+        }
+        applied++;
+      });
+
+      // Update PLAYERS bests
+      Object.keys(importedData.hitting).forEach(function(name) {
+        var p = PLAYERS[name];
+        if (!p) return;
+        var rows2 = importedData.hitting[name].slice().sort(function(a,b){
+          return safeParseDate(b.date) - safeParseDate(a.date);
+        });
+        if (rows2.length) {
+          p.latestThrow = rows2[0].throwV || p.latestThrow;
+          if (!p.bests) p.bests = {};
+          p.bests.throwV = Math.max(p.bests.throwV || 0, Math.max.apply(null, rows2.map(function(r){return r.throwV||0;})));
+        }
+      });
+
+      persistImportedData();
+
+      // Sync to Supabase
+      if (typeof sbPost === 'function') {
+        Object.keys(importedData.hitting).forEach(function(player) {
+          (importedData.hitting[player]||[]).forEach(function(h) {
+            var d = new Date(h.date);
+            var iso = !isNaN(d) ? d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0') : h.date;
+            sbPost('statcast', { player_name:player, date:iso, throw_velo:h.throwV||null });
+          });
+        });
+      }
+
+      applyStatcastData();
+      renderDashboard();
+      showStatus('Throw velo imported: ' + applied + ' player-game rows');
+      alert('Done! ' + applied + ' throw velo rows imported. ' + skipped + ' skipped.');
+
+    } catch(err) {
+      alert('Error: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
 init();
 loadCubsSchedule();
+
 
 
 
