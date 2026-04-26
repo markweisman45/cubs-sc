@@ -2249,6 +2249,8 @@ body {
 
 
 
+
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13255,6 +13257,10 @@ async function sbLoadAll() {
           target[r.player_name].push({
             date: cmjAppDate, rawDate: r.raw_date || cmjAppDate,
             jump: r.jump_height, ppbm: r.pp_bm,
+            conc: r.conc_mean_power || null,
+            stiff: r.stiffness || null,
+            vto: r.vert_takeoff_vel || null,
+            bw: r.body_weight || null,
             type: r.test_type
           });
           loaded++;
@@ -13397,7 +13403,9 @@ async function migrateToCloud() {
       allCMJRows.push({
         player_name: cp2, date: crow.date || crow.rawDate,
         test_type: 'CMJ', jump_height: crow.jump || null,
-        pp_bm: crow.ppbm || null, raw_date: crow.rawDate || null
+        pp_bm: crow.ppbm || null, raw_date: crow.rawDate || null,
+        conc_mean_power: crow.conc || null, stiffness: crow.stiff || null,
+        vert_takeoff_vel: crow.vto || null, body_weight: crow.bw || null
       });
     });
   }
@@ -13407,7 +13415,9 @@ async function migrateToCloud() {
       allCMJRows.push({
         player_name: ap2, date: acrow.date || acrow.rawDate,
         test_type: 'ABCMJ', jump_height: acrow.jump || null,
-        pp_bm: acrow.ppbm || null, raw_date: acrow.rawDate || null
+        pp_bm: acrow.ppbm || null, raw_date: acrow.rawDate || null,
+        conc_mean_power: acrow.conc || null, stiffness: acrow.stiff || null,
+        vert_takeoff_vel: acrow.vto || null, body_weight: acrow.bw || null
       });
     });
   }
@@ -13484,6 +13494,8 @@ function getCSSColors() {
 
 init();
 loadCubsSchedule();
+
+
 
 
 
