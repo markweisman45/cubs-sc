@@ -2266,6 +2266,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13603,7 +13604,14 @@ function handleHittingCSVUpload(input) {
         }
       });
 
-      persistImportedData();
+      // Save ONLY the hitting data without touching statcast in localStorage
+      try {
+        var savedFull = JSON.parse(localStorage.getItem('cubs_sc_imported_data_v1')||'{}');
+        savedFull.hitting = importedData.hitting;
+        localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(savedFull));
+        // Reload full data so statcast is back in importedData
+        Object.assign(importedData, savedFull);
+      } catch(e) { console.warn('save hitting failed:', e); }
 
       // Sync to Supabase
       if (typeof sbPost === 'function') {
@@ -13688,7 +13696,13 @@ function handleThrowCSVUpload(input) {
         }
       });
 
-      persistImportedData();
+      // Save ONLY the hitting data without touching statcast in localStorage
+      try {
+        var savedFull2 = JSON.parse(localStorage.getItem('cubs_sc_imported_data_v1')||'{}');
+        savedFull2.hitting = importedData.hitting;
+        localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(savedFull2));
+        Object.assign(importedData, savedFull2);
+      } catch(e) { console.warn('save throw failed:', e); }
 
       // Sync to Supabase
       if (typeof sbPost === 'function') {
@@ -13716,6 +13730,7 @@ function handleThrowCSVUpload(input) {
 
 init();
 loadCubsSchedule();
+
 
 
 
