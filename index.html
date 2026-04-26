@@ -2252,6 +2252,8 @@ body {
 
 
 
+
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13117,19 +13119,21 @@ async function sbLoadAll() {
     showStatus('☁️ Loading from cloud...');
     var loaded = 0;
 
-    // Wellness
+    // Reset parsedStatcastRows — Supabase is source of truth
+    parsedStatcastRows = [];
+
+    // Wellness — reload fresh from Supabase
     var wellness = await sbGet('wellness', 'order=date.asc&limit=2000');
     if (wellness && wellness.length) {
+      wellnessLog = {};
       wellness.forEach(function(w) {
         if (!wellnessLog[w.player_name]) wellnessLog[w.player_name] = [];
-        if (!wellnessLog[w.player_name].find(function(e){ return e.date === w.date; })) {
-          wellnessLog[w.player_name].push({
-            date: w.date, soreness: w.soreness, energy: w.energy,
-            sleep: w.sleep, bw: w.bw, swingWorkload: w.swing_workload,
-            readiness: w.readiness
-          });
-          loaded++;
-        }
+        wellnessLog[w.player_name].push({
+          date: w.date, soreness: w.soreness, energy: w.energy,
+          sleep: w.sleep, bw: w.bw, swingWorkload: w.swing_workload,
+          readiness: w.readiness
+        });
+        loaded++;
       });
       // Persist merged wellness back to localStorage
       try { localStorage.setItem('cubs_sc_wellness_v1', JSON.stringify(wellnessLog)); } catch(e){}
@@ -13207,11 +13211,11 @@ async function sbLoadAll() {
     var statcast = await sbGet('statcast', 'limit=5000');
     console.log('[SB] statcast rows from cloud:', statcast ? statcast.length : 'null');
     if (statcast && statcast.length) {
-      if (!importedData.statcast) importedData.statcast = {};
-      // Also rebuild parsedStatcastRows so applyStatcastData works correctly
+      // Always rebuild importedData.statcast fresh from Supabase (source of truth)
+      importedData.statcast = {};
+      importedData.hitting  = {};
       var sbStatcastRows = [];
       statcast.forEach(function(r) {
-        // Convert ISO date (2026-04-21) to app format (4/21/2026) for compatibility
         var appDate = r.date;
         if (/^\d{4}-\d{2}-\d{2}$/.test(r.date)) {
           var parts = r.date.split('-');
@@ -13223,11 +13227,9 @@ async function sbLoadAll() {
           dist: r.total_dist || 0, midEff: r.mid_eff || 0, highEff: r.high_eff || 0,
           bat: r.bat_speed || 0, exit: r.exit_velo || 0, throwV: r.throw_velo || 0
         };
-        if (!importedData.statcast[r.player_name].find(function(x){ return x.date === appDate; })) {
-          importedData.statcast[r.player_name].push(row);
-          loaded++;
-        }
-        // Add to parsedStatcastRows with app-format date
+        importedData.statcast[r.player_name].push(row);
+        loaded++;
+        // Add to parsedStatcastRows
         sbStatcastRows.push({
           name: r.player_name, date: appDate,
           speed: r.speed || 0, heDist: r.he_dist || 0,
@@ -13510,6 +13512,8 @@ function getCSSColors() {
 
 init();
 loadCubsSchedule();
+
+
 
 
 
