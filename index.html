@@ -2242,6 +2242,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13502,6 +13503,7 @@ function sbSyncPerioPlan(plan) {
 async function sbLoadAll() {
   try {
     console.log('[SB] Loading from cloud...');
+    showStatus('☁️ Loading from cloud...');
     var loaded = 0;
 
     // Wellness
@@ -13651,8 +13653,14 @@ async function sbLoadAll() {
         var target = (r.test_type === 'ABCMJ') ? importedData.abcmj : importedData.cmj;
         if (!target[r.player_name]) target[r.player_name] = [];
         if (!target[r.player_name].find(function(x){ return x.rawDate === r.raw_date; })) {
+          // Convert ISO date back to app format
+          var cmjAppDate = r.date;
+          if (r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date)) {
+            var cp = r.date.split('-');
+            cmjAppDate = parseInt(cp[1]) + '/' + parseInt(cp[2]) + '/' + cp[0];
+          }
           target[r.player_name].push({
-            date: r.date, rawDate: r.raw_date,
+            date: cmjAppDate, rawDate: r.raw_date || cmjAppDate,
             jump: r.jump_height, ppbm: r.pp_bm,
             type: r.test_type
           });
@@ -13851,6 +13859,7 @@ async function fixSupabaseDates() {
 
 init();
 loadCubsSchedule();
+
 
 
 
