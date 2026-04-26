@@ -2264,6 +2264,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13612,7 +13613,10 @@ function handleHittingCSVUpload(input) {
         });
       }
 
+      // Reload full importedData from localStorage before applying
+      loadPersistedData();
       applyStatcastData();
+      rebuildCMJTrends();
       renderDashboard();
       showStatus('Hitting CSV imported: ' + applied + ' player-game rows (' + skipped + ' skipped)');
       alert('Done! ' + applied + ' player-game rows imported.\n' + skipped + ' rows skipped (non-roster players).');
@@ -13694,7 +13698,10 @@ function handleThrowCSVUpload(input) {
         });
       }
 
+      // Reload full importedData from localStorage before applying
+      loadPersistedData();
       applyStatcastData();
+      rebuildCMJTrends();
       renderDashboard();
       showStatus('Throw velo imported: ' + applied + ' player-game rows');
       alert('Done! ' + applied + ' throw velo rows imported. ' + skipped + ' skipped.');
@@ -13708,6 +13715,7 @@ function handleThrowCSVUpload(input) {
 
 init();
 loadCubsSchedule();
+
 
 
 
