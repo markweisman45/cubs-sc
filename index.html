@@ -2248,6 +2248,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -10887,7 +10888,20 @@ function applyCMJData() {
   showStatus(`✅ CMJ data applied for ${applied} player${applied!==1?'s':''}.`);
   rebuildCMJTrends();
   persistImportedData();
-  // Sync new statcast rows to Supabase
+  // Sync ALL statcast rows to Supabase (merge-duplicates handles dedup)
+  if (typeof sbPost === 'function' && parsedStatcastRows.length) {
+    var sbRows = parsedStatcastRows.map(function(r) {
+      var d = new Date(r.date);
+      var iso = !isNaN(d) ? d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0') : r.date;
+      var h = ((importedData.hitting||{})[r.name]||[]).find(function(x){ return new Date(x.date).toDateString()===new Date(r.date).toDateString(); })||{};
+      return {player_name:r.name, date:iso, speed:r.speed||null, he_dist:r.heDist||null,
+        total_dist:r.dist||null, mid_eff:r.midEff||null, high_eff:r.highEff||null,
+        bat_speed:h.bat||null, exit_velo:h.exit||null, throw_velo:h.throwV||null};
+    });
+    for (var _bi=0; _bi<sbRows.length; _bi+=50) {
+      sbPost('statcast', sbRows.slice(_bi, _bi+50));
+    }
+  }
   if (typeof sbPost === 'function') {
     Object.keys(importedData.statcast || {}).forEach(function(player) {
       (importedData.statcast[player] || []).forEach(function(row) {
@@ -13249,31 +13263,30 @@ async function sbLoadAll() {
       try { localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(importedData)); } catch(e){}
     }
 
-    // Recompute everything from raw data
-    if (typeof applyStatcastData === 'function') applyStatcastData();
-    if (typeof rebuildCMJTrends  === 'function') rebuildCMJTrends();
-    if (typeof computeACWRForAll === 'function') computeACWRForAll();
+    // Recompute all derived data from raw Supabase data
+    try {
+      applyStatcastData();
+      rebuildCMJTrends();
+      computeACWRForAll();
+      persistImportedData();
+      buildPlayerList();
+      renderDashboard();
+      showStatus('☁️ Cloud synced — ' + loaded + ' records');
+      console.log('[SB] Done:', loaded, 'records loaded');
+    } catch(renderErr) {
+      console.warn('[SB] Render error:', renderErr.message);
+    }
 
-    // Re-render full dashboard
-    if (typeof buildPlayerList === 'function') buildPlayerList();
-    if (typeof renderDashboard === 'function') renderDashboard();
-
-    // Persist computed state to localStorage for next load
-    if (typeof persistImportedData === 'function') persistImportedData();
-
-    showStatus('☁️ Cloud data synced (' + loaded + ' records)');
-    console.log('[SB] Done - ' + loaded + ' records loaded');
+    // Remove loading overlay
+    var overlay = document.getElementById('sb-loading-overlay');
+    if (overlay) overlay.remove();
 
   } catch(err) {
-    console.warn('[SB] Cloud load failed:', err.message, err.stack);
-    // Remove loading overlay even on error
+    console.warn('[SB] Cloud load failed:', err.message);
     var o = document.getElementById('sb-loading-overlay');
     if (o) o.remove();
-    // Try to render with whatever data we have
-    try {
-      if (typeof buildPlayerList === 'function') buildPlayerList();
-      if (typeof renderDashboard === 'function') renderDashboard();
-    } catch(e2) { console.warn('[SB] Render fallback failed:', e2.message); }
+    // Render with whatever local data exists
+    try { buildPlayerList(); renderDashboard(); } catch(e2) {}
   }
 }
 
@@ -13471,6 +13484,7 @@ function getCSSColors() {
 
 init();
 loadCubsSchedule();
+
 
 
 
