@@ -2273,6 +2273,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -10509,30 +10510,33 @@ const IMPORTED_DATA_KEY = 'cubs_sc_imported_data_v1';
 const PLAYERS_STATE_KEY  = 'cubs_sc_players_state_v1';
 
 function persistImportedData() {
+  // Save each data type separately to prevent cross-contamination
+  saveStatcast();
+  saveHitting();
+  saveCMJ();
+  // Also save legacy format for backward compatibility
+  try { localStorage.setItem(IMPORTED_DATA_KEY, JSON.stringify(importedData)); } catch(e){}
+  // Save players state
   try {
-    localStorage.setItem(IMPORTED_DATA_KEY, JSON.stringify(importedData));
     const state = {};
     Object.entries(PLAYERS).forEach(([name, p]) => {
       state[name] = {
-        readiness: p.readiness, status: p.status,
-        acwr: p.acwr, heAcwr: p.heAcwr, tdAcwr: p.tdAcwr,
-        latestJump: p.latestJump, latestPPBM: p.latestPPBM,
-        latestSpeed: p.latestSpeed, latestHE: p.latestHE, latestDist: p.latestDist,
-        latestBat: p.latestBat, latestExit: p.latestExit, latestThrow: p.latestThrow,
-        daysSinceCMJ: p.daysSinceCMJ, lastDataDate: p.lastDataDate, dataAgeDays: p.dataAgeDays,
-        bests:        JSON.parse(JSON.stringify(p.bests)),
-        acwrHistory:  JSON.parse(JSON.stringify(p.acwrHistory  || [])),
-        recentGames:  JSON.parse(JSON.stringify(p.recentGames  || [])),
-        recentGames: JSON.parse(JSON.stringify(p.recentGames || [])),
-        acwrHistory: JSON.parse(JSON.stringify(p.acwrHistory || [])),
-        cmjTrends: JSON.parse(JSON.stringify(p.cmjTrends || [])),
+        readiness:p.readiness, status:p.status, acwr:p.acwr, heAcwr:p.heAcwr, tdAcwr:p.tdAcwr,
+        latestJump:p.latestJump, latestPPBM:p.latestPPBM, latestSpeed:p.latestSpeed,
+        latestHE:p.latestHE, latestDist:p.latestDist, latestBat:p.latestBat,
+        latestExit:p.latestExit, latestThrow:p.latestThrow,
+        daysSinceCMJ:p.daysSinceCMJ, lastDataDate:p.lastDataDate, dataAgeDays:p.dataAgeDays,
+        bests:JSON.parse(JSON.stringify(p.bests||{})),
+        acwrHistory:JSON.parse(JSON.stringify(p.acwrHistory||[])),
+        recentGames:JSON.parse(JSON.stringify(p.recentGames||[])),
+        cmjTrends:JSON.parse(JSON.stringify(p.cmjTrends||[])),
       };
     });
     localStorage.setItem(PLAYERS_STATE_KEY, JSON.stringify(state));
-  } catch(e) { console.warn('persistImportedData failed:', e); }
+  } catch(e){}
 }
-
 function loadPersistedData() {
+  loadAllData(); // Load from separate keys
   try {
     const saved = localStorage.getItem(IMPORTED_DATA_KEY);
     if (saved) {
@@ -10912,7 +10916,7 @@ function applyCMJData() {
   logImport(`CMJ data applied: ${applied} player records updated.`, 'success');
   showStatus(`✅ CMJ data applied for ${applied} player${applied!==1?'s':''}.`);
   rebuildCMJTrends();
-  persistImportedData();
+  saveCMJ(); // Save only CMJ;
   // Sync ALL statcast rows to Supabase (merge-duplicates handles dedup)
   if (typeof sbPost === 'function' && parsedStatcastRows.length) {
     var sbRows = parsedStatcastRows.map(function(r) {
@@ -11033,7 +11037,7 @@ function applyStatcastData() {
 
   // Step 3: Save merged data back to localStorage
   Object.assign(importedData, stored);
-  try { localStorage.setItem(IMPORTED_DATA_KEY, JSON.stringify(stored)); } catch(e){}
+  saveStatcast(); // Save only statcast — never touches hitting/CMJ
 
   // Step 4: Build byPlayer from merged importedData.statcast
   const byPlayer = {};
@@ -13634,8 +13638,8 @@ function handleThrowCSVUpload(input) {
         else stored.hitting[name].push({date:x.d,bat:0,exit:0,throwV:x.arm});
         n++;
       });
-      localStorage.setItem(IMPORTED_DATA_KEY, JSON.stringify(stored));
-      Object.assign(importedData, stored);
+      importedData.hitting = stored.hitting;
+      saveHitting(); // Save only hitting
       applyStatcastData();
       rebuildCMJTrends();
       renderDashboard();
@@ -13650,8 +13654,35 @@ function handleThrowCSVUpload(input) {
 
 
 
+
+// ── SEPARATE STORAGE KEYS (prevents cross-contamination) ──
+const STATCAST_KEY = 'cubs_sc_statcast_v1';
+const HITTING_KEY  = 'cubs_sc_hitting_v1';
+const CMJ_KEY      = 'cubs_sc_cmj_v1';
+const ABCMJ_KEY    = 'cubs_sc_abcmj_v1';
+
+function saveStatcast() {
+  try { localStorage.setItem(STATCAST_KEY, JSON.stringify(importedData.statcast||{})); } catch(e){}
+}
+function saveHitting() {
+  try { localStorage.setItem(HITTING_KEY, JSON.stringify(importedData.hitting||{})); } catch(e){}
+}
+function saveCMJ() {
+  try {
+    localStorage.setItem(CMJ_KEY,   JSON.stringify(importedData.cmj||{}));
+    localStorage.setItem(ABCMJ_KEY, JSON.stringify(importedData.abcmj||{}));
+  } catch(e){}
+}
+function loadAllData() {
+  try { importedData.statcast = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}'); } catch(e){}
+  try { importedData.hitting  = JSON.parse(localStorage.getItem(HITTING_KEY)||'{}');  } catch(e){}
+  try { importedData.cmj      = JSON.parse(localStorage.getItem(CMJ_KEY)||'{}');      } catch(e){}
+  try { importedData.abcmj    = JSON.parse(localStorage.getItem(ABCMJ_KEY)||'{}');    } catch(e){}
+}
+
 init();
 loadCubsSchedule();
+
 
 
 
