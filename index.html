@@ -643,7 +643,8 @@ body {
       <button onclick="exportAllData()" style="display:block;width:100%;padding:9px;background:#22c55e;color:#000;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">Download Backup</button>
       <button onclick="document.getElementById('restoreInput').click()" style="display:block;width:100%;padding:9px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.5);color:#f59e0b;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">Restore Backup</button>
       <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="importAllData(this)">
-      <button id="migrate-btn" onclick="migrateToCloud()" style="display:block;width:100%;padding:9px;background:rgba(168,85,247,0.2);border:1px solid rgba(168,85,247,0.5);color:#a855f7;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">☁️ Sync to Cloud</button>
+      <button id="migrate-btn" onclick="migrateToCloud()" style="display:block;width:100%;padding:9px;background:rgba(168,85,247,0.2);border:1px solid rgba(168,85,247,0.5);color:#a855f7;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">☁️ Sync to Cloud</button>
+      <button onclick="fixSupabaseDates()" style="display:block;width:100%;padding:9px;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.5);color:#60a5fa;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">🔧 Fix Cloud Dates</button>
     </div>
   </div>
 </aside>
@@ -2220,6 +2221,7 @@ body {
 </div><!-- /app -->
 
 <script>
+
 
 
 
@@ -11628,7 +11630,7 @@ function applyHittingData() {
       (hitRows[player] || []).forEach(function(h) {
         sbPost('statcast', {
           player_name: player,
-          date: typeof fmtDate === 'function' ? fmtDate(h.date) : h.date,
+          date: toISODate(h.date),
           bat_speed: h.bat || null, exit_velo: h.exit || null, throw_velo: h.throwV || null
         });
       });
@@ -13588,7 +13590,7 @@ async function sbLoadAll() {
 
     // Re-render with merged data
     // Statcast game data
-    var statcast = await sbGet('statcast', 'order=date.asc&limit=5000');
+    var statcast = await sbGet('statcast', 'limit=5000');
     console.log('[SB] statcast rows from cloud:', statcast ? statcast.length : 'null');
     if (statcast && statcast.length) {
       if (!importedData.statcast) importedData.statcast = {};
@@ -13720,7 +13722,7 @@ async function migrateToCloud() {
   for (var _hp2 in hitData2) {
     (hitData2[_hp2] || []).forEach(function(h) {
       allHitRows2.push({ player_name: _hp2,
-        date: typeof fmtDate === 'function' ? fmtDate(h.date) : h.date,
+        date: toISODate(h.date),
         bat_speed: h.bat || null, exit_velo: h.exit || null, throw_velo: h.throwV || null });
     });
   }
@@ -13748,7 +13750,7 @@ async function migrateToCloud() {
   for (var sp in statRows) {
     (statRows[sp] || []).forEach(function(row) {
       allStatRows.push({
-        player_name: sp, date: row.date,
+        player_name: sp, date: toISODate(row.date),
         speed: row.speed || null, he_dist: row.heDist || null,
         total_dist: row.dist || null, mid_eff: row.midEff || null,
         high_eff: row.highEff || null, bat_speed: row.bat || null,
@@ -13798,8 +13800,51 @@ async function migrateToCloud() {
   alert('Done! ' + count + ' records synced to Supabase.\nYour data is now in the cloud and will load on any browser.');
 }
 
+
+// Convert M/D/YYYY or 'Apr 24' to YYYY-MM-DD for consistent Supabase sorting
+function toISODate(dateStr) {
+  if (!dateStr) return dateStr;
+  // Already ISO format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  var d = new Date(dateStr);
+  if (!isNaN(d.getTime())) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  return dateStr;
+}
+
+async function fixSupabaseDates() {
+  showStatus('Fixing date formats in Supabase...');
+  var rows = await sbGet('statcast', 'limit=5000');
+  if (!rows) { alert('Could not fetch rows'); return; }
+  var toFix = rows.filter(function(r){ return !/^\d{4}-\d{2}-\d{2}$/.test(r.date); });
+  alert('Found ' + toFix.length + ' rows with non-ISO dates out of ' + rows.length + ' total. Click OK to fix them.');
+  var fixed = 0;
+  for (var i = 0; i < toFix.length; i++) {
+    var r = toFix[i];
+    var isoDate = toISODate(r.date);
+    if (isoDate !== r.date) {
+      // Delete old row and insert with ISO date
+      await fetch(SB_URL + '/rest/v1/statcast?id=eq.' + r.id, {
+        method: 'DELETE',
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+      });
+      await sbPost('statcast', {
+        player_name: r.player_name, date: isoDate,
+        speed: r.speed, he_dist: r.he_dist, total_dist: r.total_dist,
+        mid_eff: r.mid_eff, high_eff: r.high_eff,
+        bat_speed: r.bat_speed, exit_velo: r.exit_velo, throw_velo: r.throw_velo
+      });
+      fixed++;
+    }
+  }
+  showStatus('Fixed ' + fixed + ' date formats in Supabase');
+  alert('Done! Fixed ' + fixed + ' rows. All dates now in ISO format.');
+}
+
 init();
 loadCubsSchedule();
+
 
 
 
