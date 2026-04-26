@@ -2178,8 +2178,13 @@ body {
       <!-- ── SECTION 3: MANUAL ENTRY - Position Players ── -->
       <div class="card section-mb">
         <div class="card-title">⚾ Manual Entry — Hitting & Arm Metrics (Position Players)</div>
+        <div style="margin-bottom:12px;display:flex;align-items:center;gap:12px;">
+          <button onclick="document.getElementById('hittingCSVInput').click()" style="padding:8px 16px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:8px;color:var(--green);font-size:13px;font-weight:600;cursor:pointer;">&#128202; Import Hitting CSV</button>
+          <input type="file" id="hittingCSVInput" accept=".csv" style="display:none" onchange="handleHittingCSVUpload(this)">
+          <span style="font-size:11px;color:var(--text3);">Batter / Game / EV / BSp format — auto-groups by player+date</span>
+        </div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
-          Enter bat speed, exit velocity, and throw velocity per player per game date.
+          Or enter manually — bat speed, exit velocity, and throw velocity per player per game date.
         </div>
 
         <div style="display:grid;grid-template-columns:180px 130px 1fr 1fr 1fr 80px;gap:10px;align-items:center;margin-bottom:8px;">
@@ -2221,6 +2226,8 @@ body {
 </div><!-- /app -->
 
 <script>
+
+
 
 
 
@@ -13125,15 +13132,16 @@ async function sbLoadAll() {
     // Wellness — reload fresh from Supabase
     var wellness = await sbGet('wellness', 'order=date.asc&limit=2000');
     if (wellness && wellness.length) {
-      wellnessLog = {};
       wellness.forEach(function(w) {
         if (!wellnessLog[w.player_name]) wellnessLog[w.player_name] = [];
-        wellnessLog[w.player_name].push({
-          date: w.date, soreness: w.soreness, energy: w.energy,
-          sleep: w.sleep, bw: w.bw, swingWorkload: w.swing_workload,
-          readiness: w.readiness
-        });
-        loaded++;
+        if (!wellnessLog[w.player_name].find(function(e){ return e.date === w.date; })) {
+            wellnessLog[w.player_name].push({
+            date: w.date, soreness: w.soreness, energy: w.energy,
+            sleep: w.sleep, bw: w.bw, swingWorkload: w.swing_workload,
+            readiness: w.readiness
+          });
+          loaded++;
+        }
       });
       // Persist merged wellness back to localStorage
       try { localStorage.setItem('cubs_sc_wellness_v1', JSON.stringify(wellnessLog)); } catch(e){}
@@ -13211,9 +13219,9 @@ async function sbLoadAll() {
     var statcast = await sbGet('statcast', 'limit=5000');
     console.log('[SB] statcast rows from cloud:', statcast ? statcast.length : 'null');
     if (statcast && statcast.length) {
-      // Always rebuild importedData.statcast fresh from Supabase (source of truth)
-      importedData.statcast = {};
-      importedData.hitting  = {};
+      // Merge Supabase data into importedData.statcast (never wipe localStorage data)
+      if (!importedData.statcast) importedData.statcast = {};
+      if (!importedData.hitting)  importedData.hitting  = {};
       var sbStatcastRows = [];
       statcast.forEach(function(r) {
         var appDate = r.date;
@@ -13510,8 +13518,114 @@ function getCSSColors() {
   };
 }
 
+
+var HITTING_NAME_MAP = {
+  'Crow-Armstrong, P': 'Pete Crow-Armstrong',
+  'Hoerner, N':        'Nico Hoerner',
+  'Swanson, D':        'Dansby Swanson',
+  'Shaw, M':           'Matt Shaw',
+  'Kelly, C':          'Carson Kelly',
+  'Amaya, M':          'Miguel Amaya',
+  'Busch, M':          'Michael Busch',
+  'Bregman, A':        'Alex Bregman',
+  'Ballesteros, M':    'Moises Ballesteros',
+  'Happ, I':           'Ian Happ',
+};
+
+function handleHittingCSVUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var rows = parseCSV(e.target.result);
+      if (!rows.length) { alert('No data found in file'); return; }
+
+      // Group by Batter + Game date, take max EV and BSp
+      var grouped = {};
+      rows.forEach(function(row) {
+        var batter = (row['Batter'] || '').trim();
+        var date   = (row['Game']   || '').trim();
+        var ev     = parseFloat(row['EV']  || 0);
+        var bsp    = parseFloat(row['BSp'] || 0);
+        if (!batter || !date) return;
+
+        var key = batter + '|' + date;
+        if (!grouped[key]) grouped[key] = { batter: batter, date: date, ev: 0, bsp: 0 };
+        if (ev  > grouped[key].ev)  grouped[key].ev  = ev;
+        if (bsp > grouped[key].bsp) grouped[key].bsp = bsp;
+      });
+
+      // Map to roster names and save to importedData.hitting
+      if (!importedData.hitting) importedData.hitting = {};
+      var applied = 0, skipped = 0;
+
+      Object.values(grouped).forEach(function(g) {
+        var rosterName = HITTING_NAME_MAP[g.batter];
+        if (!rosterName) { skipped++; return; }
+        if (!importedData.hitting[rosterName]) importedData.hitting[rosterName] = [];
+
+        // Update or add
+        var dateStr = g.date;
+        var idx = importedData.hitting[rosterName].findIndex(function(x) {
+          return fmtDate(x.date) === fmtDate(dateStr);
+        });
+        var entry = { date: dateStr, bat: g.bsp, exit: g.ev, throwV: 0 };
+        if (idx >= 0) {
+          importedData.hitting[rosterName][idx] = entry;
+        } else {
+          importedData.hitting[rosterName].push(entry);
+        }
+        applied++;
+      });
+
+      // Also update PLAYERS latest values
+      Object.keys(importedData.hitting).forEach(function(name) {
+        var p = PLAYERS[name];
+        if (!p) return;
+        var rows2 = importedData.hitting[name].slice().sort(function(a,b){
+          return safeParseDate(b.date) - safeParseDate(a.date);
+        });
+        if (rows2.length) {
+          p.latestBat  = rows2[0].bat  || p.latestBat;
+          p.latestExit = rows2[0].exit || p.latestExit;
+          if (!p.bests) p.bests = {};
+          p.bests.bat  = Math.max(p.bests.bat  || 0, Math.max.apply(null, rows2.map(function(r){return r.bat||0;})));
+          p.bests.exit = Math.max(p.bests.exit || 0, Math.max.apply(null, rows2.map(function(r){return r.exit||0;})));
+        }
+      });
+
+      persistImportedData();
+
+      // Sync to Supabase
+      if (typeof sbPost === 'function') {
+        Object.keys(importedData.hitting).forEach(function(player) {
+          (importedData.hitting[player]||[]).forEach(function(h) {
+            var d = new Date(h.date);
+            var iso = !isNaN(d) ? d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0') : h.date;
+            sbPost('statcast', { player_name:player, date:iso, bat_speed:h.bat||null, exit_velo:h.exit||null });
+          });
+        });
+      }
+
+      applyStatcastData();
+      renderDashboard();
+      showStatus('Hitting CSV imported: ' + applied + ' player-game rows (' + skipped + ' skipped)');
+      alert('Done! ' + applied + ' player-game rows imported.\n' + skipped + ' rows skipped (non-roster players).');
+
+    } catch(err) {
+      alert('Error importing file: ' + err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+}
+
 init();
 loadCubsSchedule();
+
+
 
 
 
