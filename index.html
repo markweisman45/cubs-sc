@@ -7407,8 +7407,10 @@ function init() {
   updateDayStructure();
   updateMesoDayStructure();
   // If no local data, wait for cloud before rendering
-  var hasLocalData = localStorage.getItem('cubs_sc_imported_data_v1') || 
-                     localStorage.getItem('cubs_sc_players_state_v1');
+  var hasLocalData = localStorage.getItem('cubs_sc_statcast_v1') || 
+                     localStorage.getItem('cubs_sc_hitting_v1') || 
+                     localStorage.getItem('cubs_sc_players_state_v1') || 
+                     localStorage.getItem('cubs_sc_imported_data_v1');
   if (!hasLocalData) {
     // Show loading overlay until Supabase data arrives
     var overlay = document.createElement('div');
@@ -15711,11 +15713,12 @@ async function sbPost(table, body) {
         'apikey': SB_KEY,
         'Authorization': 'Bearer ' + SB_KEY,
         'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates,return=minimal'
+        'Prefer': 'resolution=merge-duplicates,return=minimal,return=representation'
       },
       body: JSON.stringify(body)
     });
-    if (!res.ok) console.warn('[SB] POST', table, res.status);
+    // 409 = duplicate key — harmless since localStorage is primary store
+    if (!res.ok && res.status !== 409) console.warn('[SB] POST', table, res.status);
   } catch(e) { /* silent — localStorage is primary */ }
 }
 
@@ -15869,7 +15872,6 @@ async function sbLoadAll() {
       // Merge Supabase data into importedData.statcast (never wipe localStorage data)
       if (!importedData.statcast) importedData.statcast = {};
       if (!importedData.hitting)  importedData.hitting  = {};
-      var sbStatcastRows = [];
       statcast.forEach(function(r) {
         var appDate = r.date;
         if (/^\d{4}-\d{2}-\d{2}$/.test(r.date)) {
@@ -15877,25 +15879,24 @@ async function sbLoadAll() {
           appDate = parseInt(parts[1]) + '/' + parseInt(parts[2]) + '/' + parts[0];
         }
         if (!importedData.statcast[r.player_name]) importedData.statcast[r.player_name] = [];
-        var row = {
-          date: appDate, speed: r.speed || 0, heDist: r.he_dist || 0,
-          dist: r.total_dist || 0, midEff: r.mid_eff || 0, highEff: r.high_eff || 0,
-          bat: r.bat_speed || 0, exit: r.exit_velo || 0, throwV: r.throw_velo || 0
-        };
-        importedData.statcast[r.player_name].push(row);
-        loaded++;
-        // Add to parsedStatcastRows
-        sbStatcastRows.push({
-          name: r.player_name, date: appDate,
-          speed: r.speed || 0, heDist: r.he_dist || 0,
-          dist: r.total_dist || 0, midEff: r.mid_eff || 0, highEff: r.high_eff || 0,
-          bat: r.bat_speed || 0, exit: r.exit_velo || 0, throwV: r.throw_velo || 0
+        // Merge: prefer existing localStorage row values over Supabase zeros
+        var existing = importedData.statcast[r.player_name].find(function(x) {
+          return x.date === appDate || x.date === r.date;
         });
-      });
-      // Merge into parsedStatcastRows (avoiding dupes by player+date)
-      sbStatcastRows.forEach(function(r) {
-        if (!parsedStatcastRows.find(function(x){ return x.name === r.name && x.date === r.date; })) {
-          parsedStatcastRows.push(r);
+        if (existing) {
+          // Only update fields that are missing/zero in localStorage but present in Supabase
+          if (!existing.speed    && r.speed)      existing.speed    = r.speed;
+          if (!existing.heDist   && r.he_dist)    existing.heDist   = r.he_dist;
+          if (!existing.dist     && r.total_dist) existing.dist     = r.total_dist;
+          if (!existing.midEff   && r.mid_eff)    existing.midEff   = r.mid_eff;
+          if (!existing.highEff  && r.high_eff)   existing.highEff  = r.high_eff;
+        } else {
+          importedData.statcast[r.player_name].push({
+            date: appDate, speed: r.speed || 0, heDist: r.he_dist || 0,
+            dist: r.total_dist || 0, midEff: r.mid_eff || 0, highEff: r.high_eff || 0,
+            bat: r.bat_speed || 0, exit: r.exit_velo || 0, throwV: r.throw_velo || 0
+          });
+          loaded++;
         }
       });
       // Populate hitting data from statcast rows
