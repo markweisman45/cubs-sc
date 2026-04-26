@@ -2268,6 +2268,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13547,71 +13548,42 @@ function handleHittingCSVUpload(input) {
   reader.onload = function(e) {
     try {
       var rows = parseCSV(e.target.result);
-      if (!rows.length) { alert('No data found'); return; }
-
-      // Group by Batter + Game, take max EV and BSp
-      var grouped = {};
-      rows.forEach(function(row) {
-        var batter = (row['Batter'] || '').trim();
-        var date   = (row['Game']   || '').trim();
-        var ev     = parseFloat(row['EV']  || 0);
-        var bsp    = parseFloat(row['BSp'] || 0);
-        if (!batter || !date) return;
-        var key = batter + '|' + date;
-        if (!grouped[key]) grouped[key] = { batter:batter, date:date, ev:0, bsp:0 };
-        if (ev  > grouped[key].ev)  grouped[key].ev  = ev;
-        if (bsp > grouped[key].bsp) grouped[key].bsp = bsp;
+      // Group by Batter+Game → max EV, max BSp
+      var g = {};
+      rows.forEach(function(r) {
+        var b = (r['Batter']||'').trim(), d = (r['Game']||'').trim();
+        var ev = parseFloat(r['EV']||0), bs = parseFloat(r['BSp']||0);
+        if (!b||!d) return;
+        var k = b+'|'+d;
+        if (!g[k]) g[k]={b:b,d:d,ev:0,bs:0};
+        if (ev>g[k].ev) g[k].ev=ev;
+        if (bs>g[k].bs) g[k].bs=bs;
       });
-
-      // Load current data from localStorage directly
-      var stored = JSON.parse(localStorage.getItem('cubs_sc_imported_data_v1') || '{}');
-      if (!stored.hitting) stored.hitting = {};
-      var applied = 0, skipped = 0;
-
-      Object.values(grouped).forEach(function(g) {
-        var rosterName = HITTING_NAME_MAP[g.batter];
-        if (!rosterName) { skipped++; return; }
-        if (!stored.hitting[rosterName]) stored.hitting[rosterName] = [];
-        var idx = stored.hitting[rosterName].findIndex(function(x) {
-          return fmtDate(x.date) === fmtDate(g.date);
-        });
-        var entry = { date: g.date, bat: g.bsp, exit: g.ev, throwV: (idx >= 0 ? (stored.hitting[rosterName][idx].throwV || 0) : 0) };
-        if (idx >= 0) stored.hitting[rosterName][idx] = entry;
-        else stored.hitting[rosterName].push(entry);
-        applied++;
+      // Patch localStorage directly
+      var stored = JSON.parse(localStorage.getItem(IMPORTED_DATA_KEY)||'{}');
+      if (!stored.hitting) stored.hitting={};
+      var n=0;
+      Object.values(g).forEach(function(x) {
+        var name=HITTING_NAME_MAP[x.b]; if(!name) return;
+        if (!stored.hitting[name]) stored.hitting[name]=[];
+        var i=stored.hitting[name].findIndex(function(h){return fmtDate(h.date)===fmtDate(x.d);});
+        var tv = i>=0 ? (stored.hitting[name][i].throwV||0) : 0;
+        if (i>=0) stored.hitting[name][i]={date:x.d,bat:x.bs,exit:x.ev,throwV:tv};
+        else stored.hitting[name].push({date:x.d,bat:x.bs,exit:x.ev,throwV:0});
+        n++;
       });
-
-      // Save back to localStorage - only hitting key changed, statcast untouched
-      localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(stored));
-
-      // Update in-memory importedData.hitting only
-      importedData.hitting = stored.hitting;
-
-      // Sync to Supabase
-      if (typeof sbPost === 'function') {
-        Object.keys(stored.hitting).forEach(function(player) {
-          (stored.hitting[player]||[]).forEach(function(h) {
-            var d = new Date(h.date);
-            var iso = !isNaN(d) ? d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0') : h.date;
-            sbPost('statcast', { player_name:player, date:iso, bat_speed:h.bat||null, exit_velo:h.exit||null });
-          });
-        });
-      }
-
+      localStorage.setItem(IMPORTED_DATA_KEY, JSON.stringify(stored));
+      // Reload into memory and re-render
+      Object.assign(importedData, stored);
       applyStatcastData();
       rebuildCMJTrends();
       renderDashboard();
-      showStatus('Hitting CSV imported: ' + applied + ' player-game rows');
-      alert('Done! ' + applied + ' rows imported. ' + skipped + ' skipped.');
-
-    } catch(err) {
-      alert('Error: ' + err.message);
-      console.error(err);
-    }
+      showStatus('Hitting CSV: '+n+' rows imported');
+      alert('Done! '+n+' player-game rows imported.');
+    } catch(err) { alert('Error: '+err.message); }
   };
   reader.readAsText(file);
 }
-
 
 function handleThrowCSVUpload(input) {
   var file = input.files[0];
@@ -13621,67 +13593,40 @@ function handleThrowCSVUpload(input) {
   reader.onload = function(e) {
     try {
       var rows = parseCSV(e.target.result);
-      if (!rows.length) { alert('No data found'); return; }
-
-      // Group by Player + Game, take max ARM
-      var grouped = {};
-      rows.forEach(function(row) {
-        var player = (row['Player'] || '').trim();
-        var date   = (row['Game']   || '').trim();
-        var arm    = parseFloat(row['ARM'] || 0);
-        if (!player || !date) return;
-        var key = player + '|' + date;
-        if (!grouped[key]) grouped[key] = { player:player, date:date, arm:0 };
-        if (arm > grouped[key].arm) grouped[key].arm = arm;
+      // Group by Player+Game → max ARM
+      var g = {};
+      rows.forEach(function(r) {
+        var p=(r['Player']||'').trim(), d=(r['Game']||'').trim();
+        var arm=parseFloat(r['ARM']||0);
+        if (!p||!d) return;
+        var k=p+'|'+d;
+        if (!g[k]) g[k]={p:p,d:d,arm:0};
+        if (arm>g[k].arm) g[k].arm=arm;
       });
-
-      // Load current data from localStorage directly
-      var stored = JSON.parse(localStorage.getItem('cubs_sc_imported_data_v1') || '{}');
-      if (!stored.hitting) stored.hitting = {};
-      var applied = 0, skipped = 0;
-
-      Object.values(grouped).forEach(function(g) {
-        var rosterName = HITTING_NAME_MAP[g.player];
-        if (!rosterName) { skipped++; return; }
-        if (!stored.hitting[rosterName]) stored.hitting[rosterName] = [];
-        var idx = stored.hitting[rosterName].findIndex(function(x) {
-          return fmtDate(x.date) === fmtDate(g.date);
-        });
-        if (idx >= 0) {
-          stored.hitting[rosterName][idx].throwV = g.arm;
-        } else {
-          stored.hitting[rosterName].push({ date:g.date, bat:0, exit:0, throwV:g.arm });
-        }
-        applied++;
+      // Patch localStorage directly
+      var stored = JSON.parse(localStorage.getItem(IMPORTED_DATA_KEY)||'{}');
+      if (!stored.hitting) stored.hitting={};
+      var n=0;
+      Object.values(g).forEach(function(x) {
+        var name=HITTING_NAME_MAP[x.p]; if(!name) return;
+        if (!stored.hitting[name]) stored.hitting[name]=[];
+        var i=stored.hitting[name].findIndex(function(h){return fmtDate(h.date)===fmtDate(x.d);});
+        if (i>=0) stored.hitting[name][i].throwV=x.arm;
+        else stored.hitting[name].push({date:x.d,bat:0,exit:0,throwV:x.arm});
+        n++;
       });
-
-      // Save back to localStorage - only hitting key changed
-      localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(stored));
-      importedData.hitting = stored.hitting;
-
-      // Sync to Supabase
-      if (typeof sbPost === 'function') {
-        Object.keys(stored.hitting).forEach(function(player) {
-          (stored.hitting[player]||[]).forEach(function(h) {
-            var d = new Date(h.date);
-            var iso = !isNaN(d) ? d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0') : h.date;
-            sbPost('statcast', { player_name:player, date:iso, throw_velo:h.throwV||null });
-          });
-        });
-      }
-
+      localStorage.setItem(IMPORTED_DATA_KEY, JSON.stringify(stored));
+      Object.assign(importedData, stored);
       applyStatcastData();
       rebuildCMJTrends();
       renderDashboard();
-      showStatus('Throw velo imported: ' + applied + ' player-game rows');
-      alert('Done! ' + applied + ' rows imported. ' + skipped + ' skipped.');
-
-    } catch(err) {
-      alert('Error: ' + err.message);
-    }
+      showStatus('Throw velo: '+n+' rows imported');
+      alert('Done! '+n+' player-game rows imported.');
+    } catch(err) { alert('Error: '+err.message); }
   };
   reader.readAsText(file);
 }
+
 
 
 </script>
