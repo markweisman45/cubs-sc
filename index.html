@@ -2272,6 +2272,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -11012,26 +11013,36 @@ function handleStatcastUpload(input) {
 }
 
 function applyStatcastData() {
-  // Group by player from importedData.statcast (includes all historical + Supabase data)
-  // Also merge any new rows from parsedStatcastRows not yet in importedData
-  const byPlayer = {};
+  // Step 1: Load existing statcast from localStorage
+  var stored = JSON.parse(localStorage.getItem(IMPORTED_DATA_KEY)||'{}');
+  if (!stored.statcast) stored.statcast = {};
 
-  // First populate from importedData.statcast (the persistent store)
-  Object.keys(importedData.statcast || {}).forEach(function(name) {
-    byPlayer[name] = (importedData.statcast[name] || []).map(function(r) {
-      return { name: name, date: r.date, speed: r.speed, heDist: r.heDist,
-               dist: r.dist, midEff: r.midEff, highEff: r.highEff,
-               bat: r.bat, exit: r.exit, throwV: r.throwV };
-    });
-  });
-
-  // Then merge any NEW rows from parsedStatcastRows not yet saved
+  // Step 2: Merge parsedStatcastRows into stored.statcast
   parsedStatcastRows.forEach(function(r) {
-    if (!byPlayer[r.name]) byPlayer[r.name] = [];
-    var exists = byPlayer[r.name].find(function(x) {
+    if (!r.name) return;
+    if (!stored.statcast[r.name]) stored.statcast[r.name] = [];
+    var idx = stored.statcast[r.name].findIndex(function(x){
       return fmtDate(x.date) === fmtDate(r.date);
     });
-    if (!exists) byPlayer[r.name].push(r);
+    var clean = { date:r.date, speed:r.speed||0, heDist:r.heDist||0,
+      dist:r.dist||0, midEff:r.midEff||0, highEff:r.highEff||0,
+      bat:r.bat||0, exit:r.exit||0, throwV:r.throwV||0 };
+    if (idx>=0) stored.statcast[r.name][idx] = clean;
+    else stored.statcast[r.name].push(clean);
+  });
+
+  // Step 3: Save merged data back to localStorage
+  Object.assign(importedData, stored);
+  try { localStorage.setItem(IMPORTED_DATA_KEY, JSON.stringify(stored)); } catch(e){}
+
+  // Step 4: Build byPlayer from merged importedData.statcast
+  const byPlayer = {};
+  Object.keys(importedData.statcast || {}).forEach(function(name) {
+    byPlayer[name] = (importedData.statcast[name] || []).map(function(r) {
+      return { name:name, date:r.date, speed:r.speed||0, heDist:r.heDist||0,
+               dist:r.dist||0, midEff:r.midEff||0, highEff:r.highEff||0,
+               bat:r.bat||0, exit:r.exit||0, throwV:r.throwV||0 };
+    });
   });
 
   let applied = 0;
@@ -11043,7 +11054,7 @@ function applyStatcastData() {
     rows.sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
 
     // ── MERGE into existing stored statcast data (don't replace — add/update by date)
-    // Sort rows by date for processing (don't modify importedData.statcast)
+    // Sort by date
     rows.sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
     const allRows = rows;
 
@@ -11166,6 +11177,18 @@ function applyStatcastData() {
   const dateRange = allDates.length ? `${allDates[0]} → ${allDates[allDates.length-1]}` : '';
   logImport(`Statcast applied: ${applied} players, ${parsedStatcastRows.length} game records (${dateRange}). ACWR recalculated. Note: data only updates for dates in the CSV.`, 'success');
   showStatus(`✅ Statcast data applied for ${applied} player${applied!==1?'s':''}.`);
+  // Sync new rows to Supabase
+  if (typeof sbPost === 'function') {
+    Object.keys(importedData.statcast||{}).forEach(function(player) {
+      (importedData.statcast[player]||[]).forEach(function(r) {
+        var d = new Date(r.date);
+        var iso = !isNaN(d) ? d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0') : r.date;
+        sbPost('statcast', {player_name:player, date:iso, speed:r.speed||null,
+          he_dist:r.heDist||null, total_dist:r.dist||null,
+          mid_eff:r.midEff||null, high_eff:r.highEff||null});
+      });
+    });
+  }
   persistImportedData();
   renderDashboard();
   buildPlayerList();
@@ -13629,6 +13652,7 @@ function handleThrowCSVUpload(input) {
 
 init();
 loadCubsSchedule();
+
 
 
 
