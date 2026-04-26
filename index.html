@@ -2265,6 +2265,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13562,6 +13563,8 @@ function handleHittingCSVUpload(input) {
       });
 
       // Map to roster names and save to importedData.hitting
+      // Load full data from localStorage first so we don't overwrite statcast
+      loadPersistedData();
       if (!importedData.hitting) importedData.hitting = {};
       var applied = 0, skipped = 0;
 
@@ -13613,8 +13616,6 @@ function handleHittingCSVUpload(input) {
         });
       }
 
-      // Reload full importedData from localStorage before applying
-      loadPersistedData();
       applyStatcastData();
       rebuildCMJTrends();
       renderDashboard();
@@ -13652,6 +13653,8 @@ function handleThrowCSVUpload(input) {
         if (arm > grouped[key].arm) grouped[key].arm = arm;
       });
 
+      // Load full data from localStorage first so we don't overwrite statcast
+      loadPersistedData();
       if (!importedData.hitting) importedData.hitting = {};
       var applied = 0, skipped = 0;
 
@@ -13698,8 +13701,6 @@ function handleThrowCSVUpload(input) {
         });
       }
 
-      // Reload full importedData from localStorage before applying
-      loadPersistedData();
       applyStatcastData();
       rebuildCMJTrends();
       renderDashboard();
@@ -13715,6 +13716,7 @@ function handleThrowCSVUpload(input) {
 
 init();
 loadCubsSchedule();
+
 
 
 
