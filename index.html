@@ -2244,6 +2244,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -5204,10 +5205,30 @@ function init() {
   // Init day structure editors with defaults
   updateDayStructure();
   updateMesoDayStructure();
-  // If localStorage is empty (incognito/new browser), load from cloud immediately
-  // Otherwise wait 1s to let local render happen first
-  var hasLocalData = localStorage.getItem('cubs_sc_imported_data_v1') || localStorage.getItem('cubs_sc_wellness_v1');
-  setTimeout(function(){ sbLoadAll(); }, hasLocalData ? 1000 : 100);
+  // If no local data, wait for cloud before rendering
+  var hasLocalData = localStorage.getItem('cubs_sc_imported_data_v1') || 
+                     localStorage.getItem('cubs_sc_players_state_v1');
+  if (!hasLocalData) {
+    // Show loading overlay until Supabase data arrives
+    var overlay = document.createElement('div');
+    overlay.id = 'sb-loading-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg1,#0a0d14);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+    overlay.innerHTML = '<div style="font-family:Bebas Neue,sans-serif;font-size:32px;letter-spacing:2px;color:#0E3386;">CHICAGO CUBS S&C</div>'
+      + '<div style="font-size:14px;color:rgba(255,255,255,0.5);">Loading athlete data from cloud...</div>'
+      + '<div style="width:200px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">'
+      + '<div id="sb-load-bar" style="height:100%;width:0%;background:#0E3386;transition:width 3s ease;border-radius:2px;"></div></div>';
+    document.body.appendChild(overlay);
+    setTimeout(function(){ var b = document.getElementById('sb-load-bar'); if(b) b.style.width='90%'; }, 100);
+    sbLoadAll().then(function() {
+      var b = document.getElementById('sb-load-bar'); if(b) b.style.width='100%';
+      setTimeout(function(){
+        var o = document.getElementById('sb-loading-overlay');
+        if(o) o.remove();
+      }, 300);
+    });
+  } else {
+    setTimeout(function(){ sbLoadAll(); }, 1000);
+  }
 }
 
 function nameToId(name) { return name.replace(/[^a-zA-Z0-9]/g, '-'); }
@@ -13674,17 +13695,16 @@ async function sbLoadAll() {
       try { localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(importedData)); } catch(e){}
     }
 
-    // Apply statcast + hitting data to PLAYERS (hitting is now populated above)
+    // Apply statcast + hitting data to PLAYERS
     if (typeof applyStatcastData === 'function') applyStatcastData();
     if (typeof rebuildCMJTrends === 'function')  rebuildCMJTrends();
-
     if (typeof buildPlayerList === 'function') buildPlayerList();
-    // Re-select current player to force full re-render with new data
     if (typeof selectPlayer === 'function') selectPlayer(currentPlayer);
     showStatus('☁️ Cloud data synced (' + loaded + ' records)');
+    console.log('[SB] Done - ' + loaded + ' records loaded');
 
   } catch(err) {
-    console.warn('[SB] Cloud load failed — using local data:', err.message);
+    console.warn('[SB] Cloud load failed:', err.message);
   }
 }
 
@@ -13864,6 +13884,7 @@ async function fixSupabaseDates() {
 
 init();
 loadCubsSchedule();
+
 
 
 
