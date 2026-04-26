@@ -7575,6 +7575,24 @@ function renderReadinessHero(p) {
 }
 
 function renderKPIs(p) {
+  // Ensure latest statcast values are populated directly from localStorage
+  // This guarantees values show even if rebuildFromStatcast hasn't run yet
+  if (!p.latestSpeed || !p.latestDist) {
+    try {
+      var sc = JSON.parse(localStorage.getItem('cubs_sc_statcast_v1') || '{}');
+      var rows = sc[currentPlayer] || [];
+      if (rows.length) {
+        rows.sort(function(a,b){ return new Date(a.date) - new Date(b.date); });
+        var last = rows[rows.length - 1];
+        var lastWithSpeed = rows.slice().reverse().find(function(r){ return r.speed > 0; });
+        if (!p.latestSpeed && lastWithSpeed) p.latestSpeed = lastWithSpeed.speed;
+        if (!p.latestHE)   p.latestHE   = last.heDist || 0;
+        if (!p.latestDist) p.latestDist = last.dist   || 0;
+        // Also update bests
+        rows.forEach(function(r) { if (r.speed > (p.bests.speed||0)) p.bests.speed = r.speed; });
+      }
+    } catch(e) {}
+  }
   const b = p.bests;
   const set = (id, val, best, unit='') => {
     document.getElementById('kpi-'+id).textContent = val + unit;
@@ -7636,6 +7654,10 @@ function renderPBGrid(p) {
 }
 
 function renderPerfTable(p) {
+  // If recentGames is empty, rebuild directly from localStorage before rendering
+  if (!p.recentGames || !p.recentGames.length) {
+    rebuildFromStatcast();
+  }
   const tbody = document.getElementById('perfTableBody');
   const sc = s => s === 'GREEN' ? 'green' : s === 'RED' ? 'red' : 'yellow';
   tbody.innerHTML = p.recentGames.slice(-14).map(g => `
@@ -13659,7 +13681,9 @@ function handleStatcastUpload(input) {
 // Rebuild PLAYERS state (recentGames, latestSpeed, ACWR, etc.) from importedData.statcast+hitting.
 // Safe to call on page load when parsedStatcastRows is empty — works purely from stored data.
 function rebuildFromStatcast() {
-  if (!importedData.statcast) return;
+  if (!importedData.statcast) { console.log('[rebuild] importedData.statcast is empty — skipping'); return; }
+  var keys = Object.keys(importedData.statcast);
+  console.log('[rebuild] rebuilding from', keys.length, 'players:', keys);
 
   // Build byPlayer from importedData.statcast
   const byPlayer = {};
