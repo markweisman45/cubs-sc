@@ -13205,7 +13205,7 @@ function loadPersistedData() {
     }
     // Rebuild cmjTrends from persisted importedData so it survives file updates
     rebuildCMJTrends();
-    applyStatcastData();   // Recompute latestSpeed/latestJump etc from persisted importedData
+    rebuildFromStatcast(); // Recompute latestSpeed/latestJump etc from persisted importedData
     if (saved || savedState) {
       console.log('Restored imported data from localStorage');
     }
@@ -13654,28 +13654,12 @@ function handleStatcastUpload(input) {
   reader.readAsText(file);
 }
 
-function applyStatcastData() {
-  // Step 1: importedData.statcast is already loaded from STATCAST_KEY by loadAllData()
-  if (!importedData.statcast) importedData.statcast = {};
+// Rebuild PLAYERS state (recentGames, latestSpeed, ACWR, etc.) from importedData.statcast+hitting.
+// Safe to call on page load when parsedStatcastRows is empty — works purely from stored data.
+function rebuildFromStatcast() {
+  if (!importedData.statcast) return;
 
-  // Step 2: Merge parsedStatcastRows into importedData.statcast
-  parsedStatcastRows.forEach(function(r) {
-    if (!r.name) return;
-    if (!importedData.statcast[r.name]) importedData.statcast[r.name] = [];
-    var idx = importedData.statcast[r.name].findIndex(function(x){
-      return fmtDate(x.date) === fmtDate(r.date);
-    });
-    var clean = { date:r.date, speed:r.speed||0, heDist:r.heDist||0,
-      dist:r.dist||0, midEff:r.midEff||0, highEff:r.highEff||0,
-      bat:r.bat||0, exit:r.exit||0, throwV:r.throwV||0 };
-    if (idx>=0) importedData.statcast[r.name][idx] = clean;
-    else importedData.statcast[r.name].push(clean);
-  });
-
-  // Step 3: Save merged data to STATCAST_KEY
-  saveStatcast(); // Save only statcast — never touches hitting/CMJ
-
-  // Step 4: Build byPlayer from merged importedData.statcast
+  // Build byPlayer from importedData.statcast
   const byPlayer = {};
   Object.keys(importedData.statcast || {}).forEach(function(name) {
     byPlayer[name] = (importedData.statcast[name] || []).map(function(r) {
@@ -13690,15 +13674,9 @@ function applyStatcastData() {
     const p = PLAYERS[name];
     if (!p) return;
 
-    // Sort oldest → newest
-    rows.sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
-
-    // ── MERGE into existing stored statcast data (don't replace — add/update by date)
-    // Sort by date
     rows.sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
     const allRows = rows;
 
-    // ── MERGE into recentGames (don't replace — update existing dates, add new ones)
     if (!p.recentGames) p.recentGames = [];
     allRows.forEach(r => {
       const dateStr = fmtDate(r.date);
@@ -13721,39 +13699,30 @@ function applyStatcastData() {
         status:   existingGame?.status|| p.status         || 'YELLOW',
       };
       if (existingGame) {
-        Object.assign(existingGame, gameData); // update in place
+        Object.assign(existingGame, gameData);
       } else {
-        p.recentGames.push(gameData);          // add new date
+        p.recentGames.push(gameData);
       }
     });
-    // Re-sort chronologically
     p.recentGames.sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
-    // Use the full merged set for ACWR calculation
     const rows_for_acwr = allRows;
 
-    // Update latest values
     const last = rows_for_acwr[rows_for_acwr.length - 1];
-    // Track when data was last received
     p.lastDataDate = last.date;
     p.dataAgeDays  = Math.round((new Date() - safeParseDate(last.date)) / 86400000);
-    // Use most recent row that actually has a speed value
     const lastWithSpeed = [...rows_for_acwr].reverse().find(r => r.speed > 0);
     p.latestSpeed = lastWithSpeed ? lastWithSpeed.speed : (p.latestSpeed || 0);
     p.latestHE    = last.heDist;
     p.latestDist  = last.dist;
-    // Update bests across ALL historical data
     rows_for_acwr.forEach(r => { if (r.speed > (p.bests.speed||0)) p.bests.speed = r.speed; });
 
-    // Update hitting bests from all merged statcast+hitting data
     p.recentGames.forEach(g => {
       if (g.bat    && g.bat    > (p.bests.bat    || 0)) p.bests.bat    = g.bat;
       if (g.exit   && g.exit   > (p.bests.exit   || 0)) p.bests.exit   = g.exit;
       if (g.throwV && g.throwV > (p.bests.throwV || 0)) p.bests.throwV = g.throwV;
     });
 
-    // Compute ACWR from imported data (7-day acute / 14-day chronic)
     if (rows_for_acwr.length >= 2) {
-      // Always compute relative to TODAY — accounts for off days since last game
       const today = new Date(); today.setHours(0,0,0,0);
       const cutoff7  = new Date(today); cutoff7.setDate(cutoff7.getDate()-7);
       const cutoff14 = new Date(today); cutoff14.setDate(cutoff14.getDate()-14);
@@ -13763,41 +13732,28 @@ function applyStatcastData() {
       const chronic    = rows_for_acwr.filter(inW14).reduce((s,r)=>s+r.heDist,0);
       const chronicAvg = (chronic/14)*7;
       p.heAcwr = chronicAvg > 0 ? parseFloat((acute/chronicAvg).toFixed(3)) : 1.0;
-      // TD ACWR (7:14)
       const acuteT     = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.dist,0);
       const chronicT   = rows_for_acwr.filter(inW14).reduce((s,r)=>s+r.dist,0);
       const chronicTAvg = (chronicT/14)*7;
       p.tdAcwr = chronicTAvg > 0 ? parseFloat((acuteT/chronicTAvg).toFixed(3)) : 1.0;
-      p.acwr   = parseFloat(((p.heAcwr + p.tdAcwr) / 2).toFixed(3)); // combined = average of both
+      p.acwr   = parseFloat(((p.heAcwr + p.tdAcwr) / 2).toFixed(3));
 
-      // Update ACWR history
-      // Build rolling ACWR at each date point (7-day acute / 14-day chronic)
-      const historyRows = rows_for_acwr.slice(-30); // last 30 games for chart
+      const historyRows = rows_for_acwr.slice(-30);
       p.acwrHistory = historyRows.map(r => {
         const rDate    = safeParseDate(r.date);
         const cut7     = new Date(rDate); cut7.setDate(cut7.getDate() - 7);
         const cut14    = new Date(rDate); cut14.setDate(cut14.getDate() - 14);
-
         const heAcute  = rows_for_acwr.filter(x => safeParseDate(x.date) > cut7  && safeParseDate(x.date) <= rDate).reduce((s,x)=>s+x.heDist,0);
         const heChronic= rows_for_acwr.filter(x => safeParseDate(x.date) > cut14 && safeParseDate(x.date) <= rDate).reduce((s,x)=>s+x.heDist,0);
         const heChrAvg = (heChronic/14)*7;
         const heAcwr   = heChrAvg > 0 ? parseFloat((heAcute/heChrAvg).toFixed(3)) : 1.0;
-
         const tdAcute  = rows_for_acwr.filter(x => safeParseDate(x.date) > cut7  && safeParseDate(x.date) <= rDate).reduce((s,x)=>s+x.dist,0);
         const tdChronic= rows_for_acwr.filter(x => safeParseDate(x.date) > cut14 && safeParseDate(x.date) <= rDate).reduce((s,x)=>s+x.dist,0);
         const tdChrAvg = (tdChronic/14)*7;
         const tdAcwr   = tdChrAvg > 0 ? parseFloat((tdAcute/tdChrAvg).toFixed(3)) : 1.0;
-
-        return {
-          date: fmtDate(r.date),
-          he:   heAcwr,
-          td:   tdAcwr,
-          comb: parseFloat(((heAcwr+tdAcwr)/2).toFixed(3))
-        };
+        return { date: fmtDate(r.date), he: heAcwr, td: tdAcwr, comb: parseFloat(((heAcwr+tdAcwr)/2).toFixed(3)) };
       });
 
-      // Update status based on ACWR and readiness
-      // Recalculate readiness using latest wellness entry + new ACWR
       const lastWell = (wellnessLog[name] || []).slice(-1)[0];
       if (lastWell) {
         p.readiness = calcReadiness(lastWell.soreness, lastWell.energy, lastWell.sleep, p.acwr);
@@ -13809,11 +13765,36 @@ function applyStatcastData() {
         else                      p.status = 'GREEN';
       }
     }
-
     applied++;
   });
+  return applied;
+}
 
-  const allDates = parsedStatcastRows.map(r=>r.date).sort((a,b)=>new Date(a)-new Date(b));
+function applyStatcastData() {
+  // Step 1: importedData.statcast is already loaded from STATCAST_KEY by loadAllData()
+  if (!importedData.statcast) importedData.statcast = {};
+
+  // Step 2: Merge parsedStatcastRows into importedData.statcast
+  parsedStatcastRows.forEach(function(r) {
+    if (!r.name) return;
+    if (!importedData.statcast[r.name]) importedData.statcast[r.name] = [];
+    var idx = importedData.statcast[r.name].findIndex(function(x){
+      return fmtDate(x.date) === fmtDate(r.date);
+    });
+    var clean = { date:r.date, speed:r.speed||0, heDist:r.heDist||0,
+      dist:r.dist||0, midEff:r.midEff||0, highEff:r.highEff||0,
+      bat:r.bat||0, exit:r.exit||0, throwV:r.throwV||0 };
+    if (idx>=0) importedData.statcast[r.name][idx] = clean;
+    else importedData.statcast[r.name].push(clean);
+  });
+
+  // Step 3: Save merged data to STATCAST_KEY
+  saveStatcast(); // Save only statcast — never touches hitting/CMJ
+
+  // Step 4: Rebuild PLAYERS state from all stored statcast data
+  const applied = rebuildFromStatcast();
+
+    const allDates = parsedStatcastRows.map(r=>r.date).sort((a,b)=>new Date(a)-new Date(b));
   const dateRange = allDates.length ? `${allDates[0]} → ${allDates[allDates.length-1]}` : '';
   logImport(`Statcast applied: ${applied} players, ${parsedStatcastRows.length} game records (${dateRange}). ACWR recalculated. Note: data only updates for dates in the CSV.`, 'success');
   showStatus(`✅ Statcast data applied for ${applied} player${applied!==1?'s':''}.`);
@@ -15963,7 +15944,7 @@ async function sbLoadAll() {
 
     // Recompute all derived data from raw Supabase data
     try {
-      applyStatcastData();
+      rebuildFromStatcast();
       rebuildCMJTrends();
       computeACWRForAll();
       persistImportedData();
@@ -16231,7 +16212,7 @@ function handleHittingCSVUpload(input) {
         n++;
       });
       saveHitting(); // Save to HITTING_KEY
-      applyStatcastData();
+      rebuildFromStatcast();
       rebuildCMJTrends();
       renderDashboard();
       showStatus('Hitting CSV: '+n+' rows imported');
@@ -16271,7 +16252,7 @@ function handleThrowCSVUpload(input) {
         n++;
       });
       saveHitting(); // Save to HITTING_KEY
-      applyStatcastData();
+      rebuildFromStatcast();
       rebuildCMJTrends();
       renderDashboard();
       showStatus('Throw velo: '+n+' rows imported');
