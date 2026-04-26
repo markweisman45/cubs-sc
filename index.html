@@ -2245,6 +2245,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -5512,6 +5513,26 @@ function computeMonotonyStrain(playerName) {
 
 // ── Compute ACWR live from importedData.statcast relative to TODAY
 // This always accounts for off days since the last game
+
+function computeACWRForAll() {
+  Object.keys(PLAYERS).forEach(function(name) {
+    var live = computeLiveACWR(name);
+    if (live) {
+      PLAYERS[name].acwr      = live.acwr;
+      PLAYERS[name].heAcwr    = live.heAcwr;
+      PLAYERS[name].tdAcwr    = live.tdAcwr;
+      PLAYERS[name].acwrHistory = live.history || [];
+    }
+    // Update daysSinceCMJ
+    var trends = PLAYERS[name].cmjTrends || [];
+    if (trends.length) {
+      var last = trends[trends.length-1];
+      var lastDate = safeParseDate(last.date);
+      PLAYERS[name].daysSinceCMJ = Math.round((new Date() - lastDate) / 86400000);
+    }
+  });
+}
+
 function computeLiveACWR(playerName) {
   const rows = (importedData.statcast[playerName] || [])
     .sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
@@ -13695,16 +13716,26 @@ async function sbLoadAll() {
       try { localStorage.setItem('cubs_sc_imported_data_v1', JSON.stringify(importedData)); } catch(e){}
     }
 
-    // Apply statcast + hitting data to PLAYERS
+    // Recompute everything from raw data
     if (typeof applyStatcastData === 'function') applyStatcastData();
-    if (typeof rebuildCMJTrends === 'function')  rebuildCMJTrends();
+    if (typeof rebuildCMJTrends  === 'function') rebuildCMJTrends();
+    if (typeof computeACWRForAll === 'function') computeACWRForAll();
+
+    // Re-render full dashboard
     if (typeof buildPlayerList === 'function') buildPlayerList();
-    if (typeof selectPlayer === 'function') selectPlayer(currentPlayer);
+    if (typeof renderDashboard === 'function') renderDashboard();
+
+    // Persist computed state to localStorage for next load
+    if (typeof persistImportedData === 'function') persistImportedData();
+
     showStatus('☁️ Cloud data synced (' + loaded + ' records)');
     console.log('[SB] Done - ' + loaded + ' records loaded');
 
   } catch(err) {
     console.warn('[SB] Cloud load failed:', err.message);
+    // Remove loading overlay even on error
+    var o = document.getElementById('sb-loading-overlay');
+    if (o) o.remove();
   }
 }
 
@@ -13884,6 +13915,7 @@ async function fixSupabaseDates() {
 
 init();
 loadCubsSchedule();
+
 
 
 
