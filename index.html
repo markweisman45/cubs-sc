@@ -2238,6 +2238,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -11620,13 +11621,14 @@ function applyHittingData() {
   logImport(`Hitting data applied: ${applied} records.`, applied>0?'success':'warn');
   showStatus(`✅ Hitting data applied for ${applied} record${applied!==1?'s':''}.`);
   persistImportedData();
-  // Sync hitting data to Supabase
+  // Sync hitting data to Supabase (normalize date format to match statcast rows)
   if (typeof sbPost === 'function') {
     var hitRows = importedData.hitting || {};
     Object.keys(hitRows).forEach(function(player) {
       (hitRows[player] || []).forEach(function(h) {
         sbPost('statcast', {
-          player_name: player, date: h.date,
+          player_name: player,
+          date: typeof fmtDate === 'function' ? fmtDate(h.date) : h.date,
           bat_speed: h.bat || null, exit_velo: h.exit || null, throw_velo: h.throwV || null
         });
       });
@@ -13717,7 +13719,8 @@ async function migrateToCloud() {
   var allHitRows2 = [];
   for (var _hp2 in hitData2) {
     (hitData2[_hp2] || []).forEach(function(h) {
-      allHitRows2.push({ player_name: _hp2, date: h.date,
+      allHitRows2.push({ player_name: _hp2,
+        date: typeof fmtDate === 'function' ? fmtDate(h.date) : h.date,
         bat_speed: h.bat || null, exit_velo: h.exit || null, throw_velo: h.throwV || null });
     });
   }
@@ -13797,6 +13800,7 @@ async function migrateToCloud() {
 
 init();
 loadCubsSchedule();
+
 
 
 
