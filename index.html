@@ -2270,6 +2270,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -11040,18 +11041,9 @@ function applyStatcastData() {
     rows.sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
 
     // ── MERGE into existing stored statcast data (don't replace — add/update by date)
-    if (!importedData.statcast[name]) importedData.statcast[name] = [];
-    rows.forEach(newRow => {
-      const existing = importedData.statcast[name].findIndex(r => r.date === newRow.date);
-      if (existing >= 0) {
-        importedData.statcast[name][existing] = newRow; // update existing date
-      } else {
-        importedData.statcast[name].push(newRow);       // add new date
-      }
-    });
-    // Re-sort merged data
-    importedData.statcast[name].sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
-    const allRows = importedData.statcast[name];
+    // Sort rows by date for processing (don't modify importedData.statcast)
+    rows.sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+    const allRows = rows;
 
     // ── MERGE into recentGames (don't replace — update existing dates, add new ones)
     if (!p.recentGames) p.recentGames = [];
@@ -13634,6 +13626,7 @@ function handleThrowCSVUpload(input) {
 
 init();
 loadCubsSchedule();
+
 
 </script>
 
