@@ -2274,6 +2274,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13674,14 +13675,36 @@ function saveCMJ() {
   } catch(e){}
 }
 function loadAllData() {
+  // Try new separate keys first
   try { importedData.statcast = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}'); } catch(e){}
   try { importedData.hitting  = JSON.parse(localStorage.getItem(HITTING_KEY)||'{}');  } catch(e){}
   try { importedData.cmj      = JSON.parse(localStorage.getItem(CMJ_KEY)||'{}');      } catch(e){}
   try { importedData.abcmj    = JSON.parse(localStorage.getItem(ABCMJ_KEY)||'{}');    } catch(e){}
+
+  // Migrate from old combined key if new keys are empty
+  var needsMigration = !Object.keys(importedData.statcast||{}).length &&
+                       !Object.keys(importedData.cmj||{}).length;
+  if (needsMigration) {
+    try {
+      var old = JSON.parse(localStorage.getItem(IMPORTED_DATA_KEY)||'{}');
+      if (old.statcast && Object.keys(old.statcast).length) {
+        importedData.statcast = old.statcast;
+        importedData.hitting  = old.hitting  || {};
+        importedData.cmj      = old.cmj      || {};
+        importedData.abcmj    = old.abcmj    || {};
+        // Save to new keys
+        saveStatcast();
+        saveHitting();
+        saveCMJ();
+        console.log('[Migration] Moved data from old key to new separate keys');
+      }
+    } catch(e) {}
+  }
 }
 
 init();
 loadCubsSchedule();
+
 
 
 
