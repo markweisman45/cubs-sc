@@ -2277,6 +2277,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -10544,7 +10545,12 @@ function loadPersistedData() {
     const saved = localStorage.getItem(IMPORTED_DATA_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed && typeof parsed === 'object') Object.assign(importedData, parsed);
+      if (parsed && typeof parsed === 'object') {
+        // Only restore non-data fields from old key — data comes from separate keys
+        // Don't overwrite statcast/hitting/cmj/abcmj which loadAllData already loaded
+        const { statcast, hitting, cmj, abcmj, ...rest } = parsed;
+        Object.assign(importedData, rest);
+      }
     }
     const savedState = localStorage.getItem(PLAYERS_STATE_KEY);
     if (savedState) {
@@ -13708,6 +13714,7 @@ function loadAllData() {
 
 init();
 loadCubsSchedule();
+
 
 
 
