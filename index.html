@@ -2246,6 +2246,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13732,10 +13733,15 @@ async function sbLoadAll() {
     console.log('[SB] Done - ' + loaded + ' records loaded');
 
   } catch(err) {
-    console.warn('[SB] Cloud load failed:', err.message);
+    console.warn('[SB] Cloud load failed:', err.message, err.stack);
     // Remove loading overlay even on error
     var o = document.getElementById('sb-loading-overlay');
     if (o) o.remove();
+    // Try to render with whatever data we have
+    try {
+      if (typeof buildPlayerList === 'function') buildPlayerList();
+      if (typeof renderDashboard === 'function') renderDashboard();
+    } catch(e2) { console.warn('[SB] Render fallback failed:', e2.message); }
   }
 }
 
@@ -13913,8 +13919,27 @@ async function fixSupabaseDates() {
   alert('Done! Fixed ' + fixed + ' rows. All dates now in ISO format.');
 }
 
+
+function getCSSColors() {
+  var style = getComputedStyle(document.documentElement);
+  return {
+    text1:  style.getPropertyValue('--text1').trim()  || 'rgba(255,255,255,0.95)',
+    text2:  style.getPropertyValue('--text2').trim()  || 'rgba(255,255,255,0.6)',
+    text3:  style.getPropertyValue('--text3').trim()  || 'rgba(255,255,255,0.35)',
+    bg1:    style.getPropertyValue('--bg1').trim()    || '#0a0d14',
+    bg2:    style.getPropertyValue('--bg2').trim()    || '#111318',
+    bg3:    style.getPropertyValue('--bg3').trim()    || '#1a1d24',
+    blue:   style.getPropertyValue('--blue').trim()   || '#3B7AC4',
+    green:  style.getPropertyValue('--green').trim()  || '#22c55e',
+    yellow: style.getPropertyValue('--yellow').trim() || '#f59e0b',
+    red:    style.getPropertyValue('--red').trim()    || '#ef4444',
+    border: style.getPropertyValue('--border').trim() || 'rgba(255,255,255,0.08)'
+  };
+}
+
 init();
 loadCubsSchedule();
+
 
 
 
