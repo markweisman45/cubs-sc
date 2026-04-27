@@ -2228,7 +2228,13 @@ body {
 
 <script>
 
-
+// ══════════════════════════════════════════════
+// STORAGE KEYS — declared first to guarantee availability everywhere
+// ══════════════════════════════════════════════
+var STATCAST_KEY = 'cubs_sc_statcast_v1';
+var HITTING_KEY  = 'cubs_sc_hitting_v1';
+var CMJ_KEY      = 'cubs_sc_cmj_v1';
+var ABCMJ_KEY    = 'cubs_sc_abcmj_v1';
 
 
 
@@ -13271,11 +13277,6 @@ function loadCubsSchedule() {
 // ══════════════════════════════════════════════
 // START
 // ══════════════════════════════════════════════
-
-var STATCAST_KEY = 'cubs_sc_statcast_v1';
-var HITTING_KEY  = 'cubs_sc_hitting_v1';
-var CMJ_KEY      = 'cubs_sc_cmj_v1';
-var ABCMJ_KEY    = 'cubs_sc_abcmj_v1';
 
 function saveStatcast() {
   try { localStorage.setItem(STATCAST_KEY, JSON.stringify(importedData.statcast||{})); } catch(e){}
