@@ -10818,12 +10818,10 @@ function persistImportedData() {
         latestSpeed: p.latestSpeed, latestHE: p.latestHE, latestDist: p.latestDist,
         latestBat: p.latestBat, latestExit: p.latestExit, latestThrow: p.latestThrow,
         daysSinceCMJ: p.daysSinceCMJ, lastDataDate: p.lastDataDate, dataAgeDays: p.dataAgeDays,
-        bests:        JSON.parse(JSON.stringify(p.bests)),
-        acwrHistory:  JSON.parse(JSON.stringify(p.acwrHistory  || [])),
-        recentGames:  JSON.parse(JSON.stringify(p.recentGames  || [])),
-        recentGames: JSON.parse(JSON.stringify(p.recentGames || [])),
+        bests:       JSON.parse(JSON.stringify(p.bests)),
         acwrHistory: JSON.parse(JSON.stringify(p.acwrHistory || [])),
-        cmjTrends: JSON.parse(JSON.stringify(p.cmjTrends || [])),
+        recentGames: JSON.parse(JSON.stringify(p.recentGames || [])),
+        cmjTrends:   JSON.parse(JSON.stringify(p.cmjTrends   || [])),
       };
     });
     localStorage.setItem(PLAYERS_STATE_KEY, JSON.stringify(state));
@@ -10862,7 +10860,46 @@ function loadPersistedData() {
     }
     // Rebuild cmjTrends from persisted importedData so it survives file updates
     rebuildCMJTrends();
-    applyStatcastData();   // Recompute latestSpeed/latestJump etc from persisted importedData
+    // On startup: only rebuild latest values from stored statcast — skip heavy ACWR recalc
+    // (ACWR history was already saved to PLAYERS_STATE_KEY by persistImportedData)
+    Object.entries(importedData.statcast || {}).forEach(([name, rows]) => {
+      const p = PLAYERS[name]; if (!p || !rows.length) return;
+      const sorted = rows.slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+      const last = sorted[sorted.length - 1];
+      const lastWithSpeed = [...sorted].reverse().find(r => r.speed > 0);
+      if (lastWithSpeed) p.latestSpeed = lastWithSpeed.speed;
+      p.latestHE   = last.heDist;
+      p.latestDist = last.dist;
+      p.lastDataDate = last.date;
+      p.dataAgeDays  = Math.round((new Date() - safeParseDate(last.date)) / 86400000);
+      // Merge statcast into recentGames only for dates not already present
+      if (!p.recentGames) p.recentGames = [];
+      sorted.forEach(r => {
+        const dateStr = fmtDate(r.date);
+        const hit = (importedData.hitting[name] || []).find(h => fmtDate(h.date) === dateStr) || {};
+        const existing = p.recentGames.find(g => g.date === dateStr);
+        if (existing) {
+          // Patch statcast fields only — preserve hitting/cmj fields already there
+          existing.speed  = r.speed;
+          existing.he     = r.heDist;
+          existing.dist   = r.dist;
+          existing.midEff = r.midEff;
+          existing.highEff = r.highEff;
+          if (hit.bat)    existing.bat    = hit.bat;
+          if (hit.exit)   existing.exit   = hit.exit;
+          if (hit.throwV) existing.throwV = hit.throwV;
+        } else {
+          p.recentGames.push({
+            date: dateStr, speed: r.speed, he: r.heDist, dist: r.dist,
+            midEff: r.midEff, highEff: r.highEff,
+            bat: hit.bat||0, exit: hit.exit||0, throwV: hit.throwV||0,
+            jump: p.latestJump||0, ppbm: p.latestPPBM||0,
+            readiness: p.readiness||1.0, acwr: p.acwr||1.0, status: p.status||'YELLOW'
+          });
+        }
+      });
+      p.recentGames.sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+    });
     if (saved || savedState) {
       console.log('Restored imported data from localStorage');
     }
@@ -11407,24 +11444,26 @@ function applyStatcastData() {
       p.tdAcwr = chronicTAvg > 0 ? parseFloat((acuteT/chronicTAvg).toFixed(3)) : 1.0;
       p.acwr   = parseFloat(((p.heAcwr + p.tdAcwr) / 2).toFixed(3)); // combined = average of both
 
-      // Update ACWR history
-      // Build rolling ACWR at each date point (7-day acute / 14-day chronic)
+      // Update ACWR history — O(n) single pass (pre-cache dates to avoid repeated safeParseDate)
       const historyRows = rows_for_acwr.slice(-30); // last 30 games for chart
-      p.acwrHistory = historyRows.map(r => {
-        const rDate    = safeParseDate(r.date);
-        const cut7     = new Date(rDate); cut7.setDate(cut7.getDate() - 7);
-        const cut14    = new Date(rDate); cut14.setDate(cut14.getDate() - 14);
-
-        const heAcute  = rows_for_acwr.filter(x => safeParseDate(x.date) > cut7  && safeParseDate(x.date) <= rDate).reduce((s,x)=>s+x.heDist,0);
-        const heChronic= rows_for_acwr.filter(x => safeParseDate(x.date) > cut14 && safeParseDate(x.date) <= rDate).reduce((s,x)=>s+x.heDist,0);
-        const heChrAvg = (heChronic/14)*7;
-        const heAcwr   = heChrAvg > 0 ? parseFloat((heAcute/heChrAvg).toFixed(3)) : 1.0;
-
-        const tdAcute  = rows_for_acwr.filter(x => safeParseDate(x.date) > cut7  && safeParseDate(x.date) <= rDate).reduce((s,x)=>s+x.dist,0);
-        const tdChronic= rows_for_acwr.filter(x => safeParseDate(x.date) > cut14 && safeParseDate(x.date) <= rDate).reduce((s,x)=>s+x.dist,0);
-        const tdChrAvg = (tdChronic/14)*7;
-        const tdAcwr   = tdChrAvg > 0 ? parseFloat((tdAcute/tdChrAvg).toFixed(3)) : 1.0;
-
+      const _parsedDates = rows_for_acwr.map(r => safeParseDate(r.date).getTime());
+      p.acwrHistory = historyRows.map((r, _hi) => {
+        const rTime = safeParseDate(r.date).getTime();
+        const ms7   = 7  * 86400000;
+        const ms14  = 14 * 86400000;
+        let heA=0, heC=0, tdA=0, tdC=0;
+        rows_for_acwr.forEach((x, xi) => {
+          const t = _parsedDates[xi];
+          if (t <= rTime) {
+            const diff = rTime - t;
+            if (diff < ms7)  { heA += x.heDist; tdA += x.dist; }
+            if (diff < ms14) { heC += x.heDist; tdC += x.dist; }
+          }
+        });
+        const heChrAvg = (heC/14)*7;
+        const tdChrAvg = (tdC/14)*7;
+        const heAcwr = heChrAvg > 0 ? parseFloat((heA/heChrAvg).toFixed(3)) : 1.0;
+        const tdAcwr = tdChrAvg > 0 ? parseFloat((tdA/tdChrAvg).toFixed(3)) : 1.0;
         return {
           date: fmtDate(r.date),
           he:   heAcwr,
