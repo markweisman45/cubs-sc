@@ -678,7 +678,8 @@ body {
       <!-- OVERVIEW TAB -->
       <div id="dash-overview" class="page active">
 
-        <div class="grid-hero">
+        <!-- ROW 1: Readiness Hero + ACWR side by side -->
+        <div class="grid-hero" style="margin-bottom:16px;">
           <!-- READINESS HERO -->
           <div class="readiness-hero yellow-status" id="readinessHero">
             <div class="readiness-glow"></div>
@@ -703,107 +704,44 @@ body {
             <div id="readinessTrend" style="font-size:12px;font-weight:600;margin-top:8px;text-align:center;"></div>
           </div>
 
-          <!-- KPI STRIP -->
+          <!-- ACWR + Readiness Trend stacked on right -->
           <div style="display:flex;flex-direction:column;gap:16px;">
-            <div class="grid-4">
-              <div class="stat-card">
-                <div class="card-title">CMJ Jump</div>
-                <div class="stat-val" id="kpi-jump">53.0 cm</div>
-                <div class="stat-sub">Latest CMJ</div>
-                <div class="stat-delta neu" id="kpi-jump-d">vs best</div>
-              </div>
-              <div class="stat-card">
-                <div class="card-title">ABCMJ Jump</div>
-                <div class="stat-val" id="kpi-abjump">— cm</div>
-                <div class="stat-sub">Latest ABCMJ</div>
-                <div class="stat-delta neu" id="kpi-abjump-d">vs best</div>
-              </div>
-              <div class="stat-card">
-                <div class="card-title">PP/BM</div>
-                <div class="stat-val" id="kpi-ppbm">66.6</div>
-                <div class="stat-sub">W/kg</div>
-                <div class="stat-delta neu" id="kpi-ppbm-d">vs best</div>
-              </div>
-              <div class="stat-card">
-                <div class="card-title">Top Speed</div>
-                <div class="stat-val" id="kpi-speed">29.7</div>
-                <div class="stat-sub">ft/s</div>
-                <div class="stat-delta neu" id="kpi-speed-d">vs best</div>
-              </div>
-              <div class="stat-card">
-                <div class="card-title">Exit Velo</div>
-                <div class="stat-val" id="kpi-exit">98.4</div>
-                <div class="stat-sub">mph</div>
-                <div class="stat-delta neu" id="kpi-exit-d">vs best</div>
+            <div class="card" style="flex:1;">
+              <div class="card-title">ACWR — High Effort + Total Distance</div>
+              <div class="acwr-display" id="acwrDisplay">
+                <div>
+                  <div class="acwr-num caution" id="acwrNum">1.064</div>
+                  <div class="acwr-zone caution" id="acwrZone">OPTIMAL RANGE</div>
+                </div>
+                <div style="flex:1;">
+                  <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:4px;">
+                    <span>0.6</span><span>0.8</span><span>1.0</span><span>1.2</span><span>1.5+</span>
+                  </div>
+                  <div class="acwr-scale">
+                    <div class="acwr-marker" id="acwrMarker" style="left:60%;"></div>
+                  </div>
+                  <div style="font-size:10px;color:var(--text3);margin-top:8px;">
+                    HE ACWR: <span id="heAcwr" style="color:var(--text);">1.02</span> · 
+                    TD ACWR: <span id="tdAcwr" style="color:var(--text);">1.13</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="grid-4">
-              <div class="stat-card">
-                <div class="card-title">Bat Speed</div>
-                <div class="stat-val" id="kpi-bat">71.0</div>
-                <div class="stat-sub">mph</div>
-                <div class="stat-delta neu" id="kpi-bat-d">vs best</div>
-              </div>
-              <div class="stat-card">
-                <div class="card-title">Throw Velo</div>
-                <div class="stat-val" id="kpi-throw">72.0</div>
-                <div class="stat-sub">mph</div>
-                <div class="stat-delta neu" id="kpi-throw-d">vs best</div>
-              </div>
-              <div class="stat-card">
-                <div class="card-title">HE Distance</div>
-                <div class="stat-val" id="kpi-he">466</div>
-                <div class="stat-sub">ft last game</div>
-                <div class="stat-delta neu">high effort</div>
-              </div>
-              <div class="stat-card">
-                <div class="card-title">Total Distance</div>
-                <div class="stat-val" id="kpi-dist">1,566</div>
-                <div class="stat-sub">ft last game</div>
-                <div class="stat-delta neu">total</div>
-              </div>
+            <div class="card" style="flex:1;">
+              <div class="card-title">Readiness — Last 14 Days</div>
+              <div class="chart-wrap"><canvas id="readinessMiniChart"></canvas></div>
             </div>
           </div>
         </div>
 
-        <!-- PERSONAL BESTS -->
+        <!-- ROW 2: Personal Bests full width -->
         <div class="card section-mb">
           <div class="card-title">🏆 Personal Bests</div>
           <div class="pb-grid" id="pbGrid"></div>
         </div>
 
-        <!-- READINESS TREND MINI -->
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title">Readiness — Last 14 Days</div>
-            <div class="chart-wrap"><canvas id="readinessMiniChart"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-title">ACWR — High Effort + Total Distance</div>
-            <div class="acwr-display" id="acwrDisplay">
-              <div>
-                <div class="acwr-num caution" id="acwrNum">1.064</div>
-                <div class="acwr-zone caution" id="acwrZone">OPTIMAL RANGE</div>
-              </div>
-              <div style="flex:1;">
-                <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:4px;">
-                  <span>0.6</span><span>0.8</span><span>1.0</span><span>1.2</span><span>1.5+</span>
-                </div>
-                <div class="acwr-scale">
-                  <div class="acwr-marker" id="acwrMarker" style="left:60%;"></div>
-                </div>
-                <div style="font-size:10px;color:var(--text3);margin-top:8px;">
-                  HE ACWR: <span id="heAcwr" style="color:var(--text);">1.02</span> · 
-                  TD ACWR: <span id="tdAcwr" style="color:var(--text);">1.13</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-        <!-- BW TREND CHART -->
-        <div class="card section-mb" style="margin-top:16px;">
+        <!-- ROW 3: Body Weight Trend -->
+        <div class="card section-mb">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
             <div class="card-title" style="margin:0;">⚖️ Body Weight Trend (lbs)</div>
             <div id="bwTrendStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
@@ -813,6 +751,8 @@ body {
 
         <!-- PITCHER PANEL -->
         <div id="pitcherPanel" style="display:none;"></div>
+
+      </div>
       <!-- PERFORMANCE TAB -->
       <div id="dash-performance" class="page">
         <div class="card section-mb">
