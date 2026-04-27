@@ -2283,6 +2283,9 @@ body {
 
 
 
+
+
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13578,34 +13581,32 @@ function handleHittingCSVUpload(input) {
   reader.onload = function(e) {
     try {
       var rows = parseCSV(e.target.result);
-      // Group by Batter+Game → max EV, max BSp
       var g = {};
       rows.forEach(function(r) {
-        var b = (r['Batter']||'').trim(), d = (r['Game']||'').trim();
-        var ev = parseFloat(r['EV']||0), bs = parseFloat(r['BSp']||0);
+        var b=(r['Batter']||'').trim(), d=(r['Game']||'').trim();
+        var ev=parseFloat(r['EV']||0), bs=parseFloat(r['BSp']||0);
         if (!b||!d) return;
-        var k = b+'|'+d;
+        var k=b+'|'+d;
         if (!g[k]) g[k]={b:b,d:d,ev:0,bs:0};
         if (ev>g[k].ev) g[k].ev=ev;
         if (bs>g[k].bs) g[k].bs=bs;
       });
-      // Patch localStorage directly
-      var stored = JSON.parse(localStorage.getItem(IMPORTED_DATA_KEY)||'{}');
-      if (!stored.hitting) stored.hitting={};
+      // Load ONLY from HITTING_KEY — never touch IMPORTED_DATA_KEY or STATCAST_KEY
+      var hitData = JSON.parse(localStorage.getItem(HITTING_KEY)||'{}');
       var n=0;
       Object.values(g).forEach(function(x) {
         var name=HITTING_NAME_MAP[x.b]; if(!name) return;
-        if (!stored.hitting[name]) stored.hitting[name]=[];
-        var i=stored.hitting[name].findIndex(function(h){return fmtDate(h.date)===fmtDate(x.d);});
-        var tv = i>=0 ? (stored.hitting[name][i].throwV||0) : 0;
-        if (i>=0) stored.hitting[name][i]={date:x.d,bat:x.bs,exit:x.ev,throwV:tv};
-        else stored.hitting[name].push({date:x.d,bat:x.bs,exit:x.ev,throwV:0});
+        if (!hitData[name]) hitData[name]=[];
+        var i=hitData[name].findIndex(function(h){return fmtDate(h.date)===fmtDate(x.d);});
+        var tv=i>=0?(hitData[name][i].throwV||0):0;
+        if (i>=0) hitData[name][i]={date:x.d,bat:x.bs,exit:x.ev,throwV:tv};
+        else hitData[name].push({date:x.d,bat:x.bs,exit:x.ev,throwV:0});
         n++;
       });
-      localStorage.setItem(IMPORTED_DATA_KEY, JSON.stringify(stored));
-      // Reload into memory and re-render
-      Object.assign(importedData, stored);
-      // Reload statcast from dedicated key before applying
+      // Save ONLY to HITTING_KEY
+      localStorage.setItem(HITTING_KEY, JSON.stringify(hitData));
+      importedData.hitting = hitData;
+      // Load statcast fresh (don't touch it)
       importedData.statcast = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
       applyStatcastData();
       rebuildCMJTrends();
@@ -13617,6 +13618,7 @@ function handleHittingCSVUpload(input) {
   reader.readAsText(file);
 }
 
+
 function handleThrowCSVUpload(input) {
   var file = input.files[0];
   if (!file) return;
@@ -13625,7 +13627,6 @@ function handleThrowCSVUpload(input) {
   reader.onload = function(e) {
     try {
       var rows = parseCSV(e.target.result);
-      // Group by Player+Game → max ARM
       var g = {};
       rows.forEach(function(r) {
         var p=(r['Player']||'').trim(), d=(r['Game']||'').trim();
@@ -13635,42 +13636,31 @@ function handleThrowCSVUpload(input) {
         if (!g[k]) g[k]={p:p,d:d,arm:0};
         if (arm>g[k].arm) g[k].arm=arm;
       });
-      // Patch localStorage directly
-      var stored = JSON.parse(localStorage.getItem(IMPORTED_DATA_KEY)||'{}');
-      if (!stored.hitting) stored.hitting={};
+      // Load ONLY from HITTING_KEY
+      var hitData = JSON.parse(localStorage.getItem(HITTING_KEY)||'{}');
       var n=0;
       Object.values(g).forEach(function(x) {
         var name=HITTING_NAME_MAP[x.p]; if(!name) return;
-        if (!stored.hitting[name]) stored.hitting[name]=[];
-        var i=stored.hitting[name].findIndex(function(h){return fmtDate(h.date)===fmtDate(x.d);});
-        if (i>=0) stored.hitting[name][i].throwV=x.arm;
-        else stored.hitting[name].push({date:x.d,bat:0,exit:0,throwV:x.arm});
+        if (!hitData[name]) hitData[name]=[];
+        var i=hitData[name].findIndex(function(h){return fmtDate(h.date)===fmtDate(x.d);});
+        if (i>=0) hitData[name][i].throwV=x.arm;
+        else hitData[name].push({date:x.d,bat:0,exit:0,throwV:x.arm});
         n++;
       });
-      importedData.hitting = stored.hitting;
-      saveHitting(); // Save only hitting
-      // Reload statcast from dedicated key before applying
+      // Save ONLY to HITTING_KEY
+      localStorage.setItem(HITTING_KEY, JSON.stringify(hitData));
+      importedData.hitting = hitData;
+      // Load statcast fresh (don't touch it)
       importedData.statcast = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
       applyStatcastData();
       rebuildCMJTrends();
       renderDashboard();
       showStatus('Throw velo: '+n+' rows imported');
-      alert('Done! '+n+' player-game rows imported.');
+      alert('Done! '+n+' rows imported.');
     } catch(err) { alert('Error: '+err.message); }
   };
   reader.readAsText(file);
 }
-
-
-
-
-
-
-// ── SEPARATE STORAGE KEYS (prevents cross-contamination) ──
-const STATCAST_KEY = 'cubs_sc_statcast_v1';
-const HITTING_KEY  = 'cubs_sc_hitting_v1';
-const CMJ_KEY      = 'cubs_sc_cmj_v1';
-const ABCMJ_KEY    = 'cubs_sc_abcmj_v1';
 
 function saveStatcast() {
   try { localStorage.setItem(STATCAST_KEY, JSON.stringify(importedData.statcast||{})); } catch(e){}
@@ -13750,6 +13740,9 @@ function hardReset() {
 
 init();
 loadCubsSchedule();
+
+
+
 
 
 
