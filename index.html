@@ -2282,6 +2282,7 @@ body {
 
 
 
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -13604,6 +13605,8 @@ function handleHittingCSVUpload(input) {
       localStorage.setItem(IMPORTED_DATA_KEY, JSON.stringify(stored));
       // Reload into memory and re-render
       Object.assign(importedData, stored);
+      // Reload statcast from dedicated key before applying
+      importedData.statcast = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
       applyStatcastData();
       rebuildCMJTrends();
       renderDashboard();
@@ -13646,6 +13649,8 @@ function handleThrowCSVUpload(input) {
       });
       importedData.hitting = stored.hitting;
       saveHitting(); // Save only hitting
+      // Reload statcast from dedicated key before applying
+      importedData.statcast = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
       applyStatcastData();
       rebuildCMJTrends();
       renderDashboard();
@@ -13745,6 +13750,7 @@ function hardReset() {
 
 init();
 loadCubsSchedule();
+
 
 
 
