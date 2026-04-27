@@ -11009,7 +11009,7 @@ function parseCSV(text) {
   text = text.replace(/^\uFEFF/, '');
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^\uFEFF/, '').replace(/^"|"$/g,''));
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^\uFEFF/, '').replace(/^"|"$/g,'').replace(/\u00A0/g,' '));
   return lines.slice(1).map(line => {
     if (!line.trim()) return null;
     const vals = [];
@@ -13296,12 +13296,23 @@ function loadAllData() {
   if(cmj){try{importedData.cmj=JSON.parse(cmj);}catch(e){}}else if(old&&old.cmj)importedData.cmj=old.cmj;
   if(ab){try{importedData.abcmj=JSON.parse(ab);}catch(e){}}else if(old&&old.abcmj)importedData.abcmj=old.abcmj;
 }
+// Legacy "Last, F" → roster name map (kept for backward-compat with old CSV format)
 var HITTING_NAME_MAP = {
   'Crow-Armstrong, P':'Pete Crow-Armstrong','Hoerner, N':'Nico Hoerner',
   'Swanson, D':'Dansby Swanson','Shaw, M':'Matt Shaw','Kelly, C':'Carson Kelly',
   'Amaya, M':'Miguel Amaya','Busch, M':'Michael Busch','Bregman, A':'Alex Bregman',
   'Ballesteros, M':'Moises Ballesteros','Happ, I':'Ian Happ','Suzuki, S':'Seiya Suzuki'
 };
+// Resolve a raw name from any CSV format to a roster name.
+// Supports: full names, "Last, F" legacy format, and fuzzy matching via findRosterMatch.
+function resolveRosterName(raw) {
+  if (!raw) return null;
+  raw = raw.trim();
+  // 1. Try legacy "Last, F" map first
+  if (HITTING_NAME_MAP[raw]) return HITTING_NAME_MAP[raw];
+  // 2. Try full-name fuzzy match against roster
+  return findRosterMatch(raw) || null;
+}
 function handleHittingCSVUpload(input) {
   var file=input.files[0]; if(!file)return; input.value='';
   var reader=new FileReader();
@@ -13309,8 +13320,12 @@ function handleHittingCSVUpload(input) {
     try{
       var rows=parseCSV(e.target.result), g={};
       rows.forEach(function(r){
-        var b=(r['Batter']||'').trim(),d=(r['Game']||'').trim();
-        var ev=parseFloat(r['EV'])||0,bs=parseFloat(r['BSp'])||0;
+        // Support both old ("Game") and new ("Date") date column names
+        var b=(r['Batter']||'').trim();
+        var d=(r['Date']||r['Game']||'').trim();
+        // Support both old ("EV","BSp") and new ("EV (MPH)","BSp (MPH)") column names
+        var ev=parseFloat(r['EV (MPH)']||r['EV'])||0;
+        var bs=parseFloat(r['BSp (MPH)']||r['BSp'])||0;
         if(!b||!d)return;
         var k=b+'|'+d;
         if(!g[k])g[k]={b:b,d:d,ev:0,bs:0};
@@ -13318,7 +13333,7 @@ function handleHittingCSVUpload(input) {
       });
       var hitData=JSON.parse(localStorage.getItem(HITTING_KEY)||'{}'),n=0,sk=0;
       Object.values(g).forEach(function(x){
-        var name=HITTING_NAME_MAP[x.b]; if(!name){sk++;return;}
+        var name=resolveRosterName(x.b); if(!name){sk++;return;}
         if(!hitData[name])hitData[name]=[];
         var i=hitData[name].findIndex(function(h){return fmtDate(h.date)===fmtDate(x.d);});
         var tv=i>=0?(hitData[name][i].throwV||0):0;
@@ -13329,8 +13344,8 @@ function handleHittingCSVUpload(input) {
       localStorage.setItem(HITTING_KEY,JSON.stringify(hitData));
       importedData.hitting=hitData;
       applyStatcastData(); rebuildCMJTrends(); buildPlayerList(); renderDashboard();
-      showStatus('Hitting CSV: '+n+' rows imported');
-      alert('Done! '+n+' rows imported.');
+      showStatus('Hitting CSV: '+n+' roster rows imported'+(sk?' ('+sk+' non-roster skipped)':''));
+      alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':''));
     }catch(err){alert('Error: '+err.message);}
   };
   reader.readAsText(file);
@@ -13342,16 +13357,20 @@ function handleThrowCSVUpload(input) {
     try{
       var rows=parseCSV(e.target.result),g={};
       rows.forEach(function(r){
-        var p=(r['Player']||'').trim(),d=(r['Game']||'').trim();
-        var arm=parseFloat(r['ARM'])||0;
-        if(!p||!d)return;
+        // Support both "Player" (old) and "Fielder" (new) name column
+        var p=(r['Fielder']||r['Player']||'').trim();
+        // Support both old ("Game") and new ("Date") date column
+        var d=(r['Date']||r['Game']||'').trim();
+        // Support both old ("ARM") and new ("ARM (MPH)") velo column
+        var arm=parseFloat(r['ARM (MPH)']||r['ARM'])||0;
+        if(!p||!d||!arm)return; // skip rows with no velo reading
         var k=p+'|'+d;
         if(!g[k])g[k]={p:p,d:d,arm:0};
         if(arm>g[k].arm)g[k].arm=arm;
       });
       var hitData=JSON.parse(localStorage.getItem(HITTING_KEY)||'{}'),n=0,sk=0;
       Object.values(g).forEach(function(x){
-        var name=HITTING_NAME_MAP[x.p]; if(!name){sk++;return;}
+        var name=resolveRosterName(x.p); if(!name){sk++;return;}
         if(!hitData[name])hitData[name]=[];
         var i=hitData[name].findIndex(function(h){return fmtDate(h.date)===fmtDate(x.d);});
         if(i>=0)hitData[name][i].throwV=x.arm;
@@ -13361,8 +13380,8 @@ function handleThrowCSVUpload(input) {
       localStorage.setItem(HITTING_KEY,JSON.stringify(hitData));
       importedData.hitting=hitData;
       applyStatcastData(); rebuildCMJTrends(); buildPlayerList(); renderDashboard();
-      showStatus('Throw velo: '+n+' rows imported');
-      alert('Done! '+n+' rows imported.');
+      showStatus('Throw velo: '+n+' roster rows imported'+(sk?' ('+sk+' non-roster skipped)':''));
+      alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':''));
     }catch(err){alert('Error: '+err.message);}
   };
   reader.readAsText(file);
