@@ -2168,9 +2168,9 @@ body {
               <tbody id="statcastPreviewBody"></tbody>
             </table>
           </div>
-          <div style="margin-top:12px;display:flex;gap:10px;">
-            <button class="generate-btn" onclick="applyStatcastData()">✅ Apply to Dashboard</button>
-            <button class="generate-btn" style="background:rgba(255,255,255,0.05);color:var(--text2);" onclick="clearStatcastPreview()">✕ Clear</button>
+          <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
+            <span style="font-size:12px;color:var(--green);">✅ Applied automatically on upload</span>
+            <button class="generate-btn" style="background:rgba(255,255,255,0.05);color:var(--text2);" onclick="clearStatcastPreview()">✕ Clear preview</button>
           </div>
         </div>
       </div>
@@ -11294,6 +11294,13 @@ function handleStatcastUpload(input) {
 
     document.getElementById('statcastPreview').style.display = 'block';
     logImport(`Statcast file parsed: ${parsedStatcastRows.length} roster records from ${uniquePlayers.join(', ')}.`, 'success');
+
+    // Auto-apply immediately — no separate button click needed
+    if (parsedStatcastRows.length > 0) {
+      applyStatcastData();
+    } else {
+      logImport('No roster players found in file. Check column names match expected format.', 'error');
+    }
   };
   reader.readAsText(file);
 }
