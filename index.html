@@ -13313,6 +13313,46 @@ function resolveRosterName(raw) {
   // 2. Try full-name fuzzy match against roster
   return findRosterMatch(raw) || null;
 }
+// Merge importedData.hitting into p.recentGames and update latest/bests —
+// WITHOUT touching importedData.statcast or parsedStatcastRows.
+// Called after hitting or throw-velo CSV imports.
+function mergeHittingIntoRecentGames() {
+  Object.entries(importedData.hitting).forEach(function(entry) {
+    var name = entry[0], records = entry[1];
+    var p = PLAYERS[name]; if (!p) return;
+    if (!p.recentGames) p.recentGames = [];
+    records.forEach(function(h) {
+      var dateStr = fmtDate(h.date);
+      var existing = p.recentGames.find(function(g){return g.date===dateStr;});
+      if (existing) {
+        // Only overwrite if the new value is actually present (non-zero)
+        if (h.bat)    { existing.bat    = h.bat;    if (h.bat    > (p.bests.bat||0))    p.bests.bat    = h.bat; }
+        if (h.exit)   { existing.exit   = h.exit;   if (h.exit   > (p.bests.exit||0))   p.bests.exit   = h.exit; }
+        if (h.throwV) { existing.throwV = h.throwV; if (h.throwV > (p.bests.throwV||0)) p.bests.throwV = h.throwV; }
+      } else {
+        // No statcast row for this date — add a hitting-only game row
+        p.recentGames.push({
+          date: dateStr,
+          bat: h.bat||0, exit: h.exit||0, throwV: h.throwV||0,
+          speed: 0, he: 0, dist: 0, midEff: 0, highEff: 0,
+          jump: p.latestJump||0, ppbm: p.latestPPBM||0,
+          readiness: p.readiness||1.0, acwr: p.acwr||1.0, status: p.status||'YELLOW'
+        });
+        p.recentGames.sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);});
+        if (h.bat)    { if (h.bat    > (p.bests.bat||0))    p.bests.bat    = h.bat; }
+        if (h.exit)   { if (h.exit   > (p.bests.exit||0))   p.bests.exit   = h.exit; }
+        if (h.throwV) { if (h.throwV > (p.bests.throwV||0)) p.bests.throwV = h.throwV; }
+      }
+    });
+    // Update latest values from most-recent record with data
+    var latestWithBat    = records.slice().reverse().find(function(h){return h.bat;});
+    var latestWithExit   = records.slice().reverse().find(function(h){return h.exit;});
+    var latestWithThrow  = records.slice().reverse().find(function(h){return h.throwV;});
+    if (latestWithBat)   p.latestBat   = latestWithBat.bat;
+    if (latestWithExit)  p.latestExit  = latestWithExit.exit;
+    if (latestWithThrow) p.latestThrow = latestWithThrow.throwV;
+  });
+}
 function handleHittingCSVUpload(input) {
   var file=input.files[0]; if(!file)return; input.value='';
   var reader=new FileReader();
@@ -13320,10 +13360,8 @@ function handleHittingCSVUpload(input) {
     try{
       var rows=parseCSV(e.target.result), g={};
       rows.forEach(function(r){
-        // Support both old ("Game") and new ("Date") date column names
         var b=(r['Batter']||'').trim();
         var d=(r['Date']||r['Game']||'').trim();
-        // Support both old ("EV","BSp") and new ("EV (MPH)","BSp (MPH)") column names
         var ev=parseFloat(r['EV (MPH)']||r['EV'])||0;
         var bs=parseFloat(r['BSp (MPH)']||r['BSp'])||0;
         if(!b||!d)return;
@@ -13343,7 +13381,9 @@ function handleHittingCSVUpload(input) {
       });
       localStorage.setItem(HITTING_KEY,JSON.stringify(hitData));
       importedData.hitting=hitData;
-      applyStatcastData(); rebuildCMJTrends(); buildPlayerList(); renderDashboard();
+      mergeHittingIntoRecentGames();
+      saveHitting(); persistImportedData();
+      rebuildCMJTrends(); buildPlayerList(); renderDashboard();
       showStatus('Hitting CSV: '+n+' roster rows imported'+(sk?' ('+sk+' non-roster skipped)':''));
       alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':''));
     }catch(err){alert('Error: '+err.message);}
@@ -13357,13 +13397,10 @@ function handleThrowCSVUpload(input) {
     try{
       var rows=parseCSV(e.target.result),g={};
       rows.forEach(function(r){
-        // Support both "Player" (old) and "Fielder" (new) name column
         var p=(r['Fielder']||r['Player']||'').trim();
-        // Support both old ("Game") and new ("Date") date column
         var d=(r['Date']||r['Game']||'').trim();
-        // Support both old ("ARM") and new ("ARM (MPH)") velo column
         var arm=parseFloat(r['ARM (MPH)']||r['ARM'])||0;
-        if(!p||!d||!arm)return; // skip rows with no velo reading
+        if(!p||!d||!arm)return;
         var k=p+'|'+d;
         if(!g[k])g[k]={p:p,d:d,arm:0};
         if(arm>g[k].arm)g[k].arm=arm;
@@ -13379,7 +13416,9 @@ function handleThrowCSVUpload(input) {
       });
       localStorage.setItem(HITTING_KEY,JSON.stringify(hitData));
       importedData.hitting=hitData;
-      applyStatcastData(); rebuildCMJTrends(); buildPlayerList(); renderDashboard();
+      mergeHittingIntoRecentGames();
+      saveHitting(); persistImportedData();
+      rebuildCMJTrends(); buildPlayerList(); renderDashboard();
       showStatus('Throw velo: '+n+' roster rows imported'+(sk?' ('+sk+' non-roster skipped)':''));
       alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':''));
     }catch(err){alert('Error: '+err.message);}
