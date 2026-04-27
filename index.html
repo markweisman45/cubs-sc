@@ -11239,19 +11239,31 @@ function handleStatcastUpload(input) {
     const rows = parseCSV(e.target.result);
     parsedStatcastRows = [];
 
+    // Debug: log raw column keys to surface any column name issues
+    if (rows.length > 0) {
+      console.log('[Statcast] Columns detected:', Object.keys(rows[0]));
+      console.log('[Statcast] First row:', rows[0]);
+    }
+
     // Filter to roster players only
     rows.forEach(row => {
       const name  = (row['Player'] || '').trim();
+      if (!name) return;
       const match = findRosterMatch(name);
-      if (!match) return; // Skip non-roster players
+      if (!match) {
+        console.log('[Statcast] No roster match for:', JSON.stringify(name));
+        return; // Skip non-roster players
+      }
 
       const date    = getField(row, 'Game Date').trim();
+      if (!date) { console.warn('[Statcast] Empty date for:', name); return; }
       const dist    = parseFloat(getField(row, 'Total Distance Covered (ft)') || 0);
       const midEff  = parseInt(getField(row, 'Mid-Effort Runs') || 0);
       const highEff = parseInt(getField(row, 'High-Effort Runs') || 0);
       const heDist  = parseFloat(getField(row, 'High-Effort Distance Covered (ft)') || 0);
       const speed   = parseFloat(getField(row, 'Top Speed (ft/s)') || 0);
 
+      console.log('[Statcast] Matched:', match, date, dist, speed);
       parsedStatcastRows.push({ name: match, rawName: name, date, dist, midEff, highEff, heDist, speed });
     });
 
