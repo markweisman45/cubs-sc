@@ -5273,7 +5273,7 @@ function renderDashboard() {
   const p = PLAYERS[currentPlayer];
   renderACWR(p);          // compute live ACWR first — updates p.acwr for hero
   renderReadinessHero(p); // now reads updated p.acwr
-  renderKPIs(p);
+
   renderPBGrid(p);
   renderPerfTable(p);
   renderAllCharts(p);
@@ -5350,29 +5350,7 @@ function renderReadinessHero(p) {
   }
 }
 
-function renderKPIs(p) {
-  const b = p.bests;
-  const set = (id, val, best, unit='') => {
-    document.getElementById('kpi-'+id).textContent = val + unit;
-    const pct = Math.round((val/best)*100);
-    const diff = pct - 100;
-    const el = document.getElementById('kpi-'+id+'-d');
-    if(el) {
-      el.textContent = `${pct}% of best`;
-      el.className = 'stat-delta ' + (diff >= 0 ? 'pos' : diff < -10 ? 'neg' : 'neu');
-    }
-  };
-  set('jump', p.latestJump, b.jump || p.latestJump);
-  set('ppbm', p.latestPPBM, b.ppbm || p.latestPPBM);
-  if (p.latestABJump) set('abjump', p.latestABJump, b.abJump || p.latestABJump);
-  else { const el=document.getElementById('kpi-abjump'); if(el) el.textContent='—'; }
-  set('speed', p.latestSpeed, b.speed);
-  set('exit', p.latestExit, b.exit);
-  set('bat', p.latestBat, b.bat);
-  set('throw', p.latestThrow, b.throwV);
-  document.getElementById('kpi-he').textContent = p.latestHE.toLocaleString();
-  document.getElementById('kpi-dist').textContent = p.latestDist.toLocaleString();
-}
+// renderKPIs removed — KPI tiles deleted from overview
 
 function renderPBGrid(p) {
   const b = p.bests;
