@@ -2278,6 +2278,8 @@ body {
 
 
 
+
+
 // ══════════════════════════════════════════════
 // ATHLETE PROGRAM HISTORY
 // ══════════════════════════════════════════════
@@ -10969,62 +10971,51 @@ function clearCMJPreview() {
 let parsedStatcastRows = [];
 
 function handleStatcastUpload(input) {
-  const file = input.files[0];
+  var file = input.files[0];
   if (!file) return;
-  document.getElementById('statcastFileName').textContent = file.name;
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    const rows = parseCSV(e.target.result);
-    // Merge new rows — keep existing data
-
-    // Filter to roster players only
-    rows.forEach(row => {
-      const name  = (row['Player'] || '').trim();
-      const match = findRosterMatch(name);
-      if (!match) return; // Skip non-roster players
-
-      const date    = getField(row, 'Game Date').trim();
-      const dist    = parseFloat(getField(row, 'Total Distance Covered (ft)') || 0);
-      const midEff  = parseInt(getField(row, 'Mid-Effort Runs') || 0);
-      const highEff = parseInt(getField(row, 'High-Effort Runs') || 0);
-      const heDist  = parseFloat(getField(row, 'High-Effort Distance Covered (ft)') || 0);
-      const speed   = parseFloat(getField(row, 'Top Speed (ft/s)') || 0);
-
-      parsedStatcastRows.push({ name: match, rawName: name, date, dist, midEff, highEff, heDist, speed });
-    });
-
-    // Render preview
-    const tbody = document.getElementById('statcastPreviewBody');
-    tbody.innerHTML = '';
-    const uniquePlayers = [...new Set(parsedStatcastRows.map(r=>r.name))];
-    document.getElementById('statcastSummary').textContent =
-      `${parsedStatcastRows.length} game records · ${uniquePlayers.length} roster players · ${rows.length - parsedStatcastRows.length} non-roster rows filtered out`;
-
-    parsedStatcastRows.slice(0, 50).forEach(r => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${r.name}</td>
-        <td class="date-col">${r.date}</td>
-        <td style="font-family:'DM Mono',monospace;">${r.dist.toLocaleString()}</td>
-        <td style="font-family:'DM Mono',monospace;">${r.midEff}</td>
-        <td style="font-family:'DM Mono',monospace;">${r.highEff}</td>
-        <td style="font-family:'DM Mono',monospace;">${r.heDist.toLocaleString()}</td>
-        <td style="font-family:'DM Mono',monospace;">${r.speed.toFixed(2)}</td>`;
-      tbody.appendChild(tr);
-    });
-    if (parsedStatcastRows.length > 50) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="7" style="color:var(--text3);text-align:center;">…and ${parsedStatcastRows.length-50} more rows</td>`;
-      tbody.appendChild(tr);
-    }
-
-    document.getElementById('statcastPreview').style.display = 'block';
-    logImport(`Statcast file parsed: ${parsedStatcastRows.length} roster records from ${uniquePlayers.join(', ')}.`, 'success');
+  input.value = '';
+  var label = document.getElementById('statcastFileName');
+  if (label) label.textContent = 'Processing ' + file.name + '...';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var rows = parseCSV(e.target.result);
+      if (!rows.length) { alert('No data found'); return; }
+      var statData = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
+      var applied = 0, skipped = 0;
+      rows.forEach(function(row) {
+        var name  = (row['Player'] || row['Player Name'] || '').trim();
+        var match = findRosterMatch(name);
+        if (!match) { skipped++; return; }
+        var date    = getField(row, 'Game Date').trim();
+        var dist    = parseFloat(getField(row, 'Total Distance Covered (ft)') || 0);
+        var midEff  = parseInt(getField(row, 'Mid-Effort Runs') || 0);
+        var highEff = parseInt(getField(row, 'High-Effort Runs') || 0);
+        var heDist  = parseFloat(getField(row, 'High-Effort Distance Covered (ft)') || 0);
+        var speed   = parseFloat(getField(row, 'Top Speed (ft/s)') || 0);
+        if (!date) { skipped++; return; }
+        if (!statData[match]) statData[match] = [];
+        var idx = statData[match].findIndex(function(x){ return fmtDate(x.date) === fmtDate(date); });
+        var entry = { date:date, speed:speed, heDist:heDist, dist:dist, midEff:midEff, highEff:highEff,
+                      bat:idx>=0?(statData[match][idx].bat||0):0,
+                      exit:idx>=0?(statData[match][idx].exit||0):0,
+                      throwV:idx>=0?(statData[match][idx].throwV||0):0 };
+        if (idx>=0) statData[match][idx] = entry;
+        else statData[match].push(entry);
+        applied++;
+      });
+      localStorage.setItem(STATCAST_KEY, JSON.stringify(statData));
+      importedData.statcast = statData;
+      if (label) label.textContent = file.name + ' — ' + applied + ' rows';
+      rebuildCMJTrends();
+      buildPlayerList();
+      renderDashboard();
+      showStatus('Statcast: ' + applied + ' rows imported');
+      alert('Done! ' + applied + ' rows imported, ' + skipped + ' skipped.');
+    } catch(err) { alert('Error: ' + err.message); console.error(err); }
   };
   reader.readAsText(file);
 }
-
 function applyStatcastData() {
   // Load statcast from the dedicated key
   var statData = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
@@ -13714,6 +13705,8 @@ function loadAllData() {
 
 init();
 loadCubsSchedule();
+
+
 
 
 
