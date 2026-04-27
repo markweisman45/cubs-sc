@@ -644,7 +644,7 @@ body {
       <button onclick="document.getElementById('restoreInput').click()" style="display:block;width:100%;padding:9px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.5);color:#f59e0b;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">Restore Backup</button>
       <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="importAllData(this)">
       <button id="migrate-btn" onclick="migrateToCloud()" style="display:block;width:100%;padding:9px;background:rgba(168,85,247,0.2);border:1px solid rgba(168,85,247,0.5);color:#a855f7;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">☁️ Sync to Cloud</button>
-      <button onclick="fixSupabaseDates()" style="display:block;width:100%;padding:9px;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.5);color:#60a5fa;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">🔧 Fix Cloud Dates</button>
+      <button onclick="hardReset()" style="display:block;width:100%;padding:9px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;">🔴 Hard Reset</button>
     </div>
   </div>
 </aside>
@@ -2228,6 +2228,8 @@ body {
 </div><!-- /app -->
 
 <script>
+
+
 
 
 
@@ -11007,6 +11009,8 @@ function handleStatcastUpload(input) {
       localStorage.setItem(STATCAST_KEY, JSON.stringify(statData));
       importedData.statcast = statData;
       if (label) label.textContent = file.name + ' — ' + applied + ' rows';
+      // Must call applyStatcastData to update p.recentGames before rendering
+      applyStatcastData();
       rebuildCMJTrends();
       buildPlayerList();
       renderDashboard();
@@ -13703,8 +13707,46 @@ function loadAllData() {
   }
 }
 
+
+function hardReset() {
+  if (!confirm('HARD RESET: Delete ALL data and start fresh?\n\nThis cannot be undone.')) return;
+  // Clear all cubs_sc keys
+  Object.keys(localStorage).forEach(function(k) {
+    if (k.startsWith('cubs_sc')) localStorage.removeItem(k);
+  });
+  // Reset importedData in memory
+  importedData.statcast = {};
+  importedData.hitting  = {};
+  importedData.cmj      = {};
+  importedData.abcmj    = {};
+  // Reset PLAYERS
+  Object.keys(PLAYERS).forEach(function(name) {
+    PLAYERS[name].recentGames  = [];
+    PLAYERS[name].cmjTrends    = [];
+    PLAYERS[name].acwrHistory  = [];
+    PLAYERS[name].acwr         = 1.0;
+    PLAYERS[name].latestSpeed  = 0;
+    PLAYERS[name].latestJump   = 0;
+    PLAYERS[name].latestBat    = 0;
+    PLAYERS[name].latestExit   = 0;
+    PLAYERS[name].latestThrow  = 0;
+    PLAYERS[name].latestHE     = 0;
+    PLAYERS[name].latestDist   = 0;
+    PLAYERS[name].daysSinceCMJ = 0;
+    PLAYERS[name].lastDataDate = null;
+    PLAYERS[name].bests = {jump:0,ppbm:0,abJump:0,abPPBM:0,speed:0,bat:0,exit:0,throwV:0};
+  });
+  parsedStatcastRows = [];
+  parsedCMJRows = [];
+  buildPlayerList();
+  renderDashboard();
+  alert('Hard reset complete. Upload your CSVs now:\n1. Statcast CSV\n2. Hitting CSV\n3. Throw Velo CSV\n4. ForceDecks CMJ CSV');
+}
+
 init();
 loadCubsSchedule();
+
+
 
 
 
