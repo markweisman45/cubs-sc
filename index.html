@@ -11270,8 +11270,10 @@ function handleStatcastUpload(input) {
   const file = input.files[0];
   if (!file) return;
   document.getElementById('statcastFileName').textContent = file.name;
+  input.value = ''; // reset so same file can be re-selected
 
   const reader = new FileReader();
+  reader.onerror = () => { alert('Error reading file. Please try again.'); };
   reader.onload = e => {
     const rows = parseCSV(e.target.result);
     parsedStatcastRows = [];
@@ -11491,8 +11493,9 @@ function applyStatcastData() {
 
   const allDates = parsedStatcastRows.map(r=>r.date).sort((a,b)=>new Date(a)-new Date(b));
   const dateRange = allDates.length ? `${allDates[0]} → ${allDates[allDates.length-1]}` : '';
-  logImport(`Statcast applied: ${applied} players, ${parsedStatcastRows.length} game records (${dateRange}). ACWR recalculated. Note: data only updates for dates in the CSV.`, 'success');
-  showStatus(`✅ Statcast data applied for ${applied} player${applied!==1?'s':''}.`);
+  logImport(`Statcast applied: ${applied} players, ${parsedStatcastRows.length} game records (${dateRange}). ACWR recalculated.`, 'success');
+  showStatus(`✅ Statcast applied — ${applied} player${applied!==1?'s':''}, ${parsedStatcastRows.length} game record${parsedStatcastRows.length!==1?'s':''}.`);
+  document.getElementById('statcastFileName').textContent = `✅ ${parsedStatcastRows.length} records applied (${dateRange})`;
   saveStatcast();
   persistImportedData();
   renderDashboard();
@@ -11503,8 +11506,8 @@ function applyStatcastData() {
 function clearStatcastPreview() {
   document.getElementById('statcastPreview').style.display = 'none';
   document.getElementById('statcastPreviewBody').innerHTML = '';
-  document.getElementById('statcastFileName').textContent = 'No file selected';
   parsedStatcastRows = [];
+  // Don't reset filename — leave it showing what was last uploaded as confirmation
 }
 
 // ════════════════════════════════
