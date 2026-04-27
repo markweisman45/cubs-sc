@@ -1458,25 +1458,33 @@ body {
         <!-- Toolbar: category/exercise dropdowns + block controls -->
         <div style="padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:6px;">
 
-          <!-- Row 1: Category → Exercise dropdowns + Add button -->
+          <!-- Unified combobox: type to search OR click to browse all -->
           <div style="display:flex;gap:6px;align-items:stretch;">
-            <select id="gsm-cat-sel" onchange="gsmOnCatChange()"
-              style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;min-width:0;">
-              <option value="">— Category —</option>
-            </select>
-            <select id="gsm-ex-sel" onchange="gsmOnExChange()"
-              style="flex:1.4;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;min-width:0;">
-              <option value="">— Exercise —</option>
-            </select>
-            <button onclick="gsmAddFromDropdown()"
-              style="background:var(--blue);border:none;border-radius:6px;padding:6px 14px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;">＋</button>
+            <div style="flex:1;position:relative;">
+              <input id="gsm-ex-search"
+                placeholder="Search or browse exercises… (↑↓ to navigate, Enter to add)"
+                oninput="gsmSearchExercises()"
+                onkeydown="gsmSearchKeydown(event)"
+                onfocus="gsmSearchExercises()"
+                autocomplete="off" spellcheck="false"
+                style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;box-sizing:border-box;outline:none;">
+              <div id="gsm-ex-results"
+                style="position:absolute;top:100%;left:0;right:0;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;background:var(--bg2);display:none;z-index:10;"></div>
+            </div>
+            <button onclick="gsmAddFromSearch()"
+              style="background:var(--blue);border:none;border-radius:6px;padding:6px 14px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;" title="Add selected exercise">＋</button>
           </div>
 
-          <!-- Row 1b: text search as fallback -->
+          <!-- Paste from Excel / Google Sheets -->
           <div style="position:relative;">
-            <input id="gsm-ex-search" placeholder="or type to search all exercises…" oninput="gsmSearchExercises()"
-              style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;box-sizing:border-box;">
-            <div id="gsm-ex-results" style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;background:var(--bg2);display:none;z-index:10;"></div>
+            <textarea id="gsm-paste-zone"
+              placeholder="📋  Paste from Excel or Google Sheets (Exercise | Sets | Reps | Load | Notes)"
+              onpaste="gsmHandlePaste(event)"
+              rows="1"
+              style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;box-sizing:border-box;resize:none;overflow:hidden;outline:none;"
+              onfocus="this.style.borderColor='var(--blue)'"
+              onblur="this.style.borderColor='var(--border)'"
+            ></textarea>
           </div>
 
           <!-- Row 2: Block controls -->
@@ -3186,103 +3194,191 @@ function gsmRemoveEx(bi, ei) {
 }
 
 // ── Category / Exercise dropdown population ──
-function gsmPopulateCatDropdown() {
-  const sel = document.getElementById('gsm-cat-sel');
-  if (!sel || sel.options.length > 1) return; // already populated
-  const cats = [...new Set(EXERCISE_DB.map(e => e.cat).filter(Boolean))].sort();
-  cats.forEach(c => {
-    const o = document.createElement('option');
-    o.value = c; o.textContent = c;
-    sel.appendChild(o);
-  });
-}
+// ── Unified combobox state ──
+let _gsmHighlightIdx = -1;
+let _gsmFilteredResults = [];
 
-function gsmOnCatChange() {
-  const cat  = document.getElementById('gsm-cat-sel')?.value;
-  const exSel = document.getElementById('gsm-ex-sel');
-  if (!exSel) return;
-  exSel.innerHTML = '<option value="">— Exercise —</option>';
-  if (!cat) return;
-  const exercises = EXERCISE_DB.filter(e => e.cat === cat)
-    .sort((a,b) => a.name.localeCompare(b.name));
-  exercises.forEach(e => {
-    const o = document.createElement('option');
-    o.value = e.name;
-    o.textContent = e.name + (e.video ? ' ▶' : '');
-    exSel.appendChild(o);
-  });
-}
-
-function gsmOnExChange() {
-  // Preview video if available when exercise selected
-  const name = document.getElementById('gsm-ex-sel')?.value;
-  if (!name) return;
-  const ex = EXERCISE_DB.find(e => e.name === name);
-  // Could show video preview — for now just ready to add
-}
-
-function gsmAddFromDropdown() {
-  const exSel = document.getElementById('gsm-ex-sel');
-  const name  = exSel?.value;
-  console.log('[dropdown] gsm-ex-sel value:', JSON.stringify(name));
-  console.log('[dropdown] gsm-ex-sel element:', exSel ? 'found' : 'NULL');
-  console.log('[dropdown] gridActiveKey:', gridActiveKey);
-  if (!name) {
-    const cat = document.getElementById('gsm-cat-sel')?.value;
-    if (!cat) { showStatus('Select a category and exercise first'); return; }
-    showStatus('Select an exercise from the dropdown');
-    return;
-  }
-  gsmAddExerciseByName(name);
-  if (exSel) exSel.value = '';
-}
+function gsmPopulateCatDropdown() { /* no-op — replaced by combobox */ }
+function gsmOnCatChange() { /* no-op */ }
+function gsmOnExChange() { /* no-op */ }
+function gsmAddFromDropdown() { gsmAddFromSearch(); }
 
 function gsmSearchExercises() {
-  const q = (document.getElementById('gsm-ex-search')?.value||'').toLowerCase();
+  const inp = document.getElementById('gsm-ex-search');
+  const q = (inp?.value || '').trim().toLowerCase();
   const results = document.getElementById('gsm-ex-results');
   if (!results) return;
-  if (!q) { results.style.display='none'; return; }
 
-  const matches = EXERCISE_DB.filter(e =>
-    e.name.toLowerCase().includes(q) || (e.cat||'').toLowerCase().includes(q)
-  ).slice(0, 15);
+  // If empty, show all exercises grouped by category
+  let matches;
+  if (!q) {
+    matches = [...EXERCISE_DB].sort((a,b) => (a.cat||'').localeCompare(b.cat||'') || a.name.localeCompare(b.name));
+  } else {
+    // Score: name starts-with > name contains > cat contains
+    matches = EXERCISE_DB
+      .map(e => {
+        const n = e.name.toLowerCase(), c = (e.cat||'').toLowerCase();
+        let score = 0;
+        if (n.startsWith(q)) score = 3;
+        else if (n.includes(q)) score = 2;
+        else if (c.includes(q)) score = 1;
+        return { e, score };
+      })
+      .filter(x => x.score > 0)
+      .sort((a,b) => b.score - a.score || a.e.name.localeCompare(b.e.name))
+      .map(x => x.e);
+  }
 
-  if (!matches.length) { results.style.display='none'; return; }
+  _gsmFilteredResults = matches.slice(0, 40);
+  _gsmHighlightIdx = _gsmFilteredResults.length > 0 ? 0 : -1;
+
+  if (!_gsmFilteredResults.length) { results.style.display = 'none'; return; }
   results.style.display = 'block';
+  gsmRenderSearchResults();
+}
 
-  results.innerHTML = matches.map((e) => {
-    const idx = EXERCISE_DB.indexOf(e);
-    return `<div
-      data-ex-idx="${idx}"
-      class="gsm-ex-result-item"
-      style="padding:7px 10px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);font-size:11px;display:flex;align-items:center;gap:8px;"
-      onmouseenter="this.style.background='var(--bg4)'" onmouseleave="this.style.background=''">
+function gsmRenderSearchResults() {
+  const results = document.getElementById('gsm-ex-results');
+  if (!results) return;
+  let lastCat = null;
+  const q = (document.getElementById('gsm-ex-search')?.value || '').trim().toLowerCase();
+
+  results.innerHTML = _gsmFilteredResults.map((e, i) => {
+    let catHeader = '';
+    if (!q && e.cat !== lastCat) {
+      lastCat = e.cat;
+      catHeader = `<div style="padding:4px 10px 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);background:var(--bg1);position:sticky;top:0;">${e.cat || 'Other'}</div>`;
+    }
+    const highlighted = i === _gsmHighlightIdx;
+    const qIdx = e.name.toLowerCase().indexOf(q.toLowerCase());
+    const nameHtml = (q && qIdx >= 0)
+      ? e.name.slice(0,qIdx) + '<b style="color:var(--blue)">' + e.name.slice(qIdx, qIdx+q.length) + '</b>' + e.name.slice(qIdx+q.length)
+      : e.name;
+    return catHeader + `<div
+      data-ri="${i}"
+      style="padding:6px 10px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;display:flex;align-items:center;gap:8px;background:${highlighted ? 'var(--bg4)' : ''}"
+      onmouseenter="gsmSetHighlight(${i})" onmouseleave=""
+      onmousedown="gsmPickResult(${i})">
       <div style="flex:1;">
-        <span style="color:var(--text);font-weight:600;">${e.name}</span>
-        <span style="color:var(--text3);font-size:9px;margin-left:6px;">${e.cat}</span>
+        <span style="color:var(--text);font-weight:600;">${nameHtml}</span>
+        ${q ? `<span style="color:var(--text3);font-size:9px;margin-left:6px;">${e.cat}</span>` : ''}
+        ${e.video ? ' <span style="color:var(--red);font-size:9px;">▶</span>' : ''}
       </div>
-      ${e.video ? '<span style="color:var(--red);font-size:9px;">▶</span>' : ''}
     </div>`;
   }).join('');
-
-  // Event delegation
-  results.onclick = (ev) => {
-    const item = ev.target.closest('.gsm-ex-result-item');
-    if (!item) return;
-    const ex = EXERCISE_DB[parseInt(item.dataset.exIdx)];
-    if (ex) {
-      gsmAddExerciseByName(ex.name);
-      document.getElementById('gsm-ex-search').value = '';
-      results.style.display = 'none';
-    }
-  };
 }
-function gsmAddExerciseByName(name) {
-  console.log('[gsmAdd] called with:', name);
-  console.log('[gsmAdd] gridActiveKey:', gridActiveKey);
+
+function gsmSetHighlight(i) {
+  _gsmHighlightIdx = i;
+  gsmRenderSearchResults();
+}
+
+function gsmPickResult(i) {
+  const ex = _gsmFilteredResults[i];
+  if (!ex) return;
+  gsmAddExerciseByName(ex.name);
+  const inp = document.getElementById('gsm-ex-search');
+  if (inp) inp.value = '';
+  const results = document.getElementById('gsm-ex-results');
+  if (results) results.style.display = 'none';
+  _gsmFilteredResults = [];
+  _gsmHighlightIdx = -1;
+}
+
+function gsmSearchKeydown(e) {
+  const results = document.getElementById('gsm-ex-results');
+  if (!results || results.style.display === 'none') {
+    if (e.key === 'ArrowDown' || e.key === 'Enter') { gsmSearchExercises(); return; }
+    return;
+  }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _gsmHighlightIdx = Math.min(_gsmHighlightIdx + 1, _gsmFilteredResults.length - 1);
+    gsmRenderSearchResults();
+    // Scroll highlighted item into view
+    const el = results.querySelector(`[data-ri="${_gsmHighlightIdx}"]`);
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _gsmHighlightIdx = Math.max(_gsmHighlightIdx - 1, 0);
+    gsmRenderSearchResults();
+    const el = results.querySelector(`[data-ri="${_gsmHighlightIdx}"]`);
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_gsmHighlightIdx >= 0) gsmPickResult(_gsmHighlightIdx);
+  } else if (e.key === 'Escape') {
+    results.style.display = 'none';
+  }
+}
+
+function gsmAddFromSearch() {
+  if (_gsmHighlightIdx >= 0 && _gsmFilteredResults[_gsmHighlightIdx]) {
+    gsmPickResult(_gsmHighlightIdx);
+  } else {
+    const q = document.getElementById('gsm-ex-search')?.value.trim();
+    if (!q) { showStatus('Type an exercise name to search'); return; }
+    // Exact or first match
+    const match = EXERCISE_DB.find(e => e.name.toLowerCase() === q.toLowerCase())
+      || EXERCISE_DB.find(e => e.name.toLowerCase().includes(q.toLowerCase()));
+    if (match) {
+      gsmAddExerciseByName(match.name);
+      document.getElementById('gsm-ex-search').value = '';
+      document.getElementById('gsm-ex-results').style.display = 'none';
+    } else {
+      showStatus('No exercise found matching "' + q + '"');
+    }
+  }
+}
+
+// ── Paste from Excel / Google Sheets ──
+function gsmHandlePaste(event) {
+  event.preventDefault();
+  const text = (event.clipboardData || window.clipboardData).getData('text');
+  if (!text.trim()) return;
+
+  const lines = text.trim().split('\n').map(function(l){return l.replace(/\r$/,'');});
+  let added = 0, skipped = 0;
+
+  lines.forEach(line => {
+    if (!line.trim()) return;
+    // Split on tab (Excel/Sheets default) or pipe
+    const cols = line.split(/	|\|/).map(c => c.trim());
+    const rawName = cols[0] || '';
+    if (!rawName) return;
+
+    // Fuzzy match against exercise DB
+    const match = EXERCISE_DB.find(e => e.name.toLowerCase() === rawName.toLowerCase())
+      || EXERCISE_DB.find(e => e.name.toLowerCase().includes(rawName.toLowerCase()))
+      || EXERCISE_DB.find(e => rawName.toLowerCase().includes(e.name.toLowerCase()));
+
+    const exName = match ? match.name : rawName; // use raw name if no match (still adds it)
+    const sets  = cols[1] || '';
+    const reps  = cols[2] || '';
+    const load  = cols[3] || '';
+    const notes = cols[4] || '';
+
+    gsmAddExerciseByName(exName, { sets, reps, load, notes });
+    added++;
+  });
+
+  // Clear paste zone
+  const zone = document.getElementById('gsm-paste-zone');
+  if (zone) zone.value = '';
+
+  showStatus(`📋 Pasted ${added} exercise${added !== 1 ? 's' : ''} from clipboard${skipped ? ` (${skipped} skipped)` : ''}`);
+}
+
+// Close search results when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#gsm-ex-search') && !e.target.closest('#gsm-ex-results')) {
+    const r = document.getElementById('gsm-ex-results');
+    if (r) r.style.display = 'none';
+  }
+});
+function gsmAddExerciseByName(name, prefill={}) {
   if (!gridActiveKey) {
     showStatus('Open a session first by clicking a day on the grid');
-    console.warn('[gsmAdd] BAIL: no gridActiveKey');
     return;
   }
   if (!gridState.sessions[gridActiveKey]) {
@@ -3293,27 +3389,24 @@ function gsmAddExerciseByName(name) {
 
   const sel = document.getElementById('gsm-active-block');
   let bi = parseInt(sel?.value) || 0;
-  console.log('[gsmAdd] target block bi:', bi, 'blocks.length:', session.blocks.length);
   if (!session.blocks[bi]) {
     session.blocks.push({ label:'A', tag:'Main Work', exercises:[] });
     bi = 0;
   }
 
   const ex = EXERCISE_DB.find(e => e.name === name);
-  console.log('[gsmAdd] found in DB:', ex ? ex.name : 'NOT FOUND');
   session.blocks[bi].exercises.push({
     name, cat: ex?.cat||'', video: ex?.video||'',
-    sets:'', reps:'', load:'', tempo:'', rest:'', notes:''
+    sets:  prefill.sets  || '',
+    reps:  prefill.reps  || '',
+    load:  prefill.load  || '',
+    tempo: prefill.tempo || '',
+    rest:  prefill.rest  || '',
+    notes: prefill.notes || ''
   });
-  console.log('[gsmAdd] exercises in block after push:', session.blocks[bi].exercises.length);
 
-  const searchEl = document.getElementById('gsm-ex-search');
-  if (searchEl) searchEl.value = '';
-  const resultsEl = document.getElementById('gsm-ex-results');
-  if (resultsEl) resultsEl.style.display = 'none';
   gsmFlushInputs();
   gsmRenderExercises();
-  console.log('[gsmAdd] done');
 }
 
 // ── INSERT SAVED PROGRAM INTO SESSION ────────────────────────
@@ -11015,7 +11108,7 @@ function findRosterMatch(name) {
 function parseCSV(text) {
   // Strip BOM if present
   text = text.replace(/^\uFEFF/, '');
-  const lines = text.trim().split(/\r?\n/);
+  const lines = text.trim().split('\n').map(l => l.replace(/\r$/, ''));
   if (lines.length < 2) return [];
   const headers = lines[0].split(',').map(h => h.trim().replace(/^\uFEFF/, '').replace(/^"|"$/g,'').replace(/\u00A0/g,' '));
   return lines.slice(1).map(line => {
