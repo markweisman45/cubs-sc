@@ -1719,7 +1719,10 @@ body {
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <span>📋 PROGRAM HISTORY</span>
           <div style="display:flex;gap:8px;align-items:center;">
-            <input id="prog-search" placeholder="Search programs…" oninput="renderAthletePrograms()"
+            <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);cursor:pointer;white-space:nowrap;">
+                <input type="checkbox" id="prog-hide-templates" onchange="renderAthletePrograms()" style="accent-color:var(--blue);"> Hide templates
+              </label>
+              <input id="prog-search" placeholder="Search programs…" oninput="renderAthletePrograms()"
               style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;width:200px;">
             <button onclick="openDropProgramModal()" style="background:var(--blue);border:none;border-radius:6px;padding:7px 16px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">＋ Drop Program</button>
           </div>
@@ -2213,6 +2216,55 @@ function loadAthletePrograms() {
   } catch(e) {}
 }
 
+// ── SEED PROGRAM TEMPLATES INTO ATHLETE PROGRAMS (one-time) ──────────────────
+function seedTemplatePrograms() {
+  const SEED_KEY = 'cubs_sc_templates_seeded_v1';
+  if (localStorage.getItem(SEED_KEY)) return; // already seeded
+
+  const players = Object.keys(PLAYERS);
+  const now = new Date().toISOString();
+
+  players.forEach(playerName => {
+    if (!athletePrograms[playerName]) athletePrograms[playerName] = [];
+
+    Object.entries(PROGRAM_TEMPLATES).forEach(([key, prog], pi) => {
+      // Build HTML content — one section per session
+      const contentLines = prog.sessions.map(s => {
+        const exRows = s.exercises.map(e => {
+          const setsReps = [e.sets ? e.sets+'x' : '', e.reps].filter(Boolean).join('');
+          const detail = [setsReps, e.notes].filter(Boolean).join(' · ');
+          return `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:3px 6px;font-size:11px;">${e.name}</td>
+            <td style="padding:3px 6px;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${detail}</td>
+          </tr>`;
+        }).join('');
+        return `<div style="margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${s.week} · ${s.day} <span style="color:var(--text3);font-weight:400;">[${s.tag}]</span></div>
+          <table style="width:100%;border-collapse:collapse;">${exRows}</table>
+        </div>`;
+      }).join('');
+
+      const entry = {
+        id: 'tpl_' + pi + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        name: prog.name,
+        type: 'Meso',
+        phase: 'Off-Season',
+        notes: 'Off-Season 24-25 template — ' + prog.sessions.length + ' sessions',
+        content: '<div style="font-size:12px;">' + contentLines + '</div>',
+        created: new Date(Date.now() - (Object.keys(PROGRAM_TEMPLATES).length - pi) * 60000).toISOString(),
+        athlete: playerName,
+        isTemplate: true,
+      };
+      athletePrograms[playerName].push(entry);
+    });
+  });
+
+  persistAthletePrograms();
+  localStorage.setItem(SEED_KEY, '1');
+  console.log('[Templates] Seeded', Object.keys(PROGRAM_TEMPLATES).length, 'programs for', players.length, 'players');
+}
+
+
 function persistAthletePrograms() {
   try { localStorage.setItem(ATHLETE_PROGRAMS_KEY, JSON.stringify(athletePrograms)); } catch(e) {}
 }
@@ -2381,11 +2433,13 @@ function renderAthletePrograms() {
   if (!container) return;
   const all    = (athletePrograms[currentPlayer] || []);
   const search = (document.getElementById('prog-search')?.value || '').toLowerCase();
-  const progs  = search ? all.filter(p =>
+  const hideTemplates = document.getElementById('prog-hide-templates')?.checked;
+  let progs = hideTemplates ? all.filter(p => !p.isTemplate) : all;
+  if (search) progs = progs.filter(p =>
     p.name.toLowerCase().includes(search) ||
     (p.notes||'').toLowerCase().includes(search) ||
     (p.phase||'').toLowerCase().includes(search)
-  ) : all;
+  );
 
   if (!progs.length) {
     container.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text3);font-family:'DM Mono',monospace;font-size:13px;">
@@ -2414,6 +2468,7 @@ function renderAthletePrograms() {
             <span style="color:${tc};font-weight:600;">${p.type}</span>
             <span style="color:${pc};">${p.phase}</span>
             <span style="color:rgba(255,255,255,0.4);">${dt}</span>
+            ${p.isTemplate ? '<span style="color:var(--text3);background:rgba(255,255,255,0.08);border-radius:3px;padding:1px 5px;font-size:9px;text-transform:uppercase;letter-spacing:1px;">Template</span>' : ''}
           </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
@@ -5272,6 +5327,7 @@ function init() {
   load1RM();              // Restore 1RM database
   loadWellness();         // Restore daily wellness logs
   loadAthletePrograms();  // Restore athlete program history
+  seedTemplatePrograms();   // One-time seed of Off-Season templates
   loadGridState();         // Restore grid builder state
   // Clean only truly null/undefined entries from EXERCISE_DB
   EXERCISE_DB = EXERCISE_DB.filter(e => e != null && e.name);
