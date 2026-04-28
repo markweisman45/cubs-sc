@@ -1749,6 +1749,7 @@ body {
           <option>Jameson Taillon</option><option>Shota Imanaga</option>
           <option>Justin Steele</option><option>Daniel Palencia</option>
           <option>Caleb Thielbar</option><option>Edward Cabrera</option>
+          <option>Seiya Suzuki</option><option value="Template Library">📋 Template Library</option>
         </select>
         <select class="control-select" id="prog-lib-type" onchange="renderProgramLibrary()" style="width:160px;">
           <option value="">All Types</option>
@@ -4337,6 +4338,7 @@ function init() {
   loadWellness();         // Restore daily wellness logs
   loadAthletePrograms();  // Restore athlete program history
   seedMyPrograms();        // One-time seed of Off-Season templates into My Programs
+  renderProgramLibrary();    // Refresh My Programs display
   // Clean only truly null/undefined entries from EXERCISE_DB
   EXERCISE_DB = EXERCISE_DB.filter(e => e != null && e.name);
   loadPersistedData();    // Restore imported Statcast/CMJ/hitting data across sessions
