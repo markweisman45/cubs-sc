@@ -3358,13 +3358,16 @@ function gsmInsertProgram() {
     return;
   }
 
-  // Collect all saved programs from athlete + global library
+  // Collect from athlete programs + My Programs library
   const athlete  = document.getElementById('grid-athlete')?.value || currentPlayer;
   const athProgs = (athletePrograms[athlete]||[]);
-  const allProgs = athProgs;
+  const libProgs = (typeof SAVED_PROGRAMS !== 'undefined') ? SAVED_PROGRAMS : [];
+  // Merge, dedup by id
+  const seen = new Set(athProgs.map(p=>p.id));
+  const allProgs = [...athProgs, ...libProgs.filter(p=>!seen.has(p.id))];
 
   if (!allProgs.length) {
-    alert('No saved programs found. Save a program from the Session Builder first, then come back to insert it.');
+    alert('No saved programs found. Save a program from the Session Builder first, or add templates from My Programs.');
     return;
   }
 
@@ -3429,50 +3432,98 @@ function gsmDoInsertProgram(idx) {
   if (!session) return;
   gsmMigrateToBlocks(session);
 
-  // Parse the program's HTML content to extract exercises
-  const tmp = document.createElement('div');
-  tmp.innerHTML = prog.content || '';
-
-  // Try to extract structured exercise rows from program-block divs
-  const programBlocks = tmp.querySelectorAll('.program-block');
-  if (programBlocks.length) {
+  // For template programs: extract directly from raw OC_PROGRAMS data
+  if (prog.isTemplate && typeof OC_PROGRAMS !== 'undefined' && OC_PROGRAMS[prog.name]) {
+    const sessions = OC_PROGRAMS[prog.name];
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     let blockOffset = session.blocks.length;
-    programBlocks.forEach((pb, bi) => {
-      const tag     = pb.querySelector('.pair-tag, .block-tag, h3')?.textContent?.trim() || `Block ${bi+1}`;
-      const label   = letters[(blockOffset + bi) % 26];
-      const exercises = [];
-      pb.querySelectorAll('.exercise-row').forEach(row => {
-        const cells = row.querySelectorAll('div, td');
-        if (cells.length >= 2) {
-          const name = cells[0]?.textContent?.trim();
-          if (name && name.length > 1) {
-            exercises.push({
-              name,
-              cat:   '',
-              video: '',
-              sets:  cells[1]?.textContent?.trim() || '',
-              reps:  cells[2]?.textContent?.trim() || '',
-              load:  cells[4]?.textContent?.trim() || '',
-              tempo: cells[3]?.textContent?.trim() || '',
-              rest:  cells[5]?.textContent?.trim() || '',
-              notes: cells[6]?.textContent?.trim() || '',
-            });
-          }
-        }
-      });
-      if (exercises.length || tag) {
-        session.blocks.push({ label, tag, exercises });
-      }
+    sessions.forEach((s, si) => {
+      const label = letters[(blockOffset + si) % 26];
+      const exercises = s.exercises.map(e => ({
+        name:  e.name,
+        cat:   (EXERCISE_DB.find(x=>x.name===e.name)||{}).cat || '',
+        video: (EXERCISE_DB.find(x=>x.name===e.name)||{}).video || '',
+        sets:  e.sets  || '',
+        reps:  e.reps  || '',
+        load:  e.load  || '',
+        tempo: e.tempo || '',
+        rest:  e.rest  || '',
+        notes: e.notes || '',
+      }));
+      session.blocks.push({ label, tag: s.week + ' · ' + s.day + ' [' + s.type + ']', exercises });
     });
   } else {
-    // Fallback: add as a single block with the program name
-    session.blocks.push({
-      label: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[session.blocks.length % 26],
-      tag:   prog.name,
-      exercises: [],
-    });
-    showStatus(`Program "${prog.name}" added as a block — exercises could not be parsed automatically`);
+    // Parse the program HTML content to extract exercises (for regular saved programs)
+    const tmp = document.createElement('div');
+    tmp.innerHTML = prog.content || prog.html || '';
+
+    // Try structured exercise rows
+    const programBlocks = tmp.querySelectorAll('.program-block');
+    if (programBlocks.length) {
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      let blockOffset = session.blocks.length;
+      programBlocks.forEach((pb, bi) => {
+        const tag     = pb.querySelector('.pair-tag, .block-tag, h3')?.textContent?.trim() || `Block ${bi+1}`;
+        const label   = letters[(blockOffset + bi) % 26];
+        const exercises = [];
+        pb.querySelectorAll('.exercise-row').forEach(row => {
+          const cells = row.querySelectorAll('div, td');
+          if (cells.length >= 2) {
+            const name = cells[0]?.textContent?.trim();
+            if (name && name.length > 1) {
+              exercises.push({
+                name, cat:'', video:'',
+                sets:  cells[1]?.textContent?.trim() || '',
+                reps:  cells[2]?.textContent?.trim() || '',
+                load:  cells[4]?.textContent?.trim() || '',
+                tempo: cells[3]?.textContent?.trim() || '',
+                rest:  cells[5]?.textContent?.trim() || '',
+                notes: cells[6]?.textContent?.trim() || '',
+              });
+            }
+          }
+        });
+        if (exercises.length || tag) {
+          session.blocks.push({ label, tag, exercises });
+        }
+      });
+    } else {
+      // Try parsing table rows from our template HTML format
+      const rows = tmp.querySelectorAll('tr');
+      if (rows.length > 1) {
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const exercises = [];
+        rows.forEach(row => {
+          const cells = row.querySelectorAll('td');
+          if (cells.length >= 2) {
+            const name = cells[0]?.textContent?.trim();
+            if (name && name.length > 1 && name !== 'Exercise') {
+              exercises.push({
+                name, cat:'', video:'',
+                sets:  cells[1]?.textContent?.trim() || '',
+                reps:  cells[2]?.textContent?.trim() || '',
+                tempo: cells[3]?.textContent?.trim() || '',
+                load:  cells[4]?.textContent?.trim() || '',
+                rest:  cells[5]?.textContent?.trim() || '',
+                notes: cells[6]?.textContent?.trim() || '',
+              });
+            }
+          }
+        });
+        if (exercises.length) {
+          session.blocks.push({
+            label: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[session.blocks.length % 26],
+            tag: prog.name, exercises
+          });
+        }
+      } else {
+        session.blocks.push({
+          label: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[session.blocks.length % 26],
+          tag: prog.name, exercises: [],
+        });
+        showStatus(`Program "${prog.name}" added as a block — exercises could not be parsed automatically`);
+      }
+    }
   }
 
   document.getElementById('gsm-insert-modal')?.remove();
@@ -3843,10 +3894,13 @@ function perioOnCatChange() {
 function perioImportProgram() {
   const athlete = (document.getElementById('perio-athlete') || {}).value || currentPlayer;
   const phase   = (document.getElementById('perio-phase') || {}).value || 'inseason';
-  const allProgs = (athletePrograms[athlete] || []);
+  const athProgs2 = (athletePrograms[athlete] || []);
+  const libProgs2 = (typeof SAVED_PROGRAMS !== 'undefined') ? SAVED_PROGRAMS : [];
+  const seen2 = new Set(athProgs2.map(p=>p.id));
+  const allProgs = [...athProgs2, ...libProgs2.filter(p=>!seen2.has(p.id))];
 
   if (!allProgs.length) {
-    alert('No saved programs found for ' + athlete + '. Save a program from the Session Builder or Grid Builder first.');
+    alert('No saved programs found. Add templates from My Programs or save a program from the Session Builder.');
     return;
   }
 
@@ -3938,12 +3992,35 @@ function perioDoImport(idx) {
   var def   = PHASE_DEFAULTS[phase] || PHASE_DEFAULTS.inseason;
   var athlete = (document.getElementById('perio-athlete') || {}).value || currentPlayer;
 
-  // Parse exercises from program HTML content
-  var tmp = document.createElement('div');
-  tmp.innerHTML = prog.content || '';
-
+  // For template programs: extract directly from raw OC_PROGRAMS data
   var imported = [];
   var seen = {};
+  if (prog.isTemplate && typeof OC_PROGRAMS !== 'undefined' && OC_PROGRAMS[prog.name]) {
+    var def2 = PHASE_DEFAULTS[phase] || PHASE_DEFAULTS.inseason;
+    OC_PROGRAMS[prog.name].forEach(function(s) {
+      s.exercises.forEach(function(e) {
+        if (!e.name || seen[e.name]) return;
+        seen[e.name] = true;
+        var dbEx = EXERCISE_DB.find(function(x) { return x && x.name === e.name; });
+        var rm = ((ATHLETE_1RM[athlete] || {})[e.name]) || 0;
+        var loadPct = def2.loadStart;
+        imported.push({
+          name: e.name, cat: dbEx ? dbEx.cat : '', video: dbEx ? dbEx.video : '',
+          rm: rm, curve: 'linear',
+          startSets:   parseFloat(e.sets) || def2.sets[0],
+          endSets:     (parseFloat(e.sets) || def2.sets[0]) + 1,
+          startRepsLo: def2.repsLo, startRepsHi: def2.repsHi,
+          endRepsLo:   Math.max(1, def2.repsLo - 2), endRepsHi: Math.max(1, def2.repsHi - 2),
+          startLoad: loadPct, endLoad: loadPct + 8,
+          tempo: e.tempo || '3-1-1-0', startRPE: def2.rpeStart, endRPE: def2.rpeEnd,
+        });
+      });
+    });
+  }
+
+  // Parse exercises from program HTML content (for non-template programs)
+  var tmp = document.createElement('div');
+  tmp.innerHTML = prog.content || prog.html || '';
 
   // Strategy -1: embedded JSON metadata block (most reliable — set by quickSaveProgram)
   var metaEl = tmp.querySelector('#prog-exercise-meta');
