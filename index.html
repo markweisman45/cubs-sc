@@ -2132,6 +2132,7 @@ body {
             <input type="date" id="csv-game-date" value="2026-04-27"
               style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
           </div>
+          <button onclick="deleteGameDateData()" style="padding:8px 14px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;">🗑 Delete Date</button>
           <button onclick="document.getElementById('hittingCSVInput').click()" style="padding:8px 14px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:8px;color:var(--green);font-size:13px;font-weight:600;cursor:pointer;">&#128202; Import Hitting CSV</button>
           <input type="file" id="hittingCSVInput" accept=".csv" style="display:none" onchange="handleHittingCSVUpload(this)">
           <button onclick="document.getElementById('throwCSVInput').click()" style="padding:8px 14px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:8px;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;">&#128202; Import Throw Velo CSV</button>
@@ -13417,6 +13418,27 @@ function mergeHittingIntoRecentGames() {
     if (latestWithThrow) p.latestThrow = latestWithThrow.throwV;
   });
 }
+function deleteGameDateData() {
+  var d = (document.getElementById('csv-game-date')||{}).value;
+  if (!d) { alert('Pick a date first'); return; }
+  if (!confirm('Delete ALL hitting & throw data for ' + d + '?')) return;
+
+  var hitData = JSON.parse(localStorage.getItem(HITTING_KEY) || '{}');
+  var changed = 0;
+  Object.keys(hitData).forEach(function(name) {
+    var before = hitData[name].length;
+    hitData[name] = hitData[name].filter(function(h) { return fmtDate(h.date) !== d; });
+    changed += before - hitData[name].length;
+  });
+  localStorage.setItem(HITTING_KEY, JSON.stringify(hitData));
+  importedData.hitting = hitData;
+  mergeHittingIntoRecentGames();
+  persistImportedData();
+  requestAnimationFrame(function() { rebuildCMJTrends(); buildPlayerList(); renderDashboard(); });
+  showStatus('🗑 Deleted ' + changed + ' entries for ' + d);
+  alert('Deleted ' + changed + ' hitting/throw entries for ' + d);
+}
+
 function handleHittingCSVUpload(input) {
   var file=input.files[0]; if(!file)return; input.value='';
   var reader=new FileReader();
