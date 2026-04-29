@@ -13421,25 +13421,50 @@ function mergeHittingIntoRecentGames() {
 function deleteGameDateData() {
   var d = (document.getElementById('csv-game-date')||{}).value;
   if (!d) { alert('Pick a date first'); return; }
-  if (!confirm('Delete ALL hitting & throw data for ' + d + '?')) return;
+  if (!confirm('Delete ALL game data (hitting, throw, statcast) for ' + d + '?')) return;
 
-  var hitData = JSON.parse(localStorage.getItem(HITTING_KEY) || '{}');
+  var dFmt = fmtDate(d);
   var changed = 0;
+
+  // 1. Delete from hitting data (all date formats)
+  var hitData = JSON.parse(localStorage.getItem(HITTING_KEY) || '{}');
   Object.keys(hitData).forEach(function(name) {
     var before = hitData[name].length;
-    var dFmt = fmtDate(d);
     hitData[name] = hitData[name].filter(function(h) {
-      return fmtDate(h.date) !== dFmt && h.date !== d;
+      return fmtDate(h.date) !== dFmt && h.date !== d && h.date !== dFmt;
     });
     changed += before - hitData[name].length;
   });
   localStorage.setItem(HITTING_KEY, JSON.stringify(hitData));
   importedData.hitting = hitData;
-  mergeHittingIntoRecentGames();
+
+  // 2. Delete from statcast data
+  var scData = JSON.parse(localStorage.getItem(STATCAST_KEY) || '{}');
+  Object.keys(scData).forEach(function(name) {
+    var before = (scData[name]||[]).length;
+    scData[name] = (scData[name]||[]).filter(function(g) {
+      return fmtDate(g.date) !== dFmt && g.date !== d;
+    });
+    changed += before - scData[name].length;
+  });
+  localStorage.setItem(STATCAST_KEY, JSON.stringify(scData));
+  importedData.statcast = scData;
+
+  // 3. Delete from PLAYERS recentGames directly
+  Object.keys(PLAYERS).forEach(function(name) {
+    var p = PLAYERS[name];
+    if (!p.recentGames) return;
+    var before = p.recentGames.length;
+    p.recentGames = p.recentGames.filter(function(g) {
+      return fmtDate(g.date) !== dFmt && g.date !== d;
+    });
+    changed += before - p.recentGames.length;
+  });
+
   persistImportedData();
   requestAnimationFrame(function() { rebuildCMJTrends(); buildPlayerList(); renderDashboard(); });
-  showStatus('🗑 Deleted ' + changed + ' entries for ' + d);
-  alert('Deleted ' + changed + ' hitting/throw entries for ' + d);
+  showStatus('🗑 Cleared all data for ' + dFmt);
+  alert('Cleared ' + changed + ' entries for ' + dFmt + '. If data still shows, use Restore Backup to fully reset.');
 }
 
 function handleHittingCSVUpload(input) {
