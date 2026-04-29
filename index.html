@@ -11432,14 +11432,20 @@ function applyStatcastData() {
       const cutoff28 = new Date(today); cutoff28.setDate(cutoff28.getDate()-28);
       const inW7  = r => safeParseDate(r.date) > cutoff7  && safeParseDate(r.date) <= today;
       const inW28 = r => safeParseDate(r.date) > cutoff28 && safeParseDate(r.date) <= today;
+      // Days of data actually available (capped at window sizes)
+      const firstDate   = safeParseDate(rows_for_acwr[0].date);
+      const daysOfData  = Math.round((today - firstDate) / 86400000) + 1;
+      const acuteDays   = Math.min(7,  daysOfData);
+      const chronicDays = Math.min(28, daysOfData);
+
       const acute      = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.heDist,0);
       const chronic    = rows_for_acwr.filter(inW28).reduce((s,r)=>s+r.heDist,0);
-      const chronicAvg = (chronic/28)*7;
+      const chronicAvg = (chronic/chronicDays)*acuteDays;
       p.heAcwr = chronicAvg > 0 ? parseFloat((acute/chronicAvg).toFixed(3)) : 1.0;
       // TD ACWR (7:28)
       const acuteT     = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.dist,0);
       const chronicT   = rows_for_acwr.filter(inW28).reduce((s,r)=>s+r.dist,0);
-      const chronicTAvg = (chronicT/28)*7;
+      const chronicTAvg = (chronicT/chronicDays)*acuteDays;
       p.tdAcwr = chronicTAvg > 0 ? parseFloat((acuteT/chronicTAvg).toFixed(3)) : 1.0;
       p.acwr   = parseFloat(((p.heAcwr + p.tdAcwr) / 2).toFixed(3)); // combined = average of both
 
@@ -11459,8 +11465,13 @@ function applyStatcastData() {
             if (diff < ms28) { heC += x.heDist; tdC += x.dist; }
           }
         });
-        const heChrAvg = (heC/28)*7;
-        const tdChrAvg = (tdC/28)*7;
+        // Scale chronic by actual days spanned to that game point
+        const firstMs   = _parsedDates[0];
+        const spanDays  = Math.max(1, Math.round((rTime - firstMs) / 86400000) + 1);
+        const chrDays   = Math.min(28, spanDays);
+        const actDays   = Math.min(7,  spanDays);
+        const heChrAvg = (heC/chrDays)*actDays;
+        const tdChrAvg = (tdC/chrDays)*actDays;
         const heAcwr = heChrAvg > 0 ? parseFloat((heA/heChrAvg).toFixed(3)) : 1.0;
         const tdAcwr = tdChrAvg > 0 ? parseFloat((tdA/tdChrAvg).toFixed(3)) : 1.0;
         return {
