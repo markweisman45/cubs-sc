@@ -7945,7 +7945,7 @@ function importExerciseLibraryXLSX(input) {
         // Parse CSV
         const text = e.target.result;
         const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-        const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim().toLowerCase());
+        const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim().toLowerCase()).replace(/\u00A0/g,' ');
         const nameCol = headers.findIndex(h => h.includes('name') || h.includes('exercise'));
         const catCol  = headers.findIndex(h => h.includes('cat') || h.includes('category'));
         const urlCol  = headers.findIndex(h => h.includes('url') || h.includes('video') || h.includes('youtube'));
@@ -13420,7 +13420,8 @@ function handleHittingCSVUpload(input) {
         var d=(r['Date']||r['Game']||'').trim();
         var ev=parseFloat(r['EV (MPH)']||r['EV'])||0;
         var bs=parseFloat(r['BSp (MPH)']||r['BSp'])||0;
-        if(!b||!d)return;
+        if(!b)return;
+        if(!d) d=new Date().toISOString().slice(0,10);
         var k=b+'|'+d;
         if(!g[k])g[k]={b:b,d:d,ev:0,bs:0};
         if(ev>g[k].ev)g[k].ev=ev; if(bs>g[k].bs)g[k].bs=bs;
@@ -13456,7 +13457,8 @@ function handleThrowCSVUpload(input) {
         var p=(r['Fielder']||r['Player']||'').trim();
         var d=(r['Date']||r['Game']||'').trim();
         var arm=parseFloat(r['ARM (MPH)']||r['ARM'])||0;
-        if(!p||!d||!arm)return;
+        if(!p||!arm)return;
+        if(!d) d=new Date().toISOString().slice(0,10);
         var k=p+'|'+d;
         if(!g[k])g[k]={p:p,d:d,arm:0};
         if(arm>g[k].arm)g[k].arm=arm;
