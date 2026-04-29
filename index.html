@@ -13416,6 +13416,8 @@ function handleHittingCSVUpload(input) {
   var file=input.files[0]; if(!file)return; input.value='';
   var reader=new FileReader();
   reader.onload=function(e){
+    // Strip non-UTF8 chars (e.g.   non-breaking space in headers)
+    e = {target:{result: e.target.result.replace(/ /g,' ')}};
     try{
       var rows=parseCSV(e.target.result), g={};
       rows.forEach(function(r){
@@ -13454,6 +13456,8 @@ function handleThrowCSVUpload(input) {
   var file=input.files[0]; if(!file)return; input.value='';
   var reader=new FileReader();
   reader.onload=function(e){
+    // Strip non-UTF8 chars (e.g.   non-breaking space in headers)
+    e = {target:{result: e.target.result.replace(/ /g,' ')}};
     try{
       var rows=parseCSV(e.target.result),g={};
       rows.forEach(function(r){
