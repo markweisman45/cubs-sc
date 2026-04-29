@@ -13416,10 +13416,9 @@ function handleHittingCSVUpload(input) {
   var file=input.files[0]; if(!file)return; input.value='';
   var reader=new FileReader();
   reader.onload=function(e){
-    // Strip non-UTF8 chars (e.g.   non-breaking space in headers)
-    e = {target:{result: e.target.result.replace(/ /g,' ')}};
     try{
-      var rows=parseCSV(e.target.result), g={};
+      var text=e.target.result.replace(/\u00a0/g,' ').replace(/\xa0/g,' ');
+      var rows=parseCSV(text), g={};
       rows.forEach(function(r){
         var b=(r['Batter']||'').trim();
         var d=(r['Date']||r['Game']||'').trim();
@@ -13456,10 +13455,9 @@ function handleThrowCSVUpload(input) {
   var file=input.files[0]; if(!file)return; input.value='';
   var reader=new FileReader();
   reader.onload=function(e){
-    // Strip non-UTF8 chars (e.g.   non-breaking space in headers)
-    e = {target:{result: e.target.result.replace(/ /g,' ')}};
     try{
-      var rows=parseCSV(e.target.result),g={};
+      var text=e.target.result.replace(/\u00a0/g,' ');
+      var rows=parseCSV(text),g={};
       rows.forEach(function(r){
         var p=(r['Fielder']||r['Player']||'').trim();
         var d=(r['Date']||r['Game']||'').trim();
