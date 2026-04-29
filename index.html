@@ -1032,7 +1032,7 @@ body {
       <!-- WORKLOAD TAB -->
       <div id="dash-workload" class="page">
         <div class="card section-mb">
-          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (7-day : 28-day)</div>
+          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (7-day : 14-day)</div>
           <div class="chart-wrap xl"><canvas id="acwrChart"></canvas></div>
         </div>
         <div class="grid-2">
@@ -5491,8 +5491,8 @@ function computeLiveACWR(playerName) {
   const tdA = rows.filter(inW7).reduce((s,r)=>s+r.dist,0);
   const tdC = rows.filter(inW14).reduce((s,r)=>s+r.dist,0);
 
-  const heAcwr = (heC/28)*7 > 0 ? parseFloat((heA/((heC/28)*7)).toFixed(3)) : 1.0;
-  const tdAcwr = (tdC/28)*7 > 0 ? parseFloat((tdA/((tdC/28)*7)).toFixed(3)) : 1.0;
+  const heAcwr = (heC/14)*7 > 0 ? parseFloat((heA/((heC/14)*7)).toFixed(3)) : 1.0;
+  const tdAcwr = (tdC/14)*7 > 0 ? parseFloat((tdA/((tdC/14)*7)).toFixed(3)) : 1.0;
   const acwr   = parseFloat(((heAcwr+tdAcwr)/2).toFixed(3));
 
   return { acwr, heAcwr, tdAcwr };
@@ -5925,8 +5925,8 @@ function renderAllCharts(p) {
       const heC = allStatcast.filter(x=>inWindow(x,c14,rDate)).reduce((s,x)=>s+x.heDist,0);
       const tdA = allStatcast.filter(x=>inWindow(x,c7,rDate)).reduce((s,x)=>s+x.dist,0);
       const tdC = allStatcast.filter(x=>inWindow(x,c14,rDate)).reduce((s,x)=>s+x.dist,0);
-      const heAcwr = (heC/28)*7 > 0 ? parseFloat((heA/((heC/28)*7)).toFixed(3)) : 1.0;
-      const tdAcwr = (tdC/28)*7 > 0 ? parseFloat((tdA/((tdC/28)*7)).toFixed(3)) : 1.0;
+      const heAcwr = (heC/14)*7 > 0 ? parseFloat((heA/((heC/14)*7)).toFixed(3)) : 1.0;
+      const tdAcwr = (tdC/14)*7 > 0 ? parseFloat((tdA/((tdC/14)*7)).toFixed(3)) : 1.0;
       const label  = r._today ? 'Today' : fmtDate(r.date);
       return { date:label, he:heAcwr, td:tdAcwr, comb:parseFloat(((heAcwr+tdAcwr)/2).toFixed(3)) };
     });
@@ -11424,43 +11424,43 @@ function applyStatcastData() {
       if (g.throwV && g.throwV > (p.bests.throwV || 0)) p.bests.throwV = g.throwV;
     });
 
-    // Compute ACWR from imported data (7-day acute / 28-day chronic)
+    // Compute ACWR from imported data (7-day acute / 14-day chronic)
     if (rows_for_acwr.length >= 2) {
       // Always compute relative to TODAY — accounts for off days since last game
       const today = new Date(); today.setHours(0,0,0,0);
       const cutoff7  = new Date(today); cutoff7.setDate(cutoff7.getDate()-7);
-      const cutoff28 = new Date(today); cutoff28.setDate(cutoff28.getDate()-28);
+      const cutoff14 = new Date(today); cutoff14.setDate(cutoff14.getDate()-14);
       const inW7  = r => safeParseDate(r.date) > cutoff7  && safeParseDate(r.date) <= today;
-      const inW28 = r => safeParseDate(r.date) > cutoff28 && safeParseDate(r.date) <= today;
+      const inW14 = r => safeParseDate(r.date) > cutoff14 && safeParseDate(r.date) <= today;
       const acute      = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.heDist,0);
-      const chronic    = rows_for_acwr.filter(inW28).reduce((s,r)=>s+r.heDist,0);
-      const chronicAvg = (chronic/28)*7;
+      const chronic    = rows_for_acwr.filter(inW14).reduce((s,r)=>s+r.heDist,0);
+      const chronicAvg = (chronic/14)*7;
       p.heAcwr = chronicAvg > 0 ? parseFloat((acute/chronicAvg).toFixed(3)) : 1.0;
-      // TD ACWR (7:28)
+      // TD ACWR (7:14)
       const acuteT     = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.dist,0);
-      const chronicT   = rows_for_acwr.filter(inW28).reduce((s,r)=>s+r.dist,0);
-      const chronicTAvg = (chronicT/28)*7;
+      const chronicT   = rows_for_acwr.filter(inW14).reduce((s,r)=>s+r.dist,0);
+      const chronicTAvg = (chronicT/14)*7;
       p.tdAcwr = chronicTAvg > 0 ? parseFloat((acuteT/chronicTAvg).toFixed(3)) : 1.0;
       p.acwr   = parseFloat(((p.heAcwr + p.tdAcwr) / 2).toFixed(3)); // combined = average of both
 
       // Update ACWR history — O(n) single pass (pre-cache dates to avoid repeated safeParseDate)
-      const historyRows = rows_for_acwr.slice(-60); // last 60 games for chart
+      const historyRows = rows_for_acwr.slice(-30); // last 30 games for chart
       const _parsedDates = rows_for_acwr.map(r => safeParseDate(r.date).getTime());
       p.acwrHistory = historyRows.map((r, _hi) => {
         const rTime = safeParseDate(r.date).getTime();
         const ms7   = 7  * 86400000;
-        const ms28  = 28 * 86400000;
+        const ms14  = 14 * 86400000;
         let heA=0, heC=0, tdA=0, tdC=0;
         rows_for_acwr.forEach((x, xi) => {
           const t = _parsedDates[xi];
           if (t <= rTime) {
             const diff = rTime - t;
             if (diff < ms7)  { heA += x.heDist; tdA += x.dist; }
-            if (diff < ms28) { heC += x.heDist; tdC += x.dist; }
+            if (diff < ms14) { heC += x.heDist; tdC += x.dist; }
           }
         });
-        const heChrAvg = (heC/28)*7;
-        const tdChrAvg = (tdC/28)*7;
+        const heChrAvg = (heC/14)*7;
+        const tdChrAvg = (tdC/14)*7;
         const heAcwr = heChrAvg > 0 ? parseFloat((heA/heChrAvg).toFixed(3)) : 1.0;
         const tdAcwr = tdChrAvg > 0 ? parseFloat((tdA/tdChrAvg).toFixed(3)) : 1.0;
         return {
