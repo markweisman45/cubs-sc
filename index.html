@@ -13450,7 +13450,7 @@ function handleHittingCSVUpload(input) {
       alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':''));
     }catch(err){alert('Error: '+err.message);}
   };
-  reader.readAsText(file);
+  reader.readAsText(file, 'ISO-8859-1');
 }
 function handleThrowCSVUpload(input) {
   var file=input.files[0]; if(!file)return; input.value='';
@@ -13488,7 +13488,7 @@ function handleThrowCSVUpload(input) {
       if(n===0){alert('No roster players found in throw CSV. Skipped: '+sk+' non-roster players.');} else {alert('Done! '+n+' roster players updated.');}
     }catch(err){alert('Throw CSV error: '+err.message);}
   };
-  reader.readAsText(file);
+  reader.readAsText(file, 'ISO-8859-1');
 }
 function getCSSColors(){
   var s=getComputedStyle(document.documentElement);
