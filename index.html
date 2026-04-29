@@ -5334,8 +5334,8 @@ function renderReadinessHero(p) {
     acwrEl.textContent = p.acwr.toFixed(3);
     acwrEl.style.color = acwrColor(p.acwr);
   }
-  const games = p.recentGames;
-  if (games.length) document.getElementById('lastGame').textContent = games[games.length-1].date;
+  const games = [...(p.recentGames||[])].sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+  if (games.length) document.getElementById('lastGame').textContent = fmtDate(games[games.length-1].date);
 
   // Readiness trend arrow — compare today vs yesterday
   const trendEl = document.getElementById('readinessTrend');
@@ -5491,8 +5491,8 @@ function computeLiveACWR(playerName) {
   const tdA = rows.filter(inW7).reduce((s,r)=>s+r.dist,0);
   const tdC = rows.filter(inW14).reduce((s,r)=>s+r.dist,0);
 
-  const heAcwr = (heC/14)*7 > 0 ? parseFloat((heA/((heC/14)*7)).toFixed(3)) : 1.0;
-  const tdAcwr = (tdC/14)*7 > 0 ? parseFloat((tdA/((tdC/14)*7)).toFixed(3)) : 1.0;
+  const heAcwr = (heC/28)*7 > 0 ? parseFloat((heA/((heC/28)*7)).toFixed(3)) : 1.0;
+  const tdAcwr = (tdC/28)*7 > 0 ? parseFloat((tdA/((tdC/28)*7)).toFixed(3)) : 1.0;
   const acwr   = parseFloat(((heAcwr+tdAcwr)/2).toFixed(3));
 
   return { acwr, heAcwr, tdAcwr };
@@ -5925,8 +5925,8 @@ function renderAllCharts(p) {
       const heC = allStatcast.filter(x=>inWindow(x,c14,rDate)).reduce((s,x)=>s+x.heDist,0);
       const tdA = allStatcast.filter(x=>inWindow(x,c7,rDate)).reduce((s,x)=>s+x.dist,0);
       const tdC = allStatcast.filter(x=>inWindow(x,c14,rDate)).reduce((s,x)=>s+x.dist,0);
-      const heAcwr = (heC/14)*7 > 0 ? parseFloat((heA/((heC/14)*7)).toFixed(3)) : 1.0;
-      const tdAcwr = (tdC/14)*7 > 0 ? parseFloat((tdA/((tdC/14)*7)).toFixed(3)) : 1.0;
+      const heAcwr = (heC/28)*7 > 0 ? parseFloat((heA/((heC/28)*7)).toFixed(3)) : 1.0;
+      const tdAcwr = (tdC/28)*7 > 0 ? parseFloat((tdA/((tdC/28)*7)).toFixed(3)) : 1.0;
       const label  = r._today ? 'Today' : fmtDate(r.date);
       return { date:label, he:heAcwr, td:tdAcwr, comb:parseFloat(((heAcwr+tdAcwr)/2).toFixed(3)) };
     });
@@ -10848,8 +10848,20 @@ function loadPersistedData() {
     }
     // Rebuild cmjTrends from persisted importedData so it survives file updates
     rebuildCMJTrends();
-    // On startup: only rebuild latest values from stored statcast — skip heavy ACWR recalc
-    // (ACWR history was already saved to PLAYERS_STATE_KEY by persistImportedData)
+    // On startup: rebuild latest values AND recalculate ACWR from stored data
+    // so ACWR window changes take effect immediately without re-uploading
+    if (Object.keys(importedData.statcast || {}).length) {
+      // Repopulate parsedStatcastRows from stored data then run applyStatcastData
+      parsedStatcastRows = [];
+      Object.entries(importedData.statcast).forEach(([name, rows]) => {
+        rows.forEach(r => parsedStatcastRows.push({
+          name, rawName: name, date: r.date,
+          dist: r.dist||0, midEff: r.midEff||0, highEff: r.highEff||0,
+          heDist: r.heDist||0, speed: r.speed||0
+        }));
+      });
+      try { applyStatcastData(); } catch(e) { console.warn('startup ACWR recalc failed:', e); }
+    }
     Object.entries(importedData.statcast || {}).forEach(([name, rows]) => {
       const p = PLAYERS[name]; if (!p || !rows.length) return;
       const sorted = rows.slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
@@ -11424,43 +11436,54 @@ function applyStatcastData() {
       if (g.throwV && g.throwV > (p.bests.throwV || 0)) p.bests.throwV = g.throwV;
     });
 
-    // Compute ACWR from imported data (7-day acute / 14-day chronic)
+    // Compute ACWR from imported data (7-day acute / 28-day chronic)
     if (rows_for_acwr.length >= 2) {
       // Always compute relative to TODAY — accounts for off days since last game
       const today = new Date(); today.setHours(0,0,0,0);
       const cutoff7  = new Date(today); cutoff7.setDate(cutoff7.getDate()-7);
-      const cutoff14 = new Date(today); cutoff14.setDate(cutoff14.getDate()-14);
+      const cutoff28 = new Date(today); cutoff28.setDate(cutoff28.getDate()-14);
       const inW7  = r => safeParseDate(r.date) > cutoff7  && safeParseDate(r.date) <= today;
-      const inW14 = r => safeParseDate(r.date) > cutoff14 && safeParseDate(r.date) <= today;
+      const inW28 = r => safeParseDate(r.date) > cutoff28 && safeParseDate(r.date) <= today;
+      // Days of data actually available (capped at window sizes)
+      const firstDate   = safeParseDate(rows_for_acwr[0].date);
+      const daysOfData  = Math.round((today - firstDate) / 86400000) + 1;
+      const acuteDays   = Math.min(7,  daysOfData);
+      const chronicDays = Math.min(14, daysOfData);
+
       const acute      = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.heDist,0);
-      const chronic    = rows_for_acwr.filter(inW14).reduce((s,r)=>s+r.heDist,0);
-      const chronicAvg = (chronic/14)*7;
+      const chronic    = rows_for_acwr.filter(inW28).reduce((s,r)=>s+r.heDist,0);
+      const chronicAvg = (chronic/chronicDays)*acuteDays;
       p.heAcwr = chronicAvg > 0 ? parseFloat((acute/chronicAvg).toFixed(3)) : 1.0;
-      // TD ACWR (7:14)
+      // TD ACWR (7:28)
       const acuteT     = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.dist,0);
-      const chronicT   = rows_for_acwr.filter(inW14).reduce((s,r)=>s+r.dist,0);
-      const chronicTAvg = (chronicT/14)*7;
+      const chronicT   = rows_for_acwr.filter(inW28).reduce((s,r)=>s+r.dist,0);
+      const chronicTAvg = (chronicT/chronicDays)*acuteDays;
       p.tdAcwr = chronicTAvg > 0 ? parseFloat((acuteT/chronicTAvg).toFixed(3)) : 1.0;
       p.acwr   = parseFloat(((p.heAcwr + p.tdAcwr) / 2).toFixed(3)); // combined = average of both
 
       // Update ACWR history — O(n) single pass (pre-cache dates to avoid repeated safeParseDate)
-      const historyRows = rows_for_acwr.slice(-30); // last 30 games for chart
+      const historyRows = rows_for_acwr.slice(-60); // last 60 games for chart
       const _parsedDates = rows_for_acwr.map(r => safeParseDate(r.date).getTime());
       p.acwrHistory = historyRows.map((r, _hi) => {
         const rTime = safeParseDate(r.date).getTime();
         const ms7   = 7  * 86400000;
-        const ms14  = 14 * 86400000;
+        const ms28  = 14 * 86400000;
         let heA=0, heC=0, tdA=0, tdC=0;
         rows_for_acwr.forEach((x, xi) => {
           const t = _parsedDates[xi];
           if (t <= rTime) {
             const diff = rTime - t;
             if (diff < ms7)  { heA += x.heDist; tdA += x.dist; }
-            if (diff < ms14) { heC += x.heDist; tdC += x.dist; }
+            if (diff < ms28) { heC += x.heDist; tdC += x.dist; }
           }
         });
-        const heChrAvg = (heC/14)*7;
-        const tdChrAvg = (tdC/14)*7;
+        // Scale chronic by actual days spanned to that game point
+        const firstMs   = _parsedDates[0];
+        const spanDays  = Math.max(1, Math.round((rTime - firstMs) / 86400000) + 1);
+        const chrDays   = Math.min(14, spanDays);
+        const actDays   = Math.min(7,  spanDays);
+        const heChrAvg = (heC/chrDays)*actDays;
+        const tdChrAvg = (tdC/chrDays)*actDays;
         const heAcwr = heChrAvg > 0 ? parseFloat((heA/heChrAvg).toFixed(3)) : 1.0;
         const tdAcwr = tdChrAvg > 0 ? parseFloat((tdA/tdChrAvg).toFixed(3)) : 1.0;
         return {
