@@ -7945,7 +7945,7 @@ function importExerciseLibraryXLSX(input) {
         // Parse CSV
         const text = e.target.result;
         const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-        const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim().toLowerCase());
+        const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim().toLowerCase()).replace(/\u00A0/g,' ');
         const nameCol = headers.findIndex(h => h.includes('name') || h.includes('exercise'));
         const catCol  = headers.findIndex(h => h.includes('cat') || h.includes('category'));
         const urlCol  = headers.findIndex(h => h.includes('url') || h.includes('video') || h.includes('youtube'));
@@ -10998,7 +10998,10 @@ function clearAllImportedData() {
 
 // ── Roster name normalizer (handles minor differences in spacing/punctuation)
 function normalizeName(n) {
-  return n.trim().toLowerCase().replace(/[^a-z ]/g,'').replace(/\s+/g,' ');
+  // Normalize accented chars (é→e, ó→o, etc) then strip non-alpha
+  return n.trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z ]/g,'').replace(/\s+/g,' ');
 }
 
 const ROSTER_NAMES = () => Object.keys(PLAYERS);
@@ -13413,6 +13416,8 @@ function handleHittingCSVUpload(input) {
   var file=input.files[0]; if(!file)return; input.value='';
   var reader=new FileReader();
   reader.onload=function(e){
+    // Strip non-UTF8 chars (e.g.   non-breaking space in headers)
+    e = {target:{result: e.target.result.replace(/ /g,' ')}};
     try{
       var rows=parseCSV(e.target.result), g={};
       rows.forEach(function(r){
@@ -13420,7 +13425,8 @@ function handleHittingCSVUpload(input) {
         var d=(r['Date']||r['Game']||'').trim();
         var ev=parseFloat(r['EV (MPH)']||r['EV'])||0;
         var bs=parseFloat(r['BSp (MPH)']||r['BSp'])||0;
-        if(!b||!d)return;
+        if(!b)return;
+        if(!d) d=new Date().toISOString().slice(0,10);
         var k=b+'|'+d;
         if(!g[k])g[k]={b:b,d:d,ev:0,bs:0};
         if(ev>g[k].ev)g[k].ev=ev; if(bs>g[k].bs)g[k].bs=bs;
@@ -13450,13 +13456,16 @@ function handleThrowCSVUpload(input) {
   var file=input.files[0]; if(!file)return; input.value='';
   var reader=new FileReader();
   reader.onload=function(e){
+    // Strip non-UTF8 chars (e.g.   non-breaking space in headers)
+    e = {target:{result: e.target.result.replace(/ /g,' ')}};
     try{
       var rows=parseCSV(e.target.result),g={};
       rows.forEach(function(r){
         var p=(r['Fielder']||r['Player']||'').trim();
         var d=(r['Date']||r['Game']||'').trim();
         var arm=parseFloat(r['ARM (MPH)']||r['ARM'])||0;
-        if(!p||!d||!arm)return;
+        if(!p||!arm)return;
+        if(!d) d=new Date().toISOString().slice(0,10);
         var k=p+'|'+d;
         if(!g[k])g[k]={p:p,d:d,arm:0};
         if(arm>g[k].arm)g[k].arm=arm;
@@ -13476,8 +13485,8 @@ function handleThrowCSVUpload(input) {
       saveHitting(); persistImportedData();
       requestAnimationFrame(() => { rebuildCMJTrends(); buildPlayerList(); renderDashboard(); });
       showStatus('Throw velo: '+n+' roster rows imported'+(sk?' ('+sk+' non-roster skipped)':''));
-      alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':''));
-    }catch(err){alert('Error: '+err.message);}
+      if(n===0){alert('No roster players found in throw CSV. Skipped: '+sk+' non-roster players.');} else {alert('Done! '+n+' roster players updated.');}
+    }catch(err){alert('Throw CSV error: '+err.message);}
   };
   reader.readAsText(file);
 }
