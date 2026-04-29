@@ -5334,8 +5334,8 @@ function renderReadinessHero(p) {
     acwrEl.textContent = p.acwr.toFixed(3);
     acwrEl.style.color = acwrColor(p.acwr);
   }
-  const games = p.recentGames;
-  if (games.length) document.getElementById('lastGame').textContent = games[games.length-1].date;
+  const games = [...(p.recentGames||[])].sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+  if (games.length) document.getElementById('lastGame').textContent = fmtDate(games[games.length-1].date);
 
   // Readiness trend arrow — compare today vs yesterday
   const trendEl = document.getElementById('readinessTrend');
