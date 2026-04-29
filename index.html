@@ -10998,7 +10998,10 @@ function clearAllImportedData() {
 
 // ── Roster name normalizer (handles minor differences in spacing/punctuation)
 function normalizeName(n) {
-  return n.trim().toLowerCase().replace(/[^a-z ]/g,'').replace(/\s+/g,' ');
+  // Normalize accented chars (é→e, ó→o, etc) then strip non-alpha
+  return n.trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z ]/g,'').replace(/\s+/g,' ');
 }
 
 const ROSTER_NAMES = () => Object.keys(PLAYERS);
@@ -13478,8 +13481,8 @@ function handleThrowCSVUpload(input) {
       saveHitting(); persistImportedData();
       requestAnimationFrame(() => { rebuildCMJTrends(); buildPlayerList(); renderDashboard(); });
       showStatus('Throw velo: '+n+' roster rows imported'+(sk?' ('+sk+' non-roster skipped)':''));
-      alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':''));
-    }catch(err){alert('Error: '+err.message);}
+      if(n===0){alert('No roster players found in throw CSV. Skipped: '+sk+' non-roster players.');} else {alert('Done! '+n+' roster players updated.');}
+    }catch(err){alert('Throw CSV error: '+err.message);}
   };
   reader.readAsText(file);
 }
