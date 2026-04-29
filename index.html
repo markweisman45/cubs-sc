@@ -13428,7 +13428,9 @@ function deleteGameDateData() {
   Object.keys(hitData).forEach(function(name) {
     var before = hitData[name].length;
     var dFmt = fmtDate(d);
-    hitData[name] = hitData[name].filter(function(h) { return fmtDate(h.date) !== dFmt; });
+    hitData[name] = hitData[name].filter(function(h) {
+      return fmtDate(h.date) !== dFmt && h.date !== d;
+    });
     changed += before - hitData[name].length;
   });
   localStorage.setItem(HITTING_KEY, JSON.stringify(hitData));
