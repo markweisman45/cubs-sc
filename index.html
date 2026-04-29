@@ -1032,7 +1032,7 @@ body {
       <!-- WORKLOAD TAB -->
       <div id="dash-workload" class="page">
         <div class="card section-mb">
-          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (7-day : 14-day)</div>
+          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (7-day : 21-day)</div>
           <div class="chart-wrap xl"><canvas id="acwrChart"></canvas></div>
         </div>
         <div class="grid-2">
@@ -11429,14 +11429,14 @@ function applyStatcastData() {
       // Always compute relative to TODAY — accounts for off days since last game
       const today = new Date(); today.setHours(0,0,0,0);
       const cutoff7  = new Date(today); cutoff7.setDate(cutoff7.getDate()-7);
-      const cutoff28 = new Date(today); cutoff28.setDate(cutoff28.getDate()-14);
+      const cutoff28 = new Date(today); cutoff28.setDate(cutoff28.getDate()-21);
       const inW7  = r => safeParseDate(r.date) > cutoff7  && safeParseDate(r.date) <= today;
       const inW28 = r => safeParseDate(r.date) > cutoff28 && safeParseDate(r.date) <= today;
       // Days of data actually available (capped at window sizes)
       const firstDate   = safeParseDate(rows_for_acwr[0].date);
       const daysOfData  = Math.round((today - firstDate) / 86400000) + 1;
       const acuteDays   = Math.min(7,  daysOfData);
-      const chronicDays = Math.min(14, daysOfData);
+      const chronicDays = Math.min(21, daysOfData);
 
       const acute      = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.heDist,0);
       const chronic    = rows_for_acwr.filter(inW28).reduce((s,r)=>s+r.heDist,0);
@@ -11455,7 +11455,7 @@ function applyStatcastData() {
       p.acwrHistory = historyRows.map((r, _hi) => {
         const rTime = safeParseDate(r.date).getTime();
         const ms7   = 7  * 86400000;
-        const ms28  = 14 * 86400000;
+        const ms28  = 21 * 86400000;
         let heA=0, heC=0, tdA=0, tdC=0;
         rows_for_acwr.forEach((x, xi) => {
           const t = _parsedDates[xi];
@@ -11468,7 +11468,7 @@ function applyStatcastData() {
         // Scale chronic by actual days spanned to that game point
         const firstMs   = _parsedDates[0];
         const spanDays  = Math.max(1, Math.round((rTime - firstMs) / 86400000) + 1);
-        const chrDays   = Math.min(14, spanDays);
+        const chrDays   = Math.min(21, spanDays);
         const actDays   = Math.min(7,  spanDays);
         const heChrAvg = (heC/chrDays)*actDays;
         const tdChrAvg = (tdC/chrDays)*actDays;
