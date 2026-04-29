@@ -10848,8 +10848,20 @@ function loadPersistedData() {
     }
     // Rebuild cmjTrends from persisted importedData so it survives file updates
     rebuildCMJTrends();
-    // On startup: only rebuild latest values from stored statcast — skip heavy ACWR recalc
-    // (ACWR history was already saved to PLAYERS_STATE_KEY by persistImportedData)
+    // On startup: rebuild latest values AND recalculate ACWR from stored data
+    // so ACWR window changes take effect immediately without re-uploading
+    if (Object.keys(importedData.statcast || {}).length) {
+      // Repopulate parsedStatcastRows from stored data then run applyStatcastData
+      parsedStatcastRows = [];
+      Object.entries(importedData.statcast).forEach(([name, rows]) => {
+        rows.forEach(r => parsedStatcastRows.push({
+          name, rawName: name, date: r.date,
+          dist: r.dist||0, midEff: r.midEff||0, highEff: r.highEff||0,
+          heDist: r.heDist||0, speed: r.speed||0
+        }));
+      });
+      try { applyStatcastData(); } catch(e) { console.warn('startup ACWR recalc failed:', e); }
+    }
     Object.entries(importedData.statcast || {}).forEach(([name, rows]) => {
       const p = PLAYERS[name]; if (!p || !rows.length) return;
       const sorted = rows.slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
