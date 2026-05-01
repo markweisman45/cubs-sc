@@ -5759,40 +5759,24 @@ function renderAllCharts(p) {
   mkCMJChart('abcmjJumpChart', clAB, cmjAB.map(c=>c.jump),       {color:'rgba(239,68,68,0.9)',  colorRgb:'239,68,68'});
   mkCMJChart('abcmjPPBMChart', clAB, cmjAB.map(c=>c.ppbm),       {color:'rgba(245,158,11,0.9)',colorRgb:'245,158,11'});
   mkCMJChart('abcmjVTOChart',  clAB, cmjAB.map(c=>c.vto||null),  {color:'rgba(6,182,212,0.9)', colorRgb:'6,182,212'});
-  // ACWR chart — compute rolling values live from importedData.statcast for ALL athletes
-  // Use currentPlayer name as key (matches how statcast data is stored after import)
-  const acwrKey  = p._name || currentPlayer;
-  const allStatcast = (importedData.statcast[acwrKey] || [])
-    .sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+  // ACWR chart — read from localStorage, use calcACWR (same formula as hero + team list)
+  const acwrKey = p._name || currentPlayer;
+  let allStatcast = [];
+  try {
+    const stored = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
+    const key = Object.keys(stored).find(k=>k===acwrKey)||Object.keys(stored).find(k=>k.toLowerCase()===acwrKey.toLowerCase());
+    if (key) allStatcast = (stored[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
+  } catch(e) {}
 
   let ac;
   if (allStatcast.length >= 1) {
-    // Build date range: last 14 game dates PLUS today if today > last game date
-    const todayD = new Date(); todayD.setHours(0,0,0,0);
-    const lastGameDate = safeParseDate(allStatcast[allStatcast.length-1].date);
-    const displayRows = allStatcast.slice(-13); // last 13 games
-    // Add today as a synthetic point (zero load) if today is after the last game
-    const todayStr = todayD.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    const lastStr  = fmtDate(allStatcast[allStatcast.length-1].date);
-    const addToday = todayD > lastGameDate && todayStr !== lastStr;
-    const acwrDates = [...displayRows, ...(addToday ? [{date:'today', _today:true}] : [])];
-
-    ac = acwrDates.map(r => {
-      const rDate = r._today ? todayD : safeParseDate(r.date);
-      const c7    = new Date(rDate); c7.setDate(c7.getDate()-7);
-      const c14   = new Date(rDate); c14.setDate(c14.getDate()-14);
-      const inWindow = (x, from, to) => safeParseDate(x.date) > from && safeParseDate(x.date) <= to;
-      const heA = allStatcast.filter(x=>inWindow(x,c7,rDate)).reduce((s,x)=>s+x.heDist,0);
-      const heC = allStatcast.filter(x=>inWindow(x,c14,rDate)).reduce((s,x)=>s+x.heDist,0);
-      const tdA = allStatcast.filter(x=>inWindow(x,c7,rDate)).reduce((s,x)=>s+x.dist,0);
-      const tdC = allStatcast.filter(x=>inWindow(x,c14,rDate)).reduce((s,x)=>s+x.dist,0);
-      const heAcwr = (heC/14)*7 > 0 ? parseFloat((heA/((heC/14)*7)).toFixed(3)) : 1.0;
-      const tdAcwr = (tdC/14)*7 > 0 ? parseFloat((tdA/((tdC/14)*7)).toFixed(3)) : 1.0;
-      const label  = r._today ? 'Today' : fmtDate(r.date);
-      return { date:label, he:heAcwr, td:tdAcwr, comb:parseFloat(((heAcwr+tdAcwr)/2).toFixed(3)) };
+    const displayRows = allStatcast.slice(-20); // last 20 games
+    ac = displayRows.map(r => {
+      const res = calcACWR(allStatcast, safeParseDate(r.date));
+      return { date:fmtDate(r.date), he:res.heAcwr, td:res.tdAcwr, comb:res.acwr };
     });
   } else {
-    ac = p.acwrHistory || []; // fallback to hardcoded if no import yet
+    ac = p.acwrHistory || [];
   }
 
   const al = ac.map(a=>a.date);
