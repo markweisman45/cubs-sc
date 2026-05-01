@@ -5406,23 +5406,8 @@ function renderPerfTable(p) {
   const firstSCDate = allSC.length ? safeParseDate(allSC[0].date) : null;
 
   function calcRowACWR(dateStr) {
-    if (!allSC.length || !firstSCDate) return 1.0;
-    const rDate = safeParseDate(dateStr);
-    const c7  = new Date(rDate); c7.setDate(c7.getDate()-7);
-    const c28 = new Date(rDate); c28.setDate(c28.getDate()-28);
-    const inW  = (x, from, to) => safeParseDate(x.date) > from && safeParseDate(x.date) <= to;
-    const heA = allSC.filter(x=>inW(x,c7,rDate)).reduce((s,x)=>s+x.heDist,0);
-    const heC = allSC.filter(x=>inW(x,c28,rDate)).reduce((s,x)=>s+x.heDist,0);
-    const tdA = allSC.filter(x=>inW(x,c7,rDate)).reduce((s,x)=>s+x.dist,0);
-    const tdC = allSC.filter(x=>inW(x,c28,rDate)).reduce((s,x)=>s+x.dist,0);
-    const spanDays = Math.max(1, Math.round((rDate - firstSCDate) / 86400000) + 1);
-    const chrDays  = Math.min(28, spanDays);
-    const actDays  = Math.min(7,  spanDays);
-    const heChrAvg = chrDays > 0 ? (heC/chrDays)*actDays : 0;
-    const tdChrAvg = chrDays > 0 ? (tdC/chrDays)*actDays : 0;
-    const heAcwr = heChrAvg > 0 ? heA/heChrAvg : 1.0;
-    const tdAcwr = tdChrAvg > 0 ? tdA/tdChrAvg : 1.0;
-    return parseFloat(((heAcwr+tdAcwr)/2).toFixed(3));
+    if (!allSC.length) return 1.0;
+    return calcACWR(allSC, safeParseDate(dateStr)).acwr;
   }
 
   tbody.innerHTML = p.recentGames.slice(-14).map(g => {
@@ -5508,24 +5493,33 @@ function computeMonotonyStrain(playerName) {
 // This always accounts for off days since the last game
 function computeLiveACWR(playerName) {
   const rows = (importedData.statcast[playerName] || [])
-    .sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+    .slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
   if (!rows.length) return null;
+  // Use last game date as reference (not today)
+  return calcACWR(rows, safeParseDate(rows[rows.length-1].date));
+}
 
-  const today = new Date(); today.setHours(0,0,0,0);
-  const c7    = new Date(today); c7.setDate(c7.getDate()-7);
-  const c14   = new Date(today); c14.setDate(c14.getDate()-14);
-  const inW7  = r => safeParseDate(r.date) > c7  && safeParseDate(r.date) <= today;
-  const inW14 = r => safeParseDate(r.date) > c14 && safeParseDate(r.date) <= today;
-
-  const heA = rows.filter(inW7).reduce((s,r)=>s+r.heDist,0);
-  const heC = rows.filter(inW14).reduce((s,r)=>s+r.heDist,0);
-  const tdA = rows.filter(inW7).reduce((s,r)=>s+r.dist,0);
-  const tdC = rows.filter(inW14).reduce((s,r)=>s+r.dist,0);
-
-  const heAcwr = (heC/28)*7 > 0 ? parseFloat((heA/((heC/28)*7)).toFixed(3)) : 1.0;
-  const tdAcwr = (tdC/28)*7 > 0 ? parseFloat((tdA/((tdC/28)*7)).toFixed(3)) : 1.0;
+// ── SINGLE SOURCE OF TRUTH: calcACWR(rows, refDate) ─────────────────────────
+// rows: array of {date, heDist, dist} sorted ascending
+// refDate: Date object to calculate relative to
+function calcACWR(rows, refDate) {
+  const ref = new Date(refDate); ref.setHours(0,0,0,0);
+  const c7  = new Date(ref); c7.setDate(c7.getDate()-7);
+  const c28 = new Date(ref); c28.setDate(c28.getDate()-28);
+  const inW  = (r, from, to) => safeParseDate(r.date) > from && safeParseDate(r.date) <= to;
+  const heA = rows.filter(r=>inW(r,c7,ref)).reduce((s,r)=>s+r.heDist,0);
+  const heC = rows.filter(r=>inW(r,c28,ref)).reduce((s,r)=>s+r.heDist,0);
+  const tdA = rows.filter(r=>inW(r,c7,ref)).reduce((s,r)=>s+r.dist,0);
+  const tdC = rows.filter(r=>inW(r,c28,ref)).reduce((s,r)=>s+r.dist,0);
+  const first    = safeParseDate(rows[0].date);
+  const spanDays = Math.max(1, Math.round((ref - first) / 86400000) + 1);
+  const chrDays  = Math.min(28, spanDays);
+  const actDays  = Math.min(7,  spanDays);
+  const heChr = chrDays > 0 ? (heC/chrDays)*actDays : 0;
+  const tdChr = chrDays > 0 ? (tdC/chrDays)*actDays : 0;
+  const heAcwr = heChr > 0 ? parseFloat((heA/heChr).toFixed(3)) : 1.0;
+  const tdAcwr = tdChr > 0 ? parseFloat((tdA/tdChr).toFixed(3)) : 1.0;
   const acwr   = parseFloat(((heAcwr+tdAcwr)/2).toFixed(3));
-
   return { acwr, heAcwr, tdAcwr };
 }
 
@@ -5942,23 +5936,8 @@ function renderAllCharts(p) {
 
     ac = displayRows.map(r => {
       const rDate = safeParseDate(r.date);
-      const c7    = new Date(rDate); c7.setDate(c7.getDate()-7);
-      const c28   = new Date(rDate); c28.setDate(c28.getDate()-28);
-      const inWindow = (x, from, to) => safeParseDate(x.date) > from && safeParseDate(x.date) <= to;
-      const heA = allStatcast.filter(x=>inWindow(x,c7,rDate)).reduce((s,x)=>s+x.heDist,0);
-      const heC = allStatcast.filter(x=>inWindow(x,c28,rDate)).reduce((s,x)=>s+x.heDist,0);
-      const tdA = allStatcast.filter(x=>inWindow(x,c7,rDate)).reduce((s,x)=>s+x.dist,0);
-      const tdC = allStatcast.filter(x=>inWindow(x,c28,rDate)).reduce((s,x)=>s+x.dist,0);
-      // Scale chronic by actual days spanned to this game
-      const firstMs  = safeParseDate(allStatcast[0].date);
-      const spanDays = Math.max(1, Math.round((rDate - firstMs) / 86400000) + 1);
-      const chrDays  = Math.min(28, spanDays);
-      const actDays  = Math.min(7,  spanDays);
-      const heChrAvg = chrDays > 0 ? (heC/chrDays)*actDays : 0;
-      const tdChrAvg = chrDays > 0 ? (tdC/chrDays)*actDays : 0;
-      const heAcwr = heChrAvg > 0 ? parseFloat((heA/heChrAvg).toFixed(3)) : 1.0;
-      const tdAcwr = tdChrAvg > 0 ? parseFloat((tdA/tdChrAvg).toFixed(3)) : 1.0;
-      return { date:fmtDate(r.date), he:heAcwr, td:tdAcwr, comb:parseFloat(((heAcwr+tdAcwr)/2).toFixed(3)) };
+      const res = calcACWR(allStatcast, rDate);
+      return { date:fmtDate(r.date), he:res.heAcwr, td:res.tdAcwr, comb:res.acwr };
     });
   } else {
     ac = p.acwrHistory || []; // fallback to hardcoded if no import yet
@@ -11468,29 +11447,11 @@ function applyStatcastData() {
 
     // Compute ACWR from imported data (7-day acute / 28-day chronic)
     if (rows_for_acwr.length >= 2) {
-      // Use last game date as reference (not today) so hero matches table
-      const lastGameDate = safeParseDate(last.date);
-      const refDay = new Date(lastGameDate); refDay.setHours(0,0,0,0);
-      const cutoff7  = new Date(refDay); cutoff7.setDate(cutoff7.getDate()-7);
-      const cutoff28 = new Date(refDay); cutoff28.setDate(cutoff28.getDate()-28);
-      const inW7  = r => safeParseDate(r.date) > cutoff7  && safeParseDate(r.date) <= refDay;
-      const inW28 = r => safeParseDate(r.date) > cutoff28 && safeParseDate(r.date) <= refDay;
-      // Days of data actually available (capped at window sizes)
-      const firstDate   = safeParseDate(rows_for_acwr[0].date);
-      const daysOfData  = Math.round((refDay - firstDate) / 86400000) + 1;
-      const acuteDays   = Math.min(7,  daysOfData);
-      const chronicDays = Math.min(28, daysOfData);
-
-      const acute      = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.heDist,0);
-      const chronic    = rows_for_acwr.filter(inW28).reduce((s,r)=>s+r.heDist,0);
-      const chronicAvg = (chronic/chronicDays)*acuteDays;
-      p.heAcwr = chronicAvg > 0 ? parseFloat((acute/chronicAvg).toFixed(3)) : 1.0;
-      // TD ACWR (7:28)
-      const acuteT     = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.dist,0);
-      const chronicT   = rows_for_acwr.filter(inW28).reduce((s,r)=>s+r.dist,0);
-      const chronicTAvg = (chronicT/chronicDays)*acuteDays;
-      p.tdAcwr = chronicTAvg > 0 ? parseFloat((acuteT/chronicTAvg).toFixed(3)) : 1.0;
-      p.acwr   = parseFloat(((p.heAcwr + p.tdAcwr) / 2).toFixed(3)); // combined = average of both
+      // Use shared calcACWR function — single source of truth
+      const acwrResult = calcACWR(rows_for_acwr, safeParseDate(last.date));
+      p.heAcwr = acwrResult.heAcwr;
+      p.tdAcwr = acwrResult.tdAcwr;
+      p.acwr   = acwrResult.acwr;
 
       // Update ACWR history — O(n) single pass (pre-cache dates to avoid repeated safeParseDate)
       const historyRows = rows_for_acwr.slice(-60); // last 60 games for chart
@@ -11513,8 +11474,8 @@ function applyStatcastData() {
         const spanDays  = Math.max(1, Math.round((rTime - firstMs) / 86400000) + 1);
         const chrDays   = Math.min(28, spanDays);
         const actDays   = Math.min(7,  spanDays);
-        const heChrAvg = (heC/chrDays)*actDays;
-        const tdChrAvg = (tdC/chrDays)*actDays;
+        const heChrAvg  = chrDays > 0 ? (heC/chrDays)*actDays : 0;
+        const tdChrAvg  = chrDays > 0 ? (tdC/chrDays)*actDays : 0;
         const heAcwr = heChrAvg > 0 ? parseFloat((heA/heChrAvg).toFixed(3)) : 1.0;
         const tdAcwr = tdChrAvg > 0 ? parseFloat((tdA/tdChrAvg).toFixed(3)) : 1.0;
         return {
