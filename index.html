@@ -10709,15 +10709,11 @@ function loadPersistedData() {
     }
     // Rebuild cmjTrends from persisted importedData so it survives file updates
     rebuildCMJTrends();
-    // Rebuild ACWR from stored statcast on every load
-    if (Object.keys(importedData.statcast||{}).length) {
-      parsedStatcastRows = [];
-      Object.entries(importedData.statcast).forEach(([name,rows]) => {
-        rows.forEach(r => parsedStatcastRows.push({name,rawName:name,date:r.date,
-          dist:r.dist||0,midEff:r.midEff||0,highEff:r.highEff||0,heDist:r.heDist||0,speed:r.speed||0}));
-      });
-      try { applyStatcastData(); } catch(e) { console.warn('startup ACWR recalc failed:',e); }
-    }
+    // Rebuild ACWR from stored statcast using last game date as reference
+    Object.entries(PLAYERS).forEach(([name, p]) => {
+      const live = computeLiveACWR(name);
+      if (live) { p.acwr = live.acwr; p.heAcwr = live.heAcwr; p.tdAcwr = live.tdAcwr; }
+    });
     // On startup: only rebuild latest values from stored statcast — skip heavy ACWR recalc
     // (ACWR history was already saved to PLAYERS_STATE_KEY by persistImportedData)
     Object.entries(importedData.statcast || {}).forEach(([name, rows]) => {
@@ -13545,18 +13541,11 @@ async function initWithSupabase() {
       showStatus('✅ Loaded ' + loaded + ' keys from cloud');
       loadAllData();
       rebuildCMJTrends();
-      const scKeys = Object.keys(importedData.statcast || {});
-      if (scKeys.length) {
-        parsedStatcastRows = [];
-        scKeys.forEach(name => {
-          (importedData.statcast[name]||[]).forEach(r => parsedStatcastRows.push({
-            name, rawName:name, date:r.date,
-            dist:r.dist||0, midEff:r.midEff||0, highEff:r.highEff||0,
-            heDist:r.heDist||0, speed:r.speed||0
-          }));
-        });
-        try { applyStatcastData(); } catch(e) { console.warn('ACWR recalc failed:',e); }
-      }
+      // Recompute ACWR for all players using last game date
+      Object.entries(PLAYERS).forEach(([name, p]) => {
+        const live = computeLiveACWR(name);
+        if (live) { p.acwr = live.acwr; p.heAcwr = live.heAcwr; p.tdAcwr = live.tdAcwr; }
+      });
       buildPlayerList();
       renderDashboard();
       buildTeamList(); // Rebuild team list after cloud data loads
