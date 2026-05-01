@@ -5399,19 +5399,21 @@ function renderPerfTable(p) {
   const tbody = document.getElementById('perfTableBody');
   const sc = s => s === 'GREEN' ? 'green' : s === 'RED' ? 'red' : 'yellow';
 
-  // Recalculate ACWR live for each row from raw statcast data
-  const playerName = p._name || currentPlayer;
-  const allSC = (importedData.statcast[playerName] || [])
-    .slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
-  const firstSCDate = allSC.length ? safeParseDate(allSC[0].date) : null;
+  // Recalculate ACWR live — read straight from localStorage every time
+  let allSC = [];
+  try {
+    const stored = JSON.parse(localStorage.getItem(STATCAST_KEY) || '{}');
+    // Try currentPlayer, then all keys case-insensitively
+    const key = Object.keys(stored).find(k => k === currentPlayer) ||
+                Object.keys(stored).find(k => k.toLowerCase() === currentPlayer.toLowerCase());
+    if (key) allSC = (stored[key] || []).slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+  } catch(e) {}
 
   function calcRowACWR(dateStr) {
-    if (!allSC.length) { console.warn('[ACWR] allSC empty for', playerName); return 1.0; }
+    if (!allSC.length) return 1.0;
     const match = allSC.find(r => fmtDate(r.date) === dateStr);
-    if (!match) { console.warn('[ACWR] no match for date', dateStr, 'available:', allSC.slice(0,3).map(r=>fmtDate(r.date))); return 1.0; }
-    const result = calcACWR(allSC, safeParseDate(match.date));
-    console.log('[ACWR]', dateStr, '->', result.acwr, 'heAcwr:', result.heAcwr, 'tdAcwr:', result.tdAcwr);
-    return result.acwr;
+    if (!match) return 1.0;
+    return calcACWR(allSC, safeParseDate(match.date)).acwr;
   }
 
   tbody.innerHTML = p.recentGames.slice(-14).map(g => {
