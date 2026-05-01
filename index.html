@@ -4658,6 +4658,9 @@ function switchDashTab(tab, btn) {
   if(active) { active.classList.add('active'); active.classList.remove('page'); active.style.display = 'block'; }
   if (tab === 'programs') {
     renderAthletePrograms();
+  } else if (tab === 'performance') {
+    renderPerfTable(PLAYERS[currentPlayer]);
+    setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
   } else if (tab === 'wellness') {
     renderCoachNotes(PLAYERS[currentPlayer]);
     if (typeof updateWellnessTable === 'function') updateWellnessTable(wellnessLog[currentPlayer] || []);
