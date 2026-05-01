@@ -5414,12 +5414,19 @@ function renderPerfTable(p) {
 
   function calcRowACWR(dateStr) {
     if (!allSC.length) { console.error('ACWR: allSC empty, STATCAST_KEY=', STATCAST_KEY, 'currentPlayer=', currentPlayer); return 1.0; }
-    const match = allSC.find(r => fmtDate(r.date) === dateStr);
-    if (!match) { 
-      console.error('ACWR: no match for', dateStr, '| available fmtDates:', allSC.slice(-5).map(r=>fmtDate(r.date)));
-      return 1.0; 
+    // Find exact match or nearest statcast date <= this date
+    let match = allSC.find(r => fmtDate(r.date) === dateStr);
+    if (!match) {
+      // No exact match — find the closest statcast date by comparing formatted dates
+      // Build a lookup of all formatted dates
+      const fmtDates = allSC.map(r => ({ fmt: fmtDate(r.date), raw: r }));
+      // Find last one whose formatted date sorts <= dateStr by month/day
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const parseShort = s => { const [m,d] = s.split(' '); return months.indexOf(m)*31 + parseInt(d); };
+      const targetN = parseShort(dateStr);
+      const before = fmtDates.filter(x => parseShort(x.fmt) <= targetN);
+      match = before.length ? before[before.length-1].raw : allSC[allSC.length-1];
     }
-    console.log('ACWR match found:', dateStr, '-> raw date:', match.date, 'heDist:', match.heDist, 'dist:', match.dist);
     const ref = safeParseDate(match.date);
     const c7  = new Date(ref); c7.setDate(c7.getDate()-7);
     const c28 = new Date(ref); c28.setDate(c28.getDate()-28);
