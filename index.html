@@ -5407,7 +5407,10 @@ function renderPerfTable(p) {
 
   function calcRowACWR(dateStr) {
     if (!allSC.length) return 1.0;
-    return calcACWR(allSC, safeParseDate(dateStr)).acwr;
+    // g.date is formatted "Apr 26" — find matching raw statcast date
+    const match = allSC.find(r => fmtDate(r.date) === dateStr);
+    if (!match) return 1.0;
+    return calcACWR(allSC, safeParseDate(match.date)).acwr;
   }
 
   tbody.innerHTML = p.recentGames.slice(-14).map(g => {
