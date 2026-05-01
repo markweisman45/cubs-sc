@@ -13478,7 +13478,7 @@ function hardReset(){
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
 const SUPA_URL = 'https://umcdnbnvzwedrlidzaqg.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtY2RuYm52endlZHJsaWR6YXFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjMwNjUsImV4cCI6MjA5MjYzOTA2NX0.g4t2GaT33M03b6-stee9Aiy2We1KdJpw5KVEKwScwJM';
-const SUPA_KEYS = ['cubs_sc_statcast_v1','cubs_sc_hitting_v1','cubs_sc_cmj_v1','cubs_sc_abcmj_v1','cubs_sc_players_state_v1'];
+const SUPA_KEYS = ['cubs_sc_statcast_v1','cubs_sc_hitting_v1','cubs_sc_cmj_v1','cubs_sc_abcmj_v1','cubs_sc_players_state_v1','cubs_sc_wellness_v1','cubs_sc_coach_notes_v1'];
 let _supaClient = null;
 
 function getSupaClient() {
@@ -13510,9 +13510,15 @@ async function syncToSupabase() {
   if (!db) { showStatus('⚠️ Supabase not loaded yet'); return; }
   showStatus('☁️ Syncing to cloud...');
   let count = 0;
-  for (const k of SUPA_KEYS) {
+  // Sync all cubs_sc keys except large program/schedule data (baked into code)
+  const skip = ['cubs_sc_programs_v1','cubs_sc_templates_seeded_v1','cubs_sc_my_programs_seeded_v1',
+                'cubs_sc_my_programs_seeded_v2','cubs_sc_my_programs_seeded_v3','cubs_sc_sched_ver'];
+  const allKeys = Object.keys(localStorage).filter(k => k.startsWith('cubs_sc') && !skip.includes(k));
+  for (const k of allKeys) {
     const v = localStorage.getItem(k);
-    if (v) { await supaSet(k, v); count++; }
+    if (v && v.length < 500000) { // skip anything over 500KB
+      try { await supaSet(k, v); count++; } catch(e) { console.warn('Failed to sync', k, e); }
+    }
   }
   showStatus('✅ Synced ' + count + ' keys to cloud');
   alert('✅ Synced ' + count + ' data keys to cloud!');
