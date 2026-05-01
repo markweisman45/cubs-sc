@@ -5406,11 +5406,12 @@ function renderPerfTable(p) {
   const firstSCDate = allSC.length ? safeParseDate(allSC[0].date) : null;
 
   function calcRowACWR(dateStr) {
-    if (!allSC.length) return 1.0;
-    // g.date is formatted "Apr 26" — find matching raw statcast date
+    if (!allSC.length) { console.warn('[ACWR] allSC empty for', playerName); return 1.0; }
     const match = allSC.find(r => fmtDate(r.date) === dateStr);
-    if (!match) return 1.0;
-    return calcACWR(allSC, safeParseDate(match.date)).acwr;
+    if (!match) { console.warn('[ACWR] no match for date', dateStr, 'available:', allSC.slice(0,3).map(r=>fmtDate(r.date))); return 1.0; }
+    const result = calcACWR(allSC, safeParseDate(match.date));
+    console.log('[ACWR]', dateStr, '->', result.acwr, 'heAcwr:', result.heAcwr, 'tdAcwr:', result.tdAcwr);
+    return result.acwr;
   }
 
   tbody.innerHTML = p.recentGames.slice(-14).map(g => {
