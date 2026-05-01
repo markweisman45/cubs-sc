@@ -10693,7 +10693,16 @@ function loadPersistedData() {
     }
     // Rebuild cmjTrends from persisted importedData so it survives file updates
     rebuildCMJTrends();
-    // Rebuild ACWR from stored statcast using last game date as reference
+    // Restore recentGames/latestStats from stored statcast
+    if (Object.keys(importedData.statcast||{}).length) {
+      parsedStatcastRows = [];
+      Object.entries(importedData.statcast).forEach(([name,rows]) => {
+        rows.forEach(r => parsedStatcastRows.push({name,rawName:name,date:r.date,
+          dist:r.dist||0,midEff:r.midEff||0,highEff:r.highEff||0,heDist:r.heDist||0,speed:r.speed||0}));
+      });
+      try { applyStatcastData(); } catch(e) { console.warn('startup statcast failed:',e); }
+    }
+    // Override p.acwr with computeLiveACWR (uses last game date, not today)
     Object.entries(PLAYERS).forEach(([name, p]) => {
       const live = computeLiveACWR(name);
       if (live) { p.acwr = live.acwr; p.heAcwr = live.heAcwr; p.tdAcwr = live.tdAcwr; }
@@ -13529,7 +13538,16 @@ async function initWithSupabase() {
       showStatus('✅ Loaded ' + loaded + ' keys from cloud');
       loadAllData();
       rebuildCMJTrends();
-      // Recompute ACWR for all players using last game date
+      // Restore recentGames/latestStats from Supabase statcast data
+      if (Object.keys(importedData.statcast||{}).length) {
+        parsedStatcastRows = [];
+        Object.entries(importedData.statcast).forEach(([name,rows]) => {
+          rows.forEach(r => parsedStatcastRows.push({name,rawName:name,date:r.date,
+            dist:r.dist||0,midEff:r.midEff||0,highEff:r.highEff||0,heDist:r.heDist||0,speed:r.speed||0}));
+        });
+        try { applyStatcastData(); } catch(e) { console.warn('ACWR recalc failed:',e); }
+      }
+      // Override p.acwr with computeLiveACWR (last game date reference)
       Object.entries(PLAYERS).forEach(([name, p]) => {
         const live = computeLiveACWR(name);
         if (live) { p.acwr = live.acwr; p.heAcwr = live.heAcwr; p.tdAcwr = live.tdAcwr; }
