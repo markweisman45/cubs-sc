@@ -5906,29 +5906,28 @@ function renderAllCharts(p) {
 
   let ac;
   if (allStatcast.length >= 1) {
-    // Build date range: last 14 game dates PLUS today if today > last game date
-    const todayD = new Date(); todayD.setHours(0,0,0,0);
-    const lastGameDate = safeParseDate(allStatcast[allStatcast.length-1].date);
-    const displayRows = allStatcast.slice(-13); // last 13 games
-    // Add today as a synthetic point (zero load) if today is after the last game
-    const todayStr = todayD.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    const lastStr  = fmtDate(allStatcast[allStatcast.length-1].date);
-    const addToday = todayD > lastGameDate && todayStr !== lastStr;
-    const acwrDates = [...displayRows, ...(addToday ? [{date:'today', _today:true}] : [])];
+    // Build date range: last 20 game dates only (no synthetic Today point)
+    const displayRows = allStatcast.slice(-20);
 
-    ac = acwrDates.map(r => {
-      const rDate = r._today ? todayD : safeParseDate(r.date);
+    ac = displayRows.map(r => {
+      const rDate = safeParseDate(r.date);
       const c7    = new Date(rDate); c7.setDate(c7.getDate()-7);
-      const c14   = new Date(rDate); c14.setDate(c14.getDate()-14);
+      const c28   = new Date(rDate); c28.setDate(c28.getDate()-28);
       const inWindow = (x, from, to) => safeParseDate(x.date) > from && safeParseDate(x.date) <= to;
       const heA = allStatcast.filter(x=>inWindow(x,c7,rDate)).reduce((s,x)=>s+x.heDist,0);
-      const heC = allStatcast.filter(x=>inWindow(x,c14,rDate)).reduce((s,x)=>s+x.heDist,0);
+      const heC = allStatcast.filter(x=>inWindow(x,c28,rDate)).reduce((s,x)=>s+x.heDist,0);
       const tdA = allStatcast.filter(x=>inWindow(x,c7,rDate)).reduce((s,x)=>s+x.dist,0);
-      const tdC = allStatcast.filter(x=>inWindow(x,c14,rDate)).reduce((s,x)=>s+x.dist,0);
-      const heAcwr = (heC/28)*7 > 0 ? parseFloat((heA/((heC/28)*7)).toFixed(3)) : 1.0;
-      const tdAcwr = (tdC/28)*7 > 0 ? parseFloat((tdA/((tdC/28)*7)).toFixed(3)) : 1.0;
-      const label  = r._today ? 'Today' : fmtDate(r.date);
-      return { date:label, he:heAcwr, td:tdAcwr, comb:parseFloat(((heAcwr+tdAcwr)/2).toFixed(3)) };
+      const tdC = allStatcast.filter(x=>inWindow(x,c28,rDate)).reduce((s,x)=>s+x.dist,0);
+      // Scale chronic by actual days spanned to this game
+      const firstMs  = safeParseDate(allStatcast[0].date);
+      const spanDays = Math.max(1, Math.round((rDate - firstMs) / 86400000) + 1);
+      const chrDays  = Math.min(28, spanDays);
+      const actDays  = Math.min(7,  spanDays);
+      const heChrAvg = chrDays > 0 ? (heC/chrDays)*actDays : 0;
+      const tdChrAvg = chrDays > 0 ? (tdC/chrDays)*actDays : 0;
+      const heAcwr = heChrAvg > 0 ? parseFloat((heA/heChrAvg).toFixed(3)) : 1.0;
+      const tdAcwr = tdChrAvg > 0 ? parseFloat((tdA/tdChrAvg).toFixed(3)) : 1.0;
+      return { date:fmtDate(r.date), he:heAcwr, td:tdAcwr, comb:parseFloat(((heAcwr+tdAcwr)/2).toFixed(3)) };
     });
   } else {
     ac = p.acwrHistory || []; // fallback to hardcoded if no import yet
@@ -5940,7 +5939,7 @@ function renderAllCharts(p) {
     {label:'TD ACWR',data:ac.map(a=>a.td),borderColor:C.blue,tension:0.4,pointRadius:3},
     {label:'Combined',data:ac.map(a=>a.comb),borderColor:C.green,tension:0.4,pointRadius:3,borderDash:[4,4]},
   ]},options:{...cloneOpts(),
-    scales:{...cloneOpts().scales,y:{...cloneOpts().scales.y,min:0.5,max:1.7,grid:{color:C.border},ticks:{color:C.text2,font:{family:'DM Mono',size:10}}}},
+    scales:{...cloneOpts().scales,y:{...cloneOpts().scales.y,min:0.5,max:Math.max(1.7, Math.ceil(Math.max(...ac.map(a=>Math.max(a.he,a.td,a.comb)))*10)/10 + 0.1),grid:{color:C.border},ticks:{color:C.text2,font:{family:'DM Mono',size:10}}}},
     plugins:{...cloneOpts().plugins,annotation:{annotations:{
       greenHigh: {type:'line',yMin:1.15,yMax:1.15,borderColor:'rgba(34,197,94,0.5)',borderDash:[4,4],borderWidth:1,label:{display:true,content:'1.15',position:'end',color:'rgba(34,197,94,0.8)',font:{size:9}}},
       greenLow:  {type:'line',yMin:0.85,yMax:0.85,borderColor:'rgba(34,197,94,0.5)',borderDash:[4,4],borderWidth:1,label:{display:true,content:'0.85',position:'end',color:'rgba(34,197,94,0.8)',font:{size:9}}},
