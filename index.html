@@ -1033,7 +1033,7 @@ body {
       <!-- WORKLOAD TAB -->
       <div id="dash-workload" class="page">
         <div class="card section-mb">
-          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (7-day : 14-day)</div>
+          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (7-day : 28-day)</div>
           <div class="chart-wrap xl"><canvas id="acwrChart"></canvas></div>
         </div>
         <div class="grid-2">
@@ -11312,8 +11312,12 @@ function applyStatcastData() {
             if (diff < ms28) { heC += x.heDist; tdC += x.dist; }
           }
         });
-        const heChrAvg = (heC/14)*7;
-        const tdChrAvg = (tdC/14)*7;
+        const _firstMs2 = _parsedDates[0];
+        const _span2    = Math.max(1, Math.round((rTime-_firstMs2)/86400000)+1);
+        const _chrD2    = Math.min(28, _span2);
+        const _actD2    = Math.min(7,  _span2);
+        const heChrAvg = _chrD2 > 0 ? (heC/_chrD2)*_actD2 : 0;
+        const tdChrAvg = _chrD2 > 0 ? (tdC/_chrD2)*_actD2 : 0;
         const heAcwr = heChrAvg > 0 ? parseFloat((heA/heChrAvg).toFixed(3)) : 1.0;
         const tdAcwr = tdChrAvg > 0 ? parseFloat((tdA/tdChrAvg).toFixed(3)) : 1.0;
         return {
