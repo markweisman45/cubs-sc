@@ -5410,10 +5410,29 @@ function renderPerfTable(p) {
   } catch(e) {}
 
   function calcRowACWR(dateStr) {
-    if (!allSC.length) return 1.0;
+    if (!allSC.length) { console.error('ACWR: allSC empty, STATCAST_KEY=', STATCAST_KEY, 'currentPlayer=', currentPlayer); return 1.0; }
     const match = allSC.find(r => fmtDate(r.date) === dateStr);
-    if (!match) return 1.0;
-    return calcACWR(allSC, safeParseDate(match.date)).acwr;
+    if (!match) { 
+      console.error('ACWR: no match for', dateStr, '| available fmtDates:', allSC.slice(-5).map(r=>fmtDate(r.date)));
+      return 1.0; 
+    }
+    console.log('ACWR match found:', dateStr, '-> raw date:', match.date, 'heDist:', match.heDist, 'dist:', match.dist);
+    const ref = safeParseDate(match.date);
+    const c7  = new Date(ref); c7.setDate(c7.getDate()-7);
+    const c28 = new Date(ref); c28.setDate(c28.getDate()-28);
+    const heA = allSC.filter(r => safeParseDate(r.date) > c7  && safeParseDate(r.date) <= ref).reduce((s,r)=>s+(+r.heDist||0),0);
+    const heC = allSC.filter(r => safeParseDate(r.date) > c28 && safeParseDate(r.date) <= ref).reduce((s,r)=>s+(+r.heDist||0),0);
+    const tdA = allSC.filter(r => safeParseDate(r.date) > c7  && safeParseDate(r.date) <= ref).reduce((s,r)=>s+(+r.dist||0),0);
+    const tdC = allSC.filter(r => safeParseDate(r.date) > c28 && safeParseDate(r.date) <= ref).reduce((s,r)=>s+(+r.dist||0),0);
+    const first   = safeParseDate(allSC[0].date);
+    const span    = Math.max(1, Math.round((ref - first) / 86400000) + 1);
+    const chrD    = Math.min(28, span);
+    const actD    = Math.min(7,  span);
+    const heChr   = chrD > 0 ? (heC/chrD)*actD : 0;
+    const tdChr   = chrD > 0 ? (tdC/chrD)*actD : 0;
+    const heAcwr  = heChr > 0 ? heA/heChr : 1.0;
+    const tdAcwr  = tdChr > 0 ? tdA/tdChr : 1.0;
+    return parseFloat(((heAcwr+tdAcwr)/2).toFixed(3));
   }
 
   tbody.innerHTML = p.recentGames.slice(-14).map(g => {
