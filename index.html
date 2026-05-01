@@ -13559,6 +13559,7 @@ async function initWithSupabase() {
       }
       buildPlayerList();
       renderDashboard();
+      buildTeamList(); // Rebuild team list after cloud data loads
     } else {
       showStatus('⚠️ No cloud data yet — using local');
     }
