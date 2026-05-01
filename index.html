@@ -2181,6 +2181,7 @@ body {
 </div><!-- /main -->
 </div><!-- /app -->
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 
 // ══════════════════════════════════════════════
@@ -13478,64 +13479,82 @@ function hardReset(){
 const SUPA_URL = 'https://umcdnbnvzwedrlidzaqg.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtY2RuYm52endlZHJsaWR6YXFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjMwNjUsImV4cCI6MjA5MjYzOTA2NX0.g4t2GaT33M03b6-stee9Aiy2We1KdJpw5KVEKwScwJM';
 const SUPA_KEYS = ['cubs_sc_statcast_v1','cubs_sc_hitting_v1','cubs_sc_cmj_v1','cubs_sc_abcmj_v1','cubs_sc_players_state_v1'];
+let _supaClient = null;
+
+function getSupaClient() {
+  if (_supaClient) return _supaClient;
+  if (typeof window.supabase === 'undefined') return null;
+  _supaClient = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  return _supaClient;
+}
 
 async function supaGet(key) {
+  const db = getSupaClient();
+  if (!db) return null;
   try {
-    const r = await fetch(SUPA_URL+'/rest/v1/cubs_sc_data?key=eq.'+encodeURIComponent(key)+'&select=value', {
-      headers: { apikey: SUPA_KEY, Authorization: 'Bearer '+SUPA_KEY }
-    });
-    const rows = await r.json();
-    return (rows && rows[0]) ? rows[0].value : null;
+    const { data } = await db.from('cubs_sc_data').select('value').eq('key', key).single();
+    return data ? data.value : null;
   } catch(e) { return null; }
 }
 
 async function supaSet(key, value) {
+  const db = getSupaClient();
+  if (!db) return;
   try {
-    await fetch(SUPA_URL+'/rest/v1/cubs_sc_data', {
-      method: 'POST',
-      headers: { apikey: SUPA_KEY, Authorization: 'Bearer '+SUPA_KEY,
-        'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' },
-      body: JSON.stringify({ key: key, value: value })
-    });
+    await db.from('cubs_sc_data').upsert({ key, value }, { onConflict: 'key' });
   } catch(e) { console.warn('supaSet failed:', e); }
 }
 
 async function syncToSupabase() {
+  const db = getSupaClient();
+  if (!db) { showStatus('⚠️ Supabase not loaded yet'); return; }
   showStatus('☁️ Syncing to cloud...');
-  for (var i=0; i<SUPA_KEYS.length; i++) {
-    var v = localStorage.getItem(SUPA_KEYS[i]);
-    if (v) await supaSet(SUPA_KEYS[i], v);
+  let count = 0;
+  for (const k of SUPA_KEYS) {
+    const v = localStorage.getItem(k);
+    if (v) { await supaSet(k, v); count++; }
   }
-  showStatus('✅ Synced to cloud');
+  showStatus('✅ Synced ' + count + ' keys to cloud');
+  alert('✅ Synced ' + count + ' data keys to cloud!');
 }
 
 async function initWithSupabase() {
+  // Wait for Supabase JS to load
+  let waited = 0;
+  while (typeof window.supabase === 'undefined' && waited < 5000) {
+    await new Promise(r => setTimeout(r, 200));
+    waited += 200;
+  }
+  const db = getSupaClient();
+  if (!db) { showStatus('⚠️ Supabase unavailable — using local data'); return; }
+
   showStatus('☁️ Loading from cloud...');
   try {
-    var loaded = 0;
-    for (var i=0; i<SUPA_KEYS.length; i++) {
-      var v = await supaGet(SUPA_KEYS[i]);
-      if (v) { localStorage.setItem(SUPA_KEYS[i], v); loaded++; }
+    let loaded = 0;
+    for (const k of SUPA_KEYS) {
+      const v = await supaGet(k);
+      if (v) { localStorage.setItem(k, v); loaded++; }
     }
     if (loaded > 0) {
-      showStatus('✅ Loaded '+loaded+' keys from cloud — refreshing...');
+      showStatus('✅ Loaded ' + loaded + ' keys from cloud');
       loadAllData();
       rebuildCMJTrends();
-      var scKeys = Object.keys(importedData.statcast||{});
+      const scKeys = Object.keys(importedData.statcast || {});
       if (scKeys.length) {
         parsedStatcastRows = [];
-        scKeys.forEach(function(name) {
-          (importedData.statcast[name]||[]).forEach(function(r) {
-            parsedStatcastRows.push({name:name,rawName:name,date:r.date,
-              dist:r.dist||0,midEff:r.midEff||0,highEff:r.highEff||0,heDist:r.heDist||0,speed:r.speed||0});
-          });
+        scKeys.forEach(name => {
+          (importedData.statcast[name]||[]).forEach(r => parsedStatcastRows.push({
+            name, rawName:name, date:r.date,
+            dist:r.dist||0, midEff:r.midEff||0, highEff:r.highEff||0,
+            heDist:r.heDist||0, speed:r.speed||0
+          }));
         });
         try { applyStatcastData(); } catch(e) { console.warn('ACWR recalc failed:',e); }
       }
       buildPlayerList();
       renderDashboard();
     } else {
-      showStatus('⚠️ No cloud data — using local');
+      showStatus('⚠️ No cloud data yet — using local');
     }
   } catch(e) {
     console.warn('initWithSupabase failed:', e);
