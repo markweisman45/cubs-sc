@@ -5398,7 +5398,37 @@ function renderPBGrid(p) {
 function renderPerfTable(p) {
   const tbody = document.getElementById('perfTableBody');
   const sc = s => s === 'GREEN' ? 'green' : s === 'RED' ? 'red' : 'yellow';
-  tbody.innerHTML = p.recentGames.slice(-14).map(g => `
+
+  // Recalculate ACWR live for each row from raw statcast data
+  const playerName = p._name || currentPlayer;
+  const allSC = (importedData.statcast[playerName] || [])
+    .slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+  const firstSCDate = allSC.length ? safeParseDate(allSC[0].date) : null;
+
+  function calcRowACWR(dateStr) {
+    if (!allSC.length || !firstSCDate) return 1.0;
+    const rDate = safeParseDate(dateStr);
+    const c7  = new Date(rDate); c7.setDate(c7.getDate()-7);
+    const c28 = new Date(rDate); c28.setDate(c28.getDate()-28);
+    const inW  = (x, from, to) => safeParseDate(x.date) > from && safeParseDate(x.date) <= to;
+    const heA = allSC.filter(x=>inW(x,c7,rDate)).reduce((s,x)=>s+x.heDist,0);
+    const heC = allSC.filter(x=>inW(x,c28,rDate)).reduce((s,x)=>s+x.heDist,0);
+    const tdA = allSC.filter(x=>inW(x,c7,rDate)).reduce((s,x)=>s+x.dist,0);
+    const tdC = allSC.filter(x=>inW(x,c28,rDate)).reduce((s,x)=>s+x.dist,0);
+    const spanDays = Math.max(1, Math.round((rDate - firstSCDate) / 86400000) + 1);
+    const chrDays  = Math.min(28, spanDays);
+    const actDays  = Math.min(7,  spanDays);
+    const heChrAvg = chrDays > 0 ? (heC/chrDays)*actDays : 0;
+    const tdChrAvg = chrDays > 0 ? (tdC/chrDays)*actDays : 0;
+    const heAcwr = heChrAvg > 0 ? heA/heChrAvg : 1.0;
+    const tdAcwr = tdChrAvg > 0 ? tdA/tdChrAvg : 1.0;
+    return parseFloat(((heAcwr+tdAcwr)/2).toFixed(3));
+  }
+
+  tbody.innerHTML = p.recentGames.slice(-14).map(g => {
+    const liveAcwr = calcRowACWR(g.date);
+    const liveStatus = acwrZone(liveAcwr) === 'red' ? 'RED' : acwrZone(liveAcwr) === 'yellow' ? 'YELLOW' : 'GREEN';
+    return `
     <tr>
       <td class="date-col">${g.date}</td>
       <td>${g.jump}</td>
@@ -5410,9 +5440,10 @@ function renderPerfTable(p) {
       <td>${g.exit  ? g.exit.toFixed(1)   : '—'}</td>
       <td>${g.throwV ? g.throwV.toFixed(1) : '—'}</td>
       <td>${g.readiness.toFixed(3)}</td>
-      <td>${g.acwr.toFixed(3)}</td>
-      <td><span class="pill ${sc(g.status)}">${g.status}</span></td>
-    </tr>`).join('');
+      <td>${liveAcwr.toFixed(3)}</td>
+      <td><span class="pill ${sc(liveStatus)}">${liveStatus}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 
