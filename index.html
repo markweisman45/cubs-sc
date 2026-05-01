@@ -5498,10 +5498,15 @@ function computeMonotonyStrain(playerName) {
 // ── Compute ACWR live from importedData.statcast relative to TODAY
 // This always accounts for off days since the last game
 function computeLiveACWR(playerName) {
-  const rows = (importedData.statcast[playerName] || [])
-    .slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+  // Read directly from localStorage — works even before importedData is populated
+  let rows = [];
+  try {
+    const stored = JSON.parse(localStorage.getItem(STATCAST_KEY) || '{}');
+    const key = Object.keys(stored).find(k => k === playerName) ||
+                Object.keys(stored).find(k => k.toLowerCase() === playerName.toLowerCase());
+    if (key) rows = (stored[key] || []).slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+  } catch(e) {}
   if (!rows.length) return null;
-  // Use last game date as reference (not today)
   return calcACWR(rows, safeParseDate(rows[rows.length-1].date));
 }
 
