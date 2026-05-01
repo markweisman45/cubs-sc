@@ -642,7 +642,8 @@ body {
 
     <div style="margin-top:16px;padding:10px;background:rgba(34,197,94,0.1);border:2px solid rgba(34,197,94,0.4);border-radius:10px;">
       <div style="font-size:10px;color:#22c55e;font-weight:700;text-transform:uppercase;margin-bottom:8px;text-align:center;">Data Backup</div>
-      <button onclick="exportAllData()" style="display:block;width:100%;padding:8px;background:#22c55e;color:#000;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">&#11015; Download Backup</button>
+      <button onclick="syncToSupabase()" style="padding:8px 14px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:8px;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;">☁️ Sync to Cloud</button>
+          <button onclick="exportAllData()" style="display:block;width:100%;padding:8px;background:#22c55e;color:#000;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">&#11015; Download Backup</button>
       <button onclick="document.getElementById('restoreInput').click()" style="display:block;width:100%;padding:8px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.5);color:#f59e0b;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">&#11014; Restore Backup</button>
       <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="importAllData(this)">
       <button onclick="hardReset()" style="display:block;width:100%;padding:8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">&#128308; Hard Reset</button>
@@ -1032,7 +1033,7 @@ body {
       <!-- WORKLOAD TAB -->
       <div id="dash-workload" class="page">
         <div class="card section-mb">
-          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (7-day : 28-day)</div>
+          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (7-day : 14-day)</div>
           <div class="chart-wrap xl"><canvas id="acwrChart"></canvas></div>
         </div>
         <div class="grid-2">
@@ -2129,7 +2130,7 @@ body {
         <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <div style="display:flex;align-items:center;gap:6px;">
             <label style="font-size:11px;color:var(--text3);white-space:nowrap;">Game Date</label>
-            <input type="date" id="csv-game-date" value="2026-04-27"
+            <input type="date" id="csv-game-date" value="2026-04-29"
               style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
           </div>
           <button onclick="deleteGameDateData()" style="padding:8px 14px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;">🗑 Delete Date</button>
@@ -4932,191 +4933,13 @@ const PLAYERS = {
   },
 
   // ── COLIN REA (SP) ──
-  "Colin Rea": {
-    pos:"SP", number:"53",
-    readiness:1.028, status:"YELLOW",
-    daysSinceCMJ:5, acwr:0.92, heAcwr:0.89, tdAcwr:0.95,
-    latestJump:48.5, latestPPBM:60.5, latestSpeed:22.8,
-    latestBat:null, latestExit:null, latestThrow:85.0,
-    latestHE:120, latestDist:620,
-    bests:{jump:51.2,ppbm:64.0,speed:24.5,bat:null,exit:null,throwV:89.5},
-    recentGames:[
-      {date:"Apr 7", jump:48.5,ppbm:60.5,speed:22.8,he:120,bat:0,exit:0,throwV:85.0,readiness:1.028,acwr:0.92,status:"YELLOW"},
-      {date:"Apr 12",jump:48.8,ppbm:60.8,speed:23.0,he:140,bat:0,exit:0,throwV:85.5,readiness:1.030,acwr:0.91,status:"YELLOW"},
-    ],
-    cmjTrends: [],
-    acwrHistory:[
-      {date:"Apr 7",he:0.88,td:0.94,comb:0.91},{date:"Apr 12",he:0.89,td:0.95,comb:0.92},
-    ],
-    wellness:[
-      {date:"Apr 7", soreness:4,energy:7,sleep:7,readiness:1.028},
-      {date:"Apr 12",soreness:3,energy:7,sleep:8,readiness:1.030},
-    ]
-  },
-
   // ── MATT BOYD (SP) ──
-  "Matt Boyd": {
-    pos:"SP", number:"16",
-    readiness:1.055, status:"GREEN",
-    daysSinceCMJ:3, acwr:0.98, heAcwr:0.95, tdAcwr:1.01,
-    latestJump:47.8, latestPPBM:59.8, latestSpeed:22.2,
-    latestBat:null, latestExit:null, latestThrow:84.2,
-    latestHE:110, latestDist:590,
-    bests:{jump:50.5,ppbm:63.0,speed:24.0,bat:null,exit:null,throwV:87.5},
-    recentGames:[
-      {date:"Apr 8", jump:47.8,ppbm:59.8,speed:22.2,he:110,bat:0,exit:0,throwV:84.2,readiness:1.055,acwr:0.98,status:"GREEN"},
-      {date:"Apr 12",jump:48.0,ppbm:60.0,speed:22.5,he:125,bat:0,exit:0,throwV:84.5,readiness:1.058,acwr:0.97,status:"GREEN"},
-    ],
-    cmjTrends: [],
-    acwrHistory:[
-      {date:"Apr 8",he:0.94,td:1.00,comb:0.97},{date:"Apr 12",he:0.95,td:1.01,comb:0.98},
-    ],
-    wellness:[
-      {date:"Apr 8", soreness:3,energy:8,sleep:8,readiness:1.055},
-      {date:"Apr 12",soreness:2,energy:8,sleep:9,readiness:1.058},
-    ]
-  },
-
   // ── JAMESON TAILLON (SP) ──
-  "Jameson Taillon": {
-    pos:"SP", number:"50",
-    readiness:1.042, status:"GREEN",
-    daysSinceCMJ:2, acwr:1.00, heAcwr:0.97, tdAcwr:1.03,
-    latestJump:49.2, latestPPBM:61.5, latestSpeed:23.1,
-    latestBat:null, latestExit:null, latestThrow:86.8,
-    latestHE:130, latestDist:640,
-    bests:{jump:52.0,ppbm:65.0,speed:25.0,bat:null,exit:null,throwV:91.0},
-    recentGames:[
-      {date:"Apr 9", jump:49.2,ppbm:61.5,speed:23.1,he:130,bat:0,exit:0,throwV:86.8,readiness:1.042,acwr:1.00,status:"GREEN"},
-      {date:"Apr 12",jump:49.5,ppbm:61.8,speed:23.4,he:150,bat:0,exit:0,throwV:87.2,readiness:1.045,acwr:0.99,status:"GREEN"},
-    ],
-    cmjTrends: [],
-    acwrHistory:[
-      {date:"Apr 9",he:0.96,td:1.02,comb:0.99},{date:"Apr 12",he:0.97,td:1.03,comb:1.00},
-    ],
-    wellness:[
-      {date:"Apr 9", soreness:3,energy:8,sleep:8,readiness:1.042},
-      {date:"Apr 12",soreness:2,energy:8,sleep:9,readiness:1.045},
-    ]
-  },
-
   // ── SHOTA IMANAGA (SP) ──
-  "Shota Imanaga": {
-    pos:"SP", number:"18",
-    readiness:1.062, status:"GREEN",
-    daysSinceCMJ:1, acwr:0.96, heAcwr:0.93, tdAcwr:0.99,
-    latestJump:50.8, latestPPBM:64.2, latestSpeed:23.8,
-    latestBat:null, latestExit:null, latestThrow:87.5,
-    latestHE:150, latestDist:680,
-    bests:{jump:53.5,ppbm:67.5,speed:25.8,bat:null,exit:null,throwV:91.5},
-    recentGames:[
-      {date:"Apr 10",jump:50.8,ppbm:64.2,speed:23.8,he:150,bat:0,exit:0,throwV:87.5,readiness:1.062,acwr:0.96,status:"GREEN"},
-      {date:"Apr 12",jump:51.0,ppbm:64.5,speed:24.1,he:165,bat:0,exit:0,throwV:87.8,readiness:1.065,acwr:0.95,status:"GREEN"},
-    ],
-    cmjTrends: [],
-    acwrHistory:[
-      {date:"Apr 10",he:0.92,td:0.98,comb:0.95},{date:"Apr 12",he:0.93,td:0.99,comb:0.96},
-    ],
-    wellness:[
-      {date:"Apr 10",soreness:2,energy:9,sleep:9,readiness:1.062},
-      {date:"Apr 12",soreness:2,energy:9,sleep:9,readiness:1.065},
-    ]
-  },
-
   // ── JUSTIN STEELE (SP) ──
-  "Justin Steele": {
-    pos:"SP", number:"35",
-    readiness:0.952, status:"RED",
-    daysSinceCMJ:10, acwr:1.25, heAcwr:1.30, tdAcwr:1.20,
-    latestJump:47.0, latestPPBM:58.8, latestSpeed:22.0,
-    latestBat:null, latestExit:null, latestThrow:83.5,
-    latestHE:100, latestDist:550,
-    bests:{jump:51.5,ppbm:64.5,speed:25.2,bat:null,exit:null,throwV:89.0},
-    recentGames:[
-      {date:"Apr 5", jump:47.5,ppbm:59.5,speed:22.5,he:120,bat:0,exit:0,throwV:84.0,readiness:0.958,acwr:1.22,status:"RED"},
-      {date:"Apr 8", jump:47.2,ppbm:59.0,speed:22.2,he:110,bat:0,exit:0,throwV:83.8,readiness:0.955,acwr:1.24,status:"RED"},
-      {date:"Apr 12",jump:47.0,ppbm:58.8,speed:22.0,he:100,bat:0,exit:0,throwV:83.5,readiness:0.952,acwr:1.25,status:"RED"},
-    ],
-    cmjTrends: [],
-    acwrHistory:[
-      {date:"Apr 5",he:1.28,td:1.18,comb:1.22},{date:"Apr 8",he:1.29,td:1.19,comb:1.24},
-      {date:"Apr 12",he:1.30,td:1.20,comb:1.25},
-    ],
-    wellness:[
-      {date:"Apr 5", soreness:8,energy:3,sleep:4,readiness:0.958},
-      {date:"Apr 8", soreness:8,energy:3,sleep:4,readiness:0.955},
-      {date:"Apr 12",soreness:9,energy:2,sleep:3,readiness:0.952},
-    ]
-  },
-
   // ── DANIEL PALENCIA (RP) ──
-  "Daniel Palencia": {
-    pos:"RP", number:"48",
-    readiness:1.018, status:"YELLOW",
-    daysSinceCMJ:4, acwr:1.11, heAcwr:1.08, tdAcwr:1.14,
-    latestJump:51.0, latestPPBM:64.5, latestSpeed:24.5,
-    latestBat:null, latestExit:null, latestThrow:94.2,
-    latestHE:140, latestDist:660,
-    bests:{jump:54.0,ppbm:68.0,speed:26.5,bat:null,exit:null,throwV:98.5},
-    recentGames:[
-      {date:"Apr 10",jump:51.0,ppbm:64.5,speed:24.5,he:140,bat:0,exit:0,throwV:94.2,readiness:1.018,acwr:1.11,status:"YELLOW"},
-      {date:"Apr 12",jump:51.2,ppbm:64.8,speed:24.7,he:155,bat:0,exit:0,throwV:94.5,readiness:1.020,acwr:1.10,status:"YELLOW"},
-    ],
-    cmjTrends: [],
-    acwrHistory:[
-      {date:"Apr 10",he:1.07,td:1.13,comb:1.10},{date:"Apr 12",he:1.08,td:1.14,comb:1.11},
-    ],
-    wellness:[
-      {date:"Apr 10",soreness:5,energy:6,sleep:7,readiness:1.018},
-      {date:"Apr 12",soreness:4,energy:6,sleep:7,readiness:1.020},
-    ]
-  },
-
   // ── CALEB THIELBAR (RP) ──
-  "Caleb Thielbar": {
-    pos:"RP", number:"24",
-    readiness:1.035, status:"GREEN",
-    daysSinceCMJ:3, acwr:0.94, heAcwr:0.91, tdAcwr:0.97,
-    latestJump:46.5, latestPPBM:58.2, latestSpeed:22.0,
-    latestBat:null, latestExit:null, latestThrow:88.5,
-    latestHE:90, latestDist:510,
-    bests:{jump:49.5,ppbm:62.0,speed:24.0,bat:null,exit:null,throwV:92.0},
-    recentGames:[
-      {date:"Apr 11",jump:46.5,ppbm:58.2,speed:22.0,he:90,bat:0,exit:0,throwV:88.5,readiness:1.035,acwr:0.94,status:"GREEN"},
-      {date:"Apr 12",jump:46.8,ppbm:58.5,speed:22.3,he:100,bat:0,exit:0,throwV:88.8,readiness:1.038,acwr:0.93,status:"GREEN"},
-    ],
-    cmjTrends: [],
-    acwrHistory:[
-      {date:"Apr 11",he:0.90,td:0.96,comb:0.93},{date:"Apr 12",he:0.91,td:0.97,comb:0.94},
-    ],
-    wellness:[
-      {date:"Apr 11",soreness:3,energy:8,sleep:8,readiness:1.035},
-      {date:"Apr 12",soreness:2,energy:8,sleep:8,readiness:1.038},
-    ]
-  },
-
   // ── EDWARD CABRERA (SP) ──
-  "Edward Cabrera": {
-    pos:"SP", number:"not listed",
-    readiness:1.048, status:"GREEN",
-    daysSinceCMJ:2, acwr:0.99, heAcwr:0.96, tdAcwr:1.02,
-    latestJump:52.5, latestPPBM:66.0, latestSpeed:25.5,
-    latestBat:null, latestExit:null, latestThrow:97.8,
-    latestHE:160, latestDist:700,
-    bests:{jump:55.5,ppbm:69.5,speed:27.5,bat:null,exit:null,throwV:102.0},
-    recentGames:[
-      {date:"Apr 9", jump:52.5,ppbm:66.0,speed:25.5,he:160,bat:0,exit:0,throwV:97.8,readiness:1.048,acwr:0.99,status:"GREEN"},
-      {date:"Apr 12",jump:52.8,ppbm:66.2,speed:25.8,he:175,bat:0,exit:0,throwV:98.2,readiness:1.051,acwr:0.98,status:"GREEN"},
-    ],
-    cmjTrends: [],
-    acwrHistory:[
-      {date:"Apr 9",he:0.95,td:1.01,comb:0.98},{date:"Apr 12",he:0.96,td:1.02,comb:0.99},
-    ],
-    wellness:[
-      {date:"Apr 9", soreness:3,energy:8,sleep:8,readiness:1.048},
-      {date:"Apr 12",soreness:2,energy:9,sleep:8,readiness:1.051},
-    ]
-  },
   "Seiya Suzuki": {
     pos: "RF", number: "27",
     readiness: 1.0, status: "YELLOW",
@@ -5337,7 +5160,7 @@ function renderReadinessHero(p) {
     acwrEl.textContent = p.acwr.toFixed(3);
     acwrEl.style.color = acwrColor(p.acwr);
   }
-  const games = [...(p.recentGames||[])].sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+  const games = [...(p.recentGames||[])].sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
   if (games.length) document.getElementById('lastGame').textContent = fmtDate(games[games.length-1].date);
 
   // Readiness trend arrow — compare today vs yesterday
@@ -5402,63 +5225,41 @@ function renderPerfTable(p) {
   const tbody = document.getElementById('perfTableBody');
   const sc = s => s === 'GREEN' ? 'green' : s === 'RED' ? 'red' : 'yellow';
 
-  // Recalculate ACWR live — read straight from localStorage every time
+  // Load statcast from localStorage for live ACWR calc
   let allSC = [];
   try {
-    const stored = JSON.parse(localStorage.getItem(STATCAST_KEY) || '{}');
-    // Try currentPlayer, then all keys case-insensitively
-    const key = Object.keys(stored).find(k => k === currentPlayer) ||
-                Object.keys(stored).find(k => k.toLowerCase() === currentPlayer.toLowerCase());
-    if (key) allSC = (stored[key] || []).slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+    const stored = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
+    const key = Object.keys(stored).find(k=>k===currentPlayer) || Object.keys(stored).find(k=>k.toLowerCase()===currentPlayer.toLowerCase());
+    if (key) allSC = (stored[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
   } catch(e) {}
 
   function calcRowACWR(dateStr) {
-    if (!allSC.length) { console.error('ACWR: allSC empty, STATCAST_KEY=', STATCAST_KEY, 'currentPlayer=', currentPlayer); return 1.0; }
-    // Find exact match or nearest statcast date <= this date
+    if (!allSC.length) return 1.0;
+    // Match formatted date "Apr 26" to raw statcast dates
     let match = allSC.find(r => fmtDate(r.date) === dateStr);
     if (!match) {
-      // No exact match — find the closest statcast date by comparing formatted dates
-      // Build a lookup of all formatted dates
-      const fmtDates = allSC.map(r => ({ fmt: fmtDate(r.date), raw: r }));
-      // Find last one whose formatted date sorts <= dateStr by month/day
+      // Fall back to nearest available statcast date
       const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const parseShort = s => { const [m,d] = s.split(' '); return months.indexOf(m)*31 + parseInt(d); };
-      const targetN = parseShort(dateStr);
-      const before = fmtDates.filter(x => parseShort(x.fmt) <= targetN);
-      match = before.length ? before[before.length-1].raw : allSC[allSC.length-1];
+      const parseShort = s => { const [m,d] = s.split(' '); return months.indexOf(m)*31+parseInt(d); };
+      const target = parseShort(dateStr);
+      const before = allSC.filter(r => parseShort(fmtDate(r.date)) <= target);
+      match = before.length ? before[before.length-1] : allSC[allSC.length-1];
     }
-    const ref = safeParseDate(match.date);
-    const c7  = new Date(ref); c7.setDate(c7.getDate()-7);
-    const c28 = new Date(ref); c28.setDate(c28.getDate()-28);
-    const heA = allSC.filter(r => safeParseDate(r.date) > c7  && safeParseDate(r.date) <= ref).reduce((s,r)=>s+(+r.heDist||0),0);
-    const heC = allSC.filter(r => safeParseDate(r.date) > c28 && safeParseDate(r.date) <= ref).reduce((s,r)=>s+(+r.heDist||0),0);
-    const tdA = allSC.filter(r => safeParseDate(r.date) > c7  && safeParseDate(r.date) <= ref).reduce((s,r)=>s+(+r.dist||0),0);
-    const tdC = allSC.filter(r => safeParseDate(r.date) > c28 && safeParseDate(r.date) <= ref).reduce((s,r)=>s+(+r.dist||0),0);
-    const first   = safeParseDate(allSC[0].date);
-    const span    = Math.max(1, Math.round((ref - first) / 86400000) + 1);
-    const chrD    = Math.min(28, span);
-    const actD    = Math.min(7,  span);
-    const heChr   = chrD > 0 ? (heC/chrD)*actD : 0;
-    const tdChr   = chrD > 0 ? (tdC/chrD)*actD : 0;
-    const heAcwr  = heChr > 0 ? heA/heChr : 1.0;
-    const tdAcwr  = tdChr > 0 ? tdA/tdChr : 1.0;
-    return parseFloat(((heAcwr+tdAcwr)/2).toFixed(3));
+    if (!match) return 1.0;
+    return calcACWR(allSC, safeParseDate(match.date)).acwr;
   }
 
   tbody.innerHTML = p.recentGames.slice(-14).map(g => {
     const liveAcwr = calcRowACWR(g.date);
-    const liveStatus = acwrZone(liveAcwr) === 'red' ? 'RED' : acwrZone(liveAcwr) === 'yellow' ? 'YELLOW' : 'GREEN';
-    return `
-    <tr>
+    const liveStatus = acwrZone(liveAcwr)==='red' ? 'RED' : acwrZone(liveAcwr)==='yellow' ? 'YELLOW' : 'GREEN';
+    return `<tr>
       <td class="date-col">${g.date}</td>
-      <td>${g.jump}</td>
-      <td>${g.ppbm}</td>
-      <td>${g.speed}</td>
+      <td>${g.jump}</td><td>${g.ppbm}</td><td>${g.speed}</td>
       <td>${g.he ? g.he.toLocaleString() : '—'}</td>
       <td>${g.dist ? g.dist.toLocaleString() : '—'}</td>
-      <td>${g.bat   ? g.bat.toFixed(1)    : '—'}</td>
-      <td>${g.exit  ? g.exit.toFixed(1)   : '—'}</td>
-      <td>${g.throwV ? g.throwV.toFixed(1) : '—'}</td>
+      <td>${g.bat   ? g.bat.toFixed(1)   : '—'}</td>
+      <td>${g.exit  ? g.exit.toFixed(1)  : '—'}</td>
+      <td>${g.throwV ? g.throwV.toFixed(1): '—'}</td>
       <td>${g.readiness.toFixed(3)}</td>
       <td>${liveAcwr.toFixed(3)}</td>
       <td><span class="pill ${sc(liveStatus)}">${liveStatus}</span></td>
@@ -5526,41 +5327,35 @@ function computeMonotonyStrain(playerName) {
 
 // ── Compute ACWR live from importedData.statcast relative to TODAY
 // This always accounts for off days since the last game
-function computeLiveACWR(playerName) {
-  // Read directly from localStorage — works even before importedData is populated
-  let rows = [];
-  try {
-    const stored = JSON.parse(localStorage.getItem(STATCAST_KEY) || '{}');
-    const key = Object.keys(stored).find(k => k === playerName) ||
-                Object.keys(stored).find(k => k.toLowerCase() === playerName.toLowerCase());
-    if (key) rows = (stored[key] || []).slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
-  } catch(e) {}
-  if (!rows.length) return null;
-  return calcACWR(rows, safeParseDate(rows[rows.length-1].date));
-}
-
 // ── SINGLE SOURCE OF TRUTH: calcACWR(rows, refDate) ─────────────────────────
-// rows: array of {date, heDist, dist} sorted ascending
-// refDate: Date object to calculate relative to
 function calcACWR(rows, refDate) {
   const ref = new Date(refDate); ref.setHours(0,0,0,0);
   const c7  = new Date(ref); c7.setDate(c7.getDate()-7);
   const c28 = new Date(ref); c28.setDate(c28.getDate()-28);
-  const inW  = (r, from, to) => safeParseDate(r.date) > from && safeParseDate(r.date) <= to;
-  const heA = rows.filter(r=>inW(r,c7,ref)).reduce((s,r)=>s+r.heDist,0);
-  const heC = rows.filter(r=>inW(r,c28,ref)).reduce((s,r)=>s+r.heDist,0);
-  const tdA = rows.filter(r=>inW(r,c7,ref)).reduce((s,r)=>s+r.dist,0);
-  const tdC = rows.filter(r=>inW(r,c28,ref)).reduce((s,r)=>s+r.dist,0);
+  const heA = rows.filter(r=>safeParseDate(r.date)>c7  && safeParseDate(r.date)<=ref).reduce((s,r)=>s+(+r.heDist||0),0);
+  const heC = rows.filter(r=>safeParseDate(r.date)>c28 && safeParseDate(r.date)<=ref).reduce((s,r)=>s+(+r.heDist||0),0);
+  const tdA = rows.filter(r=>safeParseDate(r.date)>c7  && safeParseDate(r.date)<=ref).reduce((s,r)=>s+(+r.dist||0),0);
+  const tdC = rows.filter(r=>safeParseDate(r.date)>c28 && safeParseDate(r.date)<=ref).reduce((s,r)=>s+(+r.dist||0),0);
   const first    = safeParseDate(rows[0].date);
-  const spanDays = Math.max(1, Math.round((ref - first) / 86400000) + 1);
+  const spanDays = Math.max(1, Math.round((ref-first)/86400000)+1);
   const chrDays  = Math.min(28, spanDays);
   const actDays  = Math.min(7,  spanDays);
-  const heChr = chrDays > 0 ? (heC/chrDays)*actDays : 0;
-  const tdChr = chrDays > 0 ? (tdC/chrDays)*actDays : 0;
-  const heAcwr = heChr > 0 ? parseFloat((heA/heChr).toFixed(3)) : 1.0;
-  const tdAcwr = tdChr > 0 ? parseFloat((tdA/tdChr).toFixed(3)) : 1.0;
-  const acwr   = parseFloat(((heAcwr+tdAcwr)/2).toFixed(3));
-  return { acwr, heAcwr, tdAcwr };
+  const heChr = chrDays>0 ? (heC/chrDays)*actDays : 0;
+  const tdChr = chrDays>0 ? (tdC/chrDays)*actDays : 0;
+  const heAcwr = heChr>0 ? parseFloat((heA/heChr).toFixed(3)) : 1.0;
+  const tdAcwr = tdChr>0 ? parseFloat((tdA/tdChr).toFixed(3)) : 1.0;
+  return { acwr: parseFloat(((heAcwr+tdAcwr)/2).toFixed(3)), heAcwr, tdAcwr };
+}
+
+function computeLiveACWR(playerName) {
+  var rows = [];
+  try {
+    var stored = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
+    var key = Object.keys(stored).find(k=>k===playerName)||Object.keys(stored).find(k=>k.toLowerCase()===playerName.toLowerCase());
+    if (key) rows = (stored[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
+  } catch(e) {}
+  if (!rows.length) return null;
+  return calcACWR(rows, safeParseDate(rows[rows.length-1].date));
 }
 
 function renderACWR(p) {
@@ -5971,13 +5766,29 @@ function renderAllCharts(p) {
 
   let ac;
   if (allStatcast.length >= 1) {
-    // Build date range: last 20 game dates only (no synthetic Today point)
-    const displayRows = allStatcast.slice(-20);
+    // Build date range: last 14 game dates PLUS today if today > last game date
+    const todayD = new Date(); todayD.setHours(0,0,0,0);
+    const lastGameDate = safeParseDate(allStatcast[allStatcast.length-1].date);
+    const displayRows = allStatcast.slice(-13); // last 13 games
+    // Add today as a synthetic point (zero load) if today is after the last game
+    const todayStr = todayD.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const lastStr  = fmtDate(allStatcast[allStatcast.length-1].date);
+    const addToday = todayD > lastGameDate && todayStr !== lastStr;
+    const acwrDates = [...displayRows, ...(addToday ? [{date:'today', _today:true}] : [])];
 
-    ac = displayRows.map(r => {
-      const rDate = safeParseDate(r.date);
-      const res = calcACWR(allStatcast, rDate);
-      return { date:fmtDate(r.date), he:res.heAcwr, td:res.tdAcwr, comb:res.acwr };
+    ac = acwrDates.map(r => {
+      const rDate = r._today ? todayD : safeParseDate(r.date);
+      const c7    = new Date(rDate); c7.setDate(c7.getDate()-7);
+      const c14   = new Date(rDate); c14.setDate(c14.getDate()-14);
+      const inWindow = (x, from, to) => safeParseDate(x.date) > from && safeParseDate(x.date) <= to;
+      const heA = allStatcast.filter(x=>inWindow(x,c7,rDate)).reduce((s,x)=>s+x.heDist,0);
+      const heC = allStatcast.filter(x=>inWindow(x,c14,rDate)).reduce((s,x)=>s+x.heDist,0);
+      const tdA = allStatcast.filter(x=>inWindow(x,c7,rDate)).reduce((s,x)=>s+x.dist,0);
+      const tdC = allStatcast.filter(x=>inWindow(x,c14,rDate)).reduce((s,x)=>s+x.dist,0);
+      const heAcwr = (heC/14)*7 > 0 ? parseFloat((heA/((heC/14)*7)).toFixed(3)) : 1.0;
+      const tdAcwr = (tdC/14)*7 > 0 ? parseFloat((tdA/((tdC/14)*7)).toFixed(3)) : 1.0;
+      const label  = r._today ? 'Today' : fmtDate(r.date);
+      return { date:label, he:heAcwr, td:tdAcwr, comb:parseFloat(((heAcwr+tdAcwr)/2).toFixed(3)) };
     });
   } else {
     ac = p.acwrHistory || []; // fallback to hardcoded if no import yet
@@ -5989,7 +5800,7 @@ function renderAllCharts(p) {
     {label:'TD ACWR',data:ac.map(a=>a.td),borderColor:C.blue,tension:0.4,pointRadius:3},
     {label:'Combined',data:ac.map(a=>a.comb),borderColor:C.green,tension:0.4,pointRadius:3,borderDash:[4,4]},
   ]},options:{...cloneOpts(),
-    scales:{...cloneOpts().scales,y:{...cloneOpts().scales.y,min:0.5,max:Math.max(1.7, Math.ceil(Math.max(...ac.map(a=>Math.max(a.he,a.td,a.comb)))*10)/10 + 0.1),grid:{color:C.border},ticks:{color:C.text2,font:{family:'DM Mono',size:10}}}},
+    scales:{...cloneOpts().scales,y:{...cloneOpts().scales.y,min:0.5,max:1.7,grid:{color:C.border},ticks:{color:C.text2,font:{family:'DM Mono',size:10}}}},
     plugins:{...cloneOpts().plugins,annotation:{annotations:{
       greenHigh: {type:'line',yMin:1.15,yMax:1.15,borderColor:'rgba(34,197,94,0.5)',borderDash:[4,4],borderWidth:1,label:{display:true,content:'1.15',position:'end',color:'rgba(34,197,94,0.8)',font:{size:9}}},
       greenLow:  {type:'line',yMin:0.85,yMax:0.85,borderColor:'rgba(34,197,94,0.5)',borderDash:[4,4],borderWidth:1,label:{display:true,content:'0.85',position:'end',color:'rgba(34,197,94,0.8)',font:{size:9}}},
@@ -10897,20 +10708,17 @@ function loadPersistedData() {
     }
     // Rebuild cmjTrends from persisted importedData so it survives file updates
     rebuildCMJTrends();
-    // On startup: rebuild latest values AND recalculate ACWR from stored data
-    // so ACWR window changes take effect immediately without re-uploading
-    if (Object.keys(importedData.statcast || {}).length) {
-      // Repopulate parsedStatcastRows from stored data then run applyStatcastData
+    // Rebuild ACWR from stored statcast on every load
+    if (Object.keys(importedData.statcast||{}).length) {
       parsedStatcastRows = [];
-      Object.entries(importedData.statcast).forEach(([name, rows]) => {
-        rows.forEach(r => parsedStatcastRows.push({
-          name, rawName: name, date: r.date,
-          dist: r.dist||0, midEff: r.midEff||0, highEff: r.highEff||0,
-          heDist: r.heDist||0, speed: r.speed||0
-        }));
+      Object.entries(importedData.statcast).forEach(([name,rows]) => {
+        rows.forEach(r => parsedStatcastRows.push({name,rawName:name,date:r.date,
+          dist:r.dist||0,midEff:r.midEff||0,highEff:r.highEff||0,heDist:r.heDist||0,speed:r.speed||0}));
       });
-      try { applyStatcastData(); } catch(e) { console.warn('startup ACWR recalc failed:', e); }
+      try { applyStatcastData(); } catch(e) { console.warn('startup ACWR recalc failed:',e); }
     }
+    // On startup: only rebuild latest values from stored statcast — skip heavy ACWR recalc
+    // (ACWR history was already saved to PLAYERS_STATE_KEY by persistImportedData)
     Object.entries(importedData.statcast || {}).forEach(([name, rows]) => {
       const p = PLAYERS[name]; if (!p || !rows.length) return;
       const sorted = rows.slice().sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
@@ -11065,15 +10873,12 @@ function clearAllImportedData() {
 
 // ── Roster name normalizer (handles minor differences in spacing/punctuation)
 function normalizeName(n) {
-  // Normalize accented chars (é→e, ó→o, etc) then strip non-alpha
-  return n.trim().toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .replace(/[^a-z ]/g,'').replace(/\s+/g,' ');
+  return n.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z ]/g,'').replace(/\s+/g,' ');
 }
 
 const ROSTER_NAMES = () => Object.keys(PLAYERS);
-const PITCHERS_LIST = () => Object.entries(PLAYERS).filter(([,p])=>['SP','RP'].includes(p.pos)).map(([n])=>n);
-const POSITION_PLAYERS_LIST = () => Object.entries(PLAYERS).filter(([,p])=>!['SP','RP'].includes(p.pos)).map(([n])=>n);
+const PITCHERS_LIST = () => [];
+const POSITION_PLAYERS_LIST = () => Object.keys(PLAYERS);
 
 function findRosterMatch(name) {
   if (!name) return null;
@@ -11487,14 +11292,31 @@ function applyStatcastData() {
 
     // Compute ACWR from imported data (7-day acute / 28-day chronic)
     if (rows_for_acwr.length >= 2) {
-      // Use shared calcACWR function — single source of truth
-      const acwrResult = calcACWR(rows_for_acwr, safeParseDate(last.date));
-      p.heAcwr = acwrResult.heAcwr;
-      p.tdAcwr = acwrResult.tdAcwr;
-      p.acwr   = acwrResult.acwr;
+      // Always compute relative to TODAY — accounts for off days since last game
+      const today = new Date(); today.setHours(0,0,0,0);
+      // Use last game date as reference — matches performance table calculation
+      const lastGameDate = safeParseDate(last.date);
+      const refDay = new Date(lastGameDate); refDay.setHours(0,0,0,0);
+      const cutoff7  = new Date(refDay); cutoff7.setDate(cutoff7.getDate()-7);
+      const cutoff28 = new Date(refDay); cutoff28.setDate(cutoff28.getDate()-28);
+      const inW7  = r => safeParseDate(r.date) > cutoff7  && safeParseDate(r.date) <= refDay;
+      const inW28 = r => safeParseDate(r.date) > cutoff28 && safeParseDate(r.date) <= refDay;
+      const firstDate  = safeParseDate(rows_for_acwr[0].date);
+      const daysOfData = Math.max(1, Math.round((refDay-firstDate)/86400000)+1);
+      const chrDays    = Math.min(28, daysOfData);
+      const actDays    = Math.min(7,  daysOfData);
+      const acute   = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.heDist,0);
+      const chronic = rows_for_acwr.filter(inW28).reduce((s,r)=>s+r.heDist,0);
+      const chronicAvg = chrDays>0 ? (chronic/chrDays)*actDays : 0;
+      p.heAcwr = chronicAvg > 0 ? parseFloat((acute/chronicAvg).toFixed(3)) : 1.0;
+      const acuteT    = rows_for_acwr.filter(inW7).reduce((s,r)=>s+r.dist,0);
+      const chronicT  = rows_for_acwr.filter(inW28).reduce((s,r)=>s+r.dist,0);
+      const chronicTAvg = chrDays>0 ? (chronicT/chrDays)*actDays : 0;
+      p.tdAcwr = chronicTAvg > 0 ? parseFloat((acuteT/chronicTAvg).toFixed(3)) : 1.0;
+      p.acwr   = parseFloat(((p.heAcwr + p.tdAcwr) / 2).toFixed(3)); // combined = average of both
 
       // Update ACWR history — O(n) single pass (pre-cache dates to avoid repeated safeParseDate)
-      const historyRows = rows_for_acwr.slice(-60); // last 60 games for chart
+      const historyRows = rows_for_acwr.slice(-30); // last 30 games for chart
       const _parsedDates = rows_for_acwr.map(r => safeParseDate(r.date).getTime());
       p.acwrHistory = historyRows.map((r, _hi) => {
         const rTime = safeParseDate(r.date).getTime();
@@ -11509,13 +11331,8 @@ function applyStatcastData() {
             if (diff < ms28) { heC += x.heDist; tdC += x.dist; }
           }
         });
-        // Scale chronic by actual days spanned to that game point
-        const firstMs   = _parsedDates[0];
-        const spanDays  = Math.max(1, Math.round((rTime - firstMs) / 86400000) + 1);
-        const chrDays   = Math.min(28, spanDays);
-        const actDays   = Math.min(7,  spanDays);
-        const heChrAvg  = chrDays > 0 ? (heC/chrDays)*actDays : 0;
-        const tdChrAvg  = chrDays > 0 ? (tdC/chrDays)*actDays : 0;
+        const heChrAvg = (heC/14)*7;
+        const tdChrAvg = (tdC/14)*7;
         const heAcwr = heChrAvg > 0 ? parseFloat((heA/heChrAvg).toFixed(3)) : 1.0;
         const tdAcwr = tdChrAvg > 0 ? parseFloat((tdA/tdChrAvg).toFixed(3)) : 1.0;
         return {
@@ -13417,6 +13234,43 @@ function loadAllData() {
   if(ab){try{importedData.abcmj=JSON.parse(ab);}catch(e){}}else if(old&&old.abcmj)importedData.abcmj=old.abcmj;
 }
 // Legacy "Last, F" → roster name map (kept for backward-compat with old CSV format)
+function resolveRosterName(raw) {
+  if (!raw) return null;
+  raw = raw.trim();
+  if (HITTING_NAME_MAP[raw]) return HITTING_NAME_MAP[raw];
+  return findRosterMatch(raw) || null;
+}
+function mergeHittingIntoRecentGames() {
+  Object.entries(importedData.hitting).forEach(function(entry) {
+    var name=entry[0], records=entry[1];
+    var p=PLAYERS[name]; if(!p) return;
+    if(!p.recentGames) p.recentGames=[];
+    records.forEach(function(h) {
+      var dateStr=fmtDate(h.date);
+      var existing=p.recentGames.find(function(g){return g.date===dateStr;});
+      if(existing) {
+        if(h.bat){existing.bat=h.bat; if(h.bat>(p.bests.bat||0))p.bests.bat=h.bat;}
+        if(h.exit){existing.exit=h.exit; if(h.exit>(p.bests.exit||0))p.bests.exit=h.exit;}
+        if(h.throwV){existing.throwV=h.throwV; if(h.throwV>(p.bests.throwV||0))p.bests.throwV=h.throwV;}
+      } else {
+        p.recentGames.push({date:dateStr,bat:h.bat||0,exit:h.exit||0,throwV:h.throwV||0,
+          speed:0,he:0,dist:0,midEff:0,highEff:0,
+          jump:p.latestJump||0,ppbm:p.latestPPBM||0,readiness:p.readiness||1.0,acwr:p.acwr||1.0,status:'YELLOW'});
+        p.recentGames.sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);});
+        if(h.bat&&h.bat>(p.bests.bat||0))p.bests.bat=h.bat;
+        if(h.exit&&h.exit>(p.bests.exit||0))p.bests.exit=h.exit;
+        if(h.throwV&&h.throwV>(p.bests.throwV||0))p.bests.throwV=h.throwV;
+      }
+    });
+    var lb=records.slice().reverse().find(function(h){return h.bat;});
+    var le=records.slice().reverse().find(function(h){return h.exit;});
+    var lt=records.slice().reverse().find(function(h){return h.throwV;});
+    if(lb)p.latestBat=lb.bat;
+    if(le)p.latestExit=le.exit;
+    if(lt)p.latestThrow=lt.throwV;
+  });
+}
+
 var HITTING_NAME_MAP = {
   'Crow-Armstrong, P':'Pete Crow-Armstrong','Hoerner, N':'Nico Hoerner',
   'Swanson, D':'Dansby Swanson','Shaw, M':'Matt Shaw','Kelly, C':'Carson Kelly',
@@ -13474,68 +13328,52 @@ function mergeHittingIntoRecentGames() {
   });
 }
 function deleteGameDateData() {
-  var d = (document.getElementById('csv-game-date')||{}).value;
-  if (!d) { alert('Pick a date first'); return; }
-  if (!confirm('Delete ALL game data (hitting, throw, statcast) for ' + d + '?')) return;
-
-  var dFmt = fmtDate(d);
-  var changed = 0;
-
-  // 1. Delete from hitting data (all date formats)
-  var hitData = JSON.parse(localStorage.getItem(HITTING_KEY) || '{}');
-  Object.keys(hitData).forEach(function(name) {
-    var before = hitData[name].length;
-    hitData[name] = hitData[name].filter(function(h) {
-      return fmtDate(h.date) !== dFmt && h.date !== d && h.date !== dFmt;
-    });
-    changed += before - hitData[name].length;
+  var d=(document.getElementById('csv-game-date')||{}).value;
+  if(!d){alert('Pick a date first');return;}
+  if(!confirm('Delete ALL game data for '+d+'?'))return;
+  var dFmt=fmtDate(d), changed=0;
+  var hitData=JSON.parse(localStorage.getItem(HITTING_KEY)||'{}');
+  Object.keys(hitData).forEach(function(name){
+    var before=hitData[name].length;
+    hitData[name]=hitData[name].filter(function(h){return fmtDate(h.date)!==dFmt&&h.date!==d;});
+    changed+=before-hitData[name].length;
   });
-  localStorage.setItem(HITTING_KEY, JSON.stringify(hitData));
-  importedData.hitting = hitData;
-
-  // 2. Delete from statcast data
-  var scData = JSON.parse(localStorage.getItem(STATCAST_KEY) || '{}');
-  Object.keys(scData).forEach(function(name) {
-    var before = (scData[name]||[]).length;
-    scData[name] = (scData[name]||[]).filter(function(g) {
-      return fmtDate(g.date) !== dFmt && g.date !== d;
-    });
-    changed += before - scData[name].length;
+  localStorage.setItem(HITTING_KEY,JSON.stringify(hitData));
+  importedData.hitting=hitData;
+  var scData=JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
+  Object.keys(scData).forEach(function(name){
+    var before=(scData[name]||[]).length;
+    scData[name]=(scData[name]||[]).filter(function(g){return fmtDate(g.date)!==dFmt&&g.date!==d;});
+    changed+=before-scData[name].length;
   });
-  localStorage.setItem(STATCAST_KEY, JSON.stringify(scData));
-  importedData.statcast = scData;
-
-  // 3. Delete from PLAYERS recentGames directly
-  Object.keys(PLAYERS).forEach(function(name) {
-    var p = PLAYERS[name];
-    if (!p.recentGames) return;
-    var before = p.recentGames.length;
-    p.recentGames = p.recentGames.filter(function(g) {
-      return fmtDate(g.date) !== dFmt && g.date !== d;
-    });
-    changed += before - p.recentGames.length;
+  localStorage.setItem(STATCAST_KEY,JSON.stringify(scData));
+  importedData.statcast=scData;
+  Object.keys(PLAYERS).forEach(function(name){
+    var p=PLAYERS[name]; if(!p.recentGames)return;
+    var before=p.recentGames.length;
+    p.recentGames=p.recentGames.filter(function(g){return fmtDate(g.date)!==dFmt&&g.date!==d;});
+    changed+=before-p.recentGames.length;
   });
-
   persistImportedData();
-  requestAnimationFrame(function() { rebuildCMJTrends(); buildPlayerList(); renderDashboard(); });
-  showStatus('🗑 Cleared all data for ' + dFmt);
-  alert('Cleared ' + changed + ' entries for ' + dFmt + '. If data still shows, use Restore Backup to fully reset.');
+  requestAnimationFrame(function(){rebuildCMJTrends();buildPlayerList();renderDashboard();});
+  showStatus('🗑 Deleted '+changed+' entries for '+dFmt);
+  alert('Deleted '+changed+' entries for '+dFmt);
 }
 
 function handleHittingCSVUpload(input) {
-  var file=input.files[0]; if(!file)return; input.value='';
+  var file=input.files[0]; if(!file)return;
+  var gameDate=(document.getElementById('csv-game-date')||{}).value||new Date().toISOString().slice(0,10);
+  input.value='';
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var text=e.target.result.replace(/\u00a0/g,' ').replace(/\xa0/g,' ');
-      var rows=parseCSV(text), g={};
+      var rows=parseCSV(e.target.result), g={};
       rows.forEach(function(r){
         var b=(r['Batter']||'').trim();
         var d=(r['Date']||r['Game']||'').trim();
         var ev=parseFloat(r['EV (MPH)']||r['EV'])||0;
         var bs=parseFloat(r['BSp (MPH)']||r['BSp'])||0;
-        if(!b)return;
-        if(!d) d=(document.getElementById('csv-game-date')||{}).value||new Date().toISOString().slice(0,10);
+        if(!b||!d)return;
         var k=b+'|'+d;
         if(!g[k])g[k]={b:b,d:d,ev:0,bs:0};
         if(ev>g[k].ev)g[k].ev=ev; if(bs>g[k].bs)g[k].bs=bs;
@@ -13559,21 +13397,21 @@ function handleHittingCSVUpload(input) {
       alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':''));
     }catch(err){alert('Error: '+err.message);}
   };
-  reader.readAsText(file, 'ISO-8859-1');
+  reader.readAsText(file,'ISO-8859-1');
 }
 function handleThrowCSVUpload(input) {
-  var file=input.files[0]; if(!file)return; input.value='';
+  var file=input.files[0]; if(!file)return;
+  var gameDate=(document.getElementById('csv-game-date')||{}).value||new Date().toISOString().slice(0,10);
+  input.value='';
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var text=e.target.result.replace(/\u00a0/g,' ');
-      var rows=parseCSV(text),g={};
+      var rows=parseCSV(e.target.result),g={};
       rows.forEach(function(r){
         var p=(r['Fielder']||r['Player']||'').trim();
         var d=(r['Date']||r['Game']||'').trim();
         var arm=parseFloat(r['ARM (MPH)']||r['ARM'])||0;
-        if(!p||!arm)return;
-        if(!d) d=(document.getElementById('csv-game-date')||{}).value||new Date().toISOString().slice(0,10);
+        if(!p||!d||!arm)return;
         var k=p+'|'+d;
         if(!g[k])g[k]={p:p,d:d,arm:0};
         if(arm>g[k].arm)g[k].arm=arm;
@@ -13593,10 +13431,10 @@ function handleThrowCSVUpload(input) {
       saveHitting(); persistImportedData();
       requestAnimationFrame(() => { rebuildCMJTrends(); buildPlayerList(); renderDashboard(); });
       showStatus('Throw velo: '+n+' roster rows imported'+(sk?' ('+sk+' non-roster skipped)':''));
-      if(n===0){alert('No roster players found in throw CSV. Skipped: '+sk+' non-roster players.');} else {alert('Done! '+n+' roster players updated.');}
-    }catch(err){alert('Throw CSV error: '+err.message);}
+      alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':''));
+    }catch(err){alert('Error: '+err.message);}
   };
-  reader.readAsText(file, 'ISO-8859-1');
+  reader.readAsText(file,'ISO-8859-1');
 }
 function getCSSColors(){
   var s=getComputedStyle(document.documentElement);
@@ -13635,9 +13473,80 @@ function hardReset(){
   location.reload();
 }
 
+
+// ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
+const SUPA_URL = 'https://umcdnbnvzwedrlidzaqg.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtY2RuYm52endlZHJsaWR6YXFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjMwNjUsImV4cCI6MjA5MjYzOTA2NX0.g4t2GaT33M03b6-stee9Aiy2We1KdJpw5KVEKwScwJM';
+const SUPA_KEYS = ['cubs_sc_statcast_v1','cubs_sc_hitting_v1','cubs_sc_cmj_v1','cubs_sc_abcmj_v1','cubs_sc_players_state_v1'];
+
+async function supaGet(key) {
+  try {
+    const r = await fetch(SUPA_URL+'/rest/v1/cubs_sc_data?key=eq.'+encodeURIComponent(key)+'&select=value', {
+      headers: { apikey: SUPA_KEY, Authorization: 'Bearer '+SUPA_KEY }
+    });
+    const rows = await r.json();
+    return (rows && rows[0]) ? rows[0].value : null;
+  } catch(e) { return null; }
+}
+
+async function supaSet(key, value) {
+  try {
+    await fetch(SUPA_URL+'/rest/v1/cubs_sc_data', {
+      method: 'POST',
+      headers: { apikey: SUPA_KEY, Authorization: 'Bearer '+SUPA_KEY,
+        'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' },
+      body: JSON.stringify({ key: key, value: value })
+    });
+  } catch(e) { console.warn('supaSet failed:', e); }
+}
+
+async function syncToSupabase() {
+  showStatus('☁️ Syncing to cloud...');
+  for (var i=0; i<SUPA_KEYS.length; i++) {
+    var v = localStorage.getItem(SUPA_KEYS[i]);
+    if (v) await supaSet(SUPA_KEYS[i], v);
+  }
+  showStatus('✅ Synced to cloud');
+}
+
+async function initWithSupabase() {
+  showStatus('☁️ Loading from cloud...');
+  try {
+    var loaded = 0;
+    for (var i=0; i<SUPA_KEYS.length; i++) {
+      var v = await supaGet(SUPA_KEYS[i]);
+      if (v) { localStorage.setItem(SUPA_KEYS[i], v); loaded++; }
+    }
+    if (loaded > 0) {
+      showStatus('✅ Loaded '+loaded+' keys from cloud — refreshing...');
+      loadAllData();
+      rebuildCMJTrends();
+      var scKeys = Object.keys(importedData.statcast||{});
+      if (scKeys.length) {
+        parsedStatcastRows = [];
+        scKeys.forEach(function(name) {
+          (importedData.statcast[name]||[]).forEach(function(r) {
+            parsedStatcastRows.push({name:name,rawName:name,date:r.date,
+              dist:r.dist||0,midEff:r.midEff||0,highEff:r.highEff||0,heDist:r.heDist||0,speed:r.speed||0});
+          });
+        });
+        try { applyStatcastData(); } catch(e) { console.warn('ACWR recalc failed:',e); }
+      }
+      buildPlayerList();
+      renderDashboard();
+    } else {
+      showStatus('⚠️ No cloud data — using local');
+    }
+  } catch(e) {
+    console.warn('initWithSupabase failed:', e);
+    showStatus('⚠️ Cloud load failed — using local data');
+  }
+}
+
 try {
   init();
   loadCubsSchedule();
+  initWithSupabase();
 } catch(e) {
   document.body.innerHTML = '<div style="color:red;padding:20px;font-size:14px;"><b>STARTUP ERROR:</b><pre>' + (e.stack||e.message) + '</pre></div>';
 }
