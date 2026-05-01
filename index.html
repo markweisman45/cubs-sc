@@ -11438,15 +11438,16 @@ function applyStatcastData() {
 
     // Compute ACWR from imported data (7-day acute / 28-day chronic)
     if (rows_for_acwr.length >= 2) {
-      // Always compute relative to TODAY — accounts for off days since last game
-      const today = new Date(); today.setHours(0,0,0,0);
-      const cutoff7  = new Date(today); cutoff7.setDate(cutoff7.getDate()-7);
-      const cutoff28 = new Date(today); cutoff28.setDate(cutoff28.getDate()-28);
-      const inW7  = r => safeParseDate(r.date) > cutoff7  && safeParseDate(r.date) <= today;
-      const inW28 = r => safeParseDate(r.date) > cutoff28 && safeParseDate(r.date) <= today;
+      // Use last game date as reference (not today) so hero matches table
+      const lastGameDate = safeParseDate(last.date);
+      const refDay = new Date(lastGameDate); refDay.setHours(0,0,0,0);
+      const cutoff7  = new Date(refDay); cutoff7.setDate(cutoff7.getDate()-7);
+      const cutoff28 = new Date(refDay); cutoff28.setDate(cutoff28.getDate()-28);
+      const inW7  = r => safeParseDate(r.date) > cutoff7  && safeParseDate(r.date) <= refDay;
+      const inW28 = r => safeParseDate(r.date) > cutoff28 && safeParseDate(r.date) <= refDay;
       // Days of data actually available (capped at window sizes)
       const firstDate   = safeParseDate(rows_for_acwr[0].date);
-      const daysOfData  = Math.round((today - firstDate) / 86400000) + 1;
+      const daysOfData  = Math.round((refDay - firstDate) / 86400000) + 1;
       const acuteDays   = Math.min(7,  daysOfData);
       const chronicDays = Math.min(28, daysOfData);
 
