@@ -612,10 +612,610 @@ body {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-<div class="app">
+<style>
+:root {
+  --cubs-blue: #0E3386;
+  --cubs-red: #CC3433;
+  --cubs-light-blue: #3B7AC4;
+  --bg: #0a0c10;
+  --bg2: #111318;
+  --bg3: #181c24;
+  --bg4: #1e2330;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(59,122,196,0.25);
+  --text: #e8eaf0;
+  --text2: #8b90a0;
+  --text3: #555c70;
+  --green: #22c55e;
+  --green-bg: rgba(34,197,94,0.12);
+  --yellow: #f59e0b;
+  --yellow-bg: rgba(245,158,11,0.12);
+  --red: #ef4444;
+  --red-bg: rgba(239,68,68,0.12);
+  --accent: #3B7AC4;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
 
-<!-- ── SIDEBAR ── -->
-<aside class="sidebar">
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── LAYOUT ── */
+.app { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-logo {
+  padding: 24px 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--cubs-blue), var(--cubs-light-blue));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+
+.logo-text { line-height: 1.1; }
+.logo-text .org { font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: 1px; color: #fff; }
+.logo-text .dept { font-size: 10px; color: var(--text2); letter-spacing: 0.5px; text-transform: uppercase; }
+
+.sidebar-section { padding: 16px 12px 8px; }
+.sidebar-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); padding: 0 8px; margin-bottom: 6px; }
+
+.player-btn {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 9px 10px; border-radius: var(--radius-sm);
+  border: none; background: transparent; color: var(--text2);
+  cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px;
+  transition: all 0.15s; text-align: left;
+}
+
+.player-btn:hover { background: var(--bg3); color: var(--text); }
+.player-btn.active { background: rgba(14,51,134,0.35); color: #fff; border-left: 2px solid var(--cubs-light-blue); }
+
+.player-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg4); display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: var(--text2); flex-shrink: 0;
+}
+
+.player-btn.active .player-avatar { background: var(--cubs-blue); color: #fff; }
+
+.player-info { flex: 1; min-width: 0; }
+.player-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player-pos { font-size: 10px; color: var(--text3); }
+
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.status-dot.green { background: var(--green); }
+.status-dot.yellow { background: var(--yellow); }
+.status-dot.red { background: var(--red); }
+
+.sidebar-nav { margin-top: auto; padding: 12px; border-top: 1px solid var(--border); }
+.nav-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 8px 10px; border-radius: var(--radius-sm);
+  border: none; background: transparent; color: var(--text2);
+  cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px;
+  transition: all 0.15s; text-align: left;
+}
+.nav-btn:hover { background: var(--bg3); color: var(--text); }
+.nav-btn.active { color: var(--accent); }
+
+/* ── MAIN ── */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 28px; border-bottom: 1px solid var(--border);
+  background: var(--bg2); position: sticky; top: 0; z-index: 10;
+}
+
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+.topbar-player { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 1.5px; color: #fff; }
+.topbar-meta { font-size: 12px; color: var(--text2); }
+.topbar-meta span { color: var(--text); }
+
+.tab-bar { display: flex; gap: 2px; background: var(--bg3); padding: 3px; border-radius: var(--radius-sm); }
+.tab-btn {
+  padding: 6px 14px; border-radius: 6px; border: none;
+  background: transparent; color: var(--text2); font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+}
+.tab-btn.active { background: var(--bg); color: #fff; }
+
+.content { padding: 24px 28px; flex: 1; overflow-y: auto; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden;
+}
+
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--cubs-blue), transparent);
+}
+
+.card-title {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text3); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+}
+
+/* ── GRID LAYOUTS ── */
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.grid-hero { display: grid; grid-template-columns: 320px 1fr; gap: 16px; margin-bottom: 20px; }
+
+/* ── READINESS HERO ── */
+.readiness-hero {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.readiness-hero::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.readiness-hero.green-status::before { background: linear-gradient(90deg, var(--green), transparent); }
+.readiness-hero.yellow-status::before { background: linear-gradient(90deg, var(--yellow), transparent); }
+.readiness-hero.red-status::before { background: linear-gradient(90deg, var(--red), transparent); }
+
+.readiness-glow {
+  position: absolute; top: -60px; right: -60px;
+  width: 200px; height: 200px; border-radius: 50%;
+  opacity: 0.06; pointer-events: none;
+}
+.green-status .readiness-glow { background: var(--green); }
+.yellow-status .readiness-glow { background: var(--yellow); }
+.red-status .readiness-glow { background: var(--red); }
+
+.status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.5px; margin-bottom: 16px;
+}
+.status-badge.green { background: var(--green-bg); color: var(--green); }
+.status-badge.yellow { background: var(--yellow-bg); color: var(--yellow); }
+.status-badge.red { background: var(--red-bg); color: var(--red); }
+
+.readiness-score {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 64px; line-height: 1; letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+.readiness-score.green { color: var(--green); }
+.readiness-score.yellow { color: var(--yellow); }
+.readiness-score.red { color: var(--red); }
+
+.readiness-label { font-size: 12px; color: var(--text2); margin-bottom: 20px; }
+
+.readiness-meta { display: flex; gap: 20px; }
+.r-meta-item { }
+.r-meta-val { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; }
+.r-meta-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+/* ── STAT CARDS ── */
+.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+.stat-val { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 500; margin-bottom: 2px; }
+.stat-lbl { font-size: 11px; color: var(--text2); }
+.stat-sub { font-size: 10px; color: var(--text3); margin-top: 4px; }
+.stat-delta { font-size: 10px; margin-top: 6px; display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 10px; }
+.stat-delta.pos { background: var(--green-bg); color: var(--green); }
+.stat-delta.neg { background: var(--red-bg); color: var(--red); }
+.stat-delta.neu { background: rgba(255,255,255,0.05); color: var(--text3); }
+
+/* ── PERSONAL BESTS ── */
+.pb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pb-item { background: var(--bg3); border-radius: var(--radius-sm); padding: 12px; }
+.pb-metric { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); margin-bottom: 6px; }
+.pb-best { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: #fff; }
+.pb-current { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.pb-bar-wrap { margin-top: 8px; height: 3px; background: var(--bg4); border-radius: 2px; }
+.pb-bar { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+.pb-pct { font-family: 'DM Mono', monospace; font-size: 11px; margin-top: 4px; }
+
+/* ── TABLE ── */
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th {
+  text-align: left; padding: 8px 12px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text3); border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2);
+}
+.data-table tr:hover td { background: rgba(255,255,255,0.02); }
+.data-table .date-col { font-size: 11px; color: var(--text3); }
+
+.pill {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.3px;
+}
+.pill.green { background: var(--green-bg); color: var(--green); }
+.pill.yellow { background: var(--yellow-bg); color: var(--yellow); }
+.pill.red { background: var(--red-bg); color: var(--red); }
+
+/* ── CHART CONTAINER ── */
+.chart-wrap      { position: relative; height: 240px; }   /* standard */
+.chart-wrap.tall { position: relative; height: 280px; }   /* performance charts */
+.chart-wrap.xl   { position: relative; height: 340px; }   /* CMJ trend charts */
+
+/* ── ACWR GAUGE ── */
+.acwr-display { display: flex; align-items: center; gap: 20px; }
+.acwr-num {
+  font-family: 'Bebas Neue', sans-serif; font-size: 52px; line-height: 1;
+}
+.acwr-num.safe { color: var(--green); }
+.acwr-num.caution { color: var(--yellow); }
+.acwr-num.danger { color: var(--red); }
+.acwr-zone { font-size: 11px; padding: 3px 10px; border-radius: 10px; }
+.acwr-zone.safe { background: var(--green-bg); color: var(--green); }
+.acwr-zone.caution { background: var(--yellow-bg); color: var(--yellow); }
+.acwr-zone.danger { background: var(--red-bg); color: var(--red); }
+
+.acwr-scale {
+  margin-top: 12px; height: 6px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--red) 0%, var(--yellow) 33%, var(--green) 50%, var(--yellow) 67%, var(--red) 100%);
+  position: relative;
+}
+.acwr-marker {
+  position: absolute; top: -4px; width: 14px; height: 14px;
+  background: #fff; border-radius: 50%; transform: translateX(-50%);
+  border: 2px solid var(--bg2); box-shadow: 0 0 8px rgba(255,255,255,0.5);
+}
+
+/* ── TEAM SUMMARY ── */
+.team-row {
+  display: flex; align-items: center; padding: 10px 0;
+  border-bottom: 1px solid var(--border); gap: 12px;
+}
+.team-row:last-child { border: none; }
+.team-name { font-size: 13px; font-weight: 500; flex: 1; }
+.team-pos { font-size: 11px; color: var(--text3); }
+
+/* ── PROGRAM BUILDER ── */
+.program-section { margin-bottom: 24px; }
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1px; }
+
+.program-controls {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;
+}
+
+.control-group { display: flex; flex-direction: column; gap: 6px; }
+.control-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); }
+.control-select, .control-input {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 8px 12px;
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px;
+  appearance: none; cursor: pointer;
+}
+.control-select:focus, .control-input:focus { outline: none; border-color: var(--accent); }
+
+.generate-btn {
+  background: linear-gradient(135deg, var(--cubs-blue), var(--cubs-light-blue));
+  border: none; border-radius: var(--radius-sm); padding: 10px 20px;
+  color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: opacity 0.15s; display: flex; align-items: center; gap: 8px;
+}
+.generate-btn:hover { opacity: 0.85; }
+
+.program-block { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+.block-header {
+  padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--border); cursor: pointer; user-select: none;
+}
+.block-icon {
+  width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.block-title { font-weight: 600; font-size: 13px; }
+.block-subtitle { font-size: 11px; color: var(--text2); }
+.block-tag { margin-left: auto; font-size: 10px; padding: 3px 8px; border-radius: 8px; font-weight: 600; }
+.block-tag.power { background: rgba(59,122,196,0.2); color: var(--cubs-light-blue); }
+.block-tag.speed { background: rgba(34,197,94,0.15); color: var(--green); }
+.block-tag.recovery { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.block-tag.strength { background: rgba(204,52,51,0.15); color: var(--cubs-red); }
+
+.block-body { padding: 12px 16px; }
+.exercise-row {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.03); align-items: center;
+}
+.exercise-row:last-child { border: none; }
+.ex-name { font-size: 13px; font-weight: 500; }
+.ex-detail { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); text-align: center; }
+.ex-header { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); text-align: center; }
+.ex-header:first-child { text-align: left; }
+
+.rationale-box {
+  margin-top: 12px; padding: 12px; background: rgba(14,51,134,0.15);
+  border-left: 3px solid var(--cubs-light-blue); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 12px; color: var(--text2); line-height: 1.6;
+}
+.rationale-box strong { color: var(--cubs-light-blue); }
+
+/* ── WEEK VIEW ── */
+.week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 20px; }
+.day-cell {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px; min-height: 100px; position: relative;
+}
+.day-cell.today { border-color: var(--cubs-light-blue); }
+.day-cell.game-day::before { content: '⚾'; position: absolute; top: 6px; right: 6px; font-size: 10px; }
+.day-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); margin-bottom: 4px; }
+.day-date { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.day-workout { font-size: 10px; padding: 3px 6px; border-radius: 4px; margin-bottom: 3px; }
+.day-workout.power { background: rgba(59,122,196,0.2); color: var(--cubs-light-blue); }
+.day-workout.speed { background: rgba(34,197,94,0.15); color: var(--green); }
+.day-workout.recovery { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.day-workout.off { background: rgba(255,255,255,0.04); color: var(--text3); }
+.day-workout.game { background: rgba(204,52,51,0.15); color: var(--cubs-red); }
+
+/* ── WELLNESS SLIDERS ── */
+.wellness-slider-group { display: flex; flex-direction: column; gap: 18px; }
+.wellness-row { display: flex; flex-direction: column; gap: 6px; }
+.wellness-label-row { display: flex; justify-content: space-between; align-items: center; }
+.wellness-metric { font-size: 13px; font-weight: 500; color: var(--text); }
+.wellness-val {
+  font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500;
+  min-width: 32px; text-align: right; line-height: 1;
+}
+.slider-track {
+  position: relative; height: 6px; background: var(--bg4);
+  border-radius: 3px; overflow: hidden; margin-top: 2px;
+}
+.slider-fill { height: 100%; border-radius: 3px; transition: width 0.15s, background 0.2s; }
+.wellness-input {
+  width: 100%; margin: 0; -webkit-appearance: none; appearance: none;
+  height: 6px; background: transparent; outline: none; cursor: pointer;
+  margin-top: -6px; position: relative; z-index: 2;
+}
+.wellness-input::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--bg2); box-shadow: 0 0 6px rgba(0,0,0,0.5);
+  cursor: pointer; margin-top: -5px;
+}
+.wellness-input::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--bg2); cursor: pointer;
+}
+.slider-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--text3); margin-top: 2px; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+
+/* ── MISC ── */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+.empty-state { text-align: center; padding: 40px; color: var(--text3); font-size: 13px; }
+.section-mb { margin-bottom: 20px; }
+.flex-row { display: flex; align-items: center; gap: 12px; }
+.ml-auto { margin-left: auto; }
+
+.scope-btn {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 12px; cursor: pointer;
+  color: var(--text2); font-family: 'DM Sans', sans-serif;
+  text-align: center; transition: all 0.15s;
+}
+.scope-btn:hover { border-color: var(--border2); color: var(--text); }
+.scope-btn.active {
+  background: rgba(14,51,134,0.3); border-color: var(--cubs-light-blue);
+  color: #fff;
+}
+.day-slot {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px;
+}
+.day-slot select {
+  width: 100%; background: var(--bg4); border: 1px solid var(--border);
+  border-radius: 6px; padding: 5px 6px; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 10px; margin-top: 4px;
+}
+
+/* ── MODALS ── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.78);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex !important; }
+.modal-box {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 28px;
+  max-width: 95vw;
+  width: 100%;
+  position: relative;
+}
+
+/* ── CALENDAR ── */
+.cal-grid-month {
+  display: grid; grid-template-columns: repeat(7,1fr);
+}
+.cal-day-header {
+  padding: 10px 8px; font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--text3); text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.cal-cell {
+  min-height: 90px; border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border); padding: 6px;
+  cursor: pointer; transition: background 0.1s; position: relative;
+}
+.cal-cell:nth-child(7n) { border-right: none; }
+.cal-cell:hover { background: rgba(255,255,255,0.02); }
+.cal-cell.today { background: rgba(14,51,134,0.15); }
+.cal-cell.today .cal-date { color: var(--cubs-light-blue); font-weight:700; }
+.cal-cell.other-month .cal-date { color: var(--text3); }
+.cal-date { font-size: 12px; font-weight: 500; margin-bottom: 4px; }
+.cal-event {
+  font-size: 10px; padding: 2px 5px; border-radius: 3px;
+  margin-bottom: 2px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; cursor: pointer;
+}
+.cal-event.game    { background: rgba(204,52,51,0.25);  color: #ff8a8a; }
+.cal-event.lift    { background: rgba(59,122,196,0.25); color: var(--cubs-light-blue); }
+.cal-event.speed   { background: rgba(34,197,94,0.2);   color: var(--green); }
+.cal-event.primer  { background: rgba(245,158,11,0.2);  color: var(--yellow); }
+.cal-event.rest    { background: rgba(255,255,255,0.05);color: var(--text3); }
+.cal-event.workout { background: rgba(168,85,247,0.2);  color: #c084fc; }
+
+/* ── EDITABLE PROGRAM OUTPUT ── */
+.ex-input {
+  background: var(--bg4); border: 1px solid transparent;
+  border-radius: 4px; color: var(--text); font-family: 'DM Mono', monospace;
+  font-size: 12px; width: 100%; padding: 4px 6px; box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.ex-input:focus { outline: none; border-color: var(--cubs-light-blue); background: var(--bg3); }
+.ex-input:hover { border-color: var(--border2); }
+.ex-name-input {
+  background: var(--bg4); border: 1px solid transparent;
+  border-radius: 4px; color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500; width: 100%; padding: 4px 6px;
+  box-sizing: border-box; transition: border-color 0.15s;
+}
+.ex-name-input:focus { outline: none; border-color: var(--cubs-light-blue); background: var(--bg3); }
+.ex-name-input:hover { border-color: var(--border2); }
+.ex-row-actions {
+  display: flex; align-items: center; gap: 4px; opacity: 0;
+  transition: opacity 0.15s;
+}
+.exercise-row:hover .ex-row-actions { opacity: 1; }
+.ex-row-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; padding: 2px 4px; border-radius: 3px;
+  line-height: 1; color: var(--text3);
+}
+.ex-row-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.ex-row-btn.danger:hover { background: rgba(239,68,68,0.15); color: var(--red); }
+.add-ex-row-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: 1px dashed var(--border);
+  border-radius: var(--radius-sm); padding: 6px 12px;
+  color: var(--text3); font-size: 11px; cursor: pointer;
+  width: 100%; margin-top: 4px; transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+.add-ex-row-btn:hover { border-color: var(--cubs-light-blue); color: var(--cubs-light-blue); background: rgba(59,122,196,0.05); }
+.load-display { font-size: 11px; line-height: 1.4; }
+.load-override { display:flex; flex-direction:column; gap:2px; }
+
+.cal-event[draggable=true] { cursor: grab; }
+.cal-event[draggable=true]:active { cursor: grabbing; opacity: 0.5; }
+.cal-cell.drag-over {
+  background: rgba(59,122,196,0.18) !important;
+  outline: 2px dashed var(--cubs-light-blue);
+  outline-offset: -2px;
+}
+.cal-cell.drag-over-invalid {
+  background: rgba(239,68,68,0.1) !important;
+  outline: 2px dashed var(--red);
+  outline-offset: -2px;
+}
+.cal-cell .add-game-btn {
+  display: none; position: absolute; bottom: 4px; right: 4px;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text3); font-size: 10px;
+  padding: 1px 5px; cursor: pointer; line-height: 1.6;
+}
+.cal-cell:hover .add-game-btn { display: block; }
+.cal-week-col[draggable=false] { } /* week col drop targets */
+.cal-week-col.drag-over {
+  background: rgba(59,122,196,0.15) !important;
+  outline: 2px dashed var(--cubs-light-blue);
+  outline-offset: -2px;
+}
+
+/* Edit game modal */
+#editGameModal .modal-box { width: 420px; }
+
+  display: grid; grid-template-columns: 60px repeat(7,1fr);
+}
+.cal-week-header {
+  padding: 10px 8px; font-size: 11px; font-weight: 600;
+  text-align: center; border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+.cal-week-col {
+  border-right: 1px solid var(--border); min-height: 200px; padding: 8px 6px;
+}
+.cal-week-col:last-child { border-right: none; }
+.cal-week-col.today-col { background: rgba(14,51,134,0.1); }
+
+/* Modals handled by .modal-overlay / .modal-overlay.open */
+@media print {
+  .sidebar, .topbar, #page-program > div:first-child,
+  .card:has(#weekGrid), .scope-btn, .generate-btn,
+  #oneRMStrip, .card-title button, a[href] { display: none !important; }
+  body { background: #fff; color: #000; }
+  .card { border: 1px solid #ddd; break-inside: avoid; }
+#prog-tab-perio .card { overflow: visible; }
+  .block-header { background: #f5f5f5 !important; }
+  .week-header { background: #e8e8e8 !important; }
+}
+
+/* addExModal handled by .modal-overlay */
+
+.page { display: none; }
+.page.active { display: block; }
+
+
+@media (max-width: 1100px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-hero { grid-template-columns: 1fr; }
+  .sidebar { width: 200px; min-width: 200px; }
+}
+</style>
+<div id="app">
+  <aside class="sidebar">
   <div class="sidebar-logo">
     <div class="logo-badge">
       <div class="logo-icon">⚾</div>
@@ -633,12 +1233,11 @@ body {
 
   <div class="sidebar-nav">
     <button class="nav-btn active" onclick="switchTab('dashboard', this)">📊 Dashboard</button>
-    <button class="nav-btn" onclick="switchTab('program', this)">💪 Program Builder</button>
-    <button class="nav-btn" onclick="switchTab('programs', this)">📁 My Programs</button>
-    <a href="programs.html" style="padding:6px 14px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;">💪 Programs</a>
-          <button class="nav-btn" onclick="switchTab('calendar', this)">📆 Calendar</button>
+    <a href="programs.html" class="nav-btn" style="text-decoration:none;display:block;">💪 Programs</a>
+    
+    
     <button class="nav-btn" onclick="switchTab('team', this)">👥 Team Summary</button>
-    <button class="nav-btn" onclick="switchTab('import', this)">📥 Data Import</button>
+    
   </div>
 
     <div style="margin-top:16px;padding:10px;background:rgba(34,197,94,0.1);border:2px solid rgba(34,197,94,0.4);border-radius:10px;">
@@ -666,15 +1265,12 @@ body {
       <button class="tab-btn" onclick="switchDashTab('cmj', this)">CMJ Trends</button>
       <button class="tab-btn" onclick="switchDashTab('wellness', this)">Wellness</button>
       <button class="tab-btn" onclick="switchDashTab('workload', this)">Workload</button>
-      <button class="tab-btn" onclick="switchDashTab('programs', this)">📋 Programs</button>
     </div>
   </div>
 
+  
   <div class="content">
-
-    <!-- ══ DASHBOARD PAGES ══ -->
-    
-<div id="page-dashboard">
+    <div id="page-dashboard">
 
 
       <!-- OVERVIEW TAB -->
@@ -1063,314 +1659,7 @@ body {
 
     
 </div><!-- /page-dashboard -->
-
-
-
-    <!-- ── ADD EXERCISE MODAL ── -->
-    <div id="addExModal" class="modal-overlay" style="display:none;">
-      <div class="modal-box" style="width:480px;max-height:85vh;overflow-y:auto;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:20px;">Add / Edit Exercise</div>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div class="control-group">
-            <div class="control-label">Exercise Name *</div>
-            <input class="control-input" id="modal-name" placeholder="e.g. Trap Bar Jump" style="font-size:13px;">
-          </div>
-          <div class="control-group">
-            <div class="control-label">Category *</div>
-            <select class="control-select" id="modal-cat" style="font-size:13px;">
-              <option value="">Select category…</option>
-              <option>Squat Variations</option><option>Deadlift Variations</option>
-              <option>Hamstring</option><option>Calf Ankle</option>
-              <option>Hip ABD_ADD</option><option>UB Horizontal Push</option>
-              <option>UB Vertical Push</option><option>UB Horizontal Pull</option>
-              <option>UB Vertical Pull</option><option>Shoulder Complex</option>
-              <option>Grip</option><option>Core Flexion anti</option>
-              <option>Core Extension anti</option><option>Core Rotation anti</option>
-              <option>Core Lateral Flexion Extension anti</option>
-              <option>LB Plyos</option><option>UB Plyos</option>
-              <option>Olympic Variations</option><option>Acceleration</option>
-              <option>Max Velocity Running</option><option>COD/Agility</option>
-              <option>Curvilinear</option><option>Deceleration</option>
-              <option>ESD</option><option>Strongman Variations</option>
-              <option>Mobility</option><option>Biceps Triceps</option>
-              <option>New Category…</option>
-            </select>
-          </div>
-          <div class="control-group" id="modal-newcat-wrap" style="display:none;">
-            <div class="control-label">New Category Name</div>
-            <input class="control-input" id="modal-newcat" placeholder="e.g. Isometric Variations" style="font-size:13px;">
-          </div>
-          <div class="control-group">
-            <div class="control-label">1RM Lift Key (for load calc — leave blank if bodyweight/no load)</div>
-            <select class="control-select" id="modal-liftkey" style="font-size:13px;">
-              <option value="">— None (BW / No load) —</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <div class="control-label">YouTube URL (optional)</div>
-            <input class="control-input" id="modal-video" placeholder="https://youtube.com/watch?v=…" style="font-size:13px;">
-          </div>
-          <div class="control-group">
-            <div class="control-label">Coach Notes (optional)</div>
-            <input class="control-input" id="modal-notes" placeholder="e.g. Knee over toe, controlled eccentric" style="font-size:13px;">
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;margin-top:20px;">
-          <button class="generate-btn" onclick="saveExercise()">💾 Save Exercise</button>
-          <button onclick="closeAddExerciseModal()" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Cancel</button>
-          <button id="modal-delete-btn" style="display:none;margin-left:auto;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:10px 18px;color:var(--red);font-size:13px;cursor:pointer;" onclick="deleteExercise()">🗑 Delete</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ ATHLETE PROGRAMS TAB ══ -->
-    <div id="dash-programs" class="page">
-      <div class="card section-mb">
-        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-          <span>📋 PROGRAM HISTORY</span>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input id="prog-search" placeholder="Search programs…" oninput="renderAthletePrograms()"
-              style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;width:200px;">
-            <button onclick="openDropProgramModal()" style="background:var(--blue);border:none;border-radius:6px;padding:7px 16px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">＋ Drop Program</button>
-          </div>
-        </div>
-        <div id="athlete-programs-list" style="margin-top:8px;"></div>
-      </div>
-    </div>
-
-    <!-- ══ MY PROGRAMS ══ -->
-    
-
-<div id="page-calendar" class="page">
-      <div class="section-header">
-        <div class="section-title">Training Calendar</div>
-        <div style="font-size:12px;color:var(--text2);">Schedule · Games · Workouts</div>
-      </div>
-
-      <!-- Controls bar -->
-      <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
-        <button onclick="calNav(-1)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 14px;color:var(--text);cursor:pointer;font-size:16px;">‹</button>
-        <div id="calMonthLabel" style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;min-width:180px;text-align:center;"></div>
-        <button onclick="calNav(1)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 14px;color:var(--text);cursor:pointer;font-size:16px;">›</button>
-        <button onclick="calGoToday()" style="background:rgba(59,122,196,0.15);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 12px;color:var(--cubs-light-blue);font-size:12px;cursor:pointer;">Today</button>
-        <!-- View toggle -->
-        <div style="display:flex;gap:2px;background:var(--bg3);padding:3px;border-radius:var(--radius-sm);margin-left:8px;">
-          <button class="tab-btn active" id="cal-view-month" onclick="setCalView('month',this)">Month</button>
-          <button class="tab-btn" id="cal-view-week" onclick="setCalView('week',this)">Week</button>
-        </div>
-        <!-- Athlete filter -->
-        <select class="control-select" id="cal-athlete-filter" onchange="renderCalendar()" style="width:180px;margin-left:auto;">
-          <option value="">All Athletes</option>
-          <option>Nico Hoerner</option><option>Pete Crow-Armstrong</option>
-          <option>Dansby Swanson</option><option>Matt Shaw</option>
-          <option>Carson Kelly</option><option>Miguel Amaya</option>
-          <option>Michael Busch</option><option>Alex Bregman</option>
-          <option>Moises Ballesteros</option><option>Ian Happ</option>
-          <option>Colin Rea</option><option>Matt Boyd</option>
-          <option>Jameson Taillon</option><option>Shota Imanaga</option>
-          <option>Justin Steele</option><option>Daniel Palencia</option>
-          <option>Caleb Thielbar</option><option>Edward Cabrera</option>
-        </select>
-        <button class="generate-btn" style="padding:8px 14px;" onclick="openGameImportModal()">⚾ Import Game Schedule</button>
-        <button class="generate-btn" style="padding:8px 14px;background:rgba(34,197,94,0.15);color:var(--green);" onclick="openScheduleWorkoutModal()">+ Schedule Workout</button>
-      </div>
-
-      <!-- Legend -->
-      <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
-          <div style="width:10px;height:10px;border-radius:2px;background:var(--cubs-red);"></div>Game
-        </div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
-          <div style="width:10px;height:10px;border-radius:2px;background:var(--cubs-light-blue);"></div>Lift Day
-        </div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
-          <div style="width:10px;height:10px;border-radius:2px;background:var(--green);"></div>Speed/Bullpen
-        </div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
-          <div style="width:10px;height:10px;border-radius:2px;background:var(--yellow);"></div>Primer/Sled
-        </div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
-          <div style="width:10px;height:10px;border-radius:2px;background:var(--text3);"></div>Rest
-        </div>
-      </div>
-
-      <!-- Calendar grid -->
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div id="calendarGrid"></div>
-      </div>
-
-      <!-- Day detail panel -->
-      <div id="dayDetailPanel" style="display:none;margin-top:16px;" class="card">
-        <div id="dayDetailContent"></div>
-      </div>
-    </div>
-
-    <!-- ── GAME IMPORT MODAL ── -->
-    <div id="gameImportModal" class="modal-overlay" style="display:none;">
-      <div class="modal-box" style="width:560px;max-height:80vh;overflow-y:auto;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:8px;">⚾ Import Game Schedule</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
-          Paste game dates — one per line, or CSV with columns: <span style="font-family:'DM Mono',monospace;color:var(--cubs-light-blue);">Date, Opponent, Home/Away</span><br>
-          Accepted date formats: <span style="font-family:'DM Mono',monospace;">4/15/2026 · 2026-04-15 · Apr 15 2026</span>
-        </div>
-        <textarea id="gameScheduleInput" style="width:100%;height:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;resize:vertical;" placeholder="4/15/2026, Pittsburgh Pirates, Home&#10;4/16/2026, Pittsburgh Pirates, Home&#10;4/18/2026, St. Louis Cardinals, Away&#10;..."></textarea>
-        <div id="gameImportPreview" style="margin-top:12px;font-size:11px;color:var(--text2);"></div>
-        <div style="display:flex;gap:10px;margin-top:16px;">
-          <button class="generate-btn" onclick="importGameSchedule()">✅ Import Games</button>
-          <button onclick="closeModal('gameImportModal')" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Cancel</button>
-          <button onclick="resetToOfficialSchedule()" style="background:rgba(59,122,196,0.1);border:1px solid rgba(59,122,196,0.3);border-radius:var(--radius-sm);padding:10px 18px;color:var(--cubs-light-blue);font-size:13px;cursor:pointer;">🔄 Reset to Official Schedule</button>
-          <button onclick="clearGames()" style="margin-left:auto;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:10px 18px;color:var(--red);font-size:13px;cursor:pointer;">🗑 Clear All Games</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── SCHEDULE WORKOUT MODAL ── -->
-    <div id="scheduleWorkoutModal" class="modal-overlay" style="display:none;">
-      <div class="modal-box" style="width:500px;max-height:85vh;overflow-y:auto;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:16px;">+ Schedule Workout</div>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div class="control-group">
-            <div class="control-label">Athlete *</div>
-            <select class="control-select" id="sw-athlete" onchange="swAthleteChanged()">
-              <option value="">All Athletes (Team)</option>
-              <option>Nico Hoerner</option><option>Pete Crow-Armstrong</option>
-              <option>Dansby Swanson</option><option>Matt Shaw</option>
-              <option>Carson Kelly</option><option>Miguel Amaya</option>
-              <option>Michael Busch</option><option>Alex Bregman</option>
-              <option>Moises Ballesteros</option><option>Ian Happ</option>
-              <option>Colin Rea</option><option>Matt Boyd</option>
-              <option>Jameson Taillon</option><option>Shota Imanaga</option>
-              <option>Justin Steele</option><option>Daniel Palencia</option>
-              <option>Caleb Thielbar</option><option>Edward Cabrera</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <div class="control-label">Date *</div>
-            <input class="control-input" type="date" id="sw-date">
-          </div>
-          <div class="control-group">
-            <div class="control-label">Workout Source</div>
-            <div style="display:flex;gap:6px;margin-top:4px;">
-              <button class="tab-btn active" id="sw-src-saved" onclick="setWorkoutSource('saved',this)" style="flex:1;">From Saved Programs</button>
-              <button class="tab-btn" id="sw-src-quick" onclick="setWorkoutSource('quick',this)" style="flex:1;">Quick Session</button>
-            </div>
-          </div>
-          <!-- Saved program picker -->
-          <div id="sw-saved-section">
-            <div class="control-group">
-              <div class="control-label">Select Program</div>
-              <select class="control-select" id="sw-program-select">
-                <option value="">— select a saved program —</option>
-              </select>
-            </div>
-          </div>
-          <!-- Quick session picker -->
-          <div id="sw-quick-section" style="display:none;">
-            <div class="control-group">
-              <div class="control-label">Session Type</div>
-              <select class="control-select" id="sw-session-type">
-                <option value="day1">Day 1 — Lift (Squat)</option>
-                <option value="day2">Day 2 — Bullpen/Speed</option>
-                <option value="day3">Day 3 — Lift (Power)</option>
-                <option value="day4">Day 4 — Primer/Sled</option>
-                <option value="gameday">Game Day Primer</option>
-                <option value="travel">Travel Day</option>
-                <option value="rest">Rest Day</option>
-              </select>
-            </div>
-            <div class="control-group" style="margin-top:10px;">
-              <div class="control-label">Label / Notes</div>
-              <input class="control-input" id="sw-label" placeholder="e.g. Pre-series activation">
-            </div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;margin-top:20px;">
-          <button class="generate-btn" onclick="scheduleWorkout()">📆 Add to Calendar</button>
-          <button onclick="closeModal('scheduleWorkoutModal')" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Cancel</button>
-        </div>
-        <div id="sw-msg" style="font-size:11px;color:var(--green);margin-top:8px;min-height:16px;"></div>
-      </div>
-    </div>
-
-    <!-- ── SAVE PROGRAM MODAL ── -->
-    <div id="saveProgramModal" class="modal-overlay" style="display:none;">
-      <div class="modal-box" style="width:440px;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:16px;">💾 Save Program</div>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div class="control-group">
-            <div class="control-label">Program Name *</div>
-            <input class="control-input" id="save-prog-name" placeholder="e.g. Hoerner IS Power 1 Wk1">
-          </div>
-          <div class="control-group">
-            <div class="control-label">Notes</div>
-            <input class="control-input" id="save-prog-notes" placeholder="Optional coaching notes">
-          </div>
-          <div id="save-prog-meta" style="font-size:11px;color:var(--text2);background:var(--bg3);padding:10px;border-radius:var(--radius-sm);"></div>
-        </div>
-        <div style="display:flex;gap:10px;margin-top:20px;">
-          <button class="generate-btn" onclick="confirmSaveProgram()">💾 Save</button>
-          <button onclick="closeModal('saveProgramModal')" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── EDIT GAME MODAL ── -->
-    <div id="editGameModal" class="modal-overlay" style="display:none;">
-      <div class="modal-box" style="width:440px;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:16px;" id="editGameTitle">Edit Game</div>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div class="control-group">
-            <div class="control-label">Date</div>
-            <input class="control-input" type="date" id="edit-game-date">
-          </div>
-          <div class="control-group">
-            <div class="control-label">Opponent</div>
-            <select class="control-select" id="edit-game-opponent">
-              <option>Arizona Diamondbacks</option><option>Athletics</option>
-              <option>Atlanta Braves</option><option>Baltimore Orioles</option>
-              <option>Boston Red Sox</option><option>Chicago White Sox</option>
-              <option>Cincinnati Reds</option><option>Cleveland Guardians</option>
-              <option>Colorado Rockies</option><option>Detroit Tigers</option>
-              <option>Houston Astros</option><option>Kansas City Royals</option>
-              <option>Los Angeles Angels</option><option>Los Angeles Dodgers</option>
-              <option>Miami Marlins</option><option>Milwaukee Brewers</option>
-              <option>Minnesota Twins</option><option>New York Mets</option>
-              <option>New York Yankees</option><option>Philadelphia Phillies</option>
-              <option>Pittsburgh Pirates</option><option>San Diego Padres</option>
-              <option>San Francisco Giants</option><option>Seattle Mariners</option>
-              <option>St. Louis Cardinals</option><option>Tampa Bay Rays</option>
-              <option>Texas Rangers</option><option>Toronto Blue Jays</option>
-              <option>Washington Nationals</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <div class="control-label">Home / Away</div>
-            <div style="display:flex;gap:8px;">
-              <button id="edit-ha-home" onclick="setEditHA('Home')" style="flex:1;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:rgba(14,51,134,0.3);color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;">🏠 Home</button>
-              <button id="edit-ha-away" onclick="setEditHA('Away')" style="flex:1;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;">✈️ Away</button>
-            </div>
-          </div>
-          <div class="control-group">
-            <div class="control-label">Game Time (local home time)</div>
-            <input class="control-input" id="edit-game-time" placeholder="e.g. 1:20 PM CT" style="font-size:13px;">
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;margin-top:20px;">
-          <button class="generate-btn" onclick="saveEditedGame()">💾 Save</button>
-          <button onclick="closeModal('editGameModal')" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Cancel</button>
-          <button onclick="deleteEditedGame()" style="margin-left:auto;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:10px 18px;color:var(--red);font-size:13px;cursor:pointer;">🗑 Delete</button>
-        </div>
-      </div>
-    </div>
-      <div class="card" id="weekGridCard">
-          <div class="card-title">📅 In-Season Week Reference</div>
-          <div class="week-grid" id="weekGrid"></div>
-        </div>
-
-    <!-- ══ TEAM SUMMARY ══ -->
-    
-
-<div id="page-team" class="page">
+    <div id="page-team" class="page">
       <div class="card section-mb">
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
           <span>👥 POSITION PLAYER READINESS</span>
@@ -1407,164 +1696,6 @@ body {
     </div>
 
     <!-- ══ DATA IMPORT ══ -->
-    
-
-<div id="page-import" class="page">
-
-      <div class="section-header">
-        <div class="section-title">Data Import</div>
-        <div style="font-size:12px;color:var(--text2);">ForceDecks · Statcast · Manual Entry</div>
-      </div>
-
-      <!-- STATUS STRIP -->
-      <div id="importStatusStrip" style="display:none;margin-bottom:16px;padding:12px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;"></div>
-
-      <!-- ── SECTION 1: CMJ UPLOAD ── -->
-      <div class="card section-mb">
-        <div class="card-title">🦵 ForceDecks CMJ Export</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
-          Upload your ForceDecks CSV export. One row per test — multiple players and dates supported. 
-          Matches on player name — must match roster exactly.
-        </div>
-
-        <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-          <label style="
-            display:flex;align-items:center;gap:8px;padding:10px 18px;
-            background:linear-gradient(135deg,var(--cubs-blue),var(--cubs-light-blue));
-            border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:600;color:#fff;">
-            📂 Choose CMJ File
-            <input type="file" id="cmjFileInput" accept=".csv" style="display:none;" onchange="handleCMJUpload(this)">
-          </label>
-          <div id="cmjFileName" style="font-size:12px;color:var(--text2);">No file selected</div>
-        </div>
-
-        <!-- Expected columns reference -->
-        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px;">Expected ForceDecks columns</div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            ${['Name','Date','Type','Jump Ht (cm)','PP/BM (W/kg)','VTO (m/s)','Conc Power (W)','Stiffness (N/m)','BW (kg)'].map(c=>
-              `<span style="font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;background:rgba(59,122,196,0.15);border-radius:4px;color:var(--cubs-light-blue);">${c}</span>`
-            ).join('')}
-          </div>
-        </div>
-
-        <!-- CMJ Preview Table -->
-        <div id="cmjPreview" style="display:none;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px;">Preview — parsed records</div>
-          <div style="overflow-x:auto;">
-            <table class="data-table" id="cmjPreviewTable">
-              <thead><tr>
-                <th>Player</th><th>Date</th><th>Type</th><th>Jump Ht (cm)</th><th>PP/BM (W/kg)</th><th>VTO (m/s)</th><th>Conc (W)</th><th>Stiff (N/m)</th><th>BW (lbs)</th><th>Match</th>
-              </tr></thead>
-              <tbody id="cmjPreviewBody"></tbody>
-            </table>
-          </div>
-          <div style="margin-top:12px;display:flex;gap:10px;">
-            <button class="generate-btn" onclick="applyCMJData()">✅ Apply to Dashboard</button>
-            <button class="generate-btn" style="background:rgba(255,255,255,0.05);color:var(--text2);" onclick="clearCMJPreview()">✕ Clear</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── SECTION 2: STATCAST UPLOAD ── -->
-      <div class="card section-mb">
-        <div class="card-title">⚡ Statcast Game Summaries</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
-          Upload Statcast daily game summary CSV. One row per player per game.
-          Imports: Total Distance, Mid/High-Effort Runs, HE Distance, Top Speed.
-        </div>
-
-        <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-          <label style="
-            display:flex;align-items:center;gap:8px;padding:10px 18px;
-            background:linear-gradient(135deg,var(--cubs-blue),var(--cubs-light-blue));
-            border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:600;color:#fff;">
-            📂 Choose Statcast File
-            <input type="file" id="statcastFileInput" accept=".csv" style="display:none;" onchange="handleStatcastUpload(this)">
-          </label>
-          <div id="statcastFileName" style="font-size:12px;color:var(--text2);">No file selected</div>
-        </div>
-
-        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px;">Expected Statcast columns</div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            ${['Player','Game Date','Total Distance Covered (ft)','Mid-Effort Runs','High-Effort Runs','High-Effort Distance Covered (ft)','Top Speed (ft/s)'].map(c=>
-              `<span style="font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;background:rgba(34,197,94,0.1);border-radius:4px;color:var(--green);">${c}</span>`
-            ).join('')}
-          </div>
-        </div>
-
-        <div id="statcastPreview" style="display:none;">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px;">Preview — roster players only</div>
-          <div id="statcastSummary" style="font-size:12px;color:var(--text2);margin-bottom:8px;"></div>
-          <div style="overflow-x:auto;">
-            <table class="data-table" id="statcastPreviewTable">
-              <thead><tr>
-                <th>Player</th><th>Game Date</th><th>Total Dist (ft)</th><th>Mid Eff</th><th>High Eff</th><th>HE Dist (ft)</th><th>Top Speed (ft/s)</th>
-              </tr></thead>
-              <tbody id="statcastPreviewBody"></tbody>
-            </table>
-          </div>
-          <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
-            <span style="font-size:12px;color:var(--green);">✅ Applied automatically on upload</span>
-            <button class="generate-btn" style="background:rgba(255,255,255,0.05);color:var(--text2);" onclick="clearStatcastPreview()">✕ Clear preview</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── SECTION 3: MANUAL ENTRY - Position Players ── -->
-      <div class="card section-mb">
-        <div class="card-title">⚾ Manual Entry — Hitting & Arm Metrics (Position Players)</div>
-        <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <label style="font-size:11px;color:var(--text3);white-space:nowrap;">Game Date</label>
-            <input type="date" id="csv-game-date" value="2026-04-29"
-              style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
-          </div>
-          <button onclick="deleteGameDateData()" style="padding:8px 14px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;">🗑 Delete Date</button>
-          <button onclick="document.getElementById('hittingCSVInput').click()" style="padding:8px 14px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:8px;color:var(--green);font-size:13px;font-weight:600;cursor:pointer;">&#128202; Import Hitting CSV</button>
-          <input type="file" id="hittingCSVInput" accept=".csv" style="display:none" onchange="handleHittingCSVUpload(this)">
-          <button onclick="document.getElementById('throwCSVInput').click()" style="padding:8px 14px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:8px;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;">&#128202; Import Throw Velo CSV</button>
-          <input type="file" id="throwCSVInput" accept=".csv" style="display:none" onchange="handleThrowCSVUpload(this)">
-        </div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
-          Or enter manually — bat speed, exit velocity, and throw velocity per player per game date.
-        </div>
-
-        <div style="display:grid;grid-template-columns:180px 130px 1fr 1fr 1fr 80px;gap:10px;align-items:center;margin-bottom:8px;">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);">Player</div>
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);">Game Date</div>
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);">Bat Speed (mph)</div>
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);">Exit Velo (mph)</div>
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);">Throw Velo (mph)</div>
-          <div></div>
-        </div>
-
-        <div id="manualHittingRows">
-          <!-- rows injected by JS -->
-        </div>
-
-        <button onclick="addHittingRow()" style="margin-top:10px;background:rgba(255,255,255,0.04);border:1px dashed var(--border2);border-radius:var(--radius-sm);padding:8px 16px;color:var(--text3);font-size:12px;cursor:pointer;width:100%;">+ Add Row</button>
-
-        <div style="margin-top:14px;display:flex;gap:10px;">
-          <button class="generate-btn" onclick="applyHittingData()">✅ Apply Hitting Data</button>
-        </div>
-        <div id="hittingApplyMsg" style="font-size:11px;color:var(--green);margin-top:8px;min-height:16px;"></div>
-      </div>
-
-      <!-- ── SECTION 4: PITCHER MANUAL ENTRY ── -->
-      <div class="card section-mb">
-        <div class="card-title">📋 Import Log</div>
-        <div id="importLog" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text2);max-height:200px;overflow-y:auto;line-height:1.8;">
-          <div style="color:var(--text3);">No imports yet this session.</div>
-        </div>
-        <button onclick="clearAllImportedData()" style="margin-top:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:7px 14px;color:var(--red);font-size:11px;cursor:pointer;">
-          🗑 Clear All Imported Data (Reset to Defaults)
-        </button>
-      </div>
-
-    </div><!-- /page-import -->
-
   </div><!-- /content -->
 </div><!-- /main -->
 </div><!-- /app -->
@@ -12964,133 +13095,5 @@ try {
 
 
 </script>
-
-</div><!-- /content -->
-</div><!-- /main -->
-</div><!-- /app -->
-
-  <!-- ── DROP PROGRAM MODAL ── -->
-  <div id="dropProgramModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('dropProgramModal')">
-    <div class="modal-box" style="max-width:520px;">
-      <div class="modal-header">
-        <span class="modal-title">Drop Program</span>
-        <button class="modal-close" onclick="closeModal('dropProgramModal')">✕</button>
-      </div>
-      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;">
-        <div>
-          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Program Name</label>
-          <input id="drop-prog-name" placeholder="e.g. Power Phase — Day 2" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Type</label>
-            <select id="drop-prog-type" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;">
-              <option value="Session">Single Session</option>
-              <option value="Week">Weekly Plan</option>
-              <option value="Meso">Mesocycle</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Phase</label>
-            <select id="drop-prog-phase" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;">
-              <option value="In-Season">In-Season</option>
-              <option value="Pre-Season">Pre-Season</option>
-              <option value="Off-Season">Off-Season</option>
-              <option value="Hypertrophy">Hypertrophy</option>
-              <option value="Strength">Strength</option>
-              <option value="Power">Power</option>
-              <option value="Restoration">Restoration</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Notes (optional)</label>
-          <textarea id="drop-prog-notes" rows="2" placeholder="Context, rationale, cues…" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;"></textarea>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Program Content</label>
-          <div id="drop-prog-source-info" style="font-size:11px;color:var(--blue);margin:4px 0 6px;"></div>
-          <textarea id="drop-prog-content" rows="6" placeholder="Paste program here, or use 'Drop from Builder' to auto-fill from current program…"
-            style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;resize:vertical;"></textarea>
-        </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;">
-          <button onclick="fillFromBuilder()" style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:8px 14px;color:var(--text3);font-size:12px;cursor:pointer;">📋 Fill from Builder</button>
-          <button onclick="dropProgram()" style="background:var(--blue);border:none;border-radius:6px;padding:8px 20px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Save to Athlete</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── EDIT PROGRAM MODAL ── -->
-  <div id="editProgramModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('editProgramModal')">
-    <div class="modal-box" style="max-width:680px;max-height:90vh;display:flex;flex-direction:column;">
-      <div class="modal-header" style="flex-shrink:0;">
-        <span class="modal-title">✏️ Edit Program</span>
-        <button class="modal-close" onclick="closeModal('editProgramModal')">✕</button>
-      </div>
-      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1;">
-
-        <!-- Meta fields -->
-        <div>
-          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Program Name</label>
-          <input id="edit-prog-name" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Type</label>
-            <select id="edit-prog-type" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;">
-              <option value="Session">Single Session</option>
-              <option value="Week">Weekly Plan</option>
-              <option value="Meso">Mesocycle</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Phase</label>
-            <select id="edit-prog-phase" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;">
-              <option value="In-Season">In-Season</option>
-              <option value="Pre-Season">Pre-Season</option>
-              <option value="Off-Season">Off-Season</option>
-              <option value="Hypertrophy">Hypertrophy</option>
-              <option value="Strength">Strength</option>
-              <option value="Power">Power</option>
-              <option value="Restoration">Restoration</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Notes</label>
-          <textarea id="edit-prog-notes" rows="2" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
-        </div>
-
-        <!-- Divider -->
-        <div style="border-top:1px solid var(--border);padding-top:12px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-            <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Program Content</label>
-            <div style="display:flex;gap:6px;">
-              <button onclick="editProgToggleView('rendered')" id="edit-view-rendered"
-                style="background:rgba(59,122,196,0.3);border:1px solid var(--blue);border-radius:4px;padding:3px 10px;color:var(--blue);font-size:10px;cursor:pointer;">👁 Preview</button>
-              <button onclick="editProgToggleView('raw')" id="edit-view-raw"
-                style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;padding:3px 10px;color:var(--text3);font-size:10px;cursor:pointer;">{ } Raw HTML</button>
-            </div>
-          </div>
-
-          <!-- Rendered preview (editable inline) -->
-          <div id="edit-prog-rendered"
-            contenteditable="true"
-            style="min-height:200px;max-height:360px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;outline:none;">
-          </div>
-
-          <!-- Raw HTML editor (hidden by default) -->
-          <textarea id="edit-prog-raw" rows="10" style="display:none;width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;resize:vertical;box-sizing:border-box;line-height:1.5;"></textarea>
-        </div>
-
-      </div>
-      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;">
-        <button onclick="closeModal('editProgramModal')" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 16px;color:var(--text3);font-size:13px;cursor:pointer;">Cancel</button>
-        <button onclick="saveEditedProgram()" style="background:var(--blue);border:none;border-radius:6px;padding:8px 20px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">💾 Save Changes</button>
-      </div>
-    </div>
-  </div>
-
 </body>
 </html>
