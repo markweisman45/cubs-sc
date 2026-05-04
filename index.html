@@ -11928,17 +11928,7 @@ function deleteProgram(id) {
   renderProgramLibrary();
 }
 
-function openProgram(id) {
-  const prog = SAVED_PROGRAMS.find(p=>p.id===id);
-  if (!prog) return;
-  // Switch to program builder and show content
-  const navBtn = document.querySelector('.nav-btn:nth-child(2)');
-  switchTab('program', navBtn || { classList:{add:()=>{},remove:()=>{}} });
-  document.getElementById('programOutput').innerHTML = prog.html;
-  // Switch to session tab
-  switchProgTab('session', document.getElementById('ptab-session'));
-  window.scrollTo(0,0);
-}
+// openProgram defined above
 
 function duplicateProgram(id) {
   const prog = SAVED_PROGRAMS.find(p=>p.id===id);
