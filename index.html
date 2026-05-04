@@ -4556,48 +4556,50 @@ function init() {
   if (document.getElementById("rmTable")) render1RMTable();
   const cl = document.getElementById('calc-lift');
   if (cl) cl.innerHTML = RM_LIFTS.map(l=>`<option value="${l}">${l}</option>`).join('');
-  update1RMStrip('Nico Hoerner');
+  if (document.getElementById("rm-athlete-select")) update1RMStrip('Nico Hoerner');
+  if (document.getElementById("prog-macro")) {
   // Init day structure editors with defaults
-  updateDayStructure();
-  updateMesoDayStructure();
-}
-
-function nameToId(name) { return name.replace(/[^a-zA-Z0-9]/g, '-'); }
-
-function buildPlayerList() {
-  const el = document.getElementById('playerList');
-  if (!el) return; // not on this page
-  const posPlayers = Object.entries(PLAYERS).filter(([,p]) => !['SP','RP'].includes(p.pos));
-
-  el.innerHTML = posPlayers.map(([name, p]) => {
-    const init = name.split(' ').map(n=>n[0]).join('');
-    // Compute live ACWR for this player and derive their current status
-    const live  = computeLiveACWR(name);
-    const acwr  = live ? live.acwr : p.acwr;
-    const status = readinessToStatus(p.readiness, acwr);
-    const sc    = status === 'GREEN' ? 'green' : status === 'RED' ? 'red' : 'yellow';
-    return `<button class="player-btn" id="pbtn-${nameToId(name)}" onclick="selectPlayer('${name.replace(/'/g,"\\'")}')">
-      <div class="player-avatar">${init}</div>
-      <div class="player-info">
-        <div class="player-name">${name}</div>
-        <div class="player-pos">${p.pos} · #${p.number}</div>
-      </div>
-      <div class="status-dot ${sc}"></div>
-    </button>`;
-  }).join('');
-}
-
-function selectPlayer(name) {
-  currentPlayer = name;
-  if (PLAYERS[name]) PLAYERS[name]._name = name; // for chart lookups
-  document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById('pbtn-' + nameToId(name));
-  if (btn) btn.classList.add('active');
-  const p = PLAYERS[name];
-  const _tp = document.getElementById('topbarPlayer'); if (_tp) _tp.textContent = name;
-  const _tm = document.getElementById('topbarMeta'); if (_tm) _tm.innerHTML = `Chicago Cubs · ${p.pos} · #${p.number} · Updated <span>Today</span>`;
-  const _pa = document.getElementById('prog-athlete'); if (_pa) _pa.value = name;
-  renderDashboard();
+    if (document.getElementById("prog-macro")) { updateDayStructure(); }
+    if (document.getElementById("prog-macro")) { updateMesoDayStructure(); }
+  }
+  
+  function nameToId(name) { return name.replace(/[^a-zA-Z0-9]/g, '-'); }
+  
+  function buildPlayerList() {
+    const el = document.getElementById('playerList');
+    if (!el) return; // not on this page
+    const posPlayers = Object.entries(PLAYERS).filter(([,p]) => !['SP','RP'].includes(p.pos));
+  
+    el.innerHTML = posPlayers.map(([name, p]) => {
+      const init = name.split(' ').map(n=>n[0]).join('');
+      // Compute live ACWR for this player and derive their current status
+      const live  = computeLiveACWR(name);
+      const acwr  = live ? live.acwr : p.acwr;
+      const status = readinessToStatus(p.readiness, acwr);
+      const sc    = status === 'GREEN' ? 'green' : status === 'RED' ? 'red' : 'yellow';
+      return `<button class="player-btn" id="pbtn-${nameToId(name)}" onclick="selectPlayer('${name.replace(/'/g,"\\'")}')">
+        <div class="player-avatar">${init}</div>
+        <div class="player-info">
+          <div class="player-name">${name}</div>
+          <div class="player-pos">${p.pos} · #${p.number}</div>
+        </div>
+        <div class="status-dot ${sc}"></div>
+      </button>`;
+    }).join('');
+  }
+  
+  function selectPlayer(name) {
+    currentPlayer = name;
+    if (PLAYERS[name]) PLAYERS[name]._name = name; // for chart lookups
+    document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('pbtn-' + nameToId(name));
+    if (btn) btn.classList.add('active');
+    const p = PLAYERS[name];
+    const _tp = document.getElementById('topbarPlayer'); if (_tp) _tp.textContent = name;
+    const _tm = document.getElementById('topbarMeta'); if (_tm) _tm.innerHTML = `Chicago Cubs · ${p.pos} · #${p.number} · Updated <span>Today</span>`;
+    const _pa = document.getElementById('prog-athlete'); if (_pa) _pa.value = name;
+    renderDashboard();
+  }
   // Reset wellness sliders for new player
   ['soreness','energy','sleep'].forEach(m => {
     const _si = document.getElementById(m+'Input'); if (_si) { _si.value = 5; updateSlider(m, 5); }
@@ -4636,6 +4638,7 @@ function renderDashboard() {
 }
 
 function renderCoachNotes(p) {
+  if (!document.getElementById("coachNotesCard")) return;
   const today = new Date().toISOString().slice(0,10);
   const el = document.getElementById('coachNotesCard');
   if (!el) return;
@@ -4660,6 +4663,7 @@ function renderCoachNotes(p) {
 }
 
 function renderReadinessHero(p) {
+  if (!document.getElementById("readinessStatus")) return;
   // Recompute status from live ACWR (already updated by renderACWR) + wellness
   const liveStatus   = readinessToStatus(p.readiness, p.acwr);
   const liveReadiness = p.readiness;
@@ -4705,6 +4709,7 @@ function renderReadinessHero(p) {
 // renderKPIs removed — KPI tiles deleted from overview
 
 function renderPBGrid(p) {
+  if (!document.getElementById("pbGrid")) return;
   const b = p.bests;
   const metrics = [
     {key:'jump',   label:'CMJ — Jump Ht',  best:b.jump,   cur:p.latestJump,   unit:'cm',  color:'#3B7AC4'},
@@ -4743,6 +4748,7 @@ function renderPBGrid(p) {
 
 function renderPerfTable(p) {
   const tbody = document.getElementById('perfTableBody');
+  if (!tbody) return;
   const sc = s => s === 'GREEN' ? 'green' : s === 'RED' ? 'red' : 'yellow';
 
   // Load statcast from localStorage for live ACWR calc
@@ -4879,6 +4885,7 @@ function computeLiveACWR(playerName) {
 }
 
 function renderACWR(p) {
+  if (!document.getElementById('acwrNum')) return; // not on dashboard
   // Always compute live so off days are accounted for
   const live = computeLiveACWR(p._name || currentPlayer);
   const acwr   = live ? live.acwr   : p.acwr;
@@ -4974,6 +4981,7 @@ function mkTrendChart(id, labels, datasets, extraOpts={}) {
 }
 
 function renderAllCharts(p) {
+  if (!document.getElementById("readinessTrendChart")) return;
   const games = p.recentGames;
   const labels = games.map(g => g.date);
 
@@ -5472,6 +5480,7 @@ function renderWellnessTable(entries) {
 }
 
 function populateBWInput() {
+  if (!document.getElementById("bwInput")) return;
   // Show last known BW as a label but leave input BLANK
   // so we don't accidentally save a pre-filled value as a manual entry
   const latestBW = getLatestBW(currentPlayer);
@@ -5629,6 +5638,7 @@ function logWellness() {
 // ══════════════════════════════════════════════
 function buildTeamList() {
   const el = document.getElementById('teamList');
+  if (!el) return;
 
   // Position players only — exclude pitchers
   const posPairs = Object.entries(PLAYERS).filter(([,p]) => !['SP','RP'].includes(p.pos));
@@ -7742,6 +7752,7 @@ function setScope(scope, btn) {
 
 // ── Build day structure editor (weekly scope)
 function updateDayStructure() {
+  if (!document.getElementById('prog-macro')) return;
   const macro = document.getElementById('prog-macro').value;
   const n = parseInt(document.getElementById('prog-days-per-week').value);
   const template = (DAY_TEMPLATES[macro] || DAY_TEMPLATES['offseason'])[n] || [];
@@ -7749,6 +7760,7 @@ function updateDayStructure() {
 }
 
 function updateMesoDayStructure() {
+  if (!document.getElementById('prog-macro')) return;
   const macro = document.getElementById('prog-macro').value;
   const n = parseInt(document.getElementById('prog-days-per-week-meso').value);
   const template = (DAY_TEMPLATES[macro] || DAY_TEMPLATES['offseason'])[n] || [];
@@ -11161,6 +11173,7 @@ function printSession() {
 // PITCHER DASHBOARD
 // ══════════════════════════════════════════════
 function renderPitcherDashboard(p) {
+  if (!document.getElementById("pitcherPanel")) return;
   const panel = document.getElementById('pitcherPanel');
   const hittingPanel = document.getElementById('hittingPanel');
   if (!panel) return;
