@@ -5084,6 +5084,7 @@ function nameToId(name) { return name.replace(/[^a-zA-Z0-9]/g, '-'); }
 
 function buildPlayerList() {
   const el = document.getElementById('playerList');
+  if (!el) return; // not on this page
   const posPlayers = Object.entries(PLAYERS).filter(([,p]) => !['SP','RP'].includes(p.pos));
 
   el.innerHTML = posPlayers.map(([name, p]) => {
@@ -5111,16 +5112,15 @@ function selectPlayer(name) {
   const btn = document.getElementById('pbtn-' + nameToId(name));
   if (btn) btn.classList.add('active');
   const p = PLAYERS[name];
-  document.getElementById('topbarPlayer').textContent = name;
-  document.getElementById('topbarMeta').innerHTML = `Chicago Cubs · ${p.pos} · #${p.number} · Updated <span>Today</span>`;
-  document.getElementById('prog-athlete').value = name;
+  const _tp = document.getElementById('topbarPlayer'); if (_tp) _tp.textContent = name;
+  const _tm = document.getElementById('topbarMeta'); if (_tm) _tm.innerHTML = `Chicago Cubs · ${p.pos} · #${p.number} · Updated <span>Today</span>`;
+  const _pa = document.getElementById('prog-athlete'); if (_pa) _pa.value = name;
   renderDashboard();
   // Reset wellness sliders for new player
   ['soreness','energy','sleep'].forEach(m => {
-    document.getElementById(m+'Input').value = 5;
-    updateSlider(m, 5);
+    const _si = document.getElementById(m+'Input'); if (_si) { _si.value = 5; updateSlider(m, 5); }
   });
-  updateComposite();
+  if (document.getElementById('compositeBar')) updateComposite();
   // Sync program builder controls from dashboard data
   const playerData = PLAYERS[name];
   if (playerData) {
