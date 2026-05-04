@@ -1063,6 +1063,925 @@ body {
     
 </div><!-- /page-dashboard -->
 
+<div id="page-program" class="page">
+
+      <!-- Sub-tab bar -->
+      <div style="display:flex;gap:2px;background:var(--bg3);padding:3px;border-radius:var(--radius-sm);margin-bottom:20px;width:fit-content;">
+        <button class="tab-btn active" id="ptab-session"  onclick="switchProgTab('session',this)">⚡ Session Builder</button>
+        <button class="tab-btn"        id="ptab-grid"     onclick="switchProgTab('grid',this)" style="color:var(--blue);">🗓 Grid Builder</button>
+        <button class="tab-btn"        id="ptab-perio"    onclick="switchProgTab('perio',this)" style="color:var(--purple);">📈 Periodization</button>
+        <button class="tab-btn"        id="ptab-1rm"      onclick="switchProgTab('1rm',this)">🏋️ 1RM Database</button>
+        <button class="tab-btn"        id="ptab-library"  onclick="switchProgTab('library',this)">📚 Exercise Library</button>
+      </div>
+
+      <!-- ── SESSION BUILDER ── -->
+      <div id="prog-tab-session" class="prog-tab">
+
+        <!-- ── SCOPE SELECTOR ── -->
+        <div class="card section-mb">
+          <div class="card-title">📐 Program Scope</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:0;">
+            <button class="scope-btn active" id="scope-day"  onclick="setScope('day',this)">
+              <div style="font-size:22px;margin-bottom:4px;">1️⃣</div>
+              <div style="font-weight:700;font-size:14px;">Single Session</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:4px;">One day, fully detailed</div>
+            </button>
+            <button class="scope-btn" id="scope-week" onclick="setScope('week',this)">
+              <div style="font-size:22px;margin-bottom:4px;">📅</div>
+              <div style="font-weight:700;font-size:14px;">Weekly Plan</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:4px;">2–7 days, full schedule</div>
+            </button>
+            <button class="scope-btn" id="scope-meso" onclick="setScope('meso',this)">
+              <div style="font-size:22px;margin-bottom:4px;">🗓</div>
+              <div style="font-weight:700;font-size:14px;">Mesocycle</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:4px;">4–6 weeks, full block</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── SHARED PARAMETERS ── -->
+        <div class="card section-mb">
+          <div class="card-title">⚙️ Parameters</div>
+          <div class="program-controls" style="grid-template-columns:repeat(4,1fr);">
+            <div class="control-group">
+              <div class="control-label">Athlete</div>
+              <select class="control-select" id="prog-athlete" onchange="onAthleteChange()">
+                <option>Nico Hoerner</option><option>Pete Crow-Armstrong</option>
+                <option>Dansby Swanson</option><option>Matt Shaw</option>
+                <option>Carson Kelly</option><option>Miguel Amaya</option>
+                <option>Michael Busch</option><option>Alex Bregman</option>
+                <option>Moises Ballesteros</option><option>Ian Happ</option>
+                <option>Colin Rea</option><option>Matt Boyd</option>
+                <option>Jameson Taillon</option><option>Shota Imanaga</option>
+                <option>Justin Steele</option><option>Daniel Palencia</option>
+                <option>Caleb Thielbar</option><option>Edward Cabrera</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <div class="control-label">Context</div>
+              <select class="control-select" id="prog-macro" onchange="updateDayStructure()">
+                <option value="in-season" selected>In-Season</option>
+                <option value="spring">Spring Training</option>
+                <option value="offseason">Off-Season</option>
+                <option value="rehab">Return-to-Play</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <div class="control-label">Mesocycle Phase</div>
+              <select class="control-select" id="prog-meso">
+                <option value="inseason" selected>In-Season</option>
+                <option value="hyp1">Hypertrophy 1</option>
+                <option value="hyp2">Hypertrophy 2</option>
+                <option value="relstr">Relative Strength</option>
+                <option value="maxstr">Maximum Strength</option>
+                <option value="power1" selected>Power 1 (Str-Speed)</option>
+                <option value="power2">Power 2 (Spd-Str)</option>
+                <option value="power3">Power 3 (Accel)</option>
+                <option value="restore">Restoration</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <div class="control-label">Readiness</div>
+              <select class="control-select" id="prog-readiness">
+                <option value="auto" selected>Auto (from dashboard)</option>
+                <option value="green">🟢 Green — Full Load</option>
+                <option value="yellow">🟡 Yellow — Modified</option>
+                <option value="red">🔴 Red — Recovery Only</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- SINGLE SESSION options -->
+          <div id="scope-opts-day" style="margin-top:14px;">
+            <div class="program-controls" style="grid-template-columns:repeat(4,1fr);">
+              <div class="control-group">
+                <div class="control-label">Session Type</div>
+                <select class="control-select" id="prog-day">
+                  <optgroup label="Strength">
+                    <option value="day1">Day 1 — Lift (Squat)</option>
+                    <option value="day2">Day 2 — Bullpen/Speed</option>
+                    <option value="day3">Day 3 — Lift (Power)</option>
+                    <option value="day4">Day 4 — Primer/Sled</option>
+                    <option value="lift1">Lift 1</option>
+                    <option value="lift2">Lift 2</option>
+                    <option value="lift3">Lift 3</option>
+                    <option value="lift4">Lift 4</option>
+                    <option value="tblift">TB Lift</option>
+                  </optgroup>
+                  <optgroup label="On-Field / Prep">
+                    <option value="primer">Primer</option>
+                    <option value="movement">Movement</option>
+                    <option value="dailyprep">Daily Prep</option>
+                    <option value="gameday">Game Day Primer</option>
+                    <option value="travel">Travel Day</option>
+                  </optgroup>
+                  <optgroup label="Speed / Conditioning">
+                    <option value="acceleration">Acceleration</option>
+                    <option value="topspeed">Top Speed</option>
+                    <option value="agility">Agility</option>
+                    <option value="baserunning">Base Running</option>
+                    <option value="esd">ESD</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div class="control-group">
+                <div class="control-label">Week in Phase</div>
+                <select class="control-select" id="prog-week">
+                  <option value="1">Week 1 — Loading</option>
+                  <option value="2">Week 2 — Accumulation</option>
+                  <option value="3">Week 3 — Intensification</option>
+                  <option value="4">Week 4 — Deload</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <div class="control-label">Days Since CMJ</div>
+                <select class="control-select" id="prog-cmj">
+                  <option value="0">0–1 days (fresh)</option>
+                  <option value="2">2–3 days</option>
+                  <option value="4" selected>4–6 days</option>
+                  <option value="7">7+ days (stale)</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <div class="control-label">ACWR</div>
+                <select class="control-select" id="prog-acwr">
+                  <option value="low">Under 0.8 — Undertrained</option>
+                  <option value="optimal" selected>0.8–1.2 — Optimal</option>
+                  <option value="high">Over 1.2 — Overreach</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- WEEKLY options -->
+          <div id="scope-opts-week" style="display:none;margin-top:14px;">
+            <div class="program-controls" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px;">
+              <div class="control-group">
+                <div class="control-label">Training Days Per Week</div>
+                <select class="control-select" id="prog-days-per-week" onchange="updateDayStructure()">
+                  <option value="2">2 Days</option>
+                  <option value="3">3 Days</option>
+                  <option value="4" selected>4 Days</option>
+                  <option value="5">5 Days</option>
+                  <option value="6">6 Days</option>
+                  <option value="7">7 Days</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <div class="control-label">Week Number</div>
+                <select class="control-select" id="prog-week-num">
+                  <option value="1" selected>Week 1</option>
+                  <option value="2">Week 2</option>
+                  <option value="3">Week 3</option>
+                  <option value="4">Week 4</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <div class="control-label">ACWR</div>
+                <select class="control-select" id="prog-acwr-week">
+                  <option value="low">Under 0.8</option>
+                  <option value="optimal" selected>0.8–1.2 Optimal</option>
+                  <option value="high">Over 1.2</option>
+                </select>
+              </div>
+            </div>
+            <!-- Day structure editor -->
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px;">Day Structure — select session type for each training day:</div>
+            <div id="day-structure-editor" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;"></div>
+          </div>
+
+          <!-- MESOCYCLE options -->
+          <div id="scope-opts-meso" style="display:none;margin-top:14px;">
+            <div class="program-controls" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px;">
+              <div class="control-group">
+                <div class="control-label">Training Days Per Week</div>
+                <select class="control-select" id="prog-days-per-week-meso" onchange="updateMesoDayStructure()">
+                  <option value="2">2 Days</option>
+                  <option value="3">3 Days</option>
+                  <option value="4" selected>4 Days</option>
+                  <option value="5">5 Days</option>
+                  <option value="6">6 Days</option>
+                  <option value="7">7 Days</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <div class="control-label">Block Length</div>
+                <select class="control-select" id="prog-meso-weeks">
+                  <option value="4" selected>4 Weeks</option>
+                  <option value="5">5 Weeks</option>
+                  <option value="6">6 Weeks</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <div class="control-label">Periodization</div>
+                <select class="control-select" id="prog-meso-periodization">
+                  <option value="linear" selected>Linear — load ↑ each week</option>
+                  <option value="undulating">Daily Undulating (DUP)</option>
+                  <option value="block">Block — accumulate then deload</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <div class="control-label">Deload Week</div>
+                <select class="control-select" id="prog-meso-deload">
+                  <option value="last" selected>Final week</option>
+                  <option value="none">No deload</option>
+                  <option value="mid">Mid-block</option>
+                </select>
+              </div>
+            </div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px;">Weekly Day Template — applies across all weeks:</div>
+            <div id="meso-day-structure-editor" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;"></div>
+          </div>
+
+          <!-- 1RM strip -->
+          <div id="oneRMStrip" style="margin-top:14px;padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm);font-size:12px;color:var(--text2);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span style="color:var(--text3);">1RM Status:</span>
+            <span id="oneRMStripContent">Select an athlete to see 1RM data</span>
+            <button onclick="switchProgTab('1rm',document.getElementById('ptab-1rm'))" style="margin-left:auto;background:rgba(59,122,196,0.15);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--cubs-light-blue);font-size:11px;cursor:pointer;">Edit 1RMs →</button>
+          </div>
+
+          <!-- Generate buttons -->
+          <div style="display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap;">
+            <button id="generateBtn" onclick="generateByScope_smart()"
+              style="background:linear-gradient(135deg,#0E3386,#3B7AC4);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;padding:12px 28px;cursor:pointer;letter-spacing:.5px;">
+              ⚡ Smart Generate
+            </button>
+            <button onclick="generateTemplate()"
+              style="background:rgba(245,158,11,0.15);color:var(--yellow);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:13px;font-weight:600;padding:11px 20px;cursor:pointer;">
+              📋 Manual Template
+            </button>
+            <button onclick="buildAndShowPrompt(currentScope)"
+              style="background:rgba(168,85,247,0.15);color:var(--purple);border:1px solid rgba(168,85,247,0.3);border-radius:8px;font-size:13px;font-weight:600;padding:11px 20px;cursor:pointer;">
+              ✨ AI Generate
+            </button>
+            <button class="generate-btn" style="background:rgba(34,197,94,0.15);color:var(--green);" onclick="exportPDF()">🖨 Print / PDF</button>
+            <button class="generate-btn" style="background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);" onclick="copyToClipboard()">📋 Copy Text</button>
+            <div id="exportMsg" style="font-size:11px;color:var(--green);min-height:16px;"></div>
+            <div style="margin-left:auto;font-size:11px;color:var(--text3);">Tempo: Ecc–Pause–Con–Reset · Loads = MROUND(% × 1RM, 5 lbs)</div>
+          </div>
+        </div>
+
+        <!-- OUTPUT AREA -->
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+          <button onclick="printSession()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:11px;font-weight:600;padding:6px 14px;cursor:pointer;">🖨️ Print / Save PDF</button>
+        </div>
+        <div id="programOutput"></div>
+
+        <!-- Static week view -->
+        <div class="card" id="weekGridCard">
+          <div class="card-title">📅 In-Season Week Reference</div>
+          <div class="week-grid" id="weekGrid"></div>
+        </div>
+      </div>
+
+      <!-- ── GRID BUILDER ── -->
+      <div id="prog-tab-grid" class="prog-tab" style="display:none;">
+        <div style="display:flex;gap:0;height:calc(100vh - 200px);min-height:600px;">
+
+          <!-- LEFT: Exercise Library Sidebar -->
+          <div id="grid-sidebar" style="width:260px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;border-radius:var(--radius) 0 0 var(--radius);overflow:hidden;">
+            <div style="padding:12px;border-bottom:1px solid var(--border);flex-shrink:0;">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--text);margin-bottom:8px;">EXERCISE LIBRARY</div>
+              <input id="grid-ex-search" placeholder="Search exercises…" oninput="gridFilterExercises()"
+                style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;box-sizing:border-box;">
+              <select id="grid-ex-cat" onchange="gridFilterExercises()" style="width:100%;margin-top:6px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;box-sizing:border-box;">
+                <option value="">All Categories</option>
+              </select>
+            </div>
+            <div id="grid-ex-list" style="flex:1;overflow-y:auto;padding:6px;"></div>
+          </div>
+
+          <!-- RIGHT: Calendar Grid -->
+          <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg1);border-radius:0 var(--radius) var(--radius) 0;">
+
+            <!-- Grid Toolbar -->
+            <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0;background:var(--bg2);">
+              <select id="grid-athlete" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+              </select>
+              <div style="display:flex;align-items:center;gap:4px;">
+                <button onclick="gridChangeWeeks(-1)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 8px;cursor:pointer;">‹</button>
+                <span id="grid-week-label" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);white-space:nowrap;">Week 1–4</span>
+                <button onclick="gridChangeWeeks(1)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 8px;cursor:pointer;">›</button>
+              </div>
+              <div style="display:flex;gap:4px;">
+                <button onclick="gridSetView(1)" id="gv1" class="grid-view-btn">1W</button>
+                <button onclick="gridSetView(2)" id="gv2" class="grid-view-btn active">2W</button>
+                <button onclick="gridSetView(4)" id="gv4" class="grid-view-btn">4W</button>
+                <button onclick="gridSetView(8)" id="gv8" class="grid-view-btn">8W</button>
+              </div>
+              <div style="margin-left:auto;display:flex;gap:6px;">
+                <button onclick="gridAddPhase()" style="background:rgba(59,122,196,0.15);border:1px solid rgba(59,122,196,0.3);border-radius:6px;padding:6px 12px;color:var(--blue);font-size:11px;cursor:pointer;">+ Phase</button>
+                <button onclick="gridSaveToAthlete()" style="background:var(--blue);border:none;border-radius:6px;padding:6px 14px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">💾 Save Program</button>
+              </div>
+            </div>
+
+            <!-- Phase Banner Row -->
+            <div id="grid-phases" style="min-height:28px;border-bottom:1px solid var(--border);position:relative;background:var(--bg2);flex-shrink:0;"></div>
+
+            <!-- Day Header Row -->
+            <div id="grid-day-headers" style="display:grid;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2);"></div>
+
+            <!-- Week Rows -->
+            <div id="grid-body" style="flex:1;overflow-y:auto;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Editor Modal (slides in from right) -->
+      <div id="grid-session-modal" style="display:none;position:fixed;top:0;right:0;width:480px;height:100vh;background:var(--bg2);border-left:1px solid var(--border);z-index:8000;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,0.4);">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <div style="flex:1;">
+            <input id="gsm-title" placeholder="Session name…" style="background:transparent;border:none;color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;width:100%;outline:none;">
+            <div id="gsm-meta" style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px;"></div>
+          </div>
+          <button onclick="gridCloseSession()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:13px;padding:4px 10px;cursor:pointer;">✕ Close</button>
+        </div>
+        <!-- Toolbar: category/exercise dropdowns + block controls -->
+        <div style="padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:6px;">
+
+          <!-- Unified combobox: type to search OR click to browse all -->
+          <div style="display:flex;gap:6px;align-items:stretch;">
+            <div style="flex:1;position:relative;">
+              <input id="gsm-ex-search"
+                placeholder="Search or browse exercises… (↑↓ to navigate, Enter to add)"
+                oninput="gsmSearchExercises()"
+                onkeydown="gsmSearchKeydown(event)"
+                onfocus="gsmSearchExercises()"
+                autocomplete="off" spellcheck="false"
+                style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;box-sizing:border-box;outline:none;">
+              <div id="gsm-ex-results"
+                style="position:absolute;top:100%;left:0;right:0;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;background:var(--bg2);display:none;z-index:10;"></div>
+            </div>
+            <button onclick="gsmAddFromSearch()"
+              style="background:var(--blue);border:none;border-radius:6px;padding:6px 14px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;" title="Add selected exercise">＋</button>
+          </div>
+
+          <!-- Paste from Excel / Google Sheets -->
+          <div style="position:relative;">
+            <textarea id="gsm-paste-zone"
+              placeholder="📋  Paste from Excel or Google Sheets (Exercise | Sets | Reps | Load | Notes)"
+              onpaste="gsmHandlePaste(event)"
+              rows="1"
+              style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;box-sizing:border-box;resize:none;overflow:hidden;outline:none;"
+              onfocus="this.style.borderColor='var(--blue)'"
+              onblur="this.style.borderColor='var(--border)'"
+            ></textarea>
+          </div>
+
+          <!-- Row 2: Block controls -->
+          <div style="display:flex;gap:6px;">
+            <button onclick="gsmAddBlock()" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:5px;padding:5px 10px;color:var(--green);font-size:11px;cursor:pointer;font-weight:600;">＋ Block</button>
+            <select id="gsm-active-block" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;">
+            </select>
+            <button onclick="gsmInsertProgram()" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:5px;padding:5px 10px;color:var(--yellow);font-size:11px;cursor:pointer;font-weight:600;" title="Insert a saved program">📋</button>
+          </div>
+        </div>
+        <div id="gsm-exercises" style="flex:1;overflow-y:auto;padding:10px 12px;"></div>
+        <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;">
+          <button onclick="gsmOpenPeriodization()" style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);border-radius:6px;padding:9px 12px;color:var(--purple);font-size:12px;cursor:pointer;" title="View periodization chart across sessions">📈</button>
+          <button onclick="gridSaveSession()" style="flex:1;background:var(--blue);border:none;border-radius:6px;padding:9px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">💾 Save Session</button>
+          <button onclick="gridDeleteSession()" style="background:rgba(204,52,51,0.15);border:1px solid rgba(204,52,51,0.3);border-radius:6px;padding:9px 14px;color:var(--red);font-size:12px;cursor:pointer;">Delete</button>
+        </div>
+      </div>
+      <div id="grid-session-overlay" style="display:none;"></div>
+
+      <!-- ── PERIODIZATION BUILDER ── -->
+      <div id="prog-tab-perio" class="prog-tab" style="display:none;">
+        <div style="display:grid;grid-template-columns:340px 1fr;gap:16px;height:calc(100vh - 200px);min-height:600px;align-items:start;">
+
+          <!-- LEFT PANEL: Setup -->
+          <div style="display:flex;flex-direction:column;gap:12px;overflow-y:auto;height:100%;">
+
+            <!-- Phase Config -->
+            <div class="card">
+              <div class="card-title">⚙️ PHASE SETUP</div>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+                <div>
+                  <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Athlete</label>
+                  <select id="perio-athlete" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;"></select>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                  <div>
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Phase</label>
+                    <select id="perio-phase" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
+                      <option value="inseason">In-Season</option>
+                      <option value="hyp1">Hypertrophy 1</option>
+                      <option value="hyp2">Hypertrophy 2</option>
+                      <option value="relstr">Relative Strength</option>
+                      <option value="maxstr">Maximum Strength</option>
+                      <option value="power1">Power 1 (Str-Speed)</option>
+                      <option value="power2">Power 2 (Spd-Str)</option>
+                      <option value="power3">Power 3 (Accel)</option>
+                      <option value="restore">Restoration</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Weeks</label>
+                    <input id="perio-weeks" type="number" min="1" max="16" value="4"
+                      style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                  <div>
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Sessions/Week</label>
+                    <select id="perio-sessions-pw" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
+                      <option value="2">2</option>
+                      <option value="3" selected>3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Deload</label>
+                    <select id="perio-deload" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
+                      <option value="none">None</option>
+                      <option value="wk3" selected>Week 3 → Deload Wk4</option>
+                      <option value="wk4">Week 4 → Deload Wk5</option>
+                      <option value="manual">Manual</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Exercise List -->
+            <div class="card" style="flex:1;display:flex;flex-direction:column;overflow:visible;padding:12px;">
+              <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+                <span>🏋️ EXERCISES</span>
+                <div style="display:flex;gap:6px;">
+                  <button onclick="perioImportProgram()" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:5px;padding:3px 10px;color:var(--yellow);font-size:11px;cursor:pointer;" title="Import exercises from a saved program">📋 Import Program</button>
+                  <button onclick="perioClearAll()" style="background:rgba(204,52,51,0.1);border:1px solid rgba(204,52,51,0.25);border-radius:5px;padding:3px 10px;color:var(--red);font-size:11px;cursor:pointer;" title="Clear all exercises">✕ Clear</button>
+                </div>
+              </div>
+              <!-- Add exercise row -->
+              <div style="display:flex;gap:6px;margin-bottom:8px;margin-top:6px;">
+                <select id="perio-cat-sel" onchange="perioOnCatChange()" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;min-width:0;">
+                  <option value="">— Category —</option>
+                </select>
+                <select id="perio-ex-sel" style="flex:1.4;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;min-width:0;">
+                  <option value="">— Exercise —</option>
+                </select>
+                <button onclick="perioAddExercise()" style="background:var(--blue);border:none;border-radius:5px;padding:5px 12px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">＋</button>
+              </div>
+              <div id="perio-ex-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:4px 2px 12px;"></div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT PANEL: Preview table -->
+          <div style="display:flex;flex-direction:column;gap:12px;overflow:hidden;">
+            <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:visible;">
+              <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                <span>📋 PHASE PLAN PREVIEW</span>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button onclick="perioBuildPreview()" style="background:rgba(168,85,247,0.2);border:1px solid rgba(168,85,247,0.4);border-radius:6px;padding:6px 14px;color:var(--purple);font-size:12px;font-weight:600;cursor:pointer;">⚡ Generate Preview</button>
+                  <button onclick="perioSavePlan()" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:6px 14px;color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">💾 Save Plan</button>
+                  <button onclick="perioLoadPlan()" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:6px;padding:6px 14px;color:var(--yellow);font-size:12px;font-weight:600;cursor:pointer;">📂 Load Plan</button>
+                  <button onclick="perioApplyToGrid()" style="background:var(--blue);border:none;border-radius:6px;padding:6px 14px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">→ Apply to Grid</button>
+                </div>
+              </div>
+              <div id="perio-preview" style="flex:1;overflow:auto;margin-top:8px;"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── 1RM DATABASE ── -->
+      <div id="prog-tab-1rm" class="prog-tab" style="display:none;">
+        <div class="card section-mb">
+          <div class="card-title">🏋️ Athlete 1RM Database</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
+            Enter each athlete's tested 1RM in lbs. These values drive all load calculations in the Session Builder using <span style="font-family:'DM Mono',monospace;color:var(--cubs-light-blue);">MROUND(% × 1RM, 5)</span>.
+          </div>
+
+          <!-- Athlete selector -->
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+            <div class="control-label" style="margin:0;">Athlete:</div>
+            <select class="control-select" id="rm-athlete-select" onchange="render1RMTable()" style="width:200px;">
+              <option>Nico Hoerner</option><option>Pete Crow-Armstrong</option>
+              <option>Dansby Swanson</option><option>Matt Shaw</option>
+              <option>Carson Kelly</option><option>Miguel Amaya</option>
+              <option>Michael Busch</option><option>Alex Bregman</option>
+              <option>Moises Ballesteros</option><option>Ian Happ</option>
+              <option>Colin Rea</option><option>Matt Boyd</option>
+              <option>Jameson Taillon</option><option>Shota Imanaga</option>
+              <option>Justin Steele</option><option>Daniel Palencia</option>
+              <option>Caleb Thielbar</option><option>Edward Cabrera</option>
+            </select>
+            <button class="generate-btn" style="padding:8px 16px;" onclick="save1RMs()">💾 Save 1RMs</button>
+            <div id="rm-save-msg" style="font-size:11px;color:var(--green);min-height:16px;"></div>
+          </div>
+
+          <div id="rm-table-wrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"></div>
+        </div>
+
+        <!-- Load calculator -->
+        <div class="card">
+          <div class="card-title">🧮 Quick Load Calculator</div>
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+            <div class="control-group" style="width:180px;">
+              <div class="control-label">Athlete</div>
+              <select class="control-select" id="calc-athlete" onchange="calcLoad()">
+                <option>Nico Hoerner</option><option>Pete Crow-Armstrong</option>
+                <option>Dansby Swanson</option><option>Matt Shaw</option>
+                <option>Carson Kelly</option><option>Miguel Amaya</option>
+                <option>Michael Busch</option><option>Alex Bregman</option>
+                <option>Moises Ballesteros</option><option>Ian Happ</option>
+                <option>Colin Rea</option><option>Matt Boyd</option>
+                <option>Jameson Taillon</option><option>Shota Imanaga</option>
+                <option>Justin Steele</option><option>Daniel Palencia</option>
+                <option>Caleb Thielbar</option><option>Edward Cabrera</option>
+              </select>
+            </div>
+            <div class="control-group" style="width:200px;">
+              <div class="control-label">Lift</div>
+              <select class="control-select" id="calc-lift" onchange="calcLoad()"></select>
+            </div>
+            <div class="control-group" style="width:110px;">
+              <div class="control-label">Percentage (%)</div>
+              <input class="control-input" type="number" id="calc-pct" value="80" min="1" max="115" oninput="calcLoad()" style="font-size:13px;padding:8px 10px;">
+            </div>
+            <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px 20px;text-align:center;min-width:140px;">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Calculated Load</div>
+              <div id="calc-result" style="font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:1px;color:var(--cubs-light-blue);">— lbs</div>
+              <div id="calc-breakdown" style="font-size:10px;color:var(--text3);margin-top:2px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── EXERCISE LIBRARY ── -->
+      <div id="prog-tab-library" class="prog-tab" style="display:none;">
+        <div class="card section-mb">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+            <div class="card-title" style="margin:0;">📚 Exercise Library</div>
+            <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input type="text" id="lib-search" placeholder="Search exercises…" oninput="filterLibrary()"
+                style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 12px;color:var(--text);font-size:12px;width:220px;">
+              <select id="lib-cat-filter" onchange="filterLibrary()"
+                style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 12px;color:var(--text);font-size:12px;">
+                <option value="">All Categories</option>
+              </select>
+              <button class="generate-btn" style="padding:8px 14px;" onclick="openAddExerciseModal()">+ Add Exercise</button>
+              <button onclick="exportExerciseLibrary()" style="background:rgba(59,122,196,0.15);border:1px solid rgba(59,122,196,0.3);border-radius:6px;color:var(--cubs-blue);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">📤 Export</button>
+              <button onclick="document.getElementById('xlsxImportInput').click()"
+                style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:8px 14px;color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">
+                📥 Import XLSX
+              </button>
+              <input type="file" id="xlsxImportInput" accept=".xlsx,.xls,.csv" style="display:none;"
+                onchange="importExerciseLibraryXLSX(this)">
+              <label style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);border-radius:6px;color:var(--green);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                📥 Import<input type="file" accept=".json" onchange="importExerciseLibrary(this)" style="display:none;">
+              </label>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:16px;" id="lib-count"></div>
+          <div id="lib-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;"></div>
+        </div>
+      </div>
+
+    </div><!-- /page-program -->
+
+    <!-- ── ADD EXERCISE MODAL ── -->
+    <div id="addExModal" class="modal-overlay" style="display:none;">
+      <div class="modal-box" style="width:480px;max-height:85vh;overflow-y:auto;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:20px;">Add / Edit Exercise</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="control-group">
+            <div class="control-label">Exercise Name *</div>
+            <input class="control-input" id="modal-name" placeholder="e.g. Trap Bar Jump" style="font-size:13px;">
+          </div>
+          <div class="control-group">
+            <div class="control-label">Category *</div>
+            <select class="control-select" id="modal-cat" style="font-size:13px;">
+              <option value="">Select category…</option>
+              <option>Squat Variations</option><option>Deadlift Variations</option>
+              <option>Hamstring</option><option>Calf Ankle</option>
+              <option>Hip ABD_ADD</option><option>UB Horizontal Push</option>
+              <option>UB Vertical Push</option><option>UB Horizontal Pull</option>
+              <option>UB Vertical Pull</option><option>Shoulder Complex</option>
+              <option>Grip</option><option>Core Flexion anti</option>
+              <option>Core Extension anti</option><option>Core Rotation anti</option>
+              <option>Core Lateral Flexion Extension anti</option>
+              <option>LB Plyos</option><option>UB Plyos</option>
+              <option>Olympic Variations</option><option>Acceleration</option>
+              <option>Max Velocity Running</option><option>COD/Agility</option>
+              <option>Curvilinear</option><option>Deceleration</option>
+              <option>ESD</option><option>Strongman Variations</option>
+              <option>Mobility</option><option>Biceps Triceps</option>
+              <option>New Category…</option>
+            </select>
+          </div>
+          <div class="control-group" id="modal-newcat-wrap" style="display:none;">
+            <div class="control-label">New Category Name</div>
+            <input class="control-input" id="modal-newcat" placeholder="e.g. Isometric Variations" style="font-size:13px;">
+          </div>
+          <div class="control-group">
+            <div class="control-label">1RM Lift Key (for load calc — leave blank if bodyweight/no load)</div>
+            <select class="control-select" id="modal-liftkey" style="font-size:13px;">
+              <option value="">— None (BW / No load) —</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <div class="control-label">YouTube URL (optional)</div>
+            <input class="control-input" id="modal-video" placeholder="https://youtube.com/watch?v=…" style="font-size:13px;">
+          </div>
+          <div class="control-group">
+            <div class="control-label">Coach Notes (optional)</div>
+            <input class="control-input" id="modal-notes" placeholder="e.g. Knee over toe, controlled eccentric" style="font-size:13px;">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;">
+          <button class="generate-btn" onclick="saveExercise()">💾 Save Exercise</button>
+          <button onclick="closeAddExerciseModal()" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Cancel</button>
+          <button id="modal-delete-btn" style="display:none;margin-left:auto;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:10px 18px;color:var(--red);font-size:13px;cursor:pointer;" onclick="deleteExercise()">🗑 Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ATHLETE PROGRAMS TAB ══ -->
+    <div id="dash-programs" class="page">
+      <div class="card section-mb">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <span>📋 PROGRAM HISTORY</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input id="prog-search" placeholder="Search programs…" oninput="renderAthletePrograms()"
+              style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;width:200px;">
+            <button onclick="openDropProgramModal()" style="background:var(--blue);border:none;border-radius:6px;padding:7px 16px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">＋ Drop Program</button>
+          </div>
+        </div>
+        <div id="athlete-programs-list" style="margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <!-- ══ MY PROGRAMS ══ -->
+    
+
+<div id="page-programs" class="page">
+      <div class="section-header">
+        <div class="section-title">My Programs</div>
+        <div style="font-size:12px;color:var(--text2);">Saved · Editable · Athlete-specific</div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
+        <select class="control-select" id="prog-lib-athlete" onchange="renderProgramLibrary()" style="width:200px;">
+          <option value="">All Athletes</option>
+          <option>Nico Hoerner</option><option>Pete Crow-Armstrong</option>
+          <option>Dansby Swanson</option><option>Matt Shaw</option>
+          <option>Carson Kelly</option><option>Miguel Amaya</option>
+          <option>Michael Busch</option><option>Alex Bregman</option>
+          <option>Moises Ballesteros</option><option>Ian Happ</option>
+          <option>Colin Rea</option><option>Matt Boyd</option>
+          <option>Jameson Taillon</option><option>Shota Imanaga</option>
+          <option>Justin Steele</option><option>Daniel Palencia</option>
+          <option>Caleb Thielbar</option><option>Edward Cabrera</option>
+        </select>
+        <select class="control-select" id="prog-lib-type" onchange="renderProgramLibrary()" style="width:160px;">
+          <option value="">All Types</option>
+          <option value="day">Single Session</option>
+          <option value="week">Weekly Plan</option>
+          <option value="meso">Mesocycle</option>
+        </select>
+        <div style="margin-left:auto;font-size:12px;color:var(--text3);" id="prog-lib-count"></div>
+      </div>
+
+      <div id="prog-library-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;"></div>
+      <div id="prog-library-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text3);">
+        <div style="font-size:40px;margin-bottom:12px;">📋</div>
+        <div style="font-size:16px;font-weight:500;margin-bottom:8px;">No saved programs yet</div>
+        <div style="font-size:13px;">Generate a program in the Program Builder, then click Save to store it here.</div>
+      </div>
+    </div>
+
+    <!-- ══ CALENDAR ══ -->
+    
+
+<div id="page-calendar" class="page">
+      <div class="section-header">
+        <div class="section-title">Training Calendar</div>
+        <div style="font-size:12px;color:var(--text2);">Schedule · Games · Workouts</div>
+      </div>
+
+      <!-- Controls bar -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
+        <button onclick="calNav(-1)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 14px;color:var(--text);cursor:pointer;font-size:16px;">‹</button>
+        <div id="calMonthLabel" style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;min-width:180px;text-align:center;"></div>
+        <button onclick="calNav(1)" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 14px;color:var(--text);cursor:pointer;font-size:16px;">›</button>
+        <button onclick="calGoToday()" style="background:rgba(59,122,196,0.15);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 12px;color:var(--cubs-light-blue);font-size:12px;cursor:pointer;">Today</button>
+        <!-- View toggle -->
+        <div style="display:flex;gap:2px;background:var(--bg3);padding:3px;border-radius:var(--radius-sm);margin-left:8px;">
+          <button class="tab-btn active" id="cal-view-month" onclick="setCalView('month',this)">Month</button>
+          <button class="tab-btn" id="cal-view-week" onclick="setCalView('week',this)">Week</button>
+        </div>
+        <!-- Athlete filter -->
+        <select class="control-select" id="cal-athlete-filter" onchange="renderCalendar()" style="width:180px;margin-left:auto;">
+          <option value="">All Athletes</option>
+          <option>Nico Hoerner</option><option>Pete Crow-Armstrong</option>
+          <option>Dansby Swanson</option><option>Matt Shaw</option>
+          <option>Carson Kelly</option><option>Miguel Amaya</option>
+          <option>Michael Busch</option><option>Alex Bregman</option>
+          <option>Moises Ballesteros</option><option>Ian Happ</option>
+          <option>Colin Rea</option><option>Matt Boyd</option>
+          <option>Jameson Taillon</option><option>Shota Imanaga</option>
+          <option>Justin Steele</option><option>Daniel Palencia</option>
+          <option>Caleb Thielbar</option><option>Edward Cabrera</option>
+        </select>
+        <button class="generate-btn" style="padding:8px 14px;" onclick="openGameImportModal()">⚾ Import Game Schedule</button>
+        <button class="generate-btn" style="padding:8px 14px;background:rgba(34,197,94,0.15);color:var(--green);" onclick="openScheduleWorkoutModal()">+ Schedule Workout</button>
+      </div>
+
+      <!-- Legend -->
+      <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--cubs-red);"></div>Game
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--cubs-light-blue);"></div>Lift Day
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--green);"></div>Speed/Bullpen
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--yellow);"></div>Primer/Sled
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--text3);"></div>Rest
+        </div>
+      </div>
+
+      <!-- Calendar grid -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="calendarGrid"></div>
+      </div>
+
+      <!-- Day detail panel -->
+      <div id="dayDetailPanel" style="display:none;margin-top:16px;" class="card">
+        <div id="dayDetailContent"></div>
+      </div>
+    </div>
+
+    <!-- ── GAME IMPORT MODAL ── -->
+    <div id="gameImportModal" class="modal-overlay" style="display:none;">
+      <div class="modal-box" style="width:560px;max-height:80vh;overflow-y:auto;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:8px;">⚾ Import Game Schedule</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
+          Paste game dates — one per line, or CSV with columns: <span style="font-family:'DM Mono',monospace;color:var(--cubs-light-blue);">Date, Opponent, Home/Away</span><br>
+          Accepted date formats: <span style="font-family:'DM Mono',monospace;">4/15/2026 · 2026-04-15 · Apr 15 2026</span>
+        </div>
+        <textarea id="gameScheduleInput" style="width:100%;height:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;resize:vertical;" placeholder="4/15/2026, Pittsburgh Pirates, Home&#10;4/16/2026, Pittsburgh Pirates, Home&#10;4/18/2026, St. Louis Cardinals, Away&#10;..."></textarea>
+        <div id="gameImportPreview" style="margin-top:12px;font-size:11px;color:var(--text2);"></div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <button class="generate-btn" onclick="importGameSchedule()">✅ Import Games</button>
+          <button onclick="closeModal('gameImportModal')" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Cancel</button>
+          <button onclick="resetToOfficialSchedule()" style="background:rgba(59,122,196,0.1);border:1px solid rgba(59,122,196,0.3);border-radius:var(--radius-sm);padding:10px 18px;color:var(--cubs-light-blue);font-size:13px;cursor:pointer;">🔄 Reset to Official Schedule</button>
+          <button onclick="clearGames()" style="margin-left:auto;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:10px 18px;color:var(--red);font-size:13px;cursor:pointer;">🗑 Clear All Games</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCHEDULE WORKOUT MODAL ── -->
+    <div id="scheduleWorkoutModal" class="modal-overlay" style="display:none;">
+      <div class="modal-box" style="width:500px;max-height:85vh;overflow-y:auto;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:16px;">+ Schedule Workout</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="control-group">
+            <div class="control-label">Athlete *</div>
+            <select class="control-select" id="sw-athlete" onchange="swAthleteChanged()">
+              <option value="">All Athletes (Team)</option>
+              <option>Nico Hoerner</option><option>Pete Crow-Armstrong</option>
+              <option>Dansby Swanson</option><option>Matt Shaw</option>
+              <option>Carson Kelly</option><option>Miguel Amaya</option>
+              <option>Michael Busch</option><option>Alex Bregman</option>
+              <option>Moises Ballesteros</option><option>Ian Happ</option>
+              <option>Colin Rea</option><option>Matt Boyd</option>
+              <option>Jameson Taillon</option><option>Shota Imanaga</option>
+              <option>Justin Steele</option><option>Daniel Palencia</option>
+              <option>Caleb Thielbar</option><option>Edward Cabrera</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Date *</div>
+            <input class="control-input" type="date" id="sw-date">
+          </div>
+          <div class="control-group">
+            <div class="control-label">Workout Source</div>
+            <div style="display:flex;gap:6px;margin-top:4px;">
+              <button class="tab-btn active" id="sw-src-saved" onclick="setWorkoutSource('saved',this)" style="flex:1;">From Saved Programs</button>
+              <button class="tab-btn" id="sw-src-quick" onclick="setWorkoutSource('quick',this)" style="flex:1;">Quick Session</button>
+            </div>
+          </div>
+          <!-- Saved program picker -->
+          <div id="sw-saved-section">
+            <div class="control-group">
+              <div class="control-label">Select Program</div>
+              <select class="control-select" id="sw-program-select">
+                <option value="">— select a saved program —</option>
+              </select>
+            </div>
+          </div>
+          <!-- Quick session picker -->
+          <div id="sw-quick-section" style="display:none;">
+            <div class="control-group">
+              <div class="control-label">Session Type</div>
+              <select class="control-select" id="sw-session-type">
+                <option value="day1">Day 1 — Lift (Squat)</option>
+                <option value="day2">Day 2 — Bullpen/Speed</option>
+                <option value="day3">Day 3 — Lift (Power)</option>
+                <option value="day4">Day 4 — Primer/Sled</option>
+                <option value="gameday">Game Day Primer</option>
+                <option value="travel">Travel Day</option>
+                <option value="rest">Rest Day</option>
+              </select>
+            </div>
+            <div class="control-group" style="margin-top:10px;">
+              <div class="control-label">Label / Notes</div>
+              <input class="control-input" id="sw-label" placeholder="e.g. Pre-series activation">
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;">
+          <button class="generate-btn" onclick="scheduleWorkout()">📆 Add to Calendar</button>
+          <button onclick="closeModal('scheduleWorkoutModal')" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Cancel</button>
+        </div>
+        <div id="sw-msg" style="font-size:11px;color:var(--green);margin-top:8px;min-height:16px;"></div>
+      </div>
+    </div>
+
+    <!-- ── SAVE PROGRAM MODAL ── -->
+    <div id="saveProgramModal" class="modal-overlay" style="display:none;">
+      <div class="modal-box" style="width:440px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:16px;">💾 Save Program</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="control-group">
+            <div class="control-label">Program Name *</div>
+            <input class="control-input" id="save-prog-name" placeholder="e.g. Hoerner IS Power 1 Wk1">
+          </div>
+          <div class="control-group">
+            <div class="control-label">Notes</div>
+            <input class="control-input" id="save-prog-notes" placeholder="Optional coaching notes">
+          </div>
+          <div id="save-prog-meta" style="font-size:11px;color:var(--text2);background:var(--bg3);padding:10px;border-radius:var(--radius-sm);"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;">
+          <button class="generate-btn" onclick="confirmSaveProgram()">💾 Save</button>
+          <button onclick="closeModal('saveProgramModal')" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── EDIT GAME MODAL ── -->
+    <div id="editGameModal" class="modal-overlay" style="display:none;">
+      <div class="modal-box" style="width:440px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;margin-bottom:16px;" id="editGameTitle">Edit Game</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="control-group">
+            <div class="control-label">Date</div>
+            <input class="control-input" type="date" id="edit-game-date">
+          </div>
+          <div class="control-group">
+            <div class="control-label">Opponent</div>
+            <select class="control-select" id="edit-game-opponent">
+              <option>Arizona Diamondbacks</option><option>Athletics</option>
+              <option>Atlanta Braves</option><option>Baltimore Orioles</option>
+              <option>Boston Red Sox</option><option>Chicago White Sox</option>
+              <option>Cincinnati Reds</option><option>Cleveland Guardians</option>
+              <option>Colorado Rockies</option><option>Detroit Tigers</option>
+              <option>Houston Astros</option><option>Kansas City Royals</option>
+              <option>Los Angeles Angels</option><option>Los Angeles Dodgers</option>
+              <option>Miami Marlins</option><option>Milwaukee Brewers</option>
+              <option>Minnesota Twins</option><option>New York Mets</option>
+              <option>New York Yankees</option><option>Philadelphia Phillies</option>
+              <option>Pittsburgh Pirates</option><option>San Diego Padres</option>
+              <option>San Francisco Giants</option><option>Seattle Mariners</option>
+              <option>St. Louis Cardinals</option><option>Tampa Bay Rays</option>
+              <option>Texas Rangers</option><option>Toronto Blue Jays</option>
+              <option>Washington Nationals</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Home / Away</div>
+            <div style="display:flex;gap:8px;">
+              <button id="edit-ha-home" onclick="setEditHA('Home')" style="flex:1;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:rgba(14,51,134,0.3);color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;">🏠 Home</button>
+              <button id="edit-ha-away" onclick="setEditHA('Away')" style="flex:1;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;">✈️ Away</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Game Time (local home time)</div>
+            <input class="control-input" id="edit-game-time" placeholder="e.g. 1:20 PM CT" style="font-size:13px;">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;">
+          <button class="generate-btn" onclick="saveEditedGame()">💾 Save</button>
+          <button onclick="closeModal('editGameModal')" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Cancel</button>
+          <button onclick="deleteEditedGame()" style="margin-left:auto;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:10px 18px;color:var(--red);font-size:13px;cursor:pointer;">🗑 Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TEAM SUMMARY ══ -->
+    
+
 <div id="page-team" class="page">
       <div class="card section-mb">
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
@@ -1100,6 +2019,7 @@ body {
     </div>
 
     <!-- ══ DATA IMPORT ══ -->
+    
 
 <div id="page-import" class="page">
 
@@ -1982,7 +2902,7 @@ function gridOpenSession(key) {
   document.getElementById('gsm-title').value = session.title || '';
   document.getElementById('gsm-meta').textContent = `Week ${weekNum} · ${dayName}`;
   // Reset dropdowns
-  if (document.getElementById("gsm-ex-search")) gsmPopulateCatDropdown();
+  gsmPopulateCatDropdown();
   const catSel = document.getElementById('gsm-cat-sel');
   const exSel  = document.getElementById('gsm-ex-sel');
   if (catSel) catSel.value = '';
@@ -4111,10 +5031,10 @@ function init() {
   loadPersistedData();    // Restore imported Statcast/CMJ/hitting data across sessions
   buildPlayerList();
   buildTeamList();
-  if (document.getElementById("weekGrid")) buildWeekView();
+  buildWeekView();
   selectPlayer("Nico Hoerner");
-  if (document.getElementById("hittingInputsTable")) addHittingRow();
-  if (document.getElementById("rmTable")) render1RMTable();
+  addHittingRow();
+  render1RMTable();
   const cl = document.getElementById('calc-lift');
   if (cl) cl.innerHTML = RM_LIFTS.map(l=>`<option value="${l}">${l}</option>`).join('');
   update1RMStrip('Nico Hoerner');
@@ -4127,7 +5047,6 @@ function nameToId(name) { return name.replace(/[^a-zA-Z0-9]/g, '-'); }
 
 function buildPlayerList() {
   const el = document.getElementById('playerList');
-  if (!el) return;
   const posPlayers = Object.entries(PLAYERS).filter(([,p]) => !['SP','RP'].includes(p.pos));
 
   el.innerHTML = posPlayers.map(([name, p]) => {
@@ -4155,15 +5074,16 @@ function selectPlayer(name) {
   const btn = document.getElementById('pbtn-' + nameToId(name));
   if (btn) btn.classList.add('active');
   const p = PLAYERS[name];
-  const _tp = document.getElementById('topbarPlayer'); if (_tp) _tp.textContent = name;
-  const _tm = document.getElementById('topbarMeta'); if (_tm) _tm.innerHTML = `Chicago Cubs · ${p.pos} · #${p.number} · Updated <span>Today</span>`;
-  const _pa = document.getElementById('prog-athlete'); if (_pa) _pa.value = name;
+  document.getElementById('topbarPlayer').textContent = name;
+  document.getElementById('topbarMeta').innerHTML = `Chicago Cubs · ${p.pos} · #${p.number} · Updated <span>Today</span>`;
+  document.getElementById('prog-athlete').value = name;
   renderDashboard();
   // Reset wellness sliders for new player
   ['soreness','energy','sleep'].forEach(m => {
-    const _si = document.getElementById(m+'Input'); if (_si) { _si.value = 5; updateSlider(m, 5); }
+    document.getElementById(m+'Input').value = 5;
+    updateSlider(m, 5);
   });
-  if (document.getElementById('compositeBar')) updateComposite();
+  updateComposite();
   // Sync program builder controls from dashboard data
   const playerData = PLAYERS[name];
   if (playerData) {
@@ -4197,7 +5117,6 @@ function renderDashboard() {
 }
 
 function renderCoachNotes(p) {
-  if (!document.getElementById("coachNotesCard")) return;
   const today = new Date().toISOString().slice(0,10);
   const el = document.getElementById('coachNotesCard');
   if (!el) return;
@@ -4222,7 +5141,6 @@ function renderCoachNotes(p) {
 }
 
 function renderReadinessHero(p) {
-  if (!document.getElementById("readinessStatus")) return;
   // Recompute status from live ACWR (already updated by renderACWR) + wellness
   const liveStatus   = readinessToStatus(p.readiness, p.acwr);
   const liveReadiness = p.readiness;
@@ -4268,7 +5186,6 @@ function renderReadinessHero(p) {
 // renderKPIs removed — KPI tiles deleted from overview
 
 function renderPBGrid(p) {
-  if (!document.getElementById("pbGrid")) return;
   const b = p.bests;
   const metrics = [
     {key:'jump',   label:'CMJ — Jump Ht',  best:b.jump,   cur:p.latestJump,   unit:'cm',  color:'#3B7AC4'},
@@ -4307,7 +5224,6 @@ function renderPBGrid(p) {
 
 function renderPerfTable(p) {
   const tbody = document.getElementById('perfTableBody');
-  if (!tbody) return;
   const sc = s => s === 'GREEN' ? 'green' : s === 'RED' ? 'red' : 'yellow';
 
   // Load statcast from localStorage for live ACWR calc
@@ -4444,7 +5360,6 @@ function computeLiveACWR(playerName) {
 }
 
 function renderACWR(p) {
-  if (!document.getElementById('acwrNum')) return;
   // Always compute live so off days are accounted for
   const live = computeLiveACWR(p._name || currentPlayer);
   const acwr   = live ? live.acwr   : p.acwr;
@@ -4540,7 +5455,6 @@ function mkTrendChart(id, labels, datasets, extraOpts={}) {
 }
 
 function renderAllCharts(p) {
-  if (!document.getElementById("readinessTrendChart")) return;
   const games = p.recentGames;
   const labels = games.map(g => g.date);
 
@@ -5039,7 +5953,6 @@ function renderWellnessTable(entries) {
 }
 
 function populateBWInput() {
-  if (!document.getElementById("bwInput")) return;
   // Show last known BW as a label but leave input BLANK
   // so we don't accidentally save a pre-filled value as a manual entry
   const latestBW = getLatestBW(currentPlayer);
@@ -5197,7 +6110,6 @@ function logWellness() {
 // ══════════════════════════════════════════════
 function buildTeamList() {
   const el = document.getElementById('teamList');
-  if (!el) return;
 
   // Position players only — exclude pitchers
   const posPairs = Object.entries(PLAYERS).filter(([,p]) => !['SP','RP'].includes(p.pos));
@@ -7198,7 +8110,7 @@ function switchProgTab(tab, btn) {
   if (tab === 'library') renderLibrary();
   if (tab === '1rm') render1RMTable();
   if (tab === 'session') calcLoad();
-  if (tab === 'grid' && document.getElementById("grid-athlete")) initGridBuilder();
+  if (tab === 'grid') initGridBuilder();
   if (tab === 'perio') initPeriodization();
 }
 
@@ -7311,7 +8223,6 @@ function setScope(scope, btn) {
 
 // ── Build day structure editor (weekly scope)
 function updateDayStructure() {
-  if (!document.getElementById("prog-macro")) return;
   const macro = document.getElementById('prog-macro').value;
   const n = parseInt(document.getElementById('prog-days-per-week').value);
   const template = (DAY_TEMPLATES[macro] || DAY_TEMPLATES['offseason'])[n] || [];
@@ -7319,7 +8230,6 @@ function updateDayStructure() {
 }
 
 function updateMesoDayStructure() {
-  if (!document.getElementById("prog-macro")) return;
   const macro = document.getElementById('prog-macro').value;
   const n = parseInt(document.getElementById('prog-days-per-week-meso').value);
   const template = (DAY_TEMPLATES[macro] || DAY_TEMPLATES['offseason'])[n] || [];
@@ -10732,7 +11642,6 @@ function printSession() {
 // PITCHER DASHBOARD
 // ══════════════════════════════════════════════
 function renderPitcherDashboard(p) {
-  if (!document.getElementById("pitcherPanel")) return;
   const panel = document.getElementById('pitcherPanel');
   const hittingPanel = document.getElementById('hittingPanel');
   if (!panel) return;
@@ -10917,7 +11826,7 @@ function deleteProgram(id) {
   if (!confirm('Delete this program?')) return;
   SAVED_PROGRAMS = SAVED_PROGRAMS.filter(p=>p.id!==id);
   persistPrograms();
-  if (document.getElementById("prog-library-grid")) renderProgramLibrary();
+  renderProgramLibrary();
 }
 
 function openProgram(id) {
@@ -12667,5 +13576,133 @@ try {
 
 
 </script>
+
+</div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+  <!-- ── DROP PROGRAM MODAL ── -->
+  <div id="dropProgramModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('dropProgramModal')">
+    <div class="modal-box" style="max-width:520px;">
+      <div class="modal-header">
+        <span class="modal-title">Drop Program</span>
+        <button class="modal-close" onclick="closeModal('dropProgramModal')">✕</button>
+      </div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Program Name</label>
+          <input id="drop-prog-name" placeholder="e.g. Power Phase — Day 2" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Type</label>
+            <select id="drop-prog-type" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;">
+              <option value="Session">Single Session</option>
+              <option value="Week">Weekly Plan</option>
+              <option value="Meso">Mesocycle</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Phase</label>
+            <select id="drop-prog-phase" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;">
+              <option value="In-Season">In-Season</option>
+              <option value="Pre-Season">Pre-Season</option>
+              <option value="Off-Season">Off-Season</option>
+              <option value="Hypertrophy">Hypertrophy</option>
+              <option value="Strength">Strength</option>
+              <option value="Power">Power</option>
+              <option value="Restoration">Restoration</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Notes (optional)</label>
+          <textarea id="drop-prog-notes" rows="2" placeholder="Context, rationale, cues…" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;"></textarea>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Program Content</label>
+          <div id="drop-prog-source-info" style="font-size:11px;color:var(--blue);margin:4px 0 6px;"></div>
+          <textarea id="drop-prog-content" rows="6" placeholder="Paste program here, or use 'Drop from Builder' to auto-fill from current program…"
+            style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;resize:vertical;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;">
+          <button onclick="fillFromBuilder()" style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:8px 14px;color:var(--text3);font-size:12px;cursor:pointer;">📋 Fill from Builder</button>
+          <button onclick="dropProgram()" style="background:var(--blue);border:none;border-radius:6px;padding:8px 20px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Save to Athlete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EDIT PROGRAM MODAL ── -->
+  <div id="editProgramModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('editProgramModal')">
+    <div class="modal-box" style="max-width:680px;max-height:90vh;display:flex;flex-direction:column;">
+      <div class="modal-header" style="flex-shrink:0;">
+        <span class="modal-title">✏️ Edit Program</span>
+        <button class="modal-close" onclick="closeModal('editProgramModal')">✕</button>
+      </div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1;">
+
+        <!-- Meta fields -->
+        <div>
+          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Program Name</label>
+          <input id="edit-prog-name" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Type</label>
+            <select id="edit-prog-type" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;">
+              <option value="Session">Single Session</option>
+              <option value="Week">Weekly Plan</option>
+              <option value="Meso">Mesocycle</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Phase</label>
+            <select id="edit-prog-phase" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;">
+              <option value="In-Season">In-Season</option>
+              <option value="Pre-Season">Pre-Season</option>
+              <option value="Off-Season">Off-Season</option>
+              <option value="Hypertrophy">Hypertrophy</option>
+              <option value="Strength">Strength</option>
+              <option value="Power">Power</option>
+              <option value="Restoration">Restoration</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Notes</label>
+          <textarea id="edit-prog-notes" rows="2" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+        </div>
+
+        <!-- Divider -->
+        <div style="border-top:1px solid var(--border);padding-top:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Program Content</label>
+            <div style="display:flex;gap:6px;">
+              <button onclick="editProgToggleView('rendered')" id="edit-view-rendered"
+                style="background:rgba(59,122,196,0.3);border:1px solid var(--blue);border-radius:4px;padding:3px 10px;color:var(--blue);font-size:10px;cursor:pointer;">👁 Preview</button>
+              <button onclick="editProgToggleView('raw')" id="edit-view-raw"
+                style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:4px;padding:3px 10px;color:var(--text3);font-size:10px;cursor:pointer;">{ } Raw HTML</button>
+            </div>
+          </div>
+
+          <!-- Rendered preview (editable inline) -->
+          <div id="edit-prog-rendered"
+            contenteditable="true"
+            style="min-height:200px;max-height:360px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;outline:none;">
+          </div>
+
+          <!-- Raw HTML editor (hidden by default) -->
+          <textarea id="edit-prog-raw" rows="10" style="display:none;width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;resize:vertical;box-sizing:border-box;line-height:1.5;"></textarea>
+        </div>
+
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;">
+        <button onclick="closeModal('editProgramModal')" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 16px;color:var(--text3);font-size:13px;cursor:pointer;">Cancel</button>
+        <button onclick="saveEditedProgram()" style="background:var(--blue);border:none;border-radius:6px;padding:8px 20px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">💾 Save Changes</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
