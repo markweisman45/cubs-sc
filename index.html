@@ -2421,7 +2421,7 @@ function gridOpenSession(key) {
   document.getElementById('gsm-title').value = session.title || '';
   document.getElementById('gsm-meta').textContent = `Week ${weekNum} · ${dayName}`;
   // Reset dropdowns
-  gsmPopulateCatDropdown();
+  if (document.getElementById("gsm-ex-search")) gsmPopulateCatDropdown();
   const catSel = document.getElementById('gsm-cat-sel');
   const exSel  = document.getElementById('gsm-ex-sel');
   if (catSel) catSel.value = '';
@@ -4178,7 +4178,7 @@ function switchDashTab(tab, btn) {
   const active = document.getElementById('dash-'+tab);
   if(active) { active.classList.add('active'); active.classList.remove('page'); active.style.display = 'block'; }
   if (tab === 'programs') {
-    renderAthletePrograms();
+    if (document.getElementById('prog-library-grid')) renderAthletePrograms();
   } else if (tab === 'performance') {
     renderPerfTable(PLAYERS[currentPlayer]);
     setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
@@ -4550,10 +4550,10 @@ function init() {
   loadPersistedData();    // Restore imported Statcast/CMJ/hitting data across sessions
   buildPlayerList();
   buildTeamList();
-  buildWeekView();
+  if (document.getElementById("weekGrid")) buildWeekView();
   selectPlayer("Nico Hoerner");
-  addHittingRow();
-  render1RMTable();
+  if (document.getElementById("hittingInputsTable")) addHittingRow();
+  if (document.getElementById("rmTable")) render1RMTable();
   const cl = document.getElementById('calc-lift');
   if (cl) cl.innerHTML = RM_LIFTS.map(l=>`<option value="${l}">${l}</option>`).join('');
   update1RMStrip('Nico Hoerner');
@@ -4566,6 +4566,7 @@ function nameToId(name) { return name.replace(/[^a-zA-Z0-9]/g, '-'); }
 
 function buildPlayerList() {
   const el = document.getElementById('playerList');
+  if (!el) return; // not on this page
   const posPlayers = Object.entries(PLAYERS).filter(([,p]) => !['SP','RP'].includes(p.pos));
 
   el.innerHTML = posPlayers.map(([name, p]) => {
@@ -4593,16 +4594,15 @@ function selectPlayer(name) {
   const btn = document.getElementById('pbtn-' + nameToId(name));
   if (btn) btn.classList.add('active');
   const p = PLAYERS[name];
-  document.getElementById('topbarPlayer').textContent = name;
-  document.getElementById('topbarMeta').innerHTML = `Chicago Cubs · ${p.pos} · #${p.number} · Updated <span>Today</span>`;
-  document.getElementById('prog-athlete').value = name;
+  const _tp = document.getElementById('topbarPlayer'); if (_tp) _tp.textContent = name;
+  const _tm = document.getElementById('topbarMeta'); if (_tm) _tm.innerHTML = `Chicago Cubs · ${p.pos} · #${p.number} · Updated <span>Today</span>`;
+  const _pa = document.getElementById('prog-athlete'); if (_pa) _pa.value = name;
   renderDashboard();
   // Reset wellness sliders for new player
   ['soreness','energy','sleep'].forEach(m => {
-    document.getElementById(m+'Input').value = 5;
-    updateSlider(m, 5);
+    const _si = document.getElementById(m+'Input'); if (_si) { _si.value = 5; updateSlider(m, 5); }
   });
-  updateComposite();
+  if (document.getElementById('compositeBar')) updateComposite();
   // Sync program builder controls from dashboard data
   const playerData = PLAYERS[name];
   if (playerData) {
@@ -7629,7 +7629,7 @@ function switchProgTab(tab, btn) {
   if (tab === 'library') renderLibrary();
   if (tab === '1rm') render1RMTable();
   if (tab === 'session') calcLoad();
-  if (tab === 'grid') initGridBuilder();
+  if (tab === 'grid' && document.getElementById("grid-athlete")) initGridBuilder();
   if (tab === 'perio') initPeriodization();
 }
 
@@ -7870,7 +7870,7 @@ function generateByScope_smart() {
   if (_out) _out.innerHTML = '<div style="padding:20px;color:var(--text3);font-family:DM Mono,monospace;font-size:12px;">⚡ Generating...</div>';
 
   try {
-    if (currentScope === 'day')        generateProgram();
+    if (currentScope === 'day' && document.getElementById("prog-athlete")) generateProgram();
     else if (currentScope === 'week')  generateWeek();
     else if (currentScope === 'meso')  generateMesocycle();
     else generateProgram(); // fallback
@@ -11345,7 +11345,7 @@ function deleteProgram(id) {
   if (!confirm('Delete this program?')) return;
   SAVED_PROGRAMS = SAVED_PROGRAMS.filter(p=>p.id!==id);
   persistPrograms();
-  renderProgramLibrary();
+  if (document.getElementById("prog-library-grid")) renderProgramLibrary();
 }
 
 function openProgram(id) {
@@ -11366,7 +11366,7 @@ function duplicateProgram(id) {
   const copy = { ...prog, id: Date.now(), name: prog.name + ' (Copy)', created: new Date().toISOString() };
   SAVED_PROGRAMS.unshift(copy);
   persistPrograms();
-  renderProgramLibrary();
+  if (document.getElementById("prog-library-grid")) renderProgramLibrary();
 }
 
 // ── Program Library renderer
