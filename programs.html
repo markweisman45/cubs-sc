@@ -1214,14 +1214,14 @@ body {
   .sidebar { width: 200px; min-width: 200px; }
 }
 </style>
-<div style="position:sticky;top:0;z-index:200;background:var(--bg1);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;gap:8px;height:48px;">
-  <a href="index.html" style="padding:6px 14px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:12px;font-weight:600;text-decoration:none;">← Dashboard</a>
+<div style="position:sticky;top:0;z-index:200;background:#0d1117;border-bottom:1px solid rgba(255,255,255,0.08);padding:0 16px;display:flex;align-items:center;gap:8px;height:48px;">
+  <a href="index.html" style="padding:6px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#94a3b8;font-size:12px;font-weight:600;text-decoration:none;">← Dashboard</a>
   <button class="nav-btn active" onclick="switchTab('program', this)">💪 Program Builder</button>
   <button class="nav-btn" onclick="switchTab('programs', this)">📁 My Programs</button>
   <button class="nav-btn" onclick="switchTab('calendar', this)">📆 Calendar</button>
 </div>
-<div class="content" style="padding:20px;max-width:1400px;margin:0 auto;">
-<div id="page-program" class="page">
+<div style="padding:20px 24px;max-width:1400px;margin:0 auto;">
+  <div id="page-program" class="page">
 
       <!-- Sub-tab bar -->
       <div style="display:flex;gap:2px;background:var(--bg3);padding:3px;border-radius:var(--radius-sm);margin-bottom:20px;width:fit-content;">
@@ -1797,7 +1797,7 @@ body {
       </div>
 
     </div><!-- /page-program -->
-<div id="page-programs" class="page">
+  <div id="page-programs" class="page">
       <div class="section-header">
         <div class="section-title">My Programs</div>
         <div style="font-size:12px;color:var(--text2);">Saved · Editable · Athlete-specific</div>
@@ -1834,7 +1834,7 @@ body {
     </div>
 
     <!-- ══ CALENDAR ══ -->
-<div id="page-calendar" class="page">
+  <div id="page-calendar" class="page">
       <div class="section-header">
         <div class="section-title">Training Calendar</div>
         <div style="font-size:12px;color:var(--text2);">Schedule · Games · Workouts</div>
