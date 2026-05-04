@@ -1214,33 +1214,13 @@ body {
   .sidebar { width: 200px; min-width: 200px; }
 }
 </style>
-
 <div style="position:sticky;top:0;z-index:200;background:var(--bg1);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;gap:8px;height:48px;">
   <a href="index.html" style="padding:6px 14px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:12px;font-weight:600;text-decoration:none;">← Dashboard</a>
   <button class="nav-btn active" onclick="switchTab('program', this)" style="margin-left:8px;">💪 Program Builder</button>
   <button class="nav-btn" onclick="switchTab('programs', this)">📁 My Programs</button>
 </div>
-
-<div id="app" style="padding:20px;max-width:1400px;margin:0 auto;">
-  <div id="page-program" class="tab-page active">
-    <div class="card section-mb" style="margin-top:16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-            <div class="card-title" style="margin:0;">⚾ Swing Workload — 30-Day Trend</div>
-            <div style="display:flex;gap:10px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);">
-              <span style="color:#3B7AC4;">📉 Low</span>
-              <span style="color:#22c55e;">⚾ Normal</span>
-              <span style="color:#f59e0b;">📈 High</span>
-              <span style="color:#ef4444;">🔥 Extreme</span>
-            </div>
-          </div>
-          <div class="chart-wrap xl"><canvas id="swingWorkloadChart"></canvas></div>
-        </div>
-      </div>
-
-    
-</div><!-- /page-dashboard -->
-
-<div id="page-program" class="page">
+<div class="content" style="padding:20px;max-width:1400px;margin:0 auto;">
+  <div id="page-program" class="page">
 
       <!-- Sub-tab bar -->
       <div style="display:flex;gap:2px;background:var(--bg3);padding:3px;border-radius:var(--radius-sm);margin-bottom:20px;width:fit-content;">
@@ -1505,10 +1485,7 @@ body {
         <div id="programOutput"></div>
 
         <!-- Static week view -->
-        <div class="card" id="weekGridCard">
-          <div class="card-title">📅 In-Season Week Reference</div>
-          <div class="week-grid" id="weekGrid"></div>
-        </div>
+        
       </div>
 
       <!-- ── GRID BUILDER ── -->
@@ -1819,85 +1796,7 @@ body {
       </div>
 
     </div><!-- /page-program -->
-
-    <!-- ── ADD EXERCISE MODAL ── -->
-    <div id="addExModal" class="modal-overlay" style="display:none;">
-      <div class="modal-box" style="width:480px;max-height:85vh;overflow-y:auto;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:20px;">Add / Edit Exercise</div>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div class="control-group">
-            <div class="control-label">Exercise Name *</div>
-            <input class="control-input" id="modal-name" placeholder="e.g. Trap Bar Jump" style="font-size:13px;">
-          </div>
-          <div class="control-group">
-            <div class="control-label">Category *</div>
-            <select class="control-select" id="modal-cat" style="font-size:13px;">
-              <option value="">Select category…</option>
-              <option>Squat Variations</option><option>Deadlift Variations</option>
-              <option>Hamstring</option><option>Calf Ankle</option>
-              <option>Hip ABD_ADD</option><option>UB Horizontal Push</option>
-              <option>UB Vertical Push</option><option>UB Horizontal Pull</option>
-              <option>UB Vertical Pull</option><option>Shoulder Complex</option>
-              <option>Grip</option><option>Core Flexion anti</option>
-              <option>Core Extension anti</option><option>Core Rotation anti</option>
-              <option>Core Lateral Flexion Extension anti</option>
-              <option>LB Plyos</option><option>UB Plyos</option>
-              <option>Olympic Variations</option><option>Acceleration</option>
-              <option>Max Velocity Running</option><option>COD/Agility</option>
-              <option>Curvilinear</option><option>Deceleration</option>
-              <option>ESD</option><option>Strongman Variations</option>
-              <option>Mobility</option><option>Biceps Triceps</option>
-              <option>New Category…</option>
-            </select>
-          </div>
-          <div class="control-group" id="modal-newcat-wrap" style="display:none;">
-            <div class="control-label">New Category Name</div>
-            <input class="control-input" id="modal-newcat" placeholder="e.g. Isometric Variations" style="font-size:13px;">
-          </div>
-          <div class="control-group">
-            <div class="control-label">1RM Lift Key (for load calc — leave blank if bodyweight/no load)</div>
-            <select class="control-select" id="modal-liftkey" style="font-size:13px;">
-              <option value="">— None (BW / No load) —</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <div class="control-label">YouTube URL (optional)</div>
-            <input class="control-input" id="modal-video" placeholder="https://youtube.com/watch?v=…" style="font-size:13px;">
-          </div>
-          <div class="control-group">
-            <div class="control-label">Coach Notes (optional)</div>
-            <input class="control-input" id="modal-notes" placeholder="e.g. Knee over toe, controlled eccentric" style="font-size:13px;">
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;margin-top:20px;">
-          <button class="generate-btn" onclick="saveExercise()">💾 Save Exercise</button>
-          <button onclick="closeAddExerciseModal()" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Cancel</button>
-          <button id="modal-delete-btn" style="display:none;margin-left:auto;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:10px 18px;color:var(--red);font-size:13px;cursor:pointer;" onclick="deleteExercise()">🗑 Delete</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ ATHLETE PROGRAMS TAB ══ -->
-    <div id="dash-programs" class="page">
-      <div class="card section-mb">
-        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-          <span>📋 PROGRAM HISTORY</span>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input id="prog-search" placeholder="Search programs…" oninput="renderAthletePrograms()"
-              style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;width:200px;">
-            <button onclick="openDropProgramModal()" style="background:var(--blue);border:none;border-radius:6px;padding:7px 16px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">＋ Drop Program</button>
-          </div>
-        </div>
-  </div>
-  <div id="page-programs" class="tab-page" style="display:none;">
-    <div id="athlete-programs-list" style="margin-top:8px;"></div>
-      </div>
-    </div>
-
-    <!-- ══ MY PROGRAMS ══ -->
-    
-
-<div id="page-programs" class="page">
+  <div id="page-programs" class="page">
       <div class="section-header">
         <div class="section-title">My Programs</div>
         <div style="font-size:12px;color:var(--text2);">Saved · Editable · Athlete-specific</div>
@@ -1929,9 +1828,12 @@ body {
       <div id="prog-library-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text3);">
         <div style="font-size:40px;margin-bottom:12px;">📋</div>
         <div style="font-size:16px;font-weight:500;margin-bottom:8px;">No saved programs yet</div>
-  </div>
-</div>
+        <div style="font-size:13px;">Generate a program in the Program Builder, then click Save to store it here.</div>
+      </div>
+    </div>
 
+    <!-- ══ CALENDAR ══ -->
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 
