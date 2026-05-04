@@ -2198,7 +2198,7 @@ function gridOpenSession(key) {
   document.getElementById('gsm-title').value = session.title || '';
   document.getElementById('gsm-meta').textContent = `Week ${weekNum} · ${dayName}`;
   // Reset dropdowns
-  gsmPopulateCatDropdown();
+  if (document.getElementById('page-program') || document.getElementById('prog-library-grid')) { gsmPopulateCatDropdown(); }
   const catSel = document.getElementById('gsm-cat-sel');
   const exSel  = document.getElementById('gsm-ex-sel');
   if (catSel) catSel.value = '';
@@ -9890,6 +9890,7 @@ function expandWeekDay(cardIdx, dayKey, athlete, meso, readiness, week, macro) {
 // WEEKLY CALENDAR VIEW (static reference)
 // ══════════════════════════════════════════════
 function buildWeekView() {
+  if (!document.getElementById('weekGrid')) return; // not on this page
   const days = [
     {day:'Mon',label:'Day 1 — Lift',   type:'lift',   key:'day1',    game:false},
     {day:'Tue',label:'Game',           type:'game',   key:'gameday', game:true},
@@ -11122,7 +11123,7 @@ function deleteProgram(id) {
   if (!confirm('Delete this program?')) return;
   SAVED_PROGRAMS = SAVED_PROGRAMS.filter(p=>p.id!==id);
   persistPrograms();
-  renderProgramLibrary();
+  if (document.getElementById('page-program') || document.getElementById('prog-library-grid')) { renderProgramLibrary(); }
 }
 
 function openProgram(id) {
