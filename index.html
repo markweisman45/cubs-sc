@@ -3370,10 +3370,12 @@ function gsmInsertProgram() {
   // Collect all saved programs from athlete + global library
   const athlete  = document.getElementById('grid-athlete')?.value || currentPlayer;
   const athProgs = (athletePrograms[athlete]||[]);
-  const allProgs = athProgs;
+  const libProgs = (typeof SAVED_PROGRAMS !== 'undefined') ? SAVED_PROGRAMS : [];
+  const seenIds  = new Set(athProgs.map(p=>p.id));
+  const allProgs = [...athProgs, ...libProgs.filter(p=>!seenIds.has(p.id))];
 
   if (!allProgs.length) {
-    alert('No saved programs found. Save a program from the Session Builder first, then come back to insert it.');
+    alert('No saved programs found. Templates are available in My Programs.');
     return;
   }
 
@@ -3852,10 +3854,14 @@ function perioOnCatChange() {
 function perioImportProgram() {
   const athlete = (document.getElementById('perio-athlete') || {}).value || currentPlayer;
   const phase   = (document.getElementById('perio-phase') || {}).value || 'inseason';
-  const allProgs = (athletePrograms[athlete] || []);
+  const athProgs = (athletePrograms[athlete] || []);
+  // Also include My Programs templates
+  const libProgs = (typeof SAVED_PROGRAMS !== 'undefined') ? SAVED_PROGRAMS : [];
+  const seenIds = new Set(athProgs.map(p=>p.id));
+  const allProgs = [...athProgs, ...libProgs.filter(p=>!seenIds.has(p.id))];
 
   if (!allProgs.length) {
-    alert('No saved programs found for ' + athlete + '. Save a program from the Session Builder or Grid Builder first.');
+    alert('No saved programs found. Templates are available in My Programs.');
     return;
   }
 
@@ -3947,12 +3953,54 @@ function perioDoImport(idx) {
   var def   = PHASE_DEFAULTS[phase] || PHASE_DEFAULTS.inseason;
   var athlete = (document.getElementById('perio-athlete') || {}).value || currentPlayer;
 
+  var imported = [];
+  var seen = {};
+
+  // Template path: read directly from OC_PROGRAMS raw data
+  if (prog.isTemplate && typeof OC_PROGRAMS !== 'undefined' && OC_PROGRAMS[prog.name]) {
+    var sessions = OC_PROGRAMS[prog.name];
+    sessions.forEach(function(s) {
+      s.exercises.forEach(function(ex) {
+        if (!ex.name || seen[ex.name]) return;
+        // Only import lift exercises into periodization tool
+        if (s.type !== 'lift' && s.type !== 'general') return;
+        seen[ex.name] = true;
+        var dbEx = EXERCISE_DB.find(function(e) { return e && e.name === ex.name; });
+        var rm = ((ATHLETE_1RM[athlete] || {})[ex.name]) || 0;
+        var loadPct = def.loadStart;
+        if (ex.load) { var lm = String(ex.load).match(/(\d+)\s*(lbs|kg)?/i); if (lm && rm > 0) loadPct = Math.round((parseInt(lm[1])/rm)*100); }
+        var setsNum = parseFloat(ex.sets) || def.sets[0];
+        var repsNum = parseFloat(ex.reps) || def.repsLo;
+        imported.push({
+          name: ex.name,
+          cat: dbEx ? dbEx.cat : '',
+          video: dbEx ? dbEx.video : '',
+          rm: rm, curve: 'linear',
+          startSets: setsNum, endSets: setsNum + 1,
+          startRepsLo: repsNum, startRepsHi: repsNum + 2,
+          endRepsLo: Math.max(1, repsNum - 2), endRepsHi: repsNum,
+          startLoad: loadPct, endLoad: Math.min(95, loadPct + 8),
+          tempo: ex.tempo || '3-1-1-0',
+          startRPE: def.rpeStart, endRPE: def.rpeEnd,
+        });
+      });
+    });
+    if (imported.length) {
+      document.getElementById('perio-import-modal').remove();
+      // Merge into plan
+      imported.forEach(function(ex) {
+        if (!perioPlan.exercises.find(function(e) { return e.name === ex.name; }))
+          perioPlan.exercises.push(ex);
+      });
+      perioRenderExList();
+      showStatus('✅ Imported ' + imported.length + ' exercises from "' + prog.name + '"');
+      return;
+    }
+  }
+
   // Parse exercises from program HTML content
   var tmp = document.createElement('div');
   tmp.innerHTML = prog.content || '';
-
-  var imported = [];
-  var seen = {};
 
   // Strategy -1: embedded JSON metadata block (most reliable — set by quickSaveProgram)
   var metaEl = tmp.querySelector('#prog-exercise-meta');
@@ -11772,7 +11820,7 @@ function renderTemplateHTML(name) {
   };
   return prog.map(function(s) {
     var cfg = TYPE_CONFIG[s.type] || TYPE_CONFIG.general;
-    var sessionLabel = s.session || s.day || '';
+    var sessionLabel = [s.session, s.day, s.week].filter(Boolean).join(' · ');
     var hdr = cfg.cols.map(function(c){
       return '<th style="padding:4px 8px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#888;font-weight:600;text-align:left;white-space:nowrap;">'+c+'</th>';
     }).join('');
