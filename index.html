@@ -1303,6 +1303,16 @@ body {
 
           <!-- Generate buttons -->
           <div style="display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap;">
+            <!-- Template context for AI -->
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+              <label style="font-size:11px;color:var(--text3);white-space:nowrap;">Base Program</label>
+              <select id="prog-template-context" onchange="loadTemplateContext()"
+                style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;">
+                <option value="">— None (generate from scratch) —</option>
+              </select>
+              <span id="prog-template-status" style="font-size:10px;color:var(--text3);"></span>
+            </div>
+
             <button id="generateBtn" onclick="generateByScope_smart()"
               style="background:linear-gradient(135deg,#0E3386,#3B7AC4);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;padding:12px 28px;cursor:pointer;letter-spacing:.5px;">
               ⚡ Smart Generate
@@ -8161,7 +8171,7 @@ function switchProgTab(tab, btn) {
   if (btn && btn.classList) btn.classList.add('active');
   if (tab === 'library') renderLibrary();
   if (tab === '1rm') render1RMTable();
-  if (tab === 'session') calcLoad();
+  if (tab === 'session') { calcLoad(); initTemplateContextDropdown(); }
   if (tab === 'grid') initGridBuilder();
   if (tab === 'perio') initPeriodization();
 }
@@ -9045,6 +9055,70 @@ function addTemplateRow(btn, type, blockLetter) {
 }
 
 
+// ── PROGRAM TEMPLATE CONTEXT FOR AI ─────────────────────────────────────────
+function initTemplateContextDropdown() {
+  var sel = document.getElementById('prog-template-context');
+  if (!sel || sel.options.length > 1) return;
+  // Add all OC_PROGRAMS
+  if (typeof OC_PROGRAMS !== 'undefined') {
+    Object.keys(OC_PROGRAMS).forEach(function(name) {
+      var o = document.createElement('option');
+      o.value = name;
+      o.textContent = name;
+      sel.appendChild(o);
+    });
+  }
+  // Add saved programs
+  if (typeof SAVED_PROGRAMS !== 'undefined') {
+    SAVED_PROGRAMS.filter(function(p) { return !p.isTemplate; }).forEach(function(p) {
+      var o = document.createElement('option');
+      o.value = '__saved__' + p.id;
+      o.textContent = '📝 ' + p.name;
+      sel.appendChild(o);
+    });
+  }
+}
+
+function loadTemplateContext() {
+  var val = (document.getElementById('prog-template-context')||{}).value;
+  var status = document.getElementById('prog-template-status');
+  if (!val) { if(status) status.textContent = ''; return; }
+  if (val.startsWith('__saved__')) {
+    if(status) status.textContent = '✓ Saved program loaded';
+  } else if (OC_PROGRAMS[val]) {
+    var sessions = OC_PROGRAMS[val];
+    var totalEx = sessions.reduce(function(s,sess){ return s + sess.exercises.length; }, 0);
+    if(status) status.textContent = '✓ ' + sessions.length + ' sessions · ' + totalEx + ' exercises';
+  }
+}
+
+function getTemplateContextForPrompt() {
+  var val = (document.getElementById('prog-template-context')||{}).value;
+  if (!val) return '';
+  
+  var lines = ['\nEXISTING PROGRAM TO MODIFY/ADJUST (use as base, make improvements based on athlete data):'];
+  
+  if (val.startsWith('__saved__')) {
+    var id = parseInt(val.replace('__saved__',''));
+    var prog = SAVED_PROGRAMS.find(function(p){ return p.id===id; });
+    if (prog) lines.push('Program: ' + prog.name + '\n' + (prog.notes||''));
+  } else if (OC_PROGRAMS[val]) {
+    var sessions = OC_PROGRAMS[val];
+    lines.push('Program: ' + val);
+    sessions.forEach(function(s) {
+      if (s.type !== 'lift' && s.type !== 'general') return;
+      lines.push('\n' + [s.session, s.day, s.week].filter(Boolean).join(' · ') + ' [' + s.type + ']:');
+      s.exercises.forEach(function(e) {
+        var detail = [e.sets ? e.sets+'x' : '', e.reps, e.tempo, e.load, e.notes].filter(Boolean).join(' ');
+        lines.push('  - ' + e.name + (detail ? ' (' + detail + ')' : ''));
+      });
+    });
+    lines.push('\nINSTRUCTION: Keep the same exercise selection and structure but adjust sets/reps/loads based on the athlete\'s current readiness, ACWR, and phase. You may substitute similar exercises if needed.');
+  }
+  
+  return lines.join('\n');
+}
+
 function buildAndShowPrompt(scope) {
   const athlete  = document.getElementById('prog-athlete').value;
   const macro    = document.getElementById('prog-macro').value;
@@ -9090,7 +9164,7 @@ READINESS: ${readiness.toUpperCase()} | ACWR: ${acwr.toFixed(3)} (${acwrLabel(ac
 DAYS SINCE CMJ: ${daysSince}
 ${cmjLatest ? `LATEST CMJ: Jump ${cmjLatest.jump?.toFixed(1)} cm | PP/BM ${cmjLatest.ppbm?.toFixed(1)} W/kg | BW ${cmjLatest.bw?.toFixed(1)} lbs` : ''}
 PERSONAL BESTS: Jump ${bests.jump||'—'} cm | PP/BM ${bests.ppbm||'—'} W/kg | Speed ${bests.speed||'—'} ft/s | Bat ${bests.bat||'—'} mph | Exit ${bests.exit||'—'} mph
-1RM DATABASE: ${rmSummary}
+1RM DATABASE: ${rmSummary}${getTemplateContextForPrompt()}
 
 FORMAT: Respond with ONLY clean HTML (no markdown, no backticks, no preamble). Use these exact CSS classes:
 - Each exercise block: <div class="program-block"><div class="block-header"><span class="pair-letter">A</span><span class="pair-tag">Block Name</span></div><div class="block-body"><div class="col-head"><div>Exercise</div><div>Sets</div><div>Reps</div><div>Tempo</div><div>Load</div></div> [exercise rows] </div></div>
