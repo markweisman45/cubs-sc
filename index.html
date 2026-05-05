@@ -5087,6 +5087,7 @@ function init() {
   loadWellness();         // Restore daily wellness logs
   loadAthletePrograms();  // Restore athlete program history
   seedMyPrograms();
+  if (document.getElementById('prog-template-context')) initTemplateContextDropdown();
   loadGridState();         // Restore grid builder state
   // Clean only truly null/undefined entries from EXERCISE_DB
   EXERCISE_DB = EXERCISE_DB.filter(e => e != null && e.name);
@@ -8172,6 +8173,7 @@ function switchProgTab(tab, btn) {
   if (tab === 'library') renderLibrary();
   if (tab === '1rm') render1RMTable();
   if (tab === 'session') { calcLoad(); initTemplateContextDropdown(); }
+  if (tab === 'grid' || tab === 'perio') initTemplateContextDropdown();
   if (tab === 'grid') initGridBuilder();
   if (tab === 'perio') initPeriodization();
 }
