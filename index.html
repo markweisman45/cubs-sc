@@ -1310,6 +1310,10 @@ body {
                 style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;">
                 <option value="">— None (generate from scratch) —</option>
               </select>
+              <button onclick="loadProgramToSession()" 
+                style="padding:6px 12px;background:rgba(59,122,196,0.2);border:1px solid rgba(59,122,196,0.4);border-radius:6px;color:var(--blue);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                📥 Load to Edit
+              </button>
               <span id="prog-template-status" style="font-size:10px;color:var(--text3);"></span>
             </div>
 
@@ -3986,7 +3990,7 @@ function perioDoImport(idx) {
           cat: dbEx ? dbEx.cat : '',
           video: dbEx ? dbEx.video : '',
           rm: rm, curve: 'linear',
-          startSets: setsNum, endSets: setsNum + 1,
+          startSets: Math.round(setsNum), endSets: Math.round(setsNum) + 1,
           startRepsLo: repsNum, startRepsHi: repsNum + 2,
           endRepsLo: Math.max(1, repsNum - 2), endRepsHi: repsNum,
           startLoad: loadPct, endLoad: Math.min(95, loadPct + 8),
@@ -4028,8 +4032,8 @@ function perioDoImport(idx) {
         imported.push({
           name: ex.name, cat: ex.cat || (dbEx ? dbEx.cat : ''), video: ex.video || (dbEx ? dbEx.video : ''),
           rm: rm, curve: 'linear',
-          startSets:   parseFloat(ex.sets) || def.sets[0],
-          endSets:     (parseFloat(ex.sets) || def.sets[0]) + 1,
+          startSets:   Math.round(parseFloat(ex.sets) || def.sets[0]),
+          endSets:     Math.round(parseFloat(ex.sets) || def.sets[0]) + 1,
           startRepsLo: def.repsLo, startRepsHi: def.repsHi,
           endRepsLo:   Math.max(1, def.repsLo - 2), endRepsHi: Math.max(1, def.repsHi - 2),
           startLoad:   loadPct, endLoad: loadPct + 8,
@@ -4057,8 +4061,8 @@ function perioDoImport(idx) {
     if (load) { var lm = String(load).match(/(\d+)%/); if (lm) loadPct = parseInt(lm[1]); }
     imported.push({
       name: name, cat: dbEx ? dbEx.cat : '', video: dbEx ? dbEx.video : '', rm: rm, curve: 'linear',
-      startSets:   parseFloat(sets) || def.sets[0],
-      endSets:     (parseFloat(sets) || def.sets[0]) + 1,
+      startSets:   Math.round(parseFloat(sets) || def.sets[0]),
+      endSets:     Math.round(parseFloat(sets) || def.sets[0]) + 1,
       startRepsLo: def.repsLo, startRepsHi: def.repsHi,
       endRepsLo:   Math.max(1, def.repsLo - 2), endRepsHi: Math.max(1, def.repsHi - 2),
       startLoad:   loadPct, endLoad: loadPct + 8,
@@ -4346,7 +4350,14 @@ function perioSavePlan() {
       var idx   = parseInt(inp.dataset.idx);
       var field = inp.dataset.field;
       if (!isNaN(idx) && field && perioPlan.exercises[idx]) {
-        perioPlan.exercises[idx][field] = inp.value;
+        // Round sets fields to whole numbers
+        var val = inp.value;
+        if (field === 'startSets' || field === 'endSets') {
+          var n = parseInt(val);
+          val = isNaN(n) ? val : String(n);
+          inp.value = val;
+        }
+        perioPlan.exercises[idx][field] = val;
       }
     });
   }
@@ -9058,6 +9069,61 @@ function addTemplateRow(btn, type, blockLetter) {
 
 
 // ── PROGRAM TEMPLATE CONTEXT FOR AI ─────────────────────────────────────────
+function loadProgramToSession() {
+  var val = (document.getElementById('prog-template-context')||{}).value;
+  if (!val) { alert('Select a Base Program first'); return; }
+  
+  var sessions = [];
+  if (val.startsWith('__saved__')) {
+    var id = parseInt(val.replace('__saved__',''));
+    var prog = SAVED_PROGRAMS.find(function(p){ return p.id===id; });
+    if (prog && (prog.html || prog.content)) {
+      // Load saved program HTML into programOutput
+      document.getElementById('programOutput').innerHTML = prog.html || prog.content;
+      switchProgTab('session', document.getElementById('ptab-session'));
+      showStatus('✅ Loaded "' + prog.name + '" — edit and save as new program');
+      return;
+    }
+  } else if (typeof OC_PROGRAMS !== 'undefined' && OC_PROGRAMS[val]) {
+    sessions = OC_PROGRAMS[val];
+  }
+  
+  if (!sessions.length) { alert('No exercises found in selected program'); return; }
+  
+  // Build HTML in program-block format for editing
+  var html = '';
+  var blockLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  var blockIdx = 0;
+  
+  sessions.forEach(function(s) {
+    var sessionLabel = [s.session, s.day, s.week].filter(Boolean).join(' · ');
+    var exRows = s.exercises.map(function(e) {
+      var load = e.load ? e.load : '';
+      var detail = [e.sets||'', e.reps||'', e.tempo||'', e.distance||'', e.intensity||''].filter(Boolean).join(' / ');
+      return '<div class="exercise-row">'
+        + '<div class="ex-name">' + e.name + '</div>'
+        + '<div class="ex-detail">' + (e.sets||'') + '</div>'
+        + '<div class="ex-detail">' + (e.reps||'') + '</div>'
+        + '<div class="ex-detail">' + (e.tempo||e.distance||'') + '</div>'
+        + '<div class="load-display">' + load + '</div>'
+        + '</div>';
+    }).join('');
+    
+    html += '<div class="program-block">'
+      + '<div class="block-header">'
+      + '<span class="pair-letter">' + (blockLetters[blockIdx++] || 'Z') + '</span>'
+      + '<span class="pair-tag">' + sessionLabel + '</span>'
+      + '</div>'
+      + '<div class="block-body">'
+      + '<div class="col-head"><div>Exercise</div><div>Sets</div><div>Reps</div><div>Tempo/Dist</div><div>Load</div></div>'
+      + exRows
+      + '</div></div>';
+  });
+  
+  document.getElementById('programOutput').innerHTML = html;
+  showStatus('✅ Loaded "' + val + '" — ' + sessions.length + ' sessions ready to edit');
+}
+
 function initTemplateContextDropdown() {
   var sel = document.getElementById('prog-template-context');
   if (!sel || sel.options.length > 1) return;
