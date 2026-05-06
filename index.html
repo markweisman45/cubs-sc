@@ -1337,7 +1337,11 @@ body {
         </div>
 
         <!-- OUTPUT AREA -->
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;">
+          <div style="display:flex;gap:8px;">
+            <button onclick="sendToPeriodization()" style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);border-radius:6px;color:var(--purple);font-size:11px;font-weight:600;padding:6px 14px;cursor:pointer;">📈 Send to Periodization</button>
+            <button onclick="saveLoadedProgram()" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:11px;font-weight:600;padding:6px 14px;cursor:pointer;">💾 Save Program</button>
+          </div>
           <button onclick="printSession()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:11px;font-weight:600;padding:6px 14px;cursor:pointer;">🖨️ Print / Save PDF</button>
         </div>
         <div id="programOutput"></div>
@@ -9069,6 +9073,118 @@ function addTemplateRow(btn, type, blockLetter) {
 
 
 // ── PROGRAM TEMPLATE CONTEXT FOR AI ─────────────────────────────────────────
+function sendToPeriodization() {
+  var output = document.getElementById('programOutput');
+  if (!output || !output.innerHTML.trim()) {
+    alert('Load a program first using the Base Program selector above.');
+    return;
+  }
+  
+  var val = (document.getElementById('prog-template-context')||{}).value;
+  var athlete = (document.getElementById('prog-athlete')||{}).value || currentPlayer;
+  var def = PHASE_DEFAULTS['offseason'] || PHASE_DEFAULTS['inseason'];
+  
+  var exercises = [];
+  var seen = {};
+  
+  // Extract from OC_PROGRAMS if template selected
+  if (val && !val.startsWith('__saved__') && typeof OC_PROGRAMS !== 'undefined' && OC_PROGRAMS[val]) {
+    OC_PROGRAMS[val].forEach(function(s) {
+      if (s.type !== 'lift' && s.type !== 'general') return;
+      s.exercises.forEach(function(e) {
+        if (!e.name || seen[e.name]) return;
+        seen[e.name] = true;
+        var dbEx = EXERCISE_DB.find(function(x){ return x && x.name === e.name; });
+        var rm = ((ATHLETE_1RM[athlete]||{})[e.name]) || 0;
+        var setsNum = Math.round(parseFloat(e.sets) || def.sets[0]);
+        var repsNum = Math.round(parseFloat(e.reps) || def.repsLo);
+        var loadPct = def.loadStart;
+        if (e.load) { var lm = String(e.load).match(/(\d+)/); if (lm && rm > 0) loadPct = Math.round((parseInt(lm[1])/rm)*100); }
+        exercises.push({
+          name: e.name, cat: dbEx?dbEx.cat:'', video: dbEx?dbEx.video:'',
+          rm: rm, curve: 'linear',
+          startSets: setsNum, endSets: setsNum+1,
+          startRepsLo: repsNum, startRepsHi: repsNum+2,
+          endRepsLo: Math.max(1,repsNum-2), endRepsHi: repsNum,
+          startLoad: loadPct, endLoad: Math.min(95,loadPct+8),
+          tempo: e.tempo || '3-1-1-0',
+          startRPE: def.rpeStart, endRPE: def.rpeEnd,
+        });
+      });
+    });
+  } else {
+    // Parse from rendered HTML table cells
+    output.querySelectorAll('tr').forEach(function(row) {
+      var cells = row.querySelectorAll('td');
+      if (cells.length < 2) return;
+      var name = cells[0].textContent.trim();
+      if (!name || name === 'Exercise') return;
+      if (seen[name]) return;
+      seen[name] = true;
+      var dbEx = EXERCISE_DB.find(function(x){ return x && x.name === name; });
+      var rm = ((ATHLETE_1RM[athlete]||{})[name]) || 0;
+      var setsNum = Math.round(parseFloat(cells[1]?cells[1].textContent:'') || def.sets[0]);
+      var repsNum = Math.round(parseFloat(cells[2]?cells[2].textContent:'') || def.repsLo);
+      exercises.push({
+        name: name, cat: dbEx?dbEx.cat:'', video: dbEx?dbEx.video:'',
+        rm: rm, curve: 'linear',
+        startSets: setsNum, endSets: setsNum+1,
+        startRepsLo: repsNum, startRepsHi: repsNum+2,
+        endRepsLo: Math.max(1,repsNum-2), endRepsHi: repsNum,
+        startLoad: def.loadStart, endLoad: Math.min(95,def.loadStart+8),
+        tempo: '3-1-1-0', startRPE: def.rpeStart, endRPE: def.rpeEnd,
+      });
+    });
+  }
+  
+  if (!exercises.length) {
+    alert('No lift exercises found to send. Only lift sessions are sent to the periodization tool.');
+    return;
+  }
+  
+  // Merge into perioPlan (don't clear existing)
+  var added = 0;
+  exercises.forEach(function(ex) {
+    if (!perioPlan.exercises.find(function(e){ return e.name===ex.name; })) {
+      perioPlan.exercises.push(ex);
+      added++;
+    }
+  });
+  
+  // Switch to periodization tab
+  var periBtn = document.getElementById('ptab-perio');
+  if (periBtn) switchProgTab('perio', periBtn);
+  perioRenderExList();
+  showStatus('✅ Sent ' + added + ' exercises to Periodization (' + (exercises.length-added) + ' already there)');
+}
+
+function saveLoadedProgram() {
+  var output = document.getElementById('programOutput');
+  if (!output || !output.innerHTML.trim()) { alert('No program loaded to save.'); return; }
+  var val = (document.getElementById('prog-template-context')||{}).value;
+  var name = val ? val.replace('__saved__','') : 'My Program';
+  name = prompt('Save program as:', name + ' (edited)');
+  if (!name) return;
+  var athlete = (document.getElementById('prog-athlete')||{}).value || currentPlayer;
+  var prog = {
+    id: Date.now(),
+    name: name,
+    notes: 'Edited from template',
+    athlete: athlete,
+    meso: (document.getElementById('prog-meso')||{}).value || 'offseason',
+    macro: (document.getElementById('prog-macro')||{}).value || 'offseason',
+    scope: 'meso', scopeLabel: 'Mesocycle', mesoLabel: name,
+    html: output.innerHTML,
+    content: output.innerHTML,
+    created: new Date().toISOString(),
+    isTemplate: false,
+  };
+  SAVED_PROGRAMS.unshift(prog);
+  persistPrograms();
+  showStatus('✅ Saved "' + name + '" to My Programs');
+  alert('Saved! Find it in My Programs under ' + athlete);
+}
+
 function loadProgramToSession() {
   var val = (document.getElementById('prog-template-context')||{}).value;
   if (!val) { alert('Select a Base Program first'); return; }
