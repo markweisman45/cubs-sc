@@ -9073,55 +9073,31 @@ function loadProgramToSession() {
   var val = (document.getElementById('prog-template-context')||{}).value;
   if (!val) { alert('Select a Base Program first'); return; }
   
-  var sessions = [];
+  var output = document.getElementById('programOutput');
+  if (!output) return;
+
   if (val.startsWith('__saved__')) {
     var id = parseInt(val.replace('__saved__',''));
     var prog = SAVED_PROGRAMS.find(function(p){ return p.id===id; });
-    if (prog && (prog.html || prog.content)) {
-      // Load saved program HTML into programOutput
-      document.getElementById('programOutput').innerHTML = prog.html || prog.content;
+    if (prog) {
+      // Use existing rendered HTML if available, otherwise render from template
+      var templateKey = Object.keys(OC_PROGRAMS||{}).find(function(k){ return k===prog.name; });
+      output.innerHTML = templateKey ? renderTemplateHTML(templateKey) : (prog.html||prog.content||'');
       switchProgTab('session', document.getElementById('ptab-session'));
-      showStatus('✅ Loaded "' + prog.name + '" — edit and save as new program');
+      showStatus('✅ Loaded "' + prog.name + '" — edit cells then save');
       return;
     }
-  } else if (typeof OC_PROGRAMS !== 'undefined' && OC_PROGRAMS[val]) {
-    sessions = OC_PROGRAMS[val];
   }
   
-  if (!sessions.length) { alert('No exercises found in selected program'); return; }
+  // OC_PROGRAMS template — render using same format as My Programs viewer
+  if (typeof OC_PROGRAMS !== 'undefined' && OC_PROGRAMS[val]) {
+    output.innerHTML = renderTemplateHTML(val);
+    switchProgTab('session', document.getElementById('ptab-session'));
+    showStatus('✅ Loaded "' + val + '" — click any cell to edit, then save');
+    return;
+  }
   
-  // Build HTML in program-block format for editing
-  var html = '';
-  var blockLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  var blockIdx = 0;
-  
-  sessions.forEach(function(s) {
-    var sessionLabel = [s.session, s.day, s.week].filter(Boolean).join(' · ');
-    var exRows = s.exercises.map(function(e) {
-      var load = e.load ? e.load : '';
-      var detail = [e.sets||'', e.reps||'', e.tempo||'', e.distance||'', e.intensity||''].filter(Boolean).join(' / ');
-      return '<div class="exercise-row">'
-        + '<div class="ex-name">' + e.name + '</div>'
-        + '<div class="ex-detail">' + (e.sets||'') + '</div>'
-        + '<div class="ex-detail">' + (e.reps||'') + '</div>'
-        + '<div class="ex-detail">' + (e.tempo||e.distance||'') + '</div>'
-        + '<div class="load-display">' + load + '</div>'
-        + '</div>';
-    }).join('');
-    
-    html += '<div class="program-block">'
-      + '<div class="block-header">'
-      + '<span class="pair-letter">' + (blockLetters[blockIdx++] || 'Z') + '</span>'
-      + '<span class="pair-tag">' + sessionLabel + '</span>'
-      + '</div>'
-      + '<div class="block-body">'
-      + '<div class="col-head"><div>Exercise</div><div>Sets</div><div>Reps</div><div>Tempo/Dist</div><div>Load</div></div>'
-      + exRows
-      + '</div></div>';
-  });
-  
-  document.getElementById('programOutput').innerHTML = html;
-  showStatus('✅ Loaded "' + val + '" — ' + sessions.length + ' sessions ready to edit');
+  alert('Program not found');
 }
 
 function initTemplateContextDropdown() {
