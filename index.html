@@ -688,7 +688,7 @@ body {
             <div class="card-title">TODAY'S READINESS</div>
             <div class="status-badge yellow" id="statusBadge">● MONITOR</div>
             <div class="readiness-score yellow" id="readinessScore">1.000</div>
-            <div class="readiness-label">Readiness Index vs 28-day Baseline</div>
+            <div class="readiness-label">Readiness Index vs EWMA Baseline</div>
             <div class="readiness-meta">
               <div class="r-meta-item">
                 <div class="r-meta-val" id="daysSinceCMJ">4</div>
@@ -1034,7 +1034,7 @@ body {
       <!-- WORKLOAD TAB -->
       <div id="dash-workload" class="page">
         <div class="card section-mb">
-          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (7-day : 28-day)</div>
+          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (EWMA 7:28)</div>
           <div class="chart-wrap xl"><canvas id="acwrChart"></canvas></div>
         </div>
         <div class="grid-2">
@@ -5406,23 +5406,40 @@ function computeMonotonyStrain(playerName) {
 
 // ── Compute ACWR live from importedData.statcast relative to TODAY
 // This always accounts for off days since the last game
-// ── SINGLE SOURCE OF TRUTH: calcACWR(rows, refDate) ─────────────────────────
+// ── SINGLE SOURCE OF TRUTH: calcACWR using EWMA ─────────────────────────────
+// λ_acute = 2/(7+1) = 0.25, λ_chronic = 2/(28+1) ≈ 0.069
+// Iterates day-by-day from first game to refDate, off days = 0 load
 function calcACWR(rows, refDate) {
-  const ref = new Date(refDate); ref.setHours(0,0,0,0);
-  const c7  = new Date(ref); c7.setDate(c7.getDate()-7);
-  const c28 = new Date(ref); c28.setDate(c28.getDate()-28);
-  const heA = rows.filter(r=>safeParseDate(r.date)>c7  && safeParseDate(r.date)<=ref).reduce((s,r)=>s+(+r.heDist||0),0);
-  const heC = rows.filter(r=>safeParseDate(r.date)>c28 && safeParseDate(r.date)<=ref).reduce((s,r)=>s+(+r.heDist||0),0);
-  const tdA = rows.filter(r=>safeParseDate(r.date)>c7  && safeParseDate(r.date)<=ref).reduce((s,r)=>s+(+r.dist||0),0);
-  const tdC = rows.filter(r=>safeParseDate(r.date)>c28 && safeParseDate(r.date)<=ref).reduce((s,r)=>s+(+r.dist||0),0);
-  const first    = safeParseDate(rows[0].date);
-  const spanDays = Math.max(1, Math.round((ref-first)/86400000)+1);
-  const chrDays  = Math.min(28, spanDays);
-  const actDays  = Math.min(7,  spanDays);
-  const heChr = chrDays>0 ? (heC/chrDays)*actDays : 0;
-  const tdChr = chrDays>0 ? (tdC/chrDays)*actDays : 0;
-  const heAcwr = heChr>0 ? parseFloat((heA/heChr).toFixed(3)) : 1.0;
-  const tdAcwr = tdChr>0 ? parseFloat((tdA/tdChr).toFixed(3)) : 1.0;
+  if (!rows || !rows.length) return { acwr: 1.0, heAcwr: 1.0, tdAcwr: 1.0 };
+  const ref   = new Date(refDate); ref.setHours(0,0,0,0);
+  const first = new Date(safeParseDate(rows[0].date)); first.setHours(0,0,0,0);
+  const la = 2/(7+1);    // acute lambda
+  const lc = 2/(28+1);   // chronic lambda
+
+  // Build date→load lookup
+  const lookup = {};
+  rows.forEach(function(r) {
+    var d = new Date(safeParseDate(r.date)); d.setHours(0,0,0,0);
+    var key = d.getTime();
+    if (!lookup[key]) lookup[key] = {he:0, td:0};
+    lookup[key].he += (+r.heDist||0);
+    lookup[key].td += (+r.dist||0);
+  });
+
+  var he_a=0, he_c=0, td_a=0, td_c=0;
+  var d = new Date(first);
+  while (d <= ref) {
+    var key = d.getTime();
+    var load = lookup[key] || {he:0, td:0};
+    he_a = la * load.he + (1-la) * he_a;
+    he_c = lc * load.he + (1-lc) * he_c;
+    td_a = la * load.td + (1-la) * td_a;
+    td_c = lc * load.td + (1-lc) * td_c;
+    d.setDate(d.getDate()+1);
+  }
+
+  var heAcwr = he_c > 0 ? parseFloat((he_a/he_c).toFixed(3)) : 1.0;
+  var tdAcwr = td_c > 0 ? parseFloat((td_a/td_c).toFixed(3)) : 1.0;
   return { acwr: parseFloat(((heAcwr+tdAcwr)/2).toFixed(3)), heAcwr, tdAcwr };
 }
 
@@ -11596,25 +11613,10 @@ function applyStatcastData() {
       const _parsedDates = rows_for_acwr.map(r => safeParseDate(r.date).getTime());
       p.acwrHistory = historyRows.map((r, _hi) => {
         const rTime = safeParseDate(r.date).getTime();
-        const ms7   = 7  * 86400000;
-        const ms28  = 28 * 86400000;
-        let heA=0, heC=0, tdA=0, tdC=0;
-        rows_for_acwr.forEach((x, xi) => {
-          const t = _parsedDates[xi];
-          if (t <= rTime) {
-            const diff = rTime - t;
-            if (diff < ms7)  { heA += x.heDist; tdA += x.dist; }
-            if (diff < ms28) { heC += x.heDist; tdC += x.dist; }
-          }
-        });
-        const _firstMs2 = _parsedDates[0];
-        const _span2    = Math.max(1, Math.round((rTime-_firstMs2)/86400000)+1);
-        const _chrD2    = Math.min(28, _span2);
-        const _actD2    = Math.min(7,  _span2);
-        const heChrAvg = _chrD2 > 0 ? (heC/_chrD2)*_actD2 : 0;
-        const tdChrAvg = _chrD2 > 0 ? (tdC/_chrD2)*_actD2 : 0;
-        const heAcwr = heChrAvg > 0 ? parseFloat((heA/heChrAvg).toFixed(3)) : 1.0;
-        const tdAcwr = tdChrAvg > 0 ? parseFloat((tdA/tdChrAvg).toFixed(3)) : 1.0;
+        // Use calcACWR (EWMA) for each history point
+        const _ewma = calcACWR(rows_for_acwr, new Date(rTime));
+        const heAcwr = _ewma.heAcwr;
+        const tdAcwr = _ewma.tdAcwr;
         return {
           date: fmtDate(r.date),
           he:   heAcwr,
