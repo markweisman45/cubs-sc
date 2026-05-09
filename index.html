@@ -5446,9 +5446,9 @@ function init() {
   loadWellness();         // Restore daily wellness logs
   loadAthletePrograms();  // Restore athlete program history
   seedMyPrograms();
-  loadAnnualData();
-  if (document.getElementById('pb-athlete')) pbInit();
-  if (document.getElementById('prog-template-context')) initTemplateContextDropdown();
+  if (typeof loadAnnualData==='function') loadAnnualData();
+  if (document.getElementById('pb-athlete') && typeof pbInit==='function') pbInit();
+  if (document.getElementById('prog-template-context') && typeof initTemplateContextDropdown==='function') initTemplateContextDropdown();
   loadGridState();         // Restore grid builder state
   // Clean only truly null/undefined entries from EXERCISE_DB
   EXERCISE_DB = EXERCISE_DB.filter(e => e != null && e.name);
@@ -5465,12 +5465,13 @@ function init() {
   // Init day structure editors with defaults
   updateDayStructure();
   updateMesoDayStructure();
-}
+} // end init
 
 function nameToId(name) { return name.replace(/[^a-zA-Z0-9]/g, '-'); }
 
 function buildPlayerList() {
   const el = document.getElementById('playerList');
+  if (!el) return;
   const posPlayers = Object.entries(PLAYERS).filter(([,p]) => !['SP','RP'].includes(p.pos));
 
   el.innerHTML = posPlayers.map(([name, p]) => {
@@ -6551,7 +6552,7 @@ function logWellness() {
 // ══════════════════════════════════════════════
 function buildTeamList() {
   const el = document.getElementById('teamList');
-
+  if (!el) return;
   // Position players only — exclude pitchers
   const posPairs = Object.entries(PLAYERS).filter(([,p]) => !['SP','RP'].includes(p.pos));
 
@@ -9968,8 +9969,8 @@ function pbSave() {
 
 var ANNUAL_PLANS = {};
 var MESO_PLANS   = {};
-const ANNUAL_KEY = 'cubs_sc_annual_v1';
-const MESO_KEY   = 'cubs_sc_meso_v1';
+var ANNUAL_KEY = 'cubs_sc_annual_v1';
+var MESO_KEY   = 'cubs_sc_meso_v1';
 
 function loadAnnualData() {
   try { ANNUAL_PLANS = JSON.parse(localStorage.getItem(ANNUAL_KEY)||'{}'); } catch(e) {}
@@ -9980,7 +9981,7 @@ function saveAnnualData() {
   try { localStorage.setItem(MESO_KEY,   JSON.stringify(MESO_PLANS));   } catch(e) {}
 }
 
-const BLOCK_TYPES = {
+var BLOCK_TYPES = {
   accumulation:  { label:'Accumulation',    color:'#6366f1', short:'Acc' },
   transmutation: { label:'Transmutation',   color:'#a78bfa', short:'Trn' },
   realization:   { label:'Realization',     color:'#c084fc', short:'Rlz' },
@@ -9991,12 +9992,12 @@ const BLOCK_TYPES = {
 };
 
 // Speed qualities for sliders
-const SPEED_QUALS = ['Acceleration','Max Velocity','COD','Deceleration','Curvilinear'];
-const SPEED_COLORS = ['#f59e0b','#ef4444','#8b5cf6','#22c55e','#06b6d4'];
+var SPEED_QUALS = ['Acceleration','Max Velocity','COD','Deceleration','Curvilinear'];
+var SPEED_COLORS = ['#f59e0b','#ef4444','#8b5cf6','#22c55e','#06b6d4'];
 
 // ESD qualities
-const ESD_QUALS = ['Aerobic','Lactic','Alactic'];
-const ESD_COLORS = ['#22c55e','#f59e0b','#ef4444'];
+var ESD_QUALS = ['Aerobic','Lactic','Alactic'];
+var ESD_COLORS = ['#22c55e','#f59e0b','#ef4444'];
 
 // Cubs season phases (Nov year → Oct year+1)
 function getSeasonPhases(year) {
@@ -10913,6 +10914,7 @@ function generateProgram() {
 }
 
 
+function generateWeek() { return generateWeeklyPlan(); }
 function generateWeeklyPlan() {
   const athlete    = document.getElementById('prog-athlete').value;
   const rdOverride = document.getElementById('prog-readiness').value;
@@ -12704,13 +12706,19 @@ function afterGenerate() {
   out.parentNode.insertBefore(bar, out);
 }
 
-// Patch generate functions to call afterGenerate
-const _origGenerate = generateProgram;
-generateProgram = function() { _origGenerate(); afterGenerate(); };
-const _origWeek = generateWeek;
-generateWeek = function() { _origWeek(); afterGenerate(); };
-const _origMeso = generateMesocycle;
-generateMesocycle = function() { _origMeso(); afterGenerate(); };
+// Patch generate functions to call afterGenerate (safe guards)
+if (typeof generateProgram === 'function') {
+  var _origGenerate = generateProgram;
+  generateProgram = function() { _origGenerate(); if(typeof afterGenerate==='function') afterGenerate(); };
+}
+if (typeof generateWeek === 'function') {
+  var _origWeek = generateWeek;
+  generateWeek = function() { _origWeek(); if(typeof afterGenerate==='function') afterGenerate(); };
+}
+if (typeof generateMesocycle === 'function') {
+  var _origMeso = generateMesocycle;
+  generateMesocycle = function() { _origMeso(); if(typeof afterGenerate==='function') afterGenerate(); };
+}
 
 // ══════════════════════════════════════════════
 // CALENDAR ENGINE
