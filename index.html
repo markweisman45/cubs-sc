@@ -1435,6 +1435,27 @@ body {
               style="background:var(--blue);border:none;border-radius:6px;padding:6px 14px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;" title="Add selected exercise">＋</button>
           </div>
 
+          <!-- Smart Prescriber Panel -->
+          <div id="gsm-prescriber" style="display:none;background:rgba(59,122,196,0.08);border:1px solid rgba(59,122,196,0.25);border-radius:8px;padding:10px;margin-top:4px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <span style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:1px;">⚡ Smart Prescriber</span>
+              <select id="gsm-zone-pick" onchange="gsmApplyZone()" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--text);font-size:10px;">
+                <option value="">— Training Goal —</option>
+                <option value="z1_endurance">Z1 Strength Endurance</option>
+                <option value="z2_hypertrophy">Z2 Hypertrophy</option>
+                <option value="z3_funct_hyp">Z3 Functional Hypertrophy</option>
+                <option value="z4_relative">Z4 Relative Strength</option>
+                <option value="power_ssc">Power / SSC</option>
+                <option value="inseason">In-Season Maintenance</option>
+                <option value="accumulation">Accumulation</option>
+                <option value="transmutation">Transmutation</option>
+                <option value="realization">Realization</option>
+                <option value="restore">Restoration</option>
+              </select>
+            </div>
+            <div id="gsm-prescriber-content" style="font-size:10px;color:var(--text2);line-height:1.6;"></div>
+          </div>
+
           <!-- Paste from Excel / Google Sheets -->
           <div style="position:relative;">
             <textarea id="gsm-paste-zone"
@@ -1482,17 +1503,26 @@ body {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                   <div>
                     <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Phase</label>
-                    <select id="perio-phase" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
-                      <option value="inseason">In-Season</option>
-                      <option value="hyp1">Hypertrophy 1</option>
-                      <option value="hyp2">Hypertrophy 2</option>
-                      <option value="relstr">Relative Strength</option>
-                      <option value="maxstr">Maximum Strength</option>
-                      <option value="power1">Power 1 (Str-Speed)</option>
-                      <option value="power2">Power 2 (Spd-Str)</option>
-                      <option value="power3">Power 3 (Accel)</option>
-                      <option value="restore">Restoration</option>
+                    <select id="perio-phase" onchange="perioPhasePick()" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
+                      <optgroup label="── Block Periodization ──">
+                        <option value="accumulation">Accumulation (Z2 · 8-12 reps · 70-78%)</option>
+                        <option value="transmutation">Transmutation (Z3 · 4-7 reps · 80-88%)</option>
+                        <option value="realization">Realization (Z4 · 1-4 reps · 88-97%)</option>
+                      </optgroup>
+                      <optgroup label="── Training Zones ──">
+                        <option value="z1_endurance">Z1 Strength Endurance (13-20 reps · 60-68%)</option>
+                        <option value="z2_hypertrophy">Z2 Hypertrophy (9-12 reps · 70-76%)</option>
+                        <option value="z3_funct_hyp">Z3 Functional Hypertrophy (5-8 reps · 78-83%)</option>
+                        <option value="z4_relative">Z4 Relative Strength (1-5 reps · 85-100%)</option>
+                        <option value="power_ssc">Power / SSC (2-5 reps · 75-85%)</option>
+                      </optgroup>
+                      <optgroup label="── General ──">
+                        <option value="inseason" selected>In-Season Maintenance</option>
+                        <option value="offseason">Off-Season General</option>
+                        <option value="restore">Restoration / Unload</option>
+                      </optgroup>
                     </select>
+                    <div id="perio-phase-desc" style="font-size:10px;color:var(--text3);margin-top:4px;font-style:italic;"></div>
                   </div>
                   <div>
                     <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Weeks</label>
@@ -3061,6 +3091,9 @@ function gsmRenderExercises() {
               <input type="text" value="${ex[field]||''}"
                 placeholder="${['4','6','70%','3-1-1-0','90s',''][fi]}"
                 data-bi="${bi}" data-ei="${ei}" data-field="${field}"
+                onfocus="field==='tempo'?showTempoTooltip(this):field==='rest'?showRestTooltip(this):null"
+                onblur="hideTempoTooltip();hideRestTooltip()"
+                oninput="field==='tempo'?showTempoTooltip(this):field==='rest'?showRestTooltip(this):null"
                 oninput="gsmUpdateEx(${bi},${ei},'${field}',this.value)"
                 style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;padding:3px 5px;box-sizing:border-box;outline:none;"
                 onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
@@ -3820,17 +3853,125 @@ const PERIO_CURVES = {
 
 const CURVE_COLORS = { linear:'#3B7AC4', wave:'#f59e0b', step:'#22c55e' };
 
+// ── PHASE DEFAULTS based on Rep Scheme Continuum & Relative Intensity Table ──
+// Z1=Strength Endurance(13-20 reps, 65-70%), Z2=Hypertrophy(9-12, 70-76%)
+// Z3=Functional Hypertrophy(5-8, 78-83%), Z4=Relative Strength(1-5, 85-100%)
 const PHASE_DEFAULTS = {
-  inseason:  { sets:[2,3],  repsLo:3,  repsHi:5,  loadStart:75, loadEnd:80,  rpeStart:7.0, rpeEnd:7.5 },
-  hyp1:      { sets:[3,4],  repsLo:8,  repsHi:12, loadStart:65, loadEnd:75,  rpeStart:7.0, rpeEnd:8.0 },
-  hyp2:      { sets:[4,5],  repsLo:6,  repsHi:10, loadStart:70, loadEnd:80,  rpeStart:7.5, rpeEnd:8.5 },
-  relstr:    { sets:[3,5],  repsLo:3,  repsHi:6,  loadStart:80, loadEnd:88,  rpeStart:7.5, rpeEnd:8.5 },
-  maxstr:    { sets:[3,5],  repsLo:1,  repsHi:5,  loadStart:85, loadEnd:93,  rpeStart:8.0, rpeEnd:9.5 },
-  power1:    { sets:[3,5],  repsLo:2,  repsHi:5,  loadStart:75, loadEnd:85,  rpeStart:7.0, rpeEnd:8.5 },
-  power2:    { sets:[4,6],  repsLo:2,  repsHi:4,  loadStart:65, loadEnd:78,  rpeStart:7.0, rpeEnd:8.0 },
-  power3:    { sets:[4,6],  repsLo:2,  repsHi:4,  loadStart:55, loadEnd:68,  rpeStart:6.5, rpeEnd:8.0 },
-  restore:   { sets:[2,3],  repsLo:8,  repsHi:12, loadStart:50, loadEnd:60,  rpeStart:5.0, rpeEnd:6.5 },
+  // ── ACCUMULATION (high volume, moderate intensity) ────────────────────────
+  accumulation: { sets:[3,5], repsLo:8,  repsHi:12, loadStart:70, loadEnd:78,  rpeStart:6.5, rpeEnd:7.5,
+    label:'Accumulation', zone:'Z2', restSec:'90-120', tempo:'3-1-1-0',
+    description:'High volume, metabolic hypertrophy. Volume drives adaptation.' },
+  // ── TRANSMUTATION (moderate volume, high intensity) ───────────────────────
+  transmutation: { sets:[4,5], repsLo:4,  repsHi:7,  loadStart:80, loadEnd:88,  rpeStart:7.5, rpeEnd:8.5,
+    label:'Transmutation', zone:'Z3', restSec:'180-240', tempo:'4-1-1-0',
+    description:'Functional hypertrophy to relative strength. Intensification phase.' },
+  // ── REALIZATION (low volume, maximal intensity) ───────────────────────────
+  realization: { sets:[3,4],  repsLo:1,  repsHi:4,  loadStart:88, loadEnd:97,  rpeStart:8.5, rpeEnd:9.5,
+    label:'Realization', zone:'Z4', restSec:'300-480', tempo:'2-1-1-0',
+    description:'Peak strength expression. Neural drive. Low volume, max intensity.' },
+  // ── IN-SEASON MAINTENANCE ─────────────────────────────────────────────────
+  inseason: { sets:[2,3],  repsLo:3,  repsHi:5,  loadStart:80, loadEnd:85,  rpeStart:7.0, rpeEnd:8.0,
+    label:'In-Season', zone:'Z4', restSec:'180-300', tempo:'3-1-1-0',
+    description:'Maintain strength & power. Minimize fatigue. Heavy but low volume.' },
+  // ── OFF-SEASON GENERAL ───────────────────────────────────────────────────
+  offseason: { sets:[3,4],  repsLo:6,  repsHi:10, loadStart:72, loadEnd:80,  rpeStart:7.0, rpeEnd:8.0,
+    label:'Off-Season', zone:'Z2-Z3', restSec:'120-180', tempo:'3-1-1-0',
+    description:'General strength development. Balanced volume and intensity.' },
+  // ── SPECIFIC ZONES ────────────────────────────────────────────────────────
+  z1_endurance: { sets:[3,5],  repsLo:13, repsHi:20, loadStart:60, loadEnd:68,  rpeStart:6.0, rpeEnd:7.0,
+    label:'Z1 Strength Endurance', zone:'Z1', restSec:'0-90', tempo:'2-1-1-0',
+    description:'Metabolic demand. High reps, short rest. 60-68% 1RM.' },
+  z2_hypertrophy: { sets:[4,5], repsLo:9, repsHi:12, loadStart:70, loadEnd:76,  rpeStart:7.0, rpeEnd:8.0,
+    label:'Z2 Hypertrophy', zone:'Z2', restSec:'90-120', tempo:'3-1-1-0',
+    description:'Metabolic hypertrophy. 70-76% 1RM. 40-70s TUT per set.' },
+  z3_funct_hyp: { sets:[3,5],  repsLo:5,  repsHi:8,  loadStart:78, loadEnd:83,  rpeStart:7.5, rpeEnd:8.5,
+    label:'Z3 Functional Hypertrophy', zone:'Z3', restSec:'120-180', tempo:'4-1-1-0',
+    description:'Neuro-metabolic. 78-83% 1RM. 20-40s TUT per set.' },
+  z4_relative: { sets:[3,5],   repsLo:1,  repsHi:5,  loadStart:85, loadEnd:97,  rpeStart:8.0, rpeEnd:9.5,
+    label:'Z4 Relative Strength', zone:'Z4', restSec:'300-480', tempo:'2-1-1-0',
+    description:'Neural drive. 85-100% 1RM. 0-20s TUT. Full neural recovery between sets.' },
+  power_ssc: { sets:[3,5],     repsLo:2,  repsHi:5,  loadStart:75, loadEnd:85,  rpeStart:7.0, rpeEnd:8.5,
+    label:'Power/SSC', zone:'Z4', restSec:'180-300', tempo:'X-0-1-0',
+    description:'Explosive/SSC. Max intent. 75-85% 1RM. X = maximal speed.' },
+  restore: { sets:[2,3],       repsLo:8,  repsHi:12, loadStart:50, loadEnd:60,  rpeStart:5.0, rpeEnd:6.5,
+    label:'Restoration', zone:'Z1', restSec:'60-90', tempo:'2-1-1-0',
+    description:'Recovery/unload week. 50-60% 1RM. Low demand, maintain movement quality.' },
+  // Legacy aliases
+  hyp1: { sets:[3,4], repsLo:8, repsHi:12, loadStart:70, loadEnd:76, rpeStart:7.0, rpeEnd:8.0,
+    label:'Hypertrophy I', zone:'Z2', restSec:'90-120', tempo:'3-1-1-0', description:'Metabolic hypertrophy block.' },
+  hyp2: { sets:[4,5], repsLo:6, repsHi:10, loadStart:76, loadEnd:82, rpeStart:7.5, rpeEnd:8.5,
+    label:'Hypertrophy II', zone:'Z2-Z3', restSec:'120-180', tempo:'4-1-1-0', description:'Functional hypertrophy block.' },
+  relstr: { sets:[3,5], repsLo:3, repsHi:6, loadStart:82, loadEnd:90, rpeStart:8.0, rpeEnd:9.0,
+    label:'Relative Strength', zone:'Z4', restSec:'240-360', tempo:'3-1-1-0', description:'Relative strength block.' },
+  maxstr: { sets:[3,5], repsLo:1, repsHi:4, loadStart:88, loadEnd:97, rpeStart:8.5, rpeEnd:9.5,
+    label:'Max Strength', zone:'Z4', restSec:'300-480', tempo:'2-1-1-0', description:'Max strength block.' },
+  power1: { sets:[3,5], repsLo:2, repsHi:5, loadStart:75, loadEnd:85, rpeStart:7.0, rpeEnd:8.5,
+    label:'Power I', zone:'Z4', restSec:'180-300', tempo:'X-0-1-0', description:'Power/SSC block.' },
+  power2: { sets:[4,6], repsLo:2, repsHi:4, loadStart:65, loadEnd:78, rpeStart:7.0, rpeEnd:8.0,
+    label:'Power II', zone:'Z3-Z4', restSec:'180-300', tempo:'X-0-1-0', description:'Power endurance block.' },
+  power3: { sets:[4,6], repsLo:2, repsHi:4, loadStart:55, loadEnd:68, rpeStart:6.5, rpeEnd:8.0,
+    label:'Power III', zone:'Z2-Z3', restSec:'120-240', tempo:'X-0-1-0', description:'Speed-strength block.' },
 };
+
+// ── RELATIVE INTENSITY TABLE (from Programming Resources) ───────────────────
+// riTable[reps][sets] = % of 1RM
+const RI_TABLE = {
+  1:  {1:100.0, 2:95.0, 3:92.5, 4:90.0, 5:87.5, 6:85.0, 8:80.0, 10:72.5},
+  2:  {1:97.5,  2:92.8, 3:90.3, 4:87.8, 5:85.5, 6:83.0, 8:78.0, 10:70.8},
+  3:  {1:95.0,  2:90.3, 3:88.0, 4:85.5, 5:83.3, 6:80.8, 8:76.0, 10:69.0},
+  4:  {1:92.5,  2:88.0, 3:85.8, 4:83.3, 5:81.0, 6:78.8, 8:74.0, 10:67.3},
+  5:  {1:90.0,  2:85.5, 3:83.3, 4:81.0, 5:78.8, 6:76.5, 8:72.0, 10:65.3},
+  6:  {1:83.0,  2:79.0, 3:77.0, 4:75.0, 5:73.0, 6:71.3, 8:67.0, 10:61.0},
+  7:  {1:80.0,  2:76.0, 3:74.0, 4:72.0, 5:70.0, 6:68.3, 8:64.5, 10:58.8},
+  8:  {1:78.0,  2:74.3, 3:72.3, 4:70.3, 5:68.5, 6:66.8, 8:63.0, 10:57.5},
+  9:  {1:76.0,  2:72.5, 3:70.5, 4:68.8, 5:67.0, 6:65.3, 8:61.8, 10:56.3},
+  10: {1:74.0,  2:70.5, 3:68.5, 4:66.8, 5:65.0, 6:63.5, 8:60.0, 10:54.8},
+  11: {1:72.0,  2:68.8, 3:67.0, 4:65.5, 5:63.8, 6:62.3, 8:59.0, 10:53.8},
+  12: {1:70.0,  2:66.8, 3:65.3, 4:63.8, 5:62.3, 6:61.0, 8:57.8, 10:52.8},
+  15: {1:66.0,  2:63.0, 3:61.5, 4:60.0, 5:58.8, 6:57.5, 8:54.5, 10:49.8},
+  20: {1:60.0,  2:57.3, 3:56.0, 4:54.8, 5:53.8, 6:52.5, 8:50.0, 10:45.8},
+};
+
+// Get relative intensity for given reps and sets
+function getRelativeIntensity(reps, sets) {
+  var repKey = [1,2,3,4,5,6,7,8,9,10,11,12,15,20].reduce(function(prev, curr) {
+    return Math.abs(curr - reps) < Math.abs(prev - reps) ? curr : prev;
+  });
+  var setKey = [1,2,3,4,5,6,8,10].reduce(function(prev, curr) {
+    return Math.abs(curr - sets) < Math.abs(prev - sets) ? curr : prev;
+  });
+  return (RI_TABLE[repKey] && RI_TABLE[repKey][setKey]) || 75;
+}
+
+// ── REST PERIOD GUIDE ────────────────────────────────────────────────────────
+const REST_GUIDE = [
+  { maxSec: 30,  recovery: '<50% Metabolic',           method: 'Strength Endurance / Hypertrophy',  color: '#22c55e' },
+  { maxSec: 90,  recovery: '>90% Metabolic',           method: 'General Strength / F. Hypertrophy', color: '#84cc16' },
+  { maxSec: 150, recovery: 'Near Complete Metabolic',  method: 'F. Hypertrophy / Relative Strength', color: '#eab308' },
+  { maxSec: 240, recovery: 'Near Complete Neural',     method: 'Relative Strength',                  color: '#f97316' },
+  { maxSec: 600, recovery: 'Complete Neural',          method: 'Power / SSC / Max Strength',         color: '#ef4444' },
+];
+
+function getRestGuide(restStr) {
+  var match = String(restStr).match(/(\d+)/);
+  if (!match) return null;
+  var secs = parseInt(match[1]);
+  // Convert min:sec format
+  var minMatch = String(restStr).match(/(\d+):(\d+)/);
+  if (minMatch) secs = parseInt(minMatch[1]) * 60 + parseInt(minMatch[2]);
+  return REST_GUIDE.find(function(r) { return secs <= r.maxSec; }) || REST_GUIDE[REST_GUIDE.length-1];
+}
+
+// ── TEMPO GUIDE ──────────────────────────────────────────────────────────────
+function getTempoGuide(tempo) {
+  var parts = String(tempo||'').split('-');
+  if (parts.length < 4) return null;
+  var labels = ['Lowering', 'Pause at bottom', 'Return', 'Pause at top'];
+  return parts.map(function(p, i) {
+    var sec = p === 'X' ? 'Explosive' : (parseInt(p) + 's');
+    return sec + ' ' + labels[i];
+  }).join(' → ');
+}
 
 function initPeriodization() {
   // Athletes
@@ -4284,7 +4425,7 @@ function perioRenderExList() {
     const tempoRow = document.createElement('div');
     tempoRow.style.gridColumn = '1 / -1';
     tempoRow.innerHTML = '<div style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;font-family:DM Mono,monospace;">Tempo (Ecc-Pause-Con-Reset)</div>' +
-      '<input type="text" value="' + (ex.tempo || '3-1-1-0') + '" placeholder="3-1-1-0" data-idx="' + i + '" data-field="tempo" class="perio-field-input" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:DM Mono,monospace;font-size:10px;padding:3px 5px;box-sizing:border-box;">';
+      '<input type="text" value="' + (ex.tempo || '3-1-1-0') + '" placeholder="3-1-1-0" data-idx="' + i + '" data-field="tempo" class="perio-field-input" onfocus="showTempoTooltip(this)" onblur="hideTempoTooltip()" oninput="showTempoTooltip(this)" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:DM Mono,monospace;font-size:10px;padding:3px 5px;box-sizing:border-box;">';
     grid.appendChild(tempoRow);
     card.appendChild(grid);
     container.appendChild(card);
@@ -9231,6 +9372,116 @@ function loadProgramToSession() {
   }
   
   alert('Program not found');
+}
+
+// ── PHASE DESCRIPTION on dropdown change ────────────────────────────────────
+function perioPhasePick() {
+  var phase = (document.getElementById('perio-phase')||{}).value;
+  var desc  = document.getElementById('perio-phase-desc');
+  if (!desc) return;
+  var def = PHASE_DEFAULTS[phase];
+  if (!def) { desc.textContent = ''; return; }
+  desc.textContent = def.description || '';
+}
+
+// ── SMART PRESCRIBER: show when exercise selected ────────────────────────────
+function gsmShowPrescriber(exName) {
+  var panel = document.getElementById('gsm-prescriber');
+  if (!panel) return;
+  panel.style.display = exName ? 'block' : 'none';
+  if (!exName) return;
+  // Show RI for current zone if selected
+  var zone = (document.getElementById('gsm-zone-pick')||{}).value;
+  var athlete = (document.getElementById('grid-athlete')||{}).value || currentPlayer;
+  var rm = ((ATHLETE_1RM[athlete]||{})[exName]) || 0;
+  var content = document.getElementById('gsm-prescriber-content');
+  if (!content) return;
+
+  var lines = ['<b style="color:var(--text)">' + exName + '</b>'];
+  if (rm) lines.push('1RM: <span style="color:var(--green)">' + rm + ' lbs</span>');
+
+  if (zone && PHASE_DEFAULTS[zone]) {
+    var def = PHASE_DEFAULTS[zone];
+    var ri  = getRelativeIntensity(def.repsLo, def.sets[0]);
+    var load = rm ? Math.round(rm * ri / 100) + ' lbs (' + ri + '%)' : ri + '% 1RM';
+    lines.push('');
+    lines.push('<b style="color:var(--blue)">' + def.label + '</b>');
+    lines.push('Sets: ' + def.sets[0] + '-' + def.sets[1] + ' · Reps: ' + def.repsLo + '-' + def.repsHi);
+    lines.push('Load: ' + load);
+    lines.push('Tempo: ' + def.tempo + (def.tempo ? ' <span style="color:var(--text3)">(' + (getTempoGuide(def.tempo)||'') + ')</span>' : ''));
+    lines.push('Rest: ' + def.restSec + 's');
+    // Rest guide
+    var rg = getRestGuide(def.restSec);
+    if (rg) lines.push('<span style="color:' + rg.color + '">● ' + rg.method + '</span> · ' + rg.recovery);
+    lines.push('<span style="color:var(--text3);font-style:italic;">' + def.description + '</span>');
+  } else {
+    // Show RI table for common schemes
+    lines.push('');
+    lines.push('<b style="color:var(--text3)">Relative Intensity by Sets×Reps:</b>');
+    [[3,8],[4,6],[5,5],[3,3],[4,4],[5,3]].forEach(function(sr) {
+      var ri = getRelativeIntensity(sr[1], sr[0]);
+      var load = rm ? ' = ' + Math.round(rm*ri/100) + ' lbs' : '';
+      lines.push(sr[0] + 'x' + sr[1] + ': <span style="color:var(--yellow)">' + ri + '%' + load + '</span>');
+    });
+  }
+  content.innerHTML = lines.join('<br>');
+}
+
+function gsmApplyZone() {
+  var inp = document.getElementById('gsm-ex-search');
+  var exName = inp ? inp.value.trim() : '';
+  // Re-render with new zone
+  gsmShowPrescriber(exName);
+}
+
+// ── TEMPO TOOLTIP ────────────────────────────────────────────────────────────
+function showTempoTooltip(inputEl) {
+  var val = inputEl.value.trim();
+  if (!val) return;
+  var guide = getTempoGuide(val);
+  if (!guide) return;
+  var tip = document.getElementById('tempo-tooltip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'tempo-tooltip';
+    tip.style.cssText = 'position:fixed;z-index:9999;background:#1a1f2e;border:1px solid rgba(59,130,246,0.4);border-radius:6px;padding:8px 12px;font-size:10px;color:var(--text2);pointer-events:none;max-width:300px;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+    document.body.appendChild(tip);
+  }
+  var rect = inputEl.getBoundingClientRect();
+  tip.innerHTML = '<b style="color:var(--blue)">TEMPO ' + val + '</b><br>' + guide.replace(/ → /g, '<br>→ ');
+  tip.style.display = 'block';
+  tip.style.left = rect.left + 'px';
+  tip.style.top  = (rect.bottom + 4) + 'px';
+}
+function hideTempoTooltip() {
+  var tip = document.getElementById('tempo-tooltip');
+  if (tip) tip.style.display = 'none';
+}
+
+// ── REST GUIDE TOOLTIP ───────────────────────────────────────────────────────
+function showRestTooltip(inputEl) {
+  var val = inputEl.value.trim();
+  if (!val) return;
+  var guide = getRestGuide(val);
+  if (!guide) return;
+  var tip = document.getElementById('rest-tooltip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'rest-tooltip';
+    tip.style.cssText = 'position:fixed;z-index:9999;background:#1a1f2e;border:1px solid ' + guide.color + ';border-radius:6px;padding:8px 12px;font-size:10px;pointer-events:none;max-width:260px;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+    document.body.appendChild(tip);
+  }
+  var rect = inputEl.getBoundingClientRect();
+  tip.style.borderColor = guide.color;
+  tip.innerHTML = '<b style="color:' + guide.color + '">' + guide.method + '</b><br>'
+    + '<span style="color:var(--text3)">' + guide.recovery + ' recovery</span>';
+  tip.style.display = 'block';
+  tip.style.left = rect.left + 'px';
+  tip.style.top  = (rect.bottom + 4) + 'px';
+}
+function hideRestTooltip() {
+  var tip = document.getElementById('rest-tooltip');
+  if (tip) tip.style.display = 'none';
 }
 
 function initTemplateContextDropdown() {
