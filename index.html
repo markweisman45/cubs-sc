@@ -8799,9 +8799,9 @@ function _tmplBuildBlock(block, def, prefix) {
     const uid = prefix + '-' + block.letter + '-' + ri;
     const exCell = `<div style="display:flex;gap:4px;align-items:center;min-width:0;flex:2;">
       <select class="tmpl-cat-sel" onchange="tmplOnCatChange(this)"
-        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text3);font-family:'DM Mono',monospace;font-size:9px;min-width:60px;">${catOpts}</select>
+        style="width:110px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-family:'DM Mono',monospace;font-size:10px;">${catOpts}</select>
       <select class="tmpl-ex-sel" onchange="tmplOnExChange(this)"
-        style="flex:1.5;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-family:'DM Mono',monospace;font-size:9px;min-width:80px;">
+        style="flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;">
         <option value="">— Exercise —</option>
       </select>
     </div>`;
@@ -10219,13 +10219,15 @@ function mesoSave() {
   alert('Mesocycle saved! Find it in My Programs as "' + key + '"');
 }
 
-// Hook into switchProgTab
-var _origSwitchProgTab = switchProgTab;
-function switchProgTab(tab, btn) {
-  _origSwitchProgTab(tab, btn);
-  if (tab === 'annual') { setTimeout(initAnnualPlan, 50); }
-  if (tab === 'meso')   { setTimeout(initMesoBuilder, 50); }
-}
+// Patch switchProgTab to handle annual/meso tabs
+(function() {
+  var _orig = switchProgTab;
+  switchProgTab = function(tab, btn) {
+    _orig(tab, btn);
+    if (tab === 'annual') { setTimeout(initAnnualPlan, 50); }
+    if (tab === 'meso')   { setTimeout(initMesoBuilder, 50); }
+  };
+})();
 
 function perioPhasePick() {
   var phase = (document.getElementById('perio-phase')||{}).value;
