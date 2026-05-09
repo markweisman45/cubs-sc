@@ -10058,13 +10058,19 @@ function calcBlockMetrics(block) {
 function initAnnualPlan() {
   var sel = document.getElementById('annual-athlete');
   if (!sel) return;
-  // Always repopulate in case PLAYERS wasn't ready before
+  // Populate from PLAYERS — always refresh
   sel.innerHTML = '';
-  var posPlayers = Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); });
-  posPlayers.forEach(function(n) {
+  var roster = ['Nico Hoerner','Dansby Swanson','Ian Happ','Pete Crow-Armstrong',
+                'Matt Shaw','Carson Kelly','Miguel Amaya','Michael Busch',
+                'Alex Bregman','Moises Ballesteros','Seiya Suzuki'];
+  // Use PLAYERS if available, fallback to hardcoded roster
+  var names = (typeof PLAYERS !== 'undefined' && Object.keys(PLAYERS).length)
+    ? Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); })
+    : roster;
+  names.forEach(function(n) {
     var o = document.createElement('option');
     o.value = n; o.textContent = n;
-    if (n === currentPlayer) o.selected = true;
+    if (n === (typeof currentPlayer !== 'undefined' ? currentPlayer : 'Nico Hoerner')) o.selected = true;
     sel.appendChild(o);
   });
   if (typeof loadAnnualData === 'function') loadAnnualData();
