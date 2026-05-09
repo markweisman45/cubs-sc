@@ -10058,11 +10058,16 @@ function calcBlockMetrics(block) {
 function initAnnualPlan() {
   var sel = document.getElementById('annual-athlete');
   if (!sel) return;
-  if (!sel.options.length) {
-    Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); })
-      .forEach(function(n) { var o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
-  }
-  loadAnnualData();
+  // Always repopulate in case PLAYERS wasn't ready before
+  sel.innerHTML = '';
+  var posPlayers = Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); });
+  posPlayers.forEach(function(n) {
+    var o = document.createElement('option');
+    o.value = n; o.textContent = n;
+    if (n === currentPlayer) o.selected = true;
+    sel.appendChild(o);
+  });
+  if (typeof loadAnnualData === 'function') loadAnnualData();
   renderAnnualPlan();
 }
 
