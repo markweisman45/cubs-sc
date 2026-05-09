@@ -8333,11 +8333,30 @@ function importExerciseLibrary(input) {
 }
 
 
+function normalizeExerciseCategories(db) {
+  var catMap = {
+    'Core Extension Anti':              'Core Anti-Extension',
+    'Core Extension anti':              'Core Anti-Extension',
+    'Core Flexion Anti':                'Core Anti-Flexion',
+    'Core Flexion anti':                'Core Anti-Flexion',
+    'Core Lateral Flexion Extension Anti': 'Core Anti-Lateral Flexion',
+    'Core Lateral Flexion Extension anti': 'Core Anti-Lateral Flexion',
+    'Core Rotation Anti':               'Core Anti-Rotation',
+    'Core Rotation anti':               'Core Anti-Rotation',
+    'Core Extension Anti ':             'Core Anti-Extension',
+    'Core Flexion Anti ':               'Core Anti-Flexion',
+  };
+  return db.map(function(e) {
+    if (e && catMap[e.cat]) e.cat = catMap[e.cat];
+    return e;
+  });
+}
+
 function loadExerciseDB() {
   try {
     const saved = localStorage.getItem(EXERCISE_DB_KEY);
     if (!saved) return;
-    const savedDB = JSON.parse(saved);
+    var savedDB = normalizeExerciseCategories(JSON.parse(saved));
     if (!Array.isArray(savedDB)) return;
     // Merge: saved entries override defaults by name; new saved entries are added
     savedDB.forEach(savedEx => {
