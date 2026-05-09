@@ -1068,11 +1068,133 @@ body {
 
       <!-- Sub-tab bar -->
       <div style="display:flex;gap:2px;background:var(--bg3);padding:3px;border-radius:var(--radius-sm);margin-bottom:20px;width:fit-content;">
-        <button class="tab-btn active" id="ptab-session"  onclick="switchProgTab('session',this)">⚡ Session Builder</button>
+        <button class="tab-btn active" id="ptab-annual"   onclick="switchProgTab('annual',this)" style="color:#f59e0b;">📅 Annual Plan</button>
+        <button class="tab-btn"        id="ptab-meso"     onclick="switchProgTab('meso',this)" style="color:#a78bfa;">📋 Mesocycle</button>
+        <button class="tab-btn"        id="ptab-session"  onclick="switchProgTab('session',this)">⚡ Session Builder</button>
         <button class="tab-btn"        id="ptab-grid"     onclick="switchProgTab('grid',this)" style="color:var(--blue);">🗓 Grid Builder</button>
         <button class="tab-btn"        id="ptab-perio"    onclick="switchProgTab('perio',this)" style="color:var(--purple);">📈 Periodization</button>
         <button class="tab-btn"        id="ptab-1rm"      onclick="switchProgTab('1rm',this)">🏋️ 1RM Database</button>
         <button class="tab-btn"        id="ptab-library"  onclick="switchProgTab('library',this)">📚 Exercise Library</button>
+      </div>
+
+      <!-- ── ANNUAL PLAN ── -->
+      <div id="prog-tab-annual" class="prog-tab" style="display:block;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <select id="annual-athlete" onchange="renderAnnualPlan()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px;min-width:160px;"></select>
+            <select id="annual-year" onchange="renderAnnualPlan()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;">
+              <option value="2025">2025-26</option>
+              <option value="2026" selected>2026-27</option>
+              <option value="2027">2027-28</option>
+            </select>
+            <button onclick="annualAddBlock()" style="padding:7px 14px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;font-size:12px;font-weight:600;cursor:pointer;">＋ Add Block</button>
+            <button onclick="annualSave()" style="padding:7px 14px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">💾 Save Plan</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--text3);">
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:#6366f1;display:inline-block;"></span>Off-Season</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:#f59e0b;display:inline-block;"></span>Spring Training</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:#22c55e;display:inline-block;"></span>In-Season</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:#64748b;display:inline-block;"></span>Post-Season</span>
+          </div>
+        </div>
+
+        <!-- Season phase bar -->
+        <div id="annual-phase-bar" style="height:28px;border-radius:6px;overflow:hidden;display:flex;margin-bottom:12px;"></div>
+
+        <!-- Week grid -->
+        <div style="overflow-x:auto;">
+          <div id="annual-grid" style="min-width:900px;"></div>
+        </div>
+
+        <!-- Volume/Intensity chart -->
+        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="card" style="padding:12px;">
+            <div class="card-title">📊 Annual Volume Projection</div>
+            <canvas id="annual-vol-chart" height="120"></canvas>
+          </div>
+          <div class="card" style="padding:12px;">
+            <div class="card-title">⚡ Annual Intensity Projection</div>
+            <canvas id="annual-int-chart" height="120"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MESOCYCLE BUILDER ── -->
+      <div id="prog-tab-meso" class="prog-tab" style="display:none;">
+        <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;min-height:600px;">
+
+          <!-- LEFT: Setup -->
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="card" style="padding:12px;">
+              <div class="card-title">⚙️ MESOCYCLE SETUP</div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+                <div>
+                  <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Athlete</label>
+                  <select id="meso-athlete" style="width:100%;margin-top:3px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;"></select>
+                </div>
+                <div>
+                  <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Block Phase</label>
+                  <select id="meso-phase" onchange="mesoPhaseChange()" style="width:100%;margin-top:3px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;">
+                    <option value="accumulation">Accumulation</option>
+                    <option value="transmutation">Transmutation</option>
+                    <option value="realization">Realization</option>
+                    <option value="inseason_2">In-Season (2-day)</option>
+                    <option value="inseason_3">In-Season (3-day)</option>
+                    <option value="inseason_5">In-Season (5-day microdose)</option>
+                    <option value="offseason">Off-Season General</option>
+                    <option value="restore">Deload / Restore</option>
+                  </select>
+                  <div id="meso-phase-desc" style="font-size:10px;color:var(--text3);margin-top:3px;font-style:italic;"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                  <div>
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Weeks</label>
+                    <select id="meso-weeks" onchange="mesoRebuild()" style="width:100%;margin-top:3px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;">
+                      <option value="4" selected>4 weeks</option>
+                      <option value="6">6 weeks</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Progression</label>
+                    <select id="meso-progression" onchange="mesoRebuild()" style="width:100%;margin-top:3px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;">
+                      <option value="linear">Linear</option>
+                      <option value="wave">Wave (Non-Linear)</option>
+                      <option value="dup">Daily Undulating</option>
+                      <option value="block">Block</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Start Date</label>
+                  <input type="date" id="meso-start-date" style="width:100%;margin-top:3px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;box-sizing:border-box;">
+                </div>
+                <button onclick="mesoRebuild()" style="padding:8px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:12px;font-weight:600;cursor:pointer;">🔄 Build Mesocycle</button>
+                <button onclick="mesoSave()" style="padding:8px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">💾 Save Mesocycle</button>
+              </div>
+            </div>
+
+            <!-- Volume/Intensity/Density targets -->
+            <div class="card" style="padding:12px;">
+              <div class="card-title">📊 WEEKLY TARGETS</div>
+              <div id="meso-targets" style="margin-top:8px;font-size:11px;"></div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Week grid -->
+          <div>
+            <!-- Week tabs -->
+            <div id="meso-week-tabs" style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;"></div>
+            <!-- Day grid for selected week -->
+            <div id="meso-week-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;"></div>
+            <!-- Session editor (shown when day clicked) -->
+            <div id="meso-session-editor" style="display:none;margin-top:16px;" class="card"></div>
+            <!-- Progression chart -->
+            <div style="margin-top:12px;" class="card" style="padding:12px;">
+              <div class="card-title">📈 VOLUME · INTENSITY · DENSITY</div>
+              <canvas id="meso-prog-chart" height="100"></canvas>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ── SESSION BUILDER ── -->
@@ -5243,6 +5365,7 @@ function init() {
   loadWellness();         // Restore daily wellness logs
   loadAthletePrograms();  // Restore athlete program history
   seedMyPrograms();
+  loadAnnualData();
   if (document.getElementById('prog-template-context')) initTemplateContextDropdown();
   loadGridState();         // Restore grid builder state
   // Clean only truly null/undefined entries from EXERCISE_DB
@@ -9375,6 +9498,735 @@ function loadProgramToSession() {
 }
 
 // ── PHASE DESCRIPTION on dropdown change ────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// ANNUAL PLAN & MESOCYCLE BUILDER
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Storage
+var ANNUAL_PLANS = {};   // { "Nico Hoerner_2026": { blocks: [...] } }
+var MESO_PLANS   = {};   // { "Nico Hoerner_2026_W01": { weeks: [...] } }
+
+const ANNUAL_KEY = 'cubs_sc_annual_v1';
+const MESO_KEY   = 'cubs_sc_meso_v1';
+
+function loadAnnualData() {
+  try { ANNUAL_PLANS = JSON.parse(localStorage.getItem(ANNUAL_KEY)||'{}'); } catch(e) {}
+  try { MESO_PLANS   = JSON.parse(localStorage.getItem(MESO_KEY)||'{}');   } catch(e) {}
+}
+function saveAnnualData() {
+  try { localStorage.setItem(ANNUAL_KEY, JSON.stringify(ANNUAL_PLANS)); } catch(e) {}
+  try { localStorage.setItem(MESO_KEY,   JSON.stringify(MESO_PLANS));   } catch(e) {}
+}
+
+// Season phases for Cubs schedule
+function getSeasonPhases(year) {
+  var y = parseInt(year);
+  return [
+    { name:'Post-Season',    color:'#64748b', start: new Date(y,9,1),   end: new Date(y,9,31)  },
+    { name:'Off-Season',     color:'#6366f1', start: new Date(y,10,1),  end: new Date(y+1,1,14) },
+    { name:'Spring Training',color:'#f59e0b', start: new Date(y+1,1,15),end: new Date(y+1,2,24) },
+    { name:'In-Season',      color:'#22c55e', start: new Date(y+1,2,25),end: new Date(y+1,9,1)  },
+  ];
+}
+
+// Block type configs
+const BLOCK_TYPES = {
+  accumulation:  { label:'Accumulation',   color:'#818cf8', weeks:[4,6], defaultWeeks:4 },
+  transmutation: { label:'Transmutation',  color:'#a78bfa', weeks:[4,6], defaultWeeks:4 },
+  realization:   { label:'Realization',    color:'#c084fc', weeks:[4,6], defaultWeeks:4 },
+  inseason:      { label:'In-Season',      color:'#4ade80', weeks:[4,6,8,12,16], defaultWeeks:16 },
+  spring:        { label:'Spring Training',color:'#fbbf24', weeks:[4,6], defaultWeeks:4 },
+  restore:       { label:'Deload',         color:'#94a3b8', weeks:[1,2], defaultWeeks:1 },
+  offseason:     { label:'Off-Season',     color:'#60a5fa', weeks:[4,6], defaultWeeks:4 },
+};
+
+// Day structure templates
+var _DAY_TEMPLATES_ANNUAL = {
+  offseason_4lift: [
+    {day:'Mon', type:'lift',   label:'UB Lift'},
+    {day:'Tue', type:'speed',  label:'Speed'},
+    {day:'Wed', type:'esd',    label:'Movement / ESD'},
+    {day:'Thu', type:'lift',   label:'LB Lift'},
+    {day:'Fri', type:'speed',  label:'Speed'},
+    {day:'Sat', type:'esd',    label:'Movement / ESD'},
+    {day:'Sun', type:'off',    label:'OFF'},
+  ],
+  inseason_2: [
+    {day:'Mon', type:'lift',  label:'Full Body Lift'},
+    {day:'Tue', type:'off',   label:'Game'},
+    {day:'Wed', type:'off',   label:'Game'},
+    {day:'Thu', type:'lift',  label:'Full Body Lift'},
+    {day:'Fri', type:'off',   label:'Game'},
+    {day:'Sat', type:'off',   label:'Game'},
+    {day:'Sun', type:'off',   label:'OFF'},
+  ],
+  inseason_3: [
+    {day:'Mon', type:'lift',  label:'Lift'},
+    {day:'Tue', type:'off',   label:'Game'},
+    {day:'Wed', type:'lift',  label:'Lift'},
+    {day:'Thu', type:'off',   label:'Game'},
+    {day:'Fri', type:'lift',  label:'Lift'},
+    {day:'Sat', type:'off',   label:'Game'},
+    {day:'Sun', type:'off',   label:'OFF'},
+  ],
+  inseason_5: [
+    {day:'Mon', type:'lift',  label:'Microdose'},
+    {day:'Tue', type:'lift',  label:'Microdose'},
+    {day:'Wed', type:'lift',  label:'Microdose'},
+    {day:'Thu', type:'lift',  label:'Microdose'},
+    {day:'Fri', type:'lift',  label:'Microdose'},
+    {day:'Sat', type:'off',   label:'Game'},
+    {day:'Sun', type:'off',   label:'OFF'},
+  ],
+};
+
+// ── ANNUAL PLAN ──────────────────────────────────────────────────────────────
+
+function initAnnualPlan() {
+  var sel = document.getElementById('annual-athlete');
+  if (!sel || sel.options.length > 0) return;
+  Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); })
+    .forEach(function(n) {
+      var o = document.createElement('option');
+      o.value = n; o.textContent = n; sel.appendChild(o);
+    });
+  loadAnnualData();
+  renderAnnualPlan();
+}
+
+function annualPlanKey() {
+  var athlete = (document.getElementById('annual-athlete')||{}).value || 'Team';
+  var year    = (document.getElementById('annual-year')||{}).value    || '2026';
+  return athlete + '_' + year;
+}
+
+function renderAnnualPlan() {
+  var key    = annualPlanKey();
+  var year   = parseInt((document.getElementById('annual-year')||{}).value || '2026');
+  var plan   = ANNUAL_PLANS[key] || { blocks: [] };
+  var phases = getSeasonPhases(year);
+  var grid   = document.getElementById('annual-grid');
+  var pbar   = document.getElementById('annual-phase-bar');
+  if (!grid) return;
+
+  // Year runs Nov 1 → Oct 31
+  var yearStart = new Date(year, 10, 1);
+  var yearEnd   = new Date(year+1, 9, 31);
+  var totalDays = (yearEnd - yearStart) / 86400000;
+
+  // Phase bar
+  if (pbar) {
+    pbar.innerHTML = phases.map(function(p) {
+      var days = (Math.min(p.end, yearEnd) - Math.max(p.start, yearStart)) / 86400000;
+      var pct  = Math.max(0, (days / totalDays) * 100);
+      return '<div style="width:' + pct + '%;background:' + p.color + ';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;">' + p.name + '</div>';
+    }).join('');
+  }
+
+  // Build 52-week grid (12 months displayed as columns of weeks)
+  var months = [];
+  var d = new Date(yearStart);
+  while (d <= yearEnd) {
+    var monthKey = d.getFullYear() + '-' + d.getMonth();
+    if (!months.length || months[months.length-1].key !== monthKey) {
+      months.push({ key: monthKey, label: d.toLocaleDateString('en-US',{month:'short',year:'2-digit'}), weeks: [] });
+    }
+    // Find week number
+    var weekNum = Math.floor((d - yearStart) / (7 * 86400000)) + 1;
+    var lastMonth = months[months.length-1];
+    if (!lastMonth.weeks.length || lastMonth.weeks[lastMonth.weeks.length-1] !== weekNum) {
+      lastMonth.weeks.push(weekNum);
+    }
+    d.setDate(d.getDate() + 7);
+  }
+
+  // Render grid
+  var html = '<div style="display:flex;gap:2px;">';
+  var weekNum = 1;
+  var d2 = new Date(yearStart);
+
+  // Group into months
+  html = '<div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;font-size:10px;">';
+  html += '<tr style="background:var(--bg3);">';
+
+  var weeks = [];
+  var cur = new Date(yearStart);
+  while (cur <= yearEnd) {
+    weeks.push(new Date(cur));
+    cur.setDate(cur.getDate() + 7);
+  }
+
+  // Month header row
+  var curMonth = -1;
+  var monthSpans = [];
+  var span = 0;
+  var monthLabels = [];
+  weeks.forEach(function(w) {
+    if (w.getMonth() !== curMonth) {
+      if (span > 0) monthSpans.push({ label: monthLabels[monthLabels.length-1] || '', span: span });
+      curMonth = w.getMonth();
+      span = 1;
+      monthLabels.push(w.toLocaleDateString('en-US',{month:'short'}));
+    } else { span++; }
+  });
+  if (span > 0) monthSpans.push({ label: monthLabels[monthLabels.length-1]||'', span: span });
+
+  html += monthSpans.map(function(ms) {
+    return '<th colspan="' + ms.span + '" style="padding:4px 2px;text-align:center;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);">' + ms.label + '</th>';
+  }).join('');
+  html += '</tr>';
+
+  // Week number row
+  html += '<tr>';
+  weeks.forEach(function(w, i) {
+    html += '<td style="padding:2px;text-align:center;color:var(--text3);font-size:9px;">' + (i+1) + '</td>';
+  });
+  html += '</tr>';
+
+  // Phase row
+  html += '<tr>';
+  weeks.forEach(function(w) {
+    var phase = phases.find(function(p) { return w >= p.start && w <= p.end; });
+    var col = phase ? phase.color + '33' : 'transparent';
+    var border = phase ? '2px solid ' + phase.color : '1px solid var(--border)';
+    html += '<td style="height:8px;background:' + col + ';border-top:' + border + ';"></td>';
+  });
+  html += '</tr>';
+
+  // Block rows
+  var typeColors = {};
+  Object.keys(BLOCK_TYPES).forEach(function(k){ typeColors[k] = BLOCK_TYPES[k].color; });
+
+  // Render each block as colored spans
+  html += '<tr style="height:36px;">';
+  weeks.forEach(function(w, wi) {
+    var wDate = w;
+    var block = (plan.blocks||[]).find(function(b) {
+      var bs = new Date(b.startDate);
+      var be = new Date(b.endDate);
+      return wDate >= bs && wDate <= be;
+    });
+    if (block) {
+      var cfg = BLOCK_TYPES[block.type] || {};
+      html += '<td onclick="annualEditBlock(\'' + block.id + '\')" style="background:' + (cfg.color||'#888') + '22;border:1px solid ' + (cfg.color||'#888') + '44;cursor:pointer;padding:2px;vertical-align:middle;text-align:center;" title="' + (cfg.label||block.type) + '">'
+        + '<div style="font-size:8px;font-weight:600;color:' + (cfg.color||'#888') + ';white-space:nowrap;overflow:hidden;">' + (cfg.label||block.type).substring(0,4) + '</div>'
+        + '<div style="font-size:8px;color:var(--text3);">W' + (wi+1) + '</div>'
+        + '</td>';
+    } else {
+      html += '<td onclick="annualAddBlockAt(\'' + w.toISOString().slice(0,10) + '\')" style="border:1px solid var(--border);cursor:pointer;opacity:0.4;" title="Add block">'
+        + '<div style="font-size:8px;text-align:center;color:var(--text3);">+</div></td>';
+    }
+  });
+  html += '</tr></table></div>';
+
+  grid.innerHTML = html;
+  renderAnnualCharts(plan, weeks, phases);
+}
+
+function renderAnnualCharts(plan, weeks, phases) {
+  // Simplified volume/intensity projections based on block types
+  var volData = weeks.map(function(w) {
+    var block = (plan.blocks||[]).find(function(b) {
+      return w >= new Date(b.startDate) && w <= new Date(b.endDate);
+    });
+    if (!block) return null;
+    var vols = { accumulation:85, transmutation:65, realization:40, inseason:35, restore:20, offseason:70, spring:55 };
+    return vols[block.type] || 50;
+  });
+  var intData = weeks.map(function(w) {
+    var block = (plan.blocks||[]).find(function(b) {
+      return w >= new Date(b.startDate) && w <= new Date(b.endDate);
+    });
+    if (!block) return null;
+    var ints = { accumulation:65, transmutation:78, realization:90, inseason:80, restore:50, offseason:70, spring:72 };
+    return ints[block.type] || 60;
+  });
+
+  var labels = weeks.map(function(w, i) { return i % 4 === 0 ? 'W'+(i+1) : ''; });
+  var nullFilter = function(v) { return v === null ? undefined : v; };
+
+  ['vol','int'].forEach(function(type) {
+    var ctx = document.getElementById('annual-' + type + '-chart');
+    if (!ctx) return;
+    var data = type === 'vol' ? volData : intData;
+    var color = type === 'vol' ? '#6366f1' : '#f59e0b';
+    if (ctx._chart) ctx._chart.destroy();
+    ctx._chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{ data: data.map(nullFilter), borderColor: color, backgroundColor: color+'22',
+          fill: true, tension: 0.4, pointRadius: 0, spanGaps: true }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color:'#64748b', font:{size:9} }, grid: { color:'rgba(255,255,255,0.05)' } },
+          y: { min:0, max:100, ticks: { color:'#64748b', font:{size:9} }, grid: { color:'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+  });
+}
+
+function annualAddBlock() {
+  annualShowBlockModal(null);
+}
+function annualAddBlockAt(dateStr) {
+  annualShowBlockModal(null, dateStr);
+}
+function annualEditBlock(id) {
+  var key  = annualPlanKey();
+  var plan = ANNUAL_PLANS[key] || { blocks:[] };
+  var block = plan.blocks.find(function(b){ return b.id===id; });
+  annualShowBlockModal(block);
+}
+
+function annualShowBlockModal(existing, startDateStr) {
+  var existing = existing || {};
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  var cfg = existing.type ? (BLOCK_TYPES[existing.type]||{}) : {};
+  var typeOptions = Object.entries(BLOCK_TYPES).map(function(e) {
+    return '<option value="' + e[0] + '"' + (existing.type===e[0]?' selected':'') + '>' + e[1].label + '</option>';
+  }).join('');
+  var weekOptions = [1,2,3,4,5,6,8,12,16].map(function(w) {
+    return '<option value="' + w + '"' + ((existing.weeks||4)===w?' selected':'') + '>' + w + ' wks</option>';
+  }).join('');
+
+  var startVal = existing.startDate || startDateStr || new Date().toISOString().slice(0,10);
+
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:380px;max-width:95vw;">'
+    + '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:16px;">' + (existing.id ? 'Edit Block' : 'Add Block') + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:10px;">'
+    + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;">Block Type</label>'
+    + '<select id="modal-block-type" style="width:100%;margin-top:3px;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:7px 10px;color:#fff;font-size:12px;">' + typeOptions + '</select></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;">Start Date</label>'
+    + '<input type="date" id="modal-block-start" value="' + startVal + '" style="width:100%;margin-top:3px;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:7px 8px;color:#fff;font-size:12px;box-sizing:border-box;"></div>'
+    + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;">Duration</label>'
+    + '<select id="modal-block-weeks" style="width:100%;margin-top:3px;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:7px 8px;color:#fff;font-size:12px;">' + weekOptions + '</select></div>'
+    + '</div>'
+    + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;">Notes</label>'
+    + '<input type="text" id="modal-block-notes" value="' + (existing.notes||'') + '" placeholder="Optional notes..." style="width:100%;margin-top:3px;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:7px 10px;color:#fff;font-size:12px;box-sizing:border-box;"></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">'
+    + (existing.id ? '<button id="modal-del-btn" style="padding:8px 14px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#ef4444;font-size:12px;cursor:pointer;">Delete</button>' : '')
+    + '<button id="modal-cancel-btn" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button id="modal-save-btn" style="padding:8px 18px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Save</button>'
+    + '</div></div>';
+
+  document.body.appendChild(modal);
+
+  modal.querySelector('#modal-save-btn').onclick = function() {
+    var type   = modal.querySelector('#modal-block-type').value;
+    var start  = modal.querySelector('#modal-block-start').value;
+    var weeks  = parseInt(modal.querySelector('#modal-block-weeks').value)||4;
+    var notes  = modal.querySelector('#modal-block-notes').value;
+    var startD = new Date(start);
+    var endD   = new Date(startD); endD.setDate(endD.getDate() + weeks*7 - 1);
+    var key    = annualPlanKey();
+    ANNUAL_PLANS[key] = ANNUAL_PLANS[key] || { blocks:[] };
+    if (existing.id) {
+      var idx = ANNUAL_PLANS[key].blocks.findIndex(function(b){ return b.id===existing.id; });
+      if (idx >= 0) ANNUAL_PLANS[key].blocks[idx] = { id:existing.id, type:type, startDate:start, endDate:endD.toISOString().slice(0,10), weeks:weeks, notes:notes };
+    } else {
+      ANNUAL_PLANS[key].blocks.push({ id:'block_'+Date.now(), type:type, startDate:start, endDate:endD.toISOString().slice(0,10), weeks:weeks, notes:notes });
+    }
+    saveAnnualData();
+    modal.remove();
+    renderAnnualPlan();
+  };
+  if (modal.querySelector('#modal-del-btn')) {
+    modal.querySelector('#modal-del-btn').onclick = function() {
+      if (!confirm('Delete this block?')) return;
+      var key = annualPlanKey();
+      ANNUAL_PLANS[key].blocks = ANNUAL_PLANS[key].blocks.filter(function(b){ return b.id!==existing.id; });
+      saveAnnualData();
+      modal.remove();
+      renderAnnualPlan();
+    };
+  }
+  modal.querySelector('#modal-cancel-btn').onclick = function() { modal.remove(); };
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+}
+
+function annualSave() {
+  saveAnnualData();
+  // Also push to Supabase if connected
+  if (typeof syncToSupabase === 'function') syncToSupabase();
+  showStatus('✅ Annual plan saved');
+}
+
+// ── MESOCYCLE BUILDER ─────────────────────────────────────────────────────────
+
+var CURRENT_MESO = null; // { athlete, phase, weeks, progression, startDate, weekData:[] }
+var MESO_ACTIVE_WEEK = 0;
+var MESO_ACTIVE_DAY  = null;
+
+function initMesoBuilder() {
+  var sel = document.getElementById('meso-athlete');
+  if (!sel || sel.options.length > 0) return;
+  Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); })
+    .forEach(function(n) {
+      var o = document.createElement('option');
+      o.value = n; o.textContent = n; sel.appendChild(o);
+    });
+  loadAnnualData();
+  mesoPhaseChange();
+}
+
+function mesoPhaseChange() {
+  var phase = (document.getElementById('meso-phase')||{}).value || 'accumulation';
+  var desc  = document.getElementById('meso-phase-desc');
+  var phaseMap = {
+    accumulation: 'High volume, moderate intensity. 70-78% 1RM. 4 lift + 4 speed + 2 ESD days.',
+    transmutation:'Moderate volume, high intensity. 80-88% 1RM. Intensification phase.',
+    realization:  'Low volume, peak intensity. 88-97% 1RM. Neural drive. Peak expression.',
+    inseason_2:   '2 full body lift days. Maintain strength. Minimize fatigue.',
+    inseason_3:   '3 lift days. Balanced maintenance program.',
+    inseason_5:   '5 microdose days. Short intense sessions 20-30 min.',
+    offseason:    'General off-season development. Balanced volume/intensity.',
+    restore:      'Deload week. 50-60% loads. Recovery and regeneration.',
+  };
+  if (desc) desc.textContent = phaseMap[phase] || '';
+}
+
+function getDayTemplate(phase) {
+  if (phase === 'inseason_2') return _DAY_TEMPLATES_ANNUAL.inseason_2;
+  if (phase === 'inseason_3') return _DAY_TEMPLATES_ANNUAL.inseason_3;
+  if (phase === 'inseason_5') return _DAY_TEMPLATES_ANNUAL.inseason_5;
+  return _DAY_TEMPLATES_ANNUAL.offseason_4lift;
+}
+
+function getProgression(type, weekNum, totalWeeks, isDeload) {
+  // Returns { volumeMod, intensityMod, densityMod } multipliers for the week
+  if (isDeload) return { vol:0.6, int:0.7, density:0.6, label:'Deload' };
+  var progress = (weekNum - 1) / Math.max(totalWeeks - 2, 1); // 0 to 1
+
+  if (type === 'linear') {
+    return { vol: 1.0 - progress*0.3, int: 0.7 + progress*0.25, density: 0.9 + progress*0.1, label:'W'+weekNum };
+  } else if (type === 'wave') {
+    var wave = [1.0, 0.85, 1.1, 0.9, 1.15, 0.8];
+    var intWave = [0.75, 0.85, 0.8, 0.9, 0.85, 0.95];
+    var i = (weekNum-1) % wave.length;
+    return { vol: wave[i], int: intWave[i], density: 0.85 + i*0.03, label:'W'+weekNum };
+  } else if (type === 'dup') {
+    // Daily undulating - varies by week focus
+    var foci = ['Power','Strength','Volume','Power','Strength','Volume'];
+    var i = (weekNum-1) % foci.length;
+    var vols = [0.7,0.85,1.0,0.75,0.9,1.0];
+    var ints = [0.9,0.85,0.7,0.92,0.88,0.72];
+    return { vol: vols[i], int: ints[i], density: 0.85, label:foci[i] };
+  } else if (type === 'block') {
+    // Each week builds on the last
+    return { vol: 0.8 + progress*0.2, int: 0.7 + progress*0.25, density: 0.85 + progress*0.15, label:'W'+weekNum };
+  }
+  return { vol:1.0, int:0.75, density:0.85, label:'W'+weekNum };
+}
+
+function mesoRebuild() {
+  var phase     = (document.getElementById('meso-phase')||{}).value || 'accumulation';
+  var totalWks  = parseInt((document.getElementById('meso-weeks')||{}).value||4);
+  var prog      = (document.getElementById('meso-progression')||{}).value || 'linear';
+  var athlete   = (document.getElementById('meso-athlete')||{}).value || currentPlayer;
+  var startDate = (document.getElementById('meso-start-date')||{}).value || new Date().toISOString().slice(0,10);
+  var dayTempl  = getDayTemplate(phase);
+  var deloadWk  = totalWks === 4 ? 3 : 4; // week 3 of 4, week 4 of 6
+
+  CURRENT_MESO = {
+    athlete, phase, weeks: totalWks, progression: prog, startDate,
+    deloadWeek: deloadWk,
+    weekData: []
+  };
+
+  // Build week data
+  for (var w = 1; w <= totalWks; w++) {
+    var isDeload = (w === deloadWk);
+    var progMods = getProgression(prog, w, totalWks, isDeload);
+    var weekStart = new Date(startDate);
+    weekStart.setDate(weekStart.getDate() + (w-1)*7);
+
+    var days = dayTempl.map(function(d, di) {
+      var dayDate = new Date(weekStart);
+      dayDate.setDate(dayDate.getDate() + di);
+      return {
+        day: d.day, type: d.type, label: d.label,
+        date: dayDate.toISOString().slice(0,10),
+        sessions: [], // filled when user adds exercises
+        volMod: progMods.vol, intMod: progMods.int, densityMod: progMods.density,
+      };
+    });
+
+    CURRENT_MESO.weekData.push({ week:w, isDeload:isDeload, label:progMods.label, days:days, progMods:progMods });
+  }
+
+  MESO_ACTIVE_WEEK = 0;
+  renderMesoWeekTabs();
+  renderMesoWeekGrid();
+  renderMesoTargets();
+  renderMesoProgChart();
+}
+
+function renderMesoWeekTabs() {
+  var tabs = document.getElementById('meso-week-tabs');
+  if (!tabs || !CURRENT_MESO) return;
+  tabs.innerHTML = CURRENT_MESO.weekData.map(function(wk, i) {
+    var isDeload = wk.isDeload;
+    var isActive = i === MESO_ACTIVE_WEEK;
+    var bg = isActive ? (isDeload ? '#94a3b8' : '#a78bfa') : 'transparent';
+    var border = isDeload ? '1px solid #94a3b8' : '1px solid rgba(167,139,250,0.4)';
+    return '<button onclick="mesoSelectWeek(' + i + ')" style="padding:6px 14px;background:' + bg + ';border:' + border + ';border-radius:6px;color:' + (isActive?'#fff':'#a78bfa') + ';font-size:11px;font-weight:600;cursor:pointer;">'
+      + 'Week ' + wk.week + (isDeload ? ' 🔄' : '') + '<br><span style="font-size:9px;opacity:0.8;">' + wk.label + '</span></button>';
+  }).join('');
+}
+
+function mesoSelectWeek(idx) {
+  MESO_ACTIVE_WEEK = idx;
+  renderMesoWeekTabs();
+  renderMesoWeekGrid();
+}
+
+const DAY_COLORS = { lift:'#6366f1', speed:'#f59e0b', esd:'#22c55e', off:'#334155' };
+
+function renderMesoWeekGrid() {
+  var grid = document.getElementById('meso-week-grid');
+  if (!grid || !CURRENT_MESO) return;
+  var wk = CURRENT_MESO.weekData[MESO_ACTIVE_WEEK];
+  if (!wk) return;
+
+  grid.innerHTML = wk.days.map(function(d, di) {
+    var col   = DAY_COLORS[d.type] || '#334155';
+    var isOff = d.type === 'off';
+    var hasSessions = d.sessions && d.sessions.length > 0;
+    var sessionCount = hasSessions ? d.sessions.reduce(function(s,b){ return s+b.exercises.length; },0) : 0;
+
+    return '<div onclick="' + (isOff ? '' : 'mesoOpenDay(' + MESO_ACTIVE_WEEK + ',' + di + ')') + '" '
+      + 'style="border:1px solid ' + col + (isOff?'44':'88') + ';border-radius:8px;padding:8px;cursor:' + (isOff?'default':'pointer') + ';'
+      + 'background:' + col + (isOff?'08':'15') + ';min-height:80px;'
+      + 'transition:background 0.15s;">'
+      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:' + col + ';margin-bottom:4px;">' + d.day + '</div>'
+      + '<div style="font-size:10px;color:var(--text2);font-weight:600;">' + d.label + '</div>'
+      + '<div style="font-size:9px;color:var(--text3);margin-top:2px;">' + (d.date ? new Date(d.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '') + '</div>'
+      + (hasSessions ? '<div style="margin-top:6px;font-size:9px;color:' + col + ';">' + sessionCount + ' exercises</div>' : '')
+      + (!isOff && !hasSessions ? '<div style="margin-top:8px;font-size:9px;color:var(--text3);">+ Add session</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function mesoOpenDay(weekIdx, dayIdx) {
+  var wk  = CURRENT_MESO.weekData[weekIdx];
+  var day = wk.days[dayIdx];
+  MESO_ACTIVE_DAY = { weekIdx, dayIdx };
+  var editor = document.getElementById('meso-session-editor');
+  if (!editor) return;
+  editor.style.display = 'block';
+
+  var existingBlocks = day.sessions || [];
+  var blockHtml = existingBlocks.map(function(block, bi) {
+    var exHtml = block.exercises.map(function(ex, ei) {
+      return '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 24px;gap:4px;margin-bottom:4px;align-items:center;">'
+        + '<input value="' + (ex.name||'') + '" placeholder="Exercise" onchange="mesoUpdateEx(' + bi + ',' + ei + ',\'name\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'
+        + '<input value="' + (ex.sets||'') + '" placeholder="Sets" onchange="mesoUpdateEx(' + bi + ',' + ei + ',\'sets\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+        + '<input value="' + (ex.reps||'') + '" placeholder="Reps" onchange="mesoUpdateEx(' + bi + ',' + ei + ',\'reps\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+        + '<input value="' + (ex.tempo||'') + '" placeholder="Tempo" onfocus="showTempoTooltip(this)" onblur="hideTempoTooltip()" onchange="mesoUpdateEx(' + bi + ',' + ei + ',\'tempo\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+        + '<input value="' + (ex.load||'') + '" placeholder="Load" onchange="mesoUpdateEx(' + bi + ',' + ei + ',\'load\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+        + '<input value="' + (ex.rest||'') + '" placeholder="Rest" onfocus="showRestTooltip(this)" onblur="hideRestTooltip()" onchange="mesoUpdateEx(' + bi + ',' + ei + ',\'rest\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+        + '<button onclick="mesoRemoveEx(' + bi + ',' + ei + ')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0;">✕</button>'
+        + '</div>';
+    }).join('');
+    return '<div style="margin-bottom:12px;background:var(--bg3);border-radius:8px;padding:10px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+      + '<div style="font-size:11px;font-weight:700;color:var(--blue);">Block ' + String.fromCharCode(65+bi) + '</div>'
+      + '<button onclick="mesoRemoveBlock(' + bi + ')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:11px;">Remove block</button>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 24px;gap:4px;margin-bottom:6px;">'
+      + '<div style="font-size:9px;color:var(--text3);">Exercise</div>'
+      + '<div style="font-size:9px;color:var(--text3);text-align:center;">Sets</div>'
+      + '<div style="font-size:9px;color:var(--text3);text-align:center;">Reps</div>'
+      + '<div style="font-size:9px;color:var(--text3);text-align:center;">Tempo</div>'
+      + '<div style="font-size:9px;color:var(--text3);text-align:center;">Load</div>'
+      + '<div style="font-size:9px;color:var(--text3);text-align:center;">Rest</div>'
+      + '<div></div></div>'
+      + exHtml
+      + '<button onclick="mesoAddEx(' + bi + ')" style="font-size:10px;color:var(--blue);background:transparent;border:1px dashed rgba(59,130,246,0.4);border-radius:4px;padding:4px 10px;cursor:pointer;width:100%;margin-top:4px;">＋ Add Exercise</button>'
+      + '</div>';
+  }).join('');
+
+  editor.innerHTML = '<div style="padding:12px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">'
+    + '<div><div style="font-size:14px;font-weight:700;color:#fff;">' + day.label + ' — Week ' + (weekIdx+1) + ' ' + day.day + '</div>'
+    + '<div style="font-size:11px;color:var(--text3);">Vol: ' + Math.round(day.volMod*100) + '% · Int: ' + Math.round(day.intMod*100) + '% · Density: ' + Math.round(day.densityMod*100) + '%</div></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="mesoCopyDayFromTemplate()" style="padding:6px 12px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:6px;color:var(--blue);font-size:11px;cursor:pointer;">📋 Load Template</button>'
+    + '<button onclick="mesoApplyToAllWeeks()" style="padding:6px 12px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;font-size:11px;cursor:pointer;">↕ Apply to All Weeks</button>'
+    + '<button onclick="mesoCloseDayEditor()" style="padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:11px;cursor:pointer;">✕ Close</button>'
+    + '</div></div>'
+    + blockHtml
+    + '<button onclick="mesoAddBlock()" style="padding:8px;background:rgba(34,197,94,0.1);border:1px dashed rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:11px;cursor:pointer;width:100%;">＋ Add Block</button>'
+    + '</div>';
+}
+
+function mesoAddBlock() {
+  if (!MESO_ACTIVE_DAY || !CURRENT_MESO) return;
+  var day = CURRENT_MESO.weekData[MESO_ACTIVE_DAY.weekIdx].days[MESO_ACTIVE_DAY.dayIdx];
+  if (!day.sessions) day.sessions = [];
+  day.sessions.push({ exercises: [{ name:'', sets:'', reps:'', tempo:'', load:'', rest:'' }] });
+  mesoOpenDay(MESO_ACTIVE_DAY.weekIdx, MESO_ACTIVE_DAY.dayIdx);
+}
+
+function mesoAddEx(blockIdx) {
+  if (!MESO_ACTIVE_DAY || !CURRENT_MESO) return;
+  var day = CURRENT_MESO.weekData[MESO_ACTIVE_DAY.weekIdx].days[MESO_ACTIVE_DAY.dayIdx];
+  day.sessions[blockIdx].exercises.push({ name:'', sets:'', reps:'', tempo:'', load:'', rest:'' });
+  mesoOpenDay(MESO_ACTIVE_DAY.weekIdx, MESO_ACTIVE_DAY.dayIdx);
+}
+
+function mesoRemoveEx(blockIdx, exIdx) {
+  if (!MESO_ACTIVE_DAY || !CURRENT_MESO) return;
+  var day = CURRENT_MESO.weekData[MESO_ACTIVE_DAY.weekIdx].days[MESO_ACTIVE_DAY.dayIdx];
+  day.sessions[blockIdx].exercises.splice(exIdx, 1);
+  mesoOpenDay(MESO_ACTIVE_DAY.weekIdx, MESO_ACTIVE_DAY.dayIdx);
+}
+
+function mesoRemoveBlock(blockIdx) {
+  if (!MESO_ACTIVE_DAY || !CURRENT_MESO) return;
+  var day = CURRENT_MESO.weekData[MESO_ACTIVE_DAY.weekIdx].days[MESO_ACTIVE_DAY.dayIdx];
+  day.sessions.splice(blockIdx, 1);
+  mesoOpenDay(MESO_ACTIVE_DAY.weekIdx, MESO_ACTIVE_DAY.dayIdx);
+}
+
+function mesoUpdateEx(blockIdx, exIdx, field, val) {
+  if (!MESO_ACTIVE_DAY || !CURRENT_MESO) return;
+  var day = CURRENT_MESO.weekData[MESO_ACTIVE_DAY.weekIdx].days[MESO_ACTIVE_DAY.dayIdx];
+  day.sessions[blockIdx].exercises[exIdx][field] = val;
+  renderMesoWeekGrid(); // update exercise count
+}
+
+function mesoCloseDayEditor() {
+  var editor = document.getElementById('meso-session-editor');
+  if (editor) editor.style.display = 'none';
+  MESO_ACTIVE_DAY = null;
+}
+
+function mesoApplyToAllWeeks() {
+  if (!MESO_ACTIVE_DAY || !CURRENT_MESO) return;
+  var srcDay = CURRENT_MESO.weekData[MESO_ACTIVE_DAY.weekIdx].days[MESO_ACTIVE_DAY.dayIdx];
+  var dayIdx = MESO_ACTIVE_DAY.dayIdx;
+
+  CURRENT_MESO.weekData.forEach(function(wk, wi) {
+    if (wi === MESO_ACTIVE_DAY.weekIdx) return; // skip current week
+    var targetDay = wk.days[dayIdx];
+    if (targetDay.type === 'off') return;
+    // Deep copy sessions with scaled load based on volume/intensity modifiers
+    targetDay.sessions = JSON.parse(JSON.stringify(srcDay.sessions)).map(function(block) {
+      block.exercises = block.exercises.map(function(ex) {
+        // Scale sets based on volume modifier
+        if (ex.sets && !isNaN(parseFloat(ex.sets))) {
+          ex.sets = Math.round(parseFloat(ex.sets) * wk.days[dayIdx].volMod / srcDay.volMod);
+        }
+        return ex;
+      });
+      return block;
+    });
+  });
+
+  showStatus('✅ Applied to all ' + CURRENT_MESO.weeks + ' weeks (sets scaled by volume modifier)');
+  renderMesoWeekGrid();
+}
+
+function mesoCopyDayFromTemplate() {
+  // Load from OC_PROGRAMS template if available
+  var val = prompt('Enter program name to load (or leave blank to open template picker):','');
+  if (!val) return;
+  if (typeof OC_PROGRAMS !== 'undefined' && OC_PROGRAMS[val]) {
+    var sessions = OC_PROGRAMS[val];
+    var day = CURRENT_MESO.weekData[MESO_ACTIVE_DAY.weekIdx].days[MESO_ACTIVE_DAY.dayIdx];
+    day.sessions = [];
+    sessions.forEach(function(s) {
+      if (s.type !== 'lift' && s.type !== 'general') return;
+      day.sessions.push({ exercises: s.exercises.map(function(e) {
+        return { name:e.name, sets:e.sets||'', reps:e.reps||'', tempo:e.tempo||'', load:e.load||'', rest:e.rest||'' };
+      })});
+    });
+    mesoOpenDay(MESO_ACTIVE_DAY.weekIdx, MESO_ACTIVE_DAY.dayIdx);
+    showStatus('✅ Loaded template: ' + val);
+  } else {
+    alert('Program "' + val + '" not found. Check My Programs for exact name.');
+  }
+}
+
+function renderMesoTargets() {
+  var targets = document.getElementById('meso-targets');
+  if (!targets || !CURRENT_MESO) return;
+  var phase = CURRENT_MESO.phase;
+  var def   = PHASE_DEFAULTS[phase] || PHASE_DEFAULTS.inseason;
+  var html  = '';
+  CURRENT_MESO.weekData.forEach(function(wk) {
+    var volPct = Math.round(wk.progMods.vol * 100);
+    var intPct = Math.round(wk.progMods.int * 100);
+    var denPct = Math.round(wk.progMods.density * 100);
+    var volColor = volPct > 90 ? '#ef4444' : volPct > 75 ? '#f59e0b' : '#22c55e';
+    var intColor = intPct > 88 ? '#ef4444' : intPct > 78 ? '#f59e0b' : '#22c55e';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">'
+      + '<span style="color:var(--text3);">Week ' + wk.week + (wk.isDeload?' 🔄':'') + '</span>'
+      + '<span style="color:' + volColor + '">Vol ' + volPct + '%</span>'
+      + '<span style="color:' + intColor + '">Int ' + intPct + '%</span>'
+      + '<span style="color:#60a5fa">Den ' + denPct + '%</span>'
+      + '</div>';
+  });
+  targets.innerHTML = html;
+}
+
+function renderMesoProgChart() {
+  var ctx = document.getElementById('meso-prog-chart');
+  if (!ctx || !CURRENT_MESO) return;
+  var labels = CURRENT_MESO.weekData.map(function(w) { return 'W' + w.week + (w.isDeload?' DL':''); });
+  var volData = CURRENT_MESO.weekData.map(function(w) { return Math.round(w.progMods.vol*100); });
+  var intData = CURRENT_MESO.weekData.map(function(w) { return Math.round(w.progMods.int*100); });
+  var denData = CURRENT_MESO.weekData.map(function(w) { return Math.round(w.progMods.density*100); });
+
+  if (ctx._chart) ctx._chart.destroy();
+  ctx._chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label:'Volume',    data:volData, backgroundColor:'#6366f144', borderColor:'#6366f1', borderWidth:2 },
+        { label:'Intensity', data:intData, backgroundColor:'#f59e0b44', borderColor:'#f59e0b', borderWidth:2 },
+        { label:'Density',   data:denData, backgroundColor:'#22c55e44', borderColor:'#22c55e', borderWidth:2 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{ labels:{ color:'#94a3b8', font:{size:10} } } },
+      scales: {
+        x: { ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'} },
+        y: { min:0, max:100, ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'} }
+      }
+    }
+  });
+}
+
+function mesoSave() {
+  if (!CURRENT_MESO) { alert('Build a mesocycle first'); return; }
+  var key = CURRENT_MESO.athlete + '_' + CURRENT_MESO.startDate.slice(0,7) + '_' + CURRENT_MESO.phase;
+  MESO_PLANS[key] = CURRENT_MESO;
+  saveAnnualData();
+  if (typeof syncToSupabase === 'function') syncToSupabase();
+  showStatus('✅ Mesocycle saved: ' + key);
+  alert('Mesocycle saved! Find it in My Programs as "' + key + '"');
+}
+
+// Hook into switchProgTab
+var _origSwitchProgTab = switchProgTab;
+function switchProgTab(tab, btn) {
+  _origSwitchProgTab(tab, btn);
+  if (tab === 'annual') { setTimeout(initAnnualPlan, 50); }
+  if (tab === 'meso')   { setTimeout(initMesoBuilder, 50); }
+}
+
 function perioPhasePick() {
   var phase = (document.getElementById('perio-phase')||{}).value;
   var desc  = document.getElementById('perio-phase-desc');
