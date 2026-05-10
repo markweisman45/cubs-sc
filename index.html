@@ -9776,8 +9776,20 @@ function pbOpenDay(weekIdx, dayIdx) {
   var catOpts = '<option value="">— Category —</option>' + cats.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
 
   var blocksHtml = day.blocks.map(function(block, bi) {
+    var isSpeedBlock = block.blockType === 'speed';
     var exRows = block.exercises.map(function(ex, ei) {
-      // Get exercises for this category
+      if (isSpeedBlock) {
+        return '<div style="display:grid;grid-template-columns:1fr 45px 45px 70px 55px 55px 1fr 20px;gap:4px;align-items:center;margin-bottom:5px;">'
+          +'<input value="'+(ex.name||'')+'" placeholder="Drill / Exercise" onchange="pbSetExField('+bi+','+ei+',\'name\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'
+          +'<input value="'+(ex.sets||'')+'" placeholder="Sets" onchange="pbSetExField('+bi+','+ei+',\'sets\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 4px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+          +'<input value="'+(ex.reps||'')+'" placeholder="Reps" onchange="pbSetExField('+bi+','+ei+',\'reps\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 4px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+          +'<input value="'+(ex.distance||'')+'" placeholder="Dist" onchange="pbSetExField('+bi+','+ei+',\'distance\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 4px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+          +'<input value="'+(ex.pct||'')+'" placeholder="%" onchange="pbSetExField('+bi+','+ei+',\'pct\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 4px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+          +'<input value="'+(ex.rest||'')+'" placeholder="Rest" onfocus="showRestTooltip(this)" onblur="hideRestTooltip()" onchange="pbSetExField('+bi+','+ei+',\'rest\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 4px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+          +'<input value="'+(ex.notes||'')+'" placeholder="Notes / split times" onchange="pbSetExField('+bi+','+ei+',\'notes\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'
+          +'<button onclick="pbRemoveEx('+bi+','+ei+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0;">✕</button>'
+          +'</div>';
+      }
       var exOpts = '<option value="">— Exercise —</option>';
       if (ex.cat) {
         EXERCISE_DB.filter(function(e){ return e&&e.cat===ex.cat; })
@@ -9796,19 +9808,36 @@ function pbOpenDay(weekIdx, dayIdx) {
         +'</div>';
     }).join('');
 
-    return '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:10px;">'
+    var isSpd = block.blockType === 'speed';
+    var bColor = isSpd ? '#f59e0b' : '#818cf8';
+    var bIcon  = isSpd ? '⚡' : '🏋️';
+    var colHdr = isSpd
+      ? '<div style="display:grid;grid-template-columns:1fr 45px 45px 70px 55px 55px 1fr 20px;gap:4px;margin-bottom:6px;">'
+        +'<div style="font-size:8px;color:var(--text3);font-weight:600;">DRILL / EXERCISE</div>'
+        +'<div style="font-size:8px;color:#f59e0b;font-weight:600;text-align:center;">SETS</div>'
+        +'<div style="font-size:8px;color:#f59e0b;font-weight:600;text-align:center;">REPS</div>'
+        +'<div style="font-size:8px;color:#f59e0b;font-weight:600;text-align:center;">DIST</div>'
+        +'<div style="font-size:8px;color:#f59e0b;font-weight:600;text-align:center;">%</div>'
+        +'<div style="font-size:8px;color:#f59e0b;font-weight:600;text-align:center;">REST</div>'
+        +'<div style="font-size:8px;color:var(--text3);font-weight:600;">NOTES / TIMES</div>'
+        +'<div></div></div>'
+      : '<div style="display:grid;grid-template-columns:130px 1fr 50px 60px 70px 65px 55px 20px;gap:4px;margin-bottom:6px;">'
+        +'<div style="font-size:8px;color:var(--text3);font-weight:600;">CATEGORY</div>'
+        +'<div style="font-size:8px;color:var(--text3);font-weight:600;">EXERCISE</div>'
+        +'<div style="font-size:8px;color:#818cf8;font-weight:600;text-align:center;">SETS</div>'
+        +'<div style="font-size:8px;color:#818cf8;font-weight:600;text-align:center;">REPS</div>'
+        +'<div style="font-size:8px;color:#818cf8;font-weight:600;text-align:center;">LOAD</div>'
+        +'<div style="font-size:8px;color:#818cf8;font-weight:600;text-align:center;">TEMPO</div>'
+        +'<div style="font-size:8px;color:#818cf8;font-weight:600;text-align:center;">REST</div>'
+        +'<div></div></div>';
+    return '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:10px;border-left:3px solid '+bColor+';">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-      +'<div style="font-size:11px;font-weight:700;color:var(--blue);">Block '+String.fromCharCode(65+bi)+'</div>'
-      +'<button onclick="pbRemoveBlock('+bi+')" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;">Remove</button></div>'
-      +'<div style="display:grid;grid-template-columns:130px 1fr 50px 60px 70px 65px 55px 20px;gap:4px;margin-bottom:6px;">'
-      +'<div style="font-size:8px;color:var(--text3);font-weight:600;">CATEGORY</div>'
-      +'<div style="font-size:8px;color:var(--text3);font-weight:600;">EXERCISE</div>'
-      +'<div style="font-size:8px;color:var(--text3);font-weight:600;text-align:center;">SETS</div>'
-      +'<div style="font-size:8px;color:var(--text3);font-weight:600;text-align:center;">REPS</div>'
-      +'<div style="font-size:8px;color:var(--text3);font-weight:600;text-align:center;">LOAD</div>'
-      +'<div style="font-size:8px;color:var(--text3);font-weight:600;text-align:center;">TEMPO</div>'
-      +'<div style="font-size:8px;color:var(--text3);font-weight:600;text-align:center;">REST</div>'
-      +'<div></div></div>'
+      +'<div style="font-size:11px;font-weight:700;color:'+bColor+';">'+bIcon+' Block '+String.fromCharCode(65+bi)+(isSpd?' · Speed':' · Lift')+'</div>'
+      +'<div style="display:flex;gap:6px;">'
+      +'<button onclick="pbAddEx('+bi+')" style="font-size:9px;color:'+bColor+';background:transparent;border:1px dashed '+bColor+'55;border-radius:4px;padding:2px 8px;cursor:pointer;">＋ Row</button>'
+      +'<button onclick="pbRemoveBlock('+bi+')" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;">Remove</button>'
+      +'</div></div>'
+      + colHdr
       + exRows
       +'<button onclick="pbAddEx('+bi+')" style="width:100%;padding:5px;background:rgba(59,130,246,0.08);border:1px dashed rgba(59,130,246,0.3);border-radius:4px;color:var(--blue);font-size:10px;cursor:pointer;margin-top:4px;">＋ Add Exercise</button>'
       +'</div>';
@@ -9819,7 +9848,8 @@ function pbOpenDay(weekIdx, dayIdx) {
     +'<div><div style="font-size:14px;font-weight:700;color:#fff;">'+day.label+' — Week '+(weekIdx+1)+' '+day.day+'</div>'
     +'<div style="font-size:10px;color:var(--text3);margin-top:2px;">Sets ×'+wk.progMod.sets.toFixed(1)+' · Reps ×'+wk.progMod.reps.toFixed(1)+' · Load ×'+wk.progMod.load.toFixed(2)+'</div></div>'
     +'<div style="display:flex;gap:6px;">'
-    +'<button onclick="pbAddBlock()" style="padding:6px 12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:11px;font-weight:600;cursor:pointer;">＋ Add Block</button>'
+    +'<button onclick="pbAddBlock(\'lift\')" style="padding:6px 12px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);border-radius:6px;color:#818cf8;font-size:11px;font-weight:600;cursor:pointer;">🏋️ Lift Block</button>'
+    +'<button onclick="pbAddBlock(\'speed\')" style="padding:6px 12px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;font-size:11px;font-weight:600;cursor:pointer;">⚡ Speed Block</button>'
     +'<button onclick="pbCloseEditor()" style="padding:6px 10px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:11px;cursor:pointer;">✕ Close</button>'
     +'</div></div>'
     + blocksHtml
@@ -9840,16 +9870,24 @@ function pbSetExField(bi, ei, field, val) {
   day.blocks[bi].exercises[ei][field] = val;
   pbRenderDayGrid();
 }
-function pbAddBlock() {
+function pbAddBlock(type) {
   if (!PB_ACTIVE_DAY) return;
   var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
-  day.blocks.push({ exercises:[{cat:'',name:'',sets:'',reps:'',load:'',tempo:'',rest:''}] });
+  type = type || 'lift';
+  var emptyEx = type === 'speed'
+    ? {type:'speed',name:'',sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
+    : {type:'lift', cat:'',name:'',sets:'',reps:'',load:'',tempo:'',rest:''};
+  day.blocks.push({ blockType:type, exercises:[emptyEx] });
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
 }
 function pbAddEx(bi) {
   if (!PB_ACTIVE_DAY) return;
   var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
-  day.blocks[bi].exercises.push({cat:'',name:'',sets:'',reps:'',load:'',tempo:'',rest:''});
+  var isSpd = day.blocks[bi] && day.blocks[bi].blockType === 'speed';
+  var emptyEx = isSpd
+    ? {type:'speed',name:'',sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
+    : {type:'lift', cat:'',name:'',sets:'',reps:'',load:'',tempo:'',rest:''};
+  day.blocks[bi].exercises.push(emptyEx);
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
 }
 function pbRemoveEx(bi, ei) {
