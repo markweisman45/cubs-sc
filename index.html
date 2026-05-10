@@ -9764,7 +9764,7 @@ function pbRenderWeekTargets() {
 var PB_ACTIVE_DAY = null; // {weekIdx, dayIdx}
 
 function pbOpenDay(weekIdx, dayIdx) {
-  PB_ACTIVE_DAY = {weekIdx, dayIdx};
+  PB_ACTIVE_DAY = {weekIdx: weekIdx, dayIdx: dayIdx};
   var wk  = PB_STATE.weekData[weekIdx];
   var day = wk.days[dayIdx];
   var editor = document.getElementById('pb-session-editor');
@@ -9913,7 +9913,8 @@ function pbAddSession() {
 }
 
 function pbAddBlock(type) {
-  if (!PB_ACTIVE_DAY) return;
+  if (!PB_ACTIVE_DAY) { console.error('pbAddBlock: PB_ACTIVE_DAY is null'); return; }
+  if (!PB_STATE.weekData || !PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx]) { console.error('pbAddBlock: no weekData'); return; }
   var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
   type = type || 'lift';
   var emptyEx = type === 'speed'
