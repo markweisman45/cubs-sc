@@ -685,10 +685,10 @@ body {
           <!-- READINESS HERO -->
           <div class="readiness-hero yellow-status" id="readinessHero">
             <div class="readiness-glow"></div>
-            <div class="card-title">TODAY'S READINESS</div>
+            <div class="card-title">TODAY'S STRAIN</div>
             <div class="status-badge yellow" id="statusBadge">● MONITOR</div>
             <div class="readiness-score yellow" id="readinessScore">1.000</div>
-            <div class="readiness-label">Readiness Index vs EWMA Baseline</div>
+            <div class="readiness-label">Weekly Strain (Load × Monotony)</div>
             <div class="readiness-meta">
               <div class="r-meta-item">
                 <div class="r-meta-val" id="daysSinceCMJ">4</div>
@@ -730,7 +730,7 @@ body {
               </div>
             </div>
             <div class="card" style="flex:1;">
-              <div class="card-title">Readiness — Last 14 Days</div>
+              <div class="card-title">Strain — Last 14 Days</div>
               <div class="chart-wrap"><canvas id="readinessMiniChart"></canvas></div>
             </div>
           </div>
@@ -772,7 +772,7 @@ body {
                   <th>Bat Spd</th>
                   <th>Exit Velo</th>
                   <th>Throw Velo</th>
-                  <th>Readiness</th>
+                  <th>Strain</th>
                   <th>ACWR</th>
                   <th>Status</th>
                 </tr>
@@ -940,7 +940,7 @@ body {
               <table class="data-table" style="font-size:11px;">
                 <thead>
                   <tr>
-                    <th>Date</th><th>Soreness</th><th>Energy</th><th>Sleep</th><th>BW (lbs)</th><th>Composite</th><th>Readiness</th><th>Swing</th><th>Flag</th>
+                    <th>Date</th><th>Soreness</th><th>Energy</th><th>Sleep</th><th>BW (lbs)</th><th>Composite</th><th>Strain</th><th>Swing</th><th>Flag</th>
                   </tr>
                 </thead>
                 <tbody id="wellnessTableBody"></tbody>
@@ -5566,21 +5566,25 @@ function renderCoachNotes(p) {
 }
 
 function renderReadinessHero(p) {
-  // Recompute status from live ACWR (already updated by renderACWR) + wellness
-  const liveStatus   = readinessToStatus(p.readiness, p.acwr);
-  const liveReadiness = p.readiness;
-  p.status = liveStatus; // keep p in sync
+  if (!document.getElementById('readinessHero')) return;
+  // Compute strain from statcast data
+  const ms = computeMonotonyStrain(p._name || currentPlayer);
+  const strain = ms.strain;
+  const weeklyHE = ms.weeklyHE;
+  const monotony = ms.monotony;
+
+  // Strain thresholds → status
+  const sc = strain > 2500 ? 'red' : strain > 1500 ? 'yellow' : 'green';
+  const statusText = strain > 2500 ? '● HIGH STRAIN' : strain > 1500 ? '● MONITOR' : '● OPTIMAL';
 
   const hero = document.getElementById('readinessHero');
-  const sc = liveStatus === 'GREEN' ? 'green' : liveStatus === 'RED' ? 'red' : 'yellow';
-  hero.className = `readiness-hero ${sc}-status`;
-  document.getElementById('readinessScore').className = `readiness-score ${sc}`;
-  document.getElementById('readinessScore').textContent = liveReadiness.toFixed(3);
-  document.getElementById('statusBadge').className = `status-badge ${sc}`;
-  document.getElementById('statusBadge').textContent =
-    liveStatus === 'GREEN' ? '● OPTIMAL' :
-    liveStatus === 'RED'   ? '● HIGH RISK' : '● MONITOR';
+  hero.className = 'readiness-hero ' + sc + '-status';
+  document.getElementById('readinessScore').className = 'readiness-score ' + sc;
+  document.getElementById('readinessScore').textContent = strain > 0 ? strain.toLocaleString() : '—';
+  document.getElementById('statusBadge').className = 'status-badge ' + sc;
+  document.getElementById('statusBadge').textContent = statusText;
   document.getElementById('daysSinceCMJ').textContent = p.daysSinceCMJ;
+
   const acwrEl = document.getElementById('acwrHero');
   if (acwrEl) {
     acwrEl.textContent = p.acwr.toFixed(3);
@@ -5589,22 +5593,22 @@ function renderReadinessHero(p) {
   const games = [...(p.recentGames||[])].sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
   if (games.length) document.getElementById('lastGame').textContent = fmtDate(games[games.length-1].date);
 
-  // Readiness trend arrow — compare today vs yesterday
+  // Strain label update
+  const lbl = document.querySelector('.readiness-label');
+  if (lbl) lbl.textContent = 'Weekly HE: ' + weeklyHE.toLocaleString() + ' ft · Monotony: ' + monotony.toFixed(2);
+
+  // Trend: compare this week strain vs last week
   const trendEl = document.getElementById('readinessTrend');
-  if (trendEl && games.length >= 2) {
-    const today = games[games.length-1].readiness || p.readiness;
-    const yesterday = games[games.length-2].readiness || p.readiness;
-    const diff = today - yesterday;
-    const pct  = Math.abs(diff * 100).toFixed(1);
-    if (Math.abs(diff) < 0.003) {
-      trendEl.innerHTML = `<span style="color:var(--text3);">→ Stable</span>`;
-    } else if (diff > 0) {
-      trendEl.innerHTML = `<span style="color:var(--green);">↑ +${pct}%</span>`;
+  if (trendEl) {
+    if (strain === 0) {
+      trendEl.innerHTML = '<span style="color:var(--text3);">No data</span>';
+    } else if (strain > 2500) {
+      trendEl.innerHTML = '<span style="color:var(--red);">↑ High load — consider reducing</span>';
+    } else if (strain > 1500) {
+      trendEl.innerHTML = '<span style="color:var(--yellow);">→ Moderate — monitor</span>';
     } else {
-      trendEl.innerHTML = `<span style="color:var(--red);">↓ −${pct}%</span>`;
+      trendEl.innerHTML = '<span style="color:var(--green);">✓ Within optimal range</span>';
     }
-  } else if (trendEl) {
-    trendEl.innerHTML = '';
   }
 }
 
@@ -5686,7 +5690,30 @@ function renderPerfTable(p) {
       <td>${g.bat   ? g.bat.toFixed(1)   : '—'}</td>
       <td>${g.exit  ? g.exit.toFixed(1)  : '—'}</td>
       <td>${g.throwV ? g.throwV.toFixed(1): '—'}</td>
-      <td>${g.readiness.toFixed(3)}</td>
+      <td>${(function(){
+        var allRows=[];
+        try{var s=JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
+          var k=Object.keys(s).find(function(k){return k===currentPlayer;})||Object.keys(s).find(function(k){return k.toLowerCase()===currentPlayer.toLowerCase();});
+          if(k) allRows=(s[k]||[]).slice().sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);});
+        }catch(e){}
+        if(!allRows.length) return '—';
+        // Find ref date for this game row
+        var match=allRows.find(function(r){return fmtDate(r.date)===g.date;});
+        if(!match) return '—';
+        var refDate=safeParseDate(match.date); refDate.setHours(0,0,0,0);
+        var daily=[];
+        for(var d=6;d>=0;d--){
+          var day=new Date(refDate); day.setDate(day.getDate()-d); day.setHours(0,0,0,0);
+          var row=allRows.find(function(r){var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===day.getTime();});
+          daily.push(row?(row.heDist||0):0);
+        }
+        var wkHE=daily.reduce(function(s,v){return s+v;},0);
+        var avg=wkHE/7;
+        var sd=Math.sqrt(daily.reduce(function(s,v){return s+Math.pow(v-avg,2);},0)/7);
+        var mono=sd>0?avg/sd:0;
+        var strain=Math.round(wkHE*mono);
+        return strain>0?strain.toLocaleString():'—';
+      })()}</td>
       <td>${liveAcwr.toFixed(3)}</td>
       <td><span class="pill ${sc(liveStatus)}">${liveStatus}</span></td>
     </tr>`;
@@ -5900,12 +5927,33 @@ function renderAllCharts(p) {
   const games = p.recentGames;
   const labels = games.map(g => g.date);
 
-  // Readiness mini
+  // Strain mini chart — rolling 7-day strain per game date
+  const allStatcastRows = (() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
+      const key = Object.keys(stored).find(k=>k===currentPlayer)||Object.keys(stored).find(k=>k.toLowerCase()===currentPlayer.toLowerCase());
+      return key ? (stored[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date)) : [];
+    } catch(e) { return []; }
+  })();
+  const strainData = games.map(function(g) {
+    var refDate = safeParseDate(g.date); refDate.setHours(0,0,0,0);
+    var daily = [];
+    for (var d=6; d>=0; d--) {
+      var day = new Date(refDate); day.setDate(day.getDate()-d); day.setHours(0,0,0,0);
+      var row = allStatcastRows.find(function(r){ var rd=safeParseDate(r.date); rd.setHours(0,0,0,0); return rd.getTime()===day.getTime(); });
+      daily.push(row ? (row.heDist||0) : 0);
+    }
+    var wkHE = daily.reduce(function(s,v){return s+v;},0);
+    var avg  = wkHE/7;
+    var sd   = Math.sqrt(daily.reduce(function(s,v){return s+Math.pow(v-avg,2);},0)/7);
+    var mono = sd>0 ? avg/sd : 0;
+    return Math.round(wkHE * mono);
+  });
   mkTrendChart('readinessMiniChart', labels,
-    [{label:'Readiness', data:games.map(g=>g.readiness), borderColor:C.blue, backgroundColor:'rgba(59,122,196,0.08)', fill:true}],
+    [{label:'Strain', data:strainData, borderColor:C.yellow, backgroundColor:'rgba(245,158,11,0.08)', fill:true}],
     { plugins:{ annotation:{ annotations:{
-        green:{ type:'line', yMin:1.05, yMax:1.05, borderColor:C.green, borderDash:[4,4], borderWidth:1 },
-        red:  { type:'line', yMin:0.95, yMax:0.95, borderColor:C.red,   borderDash:[4,4], borderWidth:1 },
+        monitor:{ type:'line', yMin:1500, yMax:1500, borderColor:C.yellow, borderDash:[4,4], borderWidth:1 },
+        high:   { type:'line', yMin:2500, yMax:2500, borderColor:C.red,    borderDash:[4,4], borderWidth:1 },
     }}}}
   );
 
