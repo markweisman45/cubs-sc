@@ -5696,23 +5696,10 @@ function renderPerfTable(p) {
           var k=Object.keys(s).find(function(k){return k===currentPlayer;})||Object.keys(s).find(function(k){return k.toLowerCase()===currentPlayer.toLowerCase();});
           if(k) allRows=(s[k]||[]).slice().sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);});
         }catch(e){}
-        if(!allRows.length) return '—';
-        // Find ref date for this game row
         var match=allRows.find(function(r){return fmtDate(r.date)===g.date;});
         if(!match) return '—';
-        var refDate=safeParseDate(match.date); refDate.setHours(0,0,0,0);
-        var daily=[];
-        for(var d=6;d>=0;d--){
-          var day=new Date(refDate); day.setDate(day.getDate()-d); day.setHours(0,0,0,0);
-          var row=allRows.find(function(r){var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===day.getTime();});
-          daily.push(row?(row.heDist||0):0);
-        }
-        var wkHE=daily.reduce(function(s,v){return s+v;},0);
-        var avg=wkHE/7;
-        var sd=Math.sqrt(daily.reduce(function(s,v){return s+Math.pow(v-avg,2);},0)/7);
-        var mono=sd>0?avg/sd:0;
-        var strain=Math.round(wkHE*mono);
-        return strain>0?strain.toLocaleString():'—';
+        var ms=computeMonotonyStrain(currentPlayer, safeParseDate(match.date));
+        return ms.strain>0?ms.strain.toLocaleString():'—';
       })()}</td>
       <td>${liveAcwr.toFixed(3)}</td>
       <td><span class="pill ${sc(liveStatus)}">${liveStatus}</span></td>
@@ -5743,38 +5730,37 @@ function acwrLabel(acwr) {
 }
 
 // ── Compute Monotony & Strain from importedData.statcast (7-day rolling)
-function computeMonotonyStrain(playerName) {
-  const rows = (importedData.statcast[playerName] || [])
-    .sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
-  if (!rows.length) return { monotony: 0, strain: 0, weeklyHE: 0 };
+function computeMonotonyStrain(playerName, refDate) {
+  // Read directly from localStorage — works before importedData is populated
+  var rows = [];
+  try {
+    var stored = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
+    var key = Object.keys(stored).find(function(k){ return k===playerName; })
+           || Object.keys(stored).find(function(k){ return k.toLowerCase()===playerName.toLowerCase(); });
+    if (key) rows = (stored[key]||[]).slice().sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
+  } catch(e) {}
+  if (!rows.length) return { monotony: 0, strain: 0, weeklyHE: 0, daily: [] };
 
-  // Use today as reference so off days after last game count as zero
-  const today = new Date(); today.setHours(0,0,0,0);
+  // Reference date — use last game date (not today) to avoid gaps for recent games
+  var ref = refDate ? new Date(refDate) : safeParseDate(rows[rows.length-1].date);
+  ref.setHours(0,0,0,0);
 
-  // Build 7 daily HE values: today back 6 days (7 calendar days)
-  const daily = [];
-  for (let i = 6; i >= 0; i--) {
-    const day = new Date(today);
-    day.setDate(day.getDate() - i);
-    day.setHours(0,0,0,0);
-    const game = rows.find(r => {
-      const rd = safeParseDate(r.date); rd.setHours(0,0,0,0);
-      return rd.getTime() === day.getTime();
-    });
-    daily.push(game ? (game.heDist || 0) : 0);
+  // Build 7 daily HE values ending on ref date
+  var daily = [];
+  for (var i = 6; i >= 0; i--) {
+    var day = new Date(ref); day.setDate(day.getDate()-i); day.setHours(0,0,0,0);
+    var game = rows.find(function(r){ var rd=safeParseDate(r.date); rd.setHours(0,0,0,0); return rd.getTime()===day.getTime(); });
+    daily.push(game ? (game.heDist||0) : 0);
   }
 
-  const weeklyHE = daily.reduce((s,v) => s+v, 0);
-  const avg = weeklyHE / 7;
+  var weeklyHE = daily.reduce(function(s,v){ return s+v; }, 0);
+  var avg = weeklyHE / 7;
+  var variance = daily.reduce(function(s,v){ return s+Math.pow(v-avg,2); }, 0) / 7;
+  var sd = Math.sqrt(variance);
+  var monotony = sd > 0 ? parseFloat((avg/sd).toFixed(2)) : 0;
+  var strain   = parseFloat((weeklyHE * monotony).toFixed(0));
 
-  // Standard deviation
-  const variance = daily.reduce((s,v) => s + Math.pow(v - avg, 2), 0) / 7;
-  const sd = Math.sqrt(variance);
-
-  const monotony = sd > 0 ? parseFloat((avg / sd).toFixed(2)) : 0;
-  const strain   = parseFloat((weeklyHE * monotony).toFixed(0));
-
-  return { monotony, strain, weeklyHE, daily };
+  return { monotony: monotony, strain: strain, weeklyHE: weeklyHE, daily: daily };
 }
 
 
@@ -5936,18 +5922,9 @@ function renderAllCharts(p) {
     } catch(e) { return []; }
   })();
   const strainData = games.map(function(g) {
-    var refDate = safeParseDate(g.date); refDate.setHours(0,0,0,0);
-    var daily = [];
-    for (var d=6; d>=0; d--) {
-      var day = new Date(refDate); day.setDate(day.getDate()-d); day.setHours(0,0,0,0);
-      var row = allStatcastRows.find(function(r){ var rd=safeParseDate(r.date); rd.setHours(0,0,0,0); return rd.getTime()===day.getTime(); });
-      daily.push(row ? (row.heDist||0) : 0);
-    }
-    var wkHE = daily.reduce(function(s,v){return s+v;},0);
-    var avg  = wkHE/7;
-    var sd   = Math.sqrt(daily.reduce(function(s,v){return s+Math.pow(v-avg,2);},0)/7);
-    var mono = sd>0 ? avg/sd : 0;
-    return Math.round(wkHE * mono);
+    // Use computeMonotonyStrain with each game's date as reference
+    var ms = computeMonotonyStrain(currentPlayer, safeParseDate(g.date));
+    return ms.strain || 0;
   });
   mkTrendChart('readinessMiniChart', labels,
     [{label:'Strain', data:strainData, borderColor:C.yellow, backgroundColor:'rgba(245,158,11,0.08)', fill:true}],
