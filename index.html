@@ -8451,6 +8451,10 @@ function getExerciseLoad(exName, athlete, pct) {
 
 function ytId(url) {
   if (!url) return null;
+  // Handle YouTube Shorts: youtube.com/shorts/VIDEO_ID
+  const shorts = url.match(/shorts\/([a-zA-Z0-9_-]{11})/);
+  if (shorts) return shorts[1];
+  // Handle standard: watch?v=, youtu.be/, embed/
   const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
   return m ? m[1] : null;
 }
