@@ -5940,9 +5940,8 @@ function renderAllCharts(p) {
     options: {
       ...cloneOpts(),
       scales: {
-        ...cloneOpts().scales,
-        y: { ...cloneOpts().scales.y, min: 0,
-          ticks: { color: C.text2, font: { family:'DM Mono', size:10 },
+        x: { grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10}} },
+        y: { min: 0, grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10},
             callback: function(v){ return v >= 1000 ? (v/1000).toFixed(1)+'k' : v; }
           }
         }
