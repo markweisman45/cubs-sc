@@ -267,9 +267,9 @@ body {
 .pill.red { background: var(--red-bg); color: var(--red); }
 
 /* ── CHART CONTAINER ── */
-.chart-wrap      { position: relative; height: 240px; }   /* standard */
-.chart-wrap.tall { position: relative; height: 280px; }   /* performance charts */
-.chart-wrap.xl   { position: relative; height: 340px; }   /* CMJ trend charts */
+.chart-wrap      { position: relative; height: 260px; }   /* standard */
+.chart-wrap.tall { position: relative; height: 300px; }   /* performance charts */
+.chart-wrap.xl   { position: relative; height: 360px; }   /* CMJ trend charts */
 
 /* ── ACWR GAUGE ── */
 .acwr-display { display: flex; align-items: center; gap: 20px; }
@@ -731,7 +731,7 @@ body {
             </div>
             <div class="card" style="flex:1;">
               <div class="card-title">Strain — Last 14 Days</div>
-              <div class="chart-wrap tall"><canvas id="readinessMiniChart"></canvas></div>
+              <div class="chart-wrap xl"><canvas id="readinessMiniChart"></canvas></div>
             </div>
           </div>
         </div>
@@ -748,7 +748,7 @@ body {
             <div class="card-title" style="margin:0;">⚖️ Body Weight Trend (lbs)</div>
             <div id="bwTrendStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
           </div>
-          <div class="chart-wrap"><canvas id="bwTrendChart"></canvas></div>
+          <div class="chart-wrap xl"><canvas id="bwTrendChart"></canvas></div>
         </div>
 
         <!-- PITCHER PANEL -->
@@ -991,14 +991,14 @@ body {
               <div class="card-title" style="margin:0;">Concentric Mean Power (W)</div>
               <div id="cmjConcStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);"></div>
             </div>
-            <div class="chart-wrap tall"><canvas id="cmjConcChart"></canvas></div>
+            <div class="chart-wrap xl"><canvas id="cmjConcChart"></canvas></div>
           </div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">CMJ Stiffness (N/m)</div>
               <div id="cmjStiffStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);"></div>
             </div>
-            <div class="chart-wrap tall"><canvas id="cmjStiffChart"></canvas></div>
+            <div class="chart-wrap xl"><canvas id="cmjStiffChart"></canvas></div>
           </div>
         </div>
 
@@ -1040,11 +1040,11 @@ body {
         <div class="grid-2">
           <div class="card">
             <div class="card-title">Top Speed Trend</div>
-            <div class="chart-wrap"><canvas id="speedChart"></canvas></div>
+            <div class="chart-wrap xl"><canvas id="speedChart"></canvas></div>
           </div>
           <div class="card">
             <div class="card-title">High-Effort Distance Per Game</div>
-            <div class="chart-wrap"><canvas id="heChart"></canvas></div>
+            <div class="chart-wrap xl"><canvas id="heChart"></canvas></div>
           </div>
         </div>
         <div class="card section-mb" style="margin-top:16px;">
@@ -5943,7 +5943,7 @@ function renderAllCharts(p) {
         x: { grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10}} },
         y: { type:'linear',
           min: 0,
-          max: Math.ceil(Math.max(3000, Math.max.apply(null, strainData.concat([0]))) / 500) * 500,
+          suggestedMax: Math.ceil(Math.max(3000, Math.max.apply(null, strainData.concat([0]))) / 500) * 500,
           grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10},
             callback: function(v){ return v >= 1000 ? (v/1000).toFixed(1)+'k' : v; }
           }
