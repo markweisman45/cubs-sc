@@ -5588,14 +5588,7 @@ function renderReadinessHero(p) {
       heroImg.style.opacity = '1';
     };
     heroImg.onerror = function() {
-      // Fallback to headshot if action shot fails
-      heroImg.src = 'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/' + ({
-        'Nico Hoerner':656428,'Dansby Swanson':669923,'Ian Happ':664023,
-        'Pete Crow-Armstrong':682998,'Matt Shaw':694973,'Carson Kelly':608348,
-        'Miguel Amaya':669242,'Michael Busch':683737,'Alex Bregman':608324,
-        'Moises Ballesteros':691626,'Seiya Suzuki':673548
-      }[currentPlayer]||'') + '/headshot/67/current';
-      heroImg.style.opacity = '1';
+      heroImg.style.opacity = '0.3'; // show placeholder opacity if image fails
     };
   }
   // Compute strain from statcast data
@@ -10175,17 +10168,17 @@ function pbSave() {
 
 // ── PLAYER HEADSHOTS (MLB CDN) ───────────────────────────────────────────────
 var PLAYER_PHOTOS = {
-  'Nico Hoerner':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:action:hero:current.png/w_2208,q_auto:best/v1/people/656428/action/hero/current',
-  'Dansby Swanson':      'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:action:hero:current.png/w_2208,q_auto:best/v1/people/669923/action/hero/current',
-  'Ian Happ':            'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:action:hero:current.png/w_2208,q_auto:best/v1/people/664023/action/hero/current',
-  'Pete Crow-Armstrong': 'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:action:hero:current.png/w_2208,q_auto:best/v1/people/682998/action/hero/current',
-  'Matt Shaw':           'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:action:hero:current.png/w_2208,q_auto:best/v1/people/694973/action/hero/current',
-  'Carson Kelly':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:action:hero:current.png/w_2208,q_auto:best/v1/people/608348/action/hero/current',
-  'Miguel Amaya':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:action:hero:current.png/w_2208,q_auto:best/v1/people/669242/action/hero/current',
-  'Michael Busch':       'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:action:hero:current.png/w_2208,q_auto:best/v1/people/683737/action/hero/current',
-  'Alex Bregman':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:action:hero:current.png/w_2208,q_auto:best/v1/people/608324/action/hero/current',
-  'Moises Ballesteros':  'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:action:hero:current.png/w_2208,q_auto:best/v1/people/691626/action/hero/current',
-  'Seiya Suzuki':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:action:hero:current.png/w_2208,q_auto:best/v1/people/673548/action/hero/current',
+  'Nico Hoerner':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/656428/headshot/67/current',
+  'Dansby Swanson':      'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/669923/headshot/67/current',
+  'Ian Happ':            'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/664023/headshot/67/current',
+  'Pete Crow-Armstrong': 'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/682998/headshot/67/current',
+  'Matt Shaw':           'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/694973/headshot/67/current',
+  'Carson Kelly':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/608348/headshot/67/current',
+  'Miguel Amaya':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/669242/headshot/67/current',
+  'Michael Busch':       'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/683737/headshot/67/current',
+  'Alex Bregman':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/608324/headshot/67/current',
+  'Moises Ballesteros':  'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/691626/headshot/67/current',
+  'Seiya Suzuki':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/673548/headshot/67/current',
 };
 
 var ANNUAL_PLANS = {};
