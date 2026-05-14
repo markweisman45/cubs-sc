@@ -5941,7 +5941,7 @@ function renderAllCharts(p) {
       ...cloneOpts(),
       scales: {
         x: { grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10}} },
-        y: { min: 0, grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10},
+        y: { min: 0, beginAtZero: true, grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10},
             callback: function(v){ return v >= 1000 ? (v/1000).toFixed(1)+'k' : v; }
           }
         }
