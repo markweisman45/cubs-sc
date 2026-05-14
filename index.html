@@ -5922,15 +5922,19 @@ function renderAllCharts(p) {
     } catch(e) { return []; }
   })();
   const strainData = games.map(function(g) {
-    // Use computeMonotonyStrain with each game's date as reference
-    var ms = computeMonotonyStrain(currentPlayer, safeParseDate(g.date));
-    return ms.strain || 0;
+    // g.date is "May 12" — find matching raw statcast date
+    var match = allStatcastRows.find(function(r){ return fmtDate(r.date) === g.date; });
+    if (!match) return null;
+    var ms = computeMonotonyStrain(currentPlayer, safeParseDate(match.date));
+    return ms.strain > 0 ? ms.strain : null;
   });
   mkTrendChart('readinessMiniChart', labels,
-    [{label:'Strain', data:strainData, borderColor:C.yellow, backgroundColor:'rgba(245,158,11,0.08)', fill:true}],
-    { plugins:{ annotation:{ annotations:{
-        monitor:{ type:'line', yMin:1500, yMax:1500, borderColor:C.yellow, borderDash:[4,4], borderWidth:1 },
-        high:   { type:'line', yMin:2500, yMax:2500, borderColor:C.red,    borderDash:[4,4], borderWidth:1 },
+    [{label:'Strain', data:strainData, borderColor:C.yellow, backgroundColor:'rgba(245,158,11,0.08)', fill:true,
+      spanGaps:true}],
+    { scales:{ y:{ min:0 } },
+      plugins:{ annotation:{ annotations:{
+        monitor:{ type:'line', yMin:1500, yMax:1500, borderColor:C.yellow, borderDash:[4,4], borderWidth:1, label:{content:'Monitor',display:true,font:{size:9}} },
+        high:   { type:'line', yMin:2500, yMax:2500, borderColor:C.red,    borderDash:[4,4], borderWidth:1, label:{content:'High',display:true,font:{size:9}} },
     }}}}
   );
 
