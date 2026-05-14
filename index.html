@@ -1885,6 +1885,8 @@ body {
                 <option value="">All Categories</option>
               </select>
               <button class="generate-btn" style="padding:8px 14px;" onclick="openAddExerciseModal()">+ Add Exercise</button>
+              <button onclick="libToggleSelect()" id="lib-select-btn" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">☑ Select</button>
+              <button onclick="libDeleteSelected()" id="lib-delete-btn" style="display:none;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">🗑 Delete Selected (<span id="lib-sel-count">0</span>)</button>
               <button onclick="exportExerciseLibrary()" style="background:rgba(59,122,196,0.15);border:1px solid rgba(59,122,196,0.3);border-radius:6px;color:var(--cubs-blue);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">📤 Export</button>
               <button onclick="document.getElementById('xlsxImportInput').click()"
                 style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:8px 14px;color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">
@@ -8409,15 +8411,74 @@ function importExerciseLibraryXLSX(input) {
 }
 
 
+// ── LIBRARY BULK SELECT / DELETE ─────────────────────────────────────────────
+var LIB_SELECTED = new Set();
+
+function libToggleSelect() {
+  var btn = document.getElementById('lib-select-btn');
+  var delBtn = document.getElementById('lib-delete-btn');
+  var isEntering = btn.textContent.includes('Select');
+  btn.textContent = isEntering ? '✕ Done' : '☑ Select';
+  LIB_SELECTED.clear();
+  if (delBtn) delBtn.style.display = isEntering ? 'block' : 'none';
+  renderLibrary();
+}
+
+function libToggleCard(card, idx) {
+  if (!card) return;
+  if (LIB_SELECTED.has(idx)) {
+    LIB_SELECTED.delete(idx);
+    card.classList.remove('lib-selected');
+    var cb = card.querySelector('.lib-cb');
+    if (cb) cb.checked = false;
+  } else {
+    LIB_SELECTED.add(idx);
+    card.classList.add('lib-selected');
+    var cb = card.querySelector('.lib-cb');
+    if (cb) cb.checked = true;
+  }
+  var cnt = document.getElementById('lib-sel-count');
+  if (cnt) cnt.textContent = LIB_SELECTED.size;
+}
+
+function libDeleteSelected() {
+  if (!LIB_SELECTED.size) { alert('No exercises selected'); return; }
+  if (!confirm('Delete ' + LIB_SELECTED.size + ' selected exercises? This cannot be undone.')) return;
+  // Remove by index — sort descending so indices stay valid
+  var idxs = Array.from(LIB_SELECTED).sort(function(a,b){return b-a;});
+  idxs.forEach(function(i){ EXERCISE_DB.splice(i,1); });
+  LIB_SELECTED.clear();
+  persistExerciseDB();
+  // Exit select mode
+  var btn = document.getElementById('lib-select-btn');
+  var delBtn = document.getElementById('lib-delete-btn');
+  if (btn) btn.textContent = '☑ Select';
+  if (delBtn) delBtn.style.display = 'none';
+  renderLibrary();
+  showStatus('✅ Deleted ' + idxs.length + ' exercises');
+}
+
 function exportExerciseLibrary() {
-  const data = JSON.stringify(EXERCISE_DB, null, 2);
-  const blob = new Blob([data], {type:'application/json'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
+  // Export as CSV — opens cleanly in Excel
+  var rows = [['Category','Exercise Name','Lift Key','Video URL','Notes']];
+  EXERCISE_DB.filter(Boolean).forEach(function(e) {
+    rows.push([
+      (e.cat||'').replace(/,/g,';'),
+      (e.name||'').replace(/,/g,';'),
+      (e.liftKey||'').replace(/,/g,';'),
+      (e.video||'').replace(/,/g,';'),
+      (e.notes||'').replace(/,/g,';')
+    ]);
+  });
+  var csv = rows.map(function(r){ return r.map(function(c){ return '"'+c+'"'; }).join(','); }).join('\r\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
   a.href = url;
-  a.download = 'cubs_exercise_library_' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'cubs_exercise_library_' + new Date().toISOString().slice(0,10) + '.csv';
   a.click();
   URL.revokeObjectURL(url);
+  showStatus('✅ Exported ' + (rows.length-1) + ' exercises as CSV — open in Excel to edit');
 }
 
 function importExerciseLibrary(input) {
