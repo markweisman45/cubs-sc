@@ -731,7 +731,7 @@ body {
             </div>
             <div class="card" style="flex:1;">
               <div class="card-title">Strain — Last 14 Days</div>
-              <div class="chart-wrap"><canvas id="readinessMiniChart"></canvas></div>
+              <div class="chart-wrap tall"><canvas id="readinessMiniChart"></canvas></div>
             </div>
           </div>
         </div>
@@ -5941,8 +5941,9 @@ function renderAllCharts(p) {
       ...cloneOpts(),
       scales: {
         x: { grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10}} },
-        y: { type:'linear', min: 0, max: Math.max(3000, Math.max.apply(null, strainData.filter(Boolean)) * 1.1 | 0),
-          beginAtZero: true, grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10},
+        y: { type:'linear', min: 0, suggestedMax: 3000,
+          beginAtZero: true, grace: '0%',
+          grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10},
             callback: function(v){ return v >= 1000 ? (v/1000).toFixed(1)+'k' : v; }
           }
         }
