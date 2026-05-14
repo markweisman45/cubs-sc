@@ -685,6 +685,10 @@ body {
           <!-- READINESS HERO -->
           <div class="readiness-hero yellow-status" id="readinessHero">
             <div class="readiness-glow"></div>
+            <!-- Player headshot overlay -->
+            <div id="playerHeroPhoto" style="position:absolute;bottom:0;right:0;width:140px;height:160px;overflow:hidden;pointer-events:none;border-radius:0 0 var(--radius) 0;">
+              <img id="playerHeroImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;object-position:top center;opacity:0.55;filter:grayscale(15%);">
+            </div>
             <div class="card-title">TODAY'S STRAIN</div>
             <div class="status-badge yellow" id="statusBadge">● MONITOR</div>
             <div class="readiness-score yellow" id="readinessScore">1.000</div>
@@ -5567,6 +5571,17 @@ function renderCoachNotes(p) {
 
 function renderReadinessHero(p) {
   if (!document.getElementById('readinessHero')) return;
+  // Set player photo
+  var heroImg = document.getElementById('playerHeroImg');
+  if (heroImg) {
+    var photoUrl = PLAYER_PHOTOS[currentPlayer];
+    if (photoUrl) {
+      heroImg.src = photoUrl;
+      heroImg.style.display = 'block';
+    } else {
+      heroImg.style.display = 'none';
+    }
+  }
   // Compute strain from statcast data
   const ms = computeMonotonyStrain(p._name || currentPlayer);
   const strain = ms.strain;
@@ -10141,6 +10156,21 @@ function pbSave() {
 // ══════════════════════════════════════════════════════════════════════════════
 // ANNUAL PLAN & MESOCYCLE BUILDER
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ── PLAYER HEADSHOTS (MLB CDN) ───────────────────────────────────────────────
+var PLAYER_PHOTOS = {
+  'Nico Hoerner':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/656428/headshot/67/current',
+  'Dansby Swanson':      'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/669923/headshot/67/current',
+  'Ian Happ':            'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/664023/headshot/67/current',
+  'Pete Crow-Armstrong': 'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/682998/headshot/67/current',
+  'Matt Shaw':           'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/694973/headshot/67/current',
+  'Carson Kelly':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/608348/headshot/67/current',
+  'Miguel Amaya':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/669242/headshot/67/current',
+  'Michael Busch':       'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/683737/headshot/67/current',
+  'Alex Bregman':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/608324/headshot/67/current',
+  'Moises Ballesteros':  'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/691626/headshot/67/current',
+  'Seiya Suzuki':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/673548/headshot/67/current',
+};
 
 var ANNUAL_PLANS = {};
 var MESO_PLANS   = {};
