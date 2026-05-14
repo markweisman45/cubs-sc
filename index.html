@@ -5941,8 +5941,9 @@ function renderAllCharts(p) {
       ...cloneOpts(),
       scales: {
         x: { grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10}} },
-        y: { type:'linear', min: 0, suggestedMax: 3000,
-          beginAtZero: true, grace: '0%',
+        y: { type:'linear',
+          min: 0,
+          max: Math.ceil(Math.max(3000, Math.max.apply(null, strainData.concat([0]))) / 500) * 500,
           grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10},
             callback: function(v){ return v >= 1000 ? (v/1000).toFixed(1)+'k' : v; }
           }
