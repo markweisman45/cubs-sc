@@ -8524,19 +8524,11 @@ function loadExerciseDB() {
     const saved = localStorage.getItem(EXERCISE_DB_KEY);
     if (!saved) return;
     var savedDB = normalizeExerciseCategories(JSON.parse(saved));
-    if (!Array.isArray(savedDB)) return;
-    // Merge: saved entries override defaults by name; new saved entries are added
-    savedDB.forEach(savedEx => {
-      const idx = EXERCISE_DB.findIndex(e => e.name.toLowerCase() === savedEx.name.toLowerCase());
-      if (idx >= 0) {
-        // Update existing: preserve saved video, notes, liftKey, category
-        Object.assign(EXERCISE_DB[idx], savedEx);
-      } else {
-        // New custom exercise added by user — always add
-        if (savedEx.name && savedEx.cat) EXERCISE_DB.push(savedEx);
-      }
-    });
-    console.log('[loadExerciseDB] merged', savedDB.length, 'saved exercises, DB now has', EXERCISE_DB.length);
+    if (!Array.isArray(savedDB) || !savedDB.length) return;
+    // REPLACE the full DB with the saved version — deletions are preserved
+    EXERCISE_DB.length = 0;
+    savedDB.forEach(function(ex) { EXERCISE_DB.push(ex); });
+    console.log('[loadExerciseDB] loaded', EXERCISE_DB.length, 'exercises from localStorage');
   } catch(e) { console.error('[loadExerciseDB] error:', e); }
 }
 
