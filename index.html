@@ -5928,15 +5928,35 @@ function renderAllCharts(p) {
     var ms = computeMonotonyStrain(currentPlayer, safeParseDate(match.date));
     return ms.strain > 0 ? ms.strain : null;
   });
-  mkTrendChart('readinessMiniChart', labels,
-    [{label:'Strain', data:strainData, borderColor:C.yellow, backgroundColor:'rgba(245,158,11,0.08)', fill:true,
-      spanGaps:true}],
-    { scales:{ y:{ min:0 } },
-      plugins:{ annotation:{ annotations:{
-        monitor:{ type:'line', yMin:1500, yMax:1500, borderColor:C.yellow, borderDash:[4,4], borderWidth:1, label:{content:'Monitor',display:true,font:{size:9}} },
-        high:   { type:'line', yMin:2500, yMax:2500, borderColor:C.red,    borderDash:[4,4], borderWidth:1, label:{content:'High',display:true,font:{size:9}} },
-    }}}}
-  );
+  // Strain chart — render manually so y-axis starts at 0
+  mkChart('readinessMiniChart', {
+    type: 'line',
+    data: { labels: labels, datasets: [{
+      label: 'Strain', data: strainData,
+      borderColor: C.yellow, backgroundColor: 'rgba(245,158,11,0.08)',
+      fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6,
+      borderWidth: 2, spanGaps: true,
+    }]},
+    options: {
+      ...cloneOpts(),
+      scales: {
+        ...cloneOpts().scales,
+        y: { ...cloneOpts().scales.y, min: 0,
+          ticks: { color: C.text2, font: { family:'DM Mono', size:10 },
+            callback: function(v){ return v >= 1000 ? (v/1000).toFixed(1)+'k' : v; }
+          }
+        }
+      },
+      plugins: {
+        ...cloneOpts().plugins,
+        legend: { display: false },
+        annotation: { annotations: {
+          monitor: { type:'line', yMin:1500, yMax:1500, borderColor:C.yellow, borderDash:[4,4], borderWidth:1 },
+          high:    { type:'line', yMin:2500, yMax:2500, borderColor:C.red,    borderDash:[4,4], borderWidth:1 },
+        }}
+      }
+    }
+  });
 
   // Individual hitting/arm charts with personal best reference line
   const pbBat = p.bests.bat, pbExit = p.bests.exit, pbThrow = p.bests.throwV;
