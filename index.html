@@ -387,9 +387,9 @@ body {
 .day-workout.game { background: rgba(204,52,51,0.15); color: var(--cubs-red); }
 
 /* ── WELLNESS SLIDERS ── */
-.wellness-slider-group { display: flex; flex-direction: column; gap: 18px; }
-.wellness-row { display: flex; flex-direction: column; gap: 6px; }
-.wellness-label-row { display: flex; justify-content: space-between; align-items: center; }
+
+
+
 .wellness-metric { font-size: 13px; font-weight: 500; color: var(--text); }
 .wellness-val {
   font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500;
@@ -664,7 +664,7 @@ body {
       <button class="tab-btn active" onclick="switchDashTab('overview', this)">Overview</button>
       <button class="tab-btn" onclick="switchDashTab('performance', this)">Performance</button>
       <button class="tab-btn" onclick="switchDashTab('cmj', this)">CMJ Trends</button>
-      <button class="tab-btn" onclick="switchDashTab('wellness', this)">Wellness</button>
+
       <button class="tab-btn" onclick="switchDashTab('workload', this)">Workload</button>
       <button class="tab-btn" onclick="switchDashTab('programs', this)">📋 Programs</button>
     </div>
@@ -829,218 +829,6 @@ body {
         </div>
 
       <!-- ── WELLNESS TAB ── -->
-      <div id="dash-wellness" class="page" style="display:none;">
-
-        <!-- Coach Notes -->
-        <div id="coachNotesCard" class="card section-mb" style="padding:20px;"></div>
-
-        <!-- Subjective Wellness -->
-        <!-- SUBJECTIVE WELLNESS -->
-        <div class="card section-mb" style="margin-top:20px;">
-          <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
-            <span>🧠 Daily Athlete Wellness</span>
-            <span style="font-size:11px;color:var(--text3);">Logged by athlete · Today</span>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
-            <!-- Entry form -->
-            <div>
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Log Wellness</div>
-                <input type="date" id="wellnessDateInput"
-                  style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:5px 10px;color:var(--text2);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;"
-                  title="Leave blank to log today, or pick a past date to backlog">
-              </div>
-
-              <div class="wellness-slider-group">
-                <div class="wellness-row">
-                  <div class="wellness-label-row">
-                    <span class="wellness-metric">😣 Soreness</span>
-                    <span class="wellness-val" id="sorenessVal">5</span>
-                  </div>
-                  <div class="slider-track">
-                    <div class="slider-fill" id="sorenessFill" style="width:50%;background:var(--yellow);"></div>
-                  </div>
-                  <input type="range" min="1" max="10" value="5" class="wellness-input" id="sorenessInput"
-                    oninput="updateSlider('soreness',this.value)">
-                  <div class="slider-labels"><span>Low</span><span>High</span></div>
-                </div>
-
-                <div class="wellness-row">
-                  <div class="wellness-label-row">
-                    <span class="wellness-metric">⚡ Energy</span>
-                    <span class="wellness-val" id="energyVal">5</span>
-                  </div>
-                  <div class="slider-track">
-                    <div class="slider-fill" id="energyFill" style="width:50%;background:var(--yellow);"></div>
-                  </div>
-                  <input type="range" min="1" max="10" value="5" class="wellness-input" id="energyInput"
-                    oninput="updateSlider('energy',this.value)">
-                  <div class="slider-labels"><span>Low</span><span>High</span></div>
-                </div>
-
-                <div class="wellness-row">
-                  <div class="wellness-metric-row">
-                    <div class="wellness-label-row">
-                      <span class="wellness-metric">😴 Sleep Quality</span>
-                      <span class="wellness-val" id="sleepVal">5</span>
-                    </div>
-                    <div class="slider-track">
-                      <div class="slider-fill" id="sleepFill" style="width:50%;background:var(--yellow);"></div>
-                    </div>
-                    <input type="range" min="1" max="10" value="5" class="wellness-input" id="sleepInput"
-                      oninput="updateSlider('sleep',this.value)">
-                    <div class="slider-labels"><span>Poor</span><span>Excellent</span></div>
-                  </div>
-                </div>
-                <div class="wellness-row">
-                  <div class="wellness-label-row">
-                    <span class="wellness-metric">⚾ Swing Workload</span>
-                    <span class="wellness-val" id="swingVal" style="font-size:13px;font-weight:600;">Normal</span>
-                  </div>
-                  <div class="slider-track">
-                    <div class="slider-fill" id="swingFill" style="width:33%;background:var(--blue);"></div>
-                  </div>
-                  <input type="range" min="1" max="4" value="2" class="wellness-input" id="swingInput"
-                    oninput="updateSwingSlider(this.value)">
-                  <div class="slider-labels">
-                    <span>📉 Low</span><span>⚾ Normal</span><span>📈 High</span><span>🔥 Extreme</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Body Weight row -->
-              <div class="wellness-row" style="margin-top:12px;">
-                <div class="wellness-label-row">
-                  <span class="wellness-metric">⚖️ Body Weight</span>
-                  <div style="display:flex;align-items:center;gap:6px;">
-                    <input type="number" id="bwInput" placeholder="—" step="0.1" min="100" max="350"
-                      style="width:64px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
-                             padding:4px 8px;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;text-align:right;"
-                      title="Body weight in lbs">
-                    <span style="font-size:11px;color:var(--text3);">lbs</span>
-                  </div>
-                </div>
-                <div id="bwLatestLabel" style="font-size:10px;color:var(--text3);margin-top:4px;"></div>
-              </div>
-
-              <div style="margin-top:16px;display:flex;align-items:center;gap:12px;">
-                <div id="wellnessComposite" style="flex:1;background:var(--bg3);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:10px;">
-                  <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);">Composite</div>
-                  <div id="wellnessCompositeScore" style="font-family:'DM Mono',monospace;font-size:20px;color:var(--yellow);">5.0</div>
-                  <div id="wellnessCompositeLabel" style="font-size:11px;color:var(--yellow);">/ 10</div>
-                </div>
-                <button class="generate-btn" style="padding:10px 18px;" onclick="logWellness()">Log Entry</button>
-              </div>
-              <div id="wellnessLogMsg" style="font-size:11px;color:var(--green);margin-top:8px;min-height:16px;"></div>
-            </div>
-
-            <!-- Wellness history chart -->
-            <div>
-              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;">14-Day Wellness Trend</div>
-              <div class="chart-wrap tall"><canvas id="wellnessChart"></canvas></div>
-            </div>
-          </div>
-
-          <!-- Wellness log table -->
-          <div style="margin-top:20px;">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:10px;">Recent Entries</div>
-            <div style="overflow-x:auto;">
-              <table class="data-table" style="font-size:11px;">
-                <thead>
-                  <tr>
-                    <th>Date</th><th>Soreness</th><th>Energy</th><th>Sleep</th><th>BW (lbs)</th><th>Composite</th><th>Strain</th><th>Swing</th><th>Flag</th>
-                  </tr>
-                </thead>
-                <tbody id="wellnessTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- CMJ TAB -->
-      <div id="dash-cmj" class="page">
-
-        <!-- ── CMJ (Standard) ── -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--cubs-blue);">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--cubs-blue);">CMJ — Countermovement Jump</div>
-          <div style="margin-left:auto;display:flex;gap:8px;font-family:'DM Mono',monospace;font-size:10px;">
-            <span style="padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.05);color:var(--text3);">● Line = trend</span>
-            <span style="padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.25);">--- Avg</span>
-            <span style="padding:3px 8px;border-radius:6px;background:rgba(245,158,11,0.1);color:#f59e0b;">★ PR</span>
-          </div>
-        </div>
-
-        <div class="card section-mb">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-            <div class="card-title" style="margin:0;">Jump Height (cm)</div>
-            <div id="cmjJumpStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
-          </div>
-          <div class="chart-wrap xl"><canvas id="cmjJumpChart"></canvas></div>
-        </div>
-        <div class="card section-mb">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-            <div class="card-title" style="margin:0;">Peak Power / BM (W/kg)</div>
-            <div id="cmjPPBMStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
-          </div>
-          <div class="chart-wrap xl"><canvas id="cmjPPBMChart"></canvas></div>
-        </div>
-        <div class="card section-mb">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-            <div class="card-title" style="margin:0;">Vertical Takeoff Velocity (m/s)</div>
-            <div id="cmjVTOStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
-          </div>
-          <div class="chart-wrap xl"><canvas id="cmjVTOChart"></canvas></div>
-        </div>
-        <div class="section-mb" style="display:flex;flex-direction:column;gap:16px;">
-          <div class="card">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-              <div class="card-title" style="margin:0;">Concentric Mean Power (W)</div>
-              <div id="cmjConcStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);"></div>
-            </div>
-            <div class="chart-wrap xl"><canvas id="cmjConcChart"></canvas></div>
-          </div>
-          <div class="card">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-              <div class="card-title" style="margin:0;">CMJ Stiffness (N/m)</div>
-              <div id="cmjStiffStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);"></div>
-            </div>
-            <div class="chart-wrap xl"><canvas id="cmjStiffChart"></canvas></div>
-          </div>
-        </div>
-
-        <!-- ── ABCMJ (Arm-Swing) ── -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--cubs-red);">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--cubs-red);">ABCMJ — Arm-Swing CMJ</div>
-          <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);">Arm-swing contribution vs standard CMJ</div>
-        </div>
-        <div class="card section-mb">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-            <div class="card-title" style="margin:0;">Jump Height (cm)</div>
-            <div id="abcmjJumpStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
-          </div>
-          <div class="chart-wrap xl"><canvas id="abcmjJumpChart"></canvas></div>
-        </div>
-        <div class="card section-mb">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-            <div class="card-title" style="margin:0;">Peak Power / BM (W/kg)</div>
-            <div id="abcmjPPBMStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
-          </div>
-          <div class="chart-wrap xl"><canvas id="abcmjPPBMChart"></canvas></div>
-        </div>
-        <div class="card section-mb">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-            <div class="card-title" style="margin:0;">Vertical Takeoff Velocity (m/s)</div>
-            <div id="abcmjVTOStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
-          </div>
-          <div class="chart-wrap xl"><canvas id="abcmjVTOChart"></canvas></div>
-        </div>
-
-      </div>
-
-      <!-- WORKLOAD TAB -->
       <div id="dash-workload" class="page">
         <div class="card section-mb">
           <div class="card-title">ACWR — Acute:Chronic Workload Ratio (EWMA 7:28)</div>
@@ -1183,7 +971,7 @@ body {
       <div id="prog-tab-annual" class="prog-tab" style="display:none;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <select id="annual-athlete" onchange="renderAnnualPlan()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;min-width:150px;"><option value="Nico Hoerner">Nico Hoerner</option><option value="Dansby Swanson">Dansby Swanson</option><option value="Ian Happ">Ian Happ</option><option value="Pete Crow-Armstrong">Pete Crow-Armstrong</option><option value="Matt Shaw">Matt Shaw</option><option value="Carson Kelly">Carson Kelly</option><option value="Miguel Amaya">Miguel Amaya</option><option value="Michael Busch">Michael Busch</option><option value="Alex Bregman">Alex Bregman</option><option value="Moises Ballesteros">Moises Ballesteros</option><option value="Seiya Suzuki">Seiya Suzuki</option></select>
+      <select id="annual-athlete" onchange="renderAnnualPlan()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;min-width:150px;"><option value="Nico Hoerner">Nico Hoerner</option><option value="Dansby Swanson">Dansby Swanson</option><option value="Ian Happ">Ian Happ</option><option value="Pete Crow-Armstrong">Pete Crow-Armstrong</option><option value="Matt Shaw">Matt Shaw</option><option value="Carson Kelly">Carson Kelly</option><option value="Miguel Amaya">Miguel Amaya</option><option value="Michael Busch">Michael Busch</option><option value="Alex Bregman">Alex Bregman</option><option value="Moises Ballesteros">Moises Ballesteros</option><option value="Seiya Suzuki">Seiya Suzuki</option><option value="Michael Conforto">Michael Conforto</option></select>
       <select id="annual-year" onchange="renderAnnualPlan()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;">
         <option value="2025">2025-26</option>
         <option value="2026" selected>2026-27</option>
@@ -5096,8 +4884,7 @@ function switchDashTab(tab, btn) {
     setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
   } else if (tab === 'wellness') {
     renderCoachNotes(PLAYERS[currentPlayer]);
-    if (typeof updateWellnessTable === 'function') updateWellnessTable(wellnessLog[currentPlayer] || []);
-    setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
+      setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
   } else {
     setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
   }
@@ -5514,12 +5301,7 @@ function selectPlayer(name) {
   document.getElementById('topbarMeta').innerHTML = `Chicago Cubs · ${p.pos} · #${p.number} · Updated <span>Today</span>`;
   document.getElementById('prog-athlete').value = name;
   renderDashboard();
-  // Reset wellness sliders for new player
-  ['soreness','energy','sleep'].forEach(m => {
-    document.getElementById(m+'Input').value = 5;
-    updateSlider(m, 5);
-  });
-  updateComposite();
+
   // Sync program builder controls from dashboard data
   const playerData = PLAYERS[name];
   if (playerData) {
@@ -5548,7 +5330,7 @@ function renderDashboard() {
   renderAllCharts(p);
   renderCoachNotes(p);
   if (typeof updateWellnessTable === 'function') updateWellnessTable(wellnessLog[currentPlayer] || []);
-  populateBWInput();
+  if (typeof populateBWInput === 'function') populateBWInput();
   renderPitcherDashboard(p);
 }
 
@@ -6051,7 +5833,6 @@ function renderAllCharts(p) {
   });
 
   // Wellness chart
-  renderWellnessChart(p);
 
   // ── Body Weight trend chart (overview) — last 30 days, oldest left → newest right
   const bwEl = document.getElementById('bwTrendChart');
@@ -6274,6 +6055,57 @@ function renderAllCharts(p) {
   mkCMJChart('cmjConcChart',  clStd, cmjStd.map(c=>c.conc),       {color:C.yellow, colorRgb:'245,158,11'});
   mkCMJChart('cmjStiffChart', clStd, cmjStd.map(c=>c.stiff),      {color:C.purple, colorRgb:'168,85,247'});
 
+  // ── P1 / P2 Concentric Impulse (dual line on same chart)
+  const hasImpulse = cmjStd.some(c=>c.p1||c.p2);
+  if (hasImpulse) {
+    const impulseCanvas = document.getElementById('cmjImpulseChart');
+    if (impulseCanvas) {
+      mkChart('cmjImpulseChart', {
+        type:'line',
+        data:{ labels: clStd, datasets:[
+          { label:'P1 Impulse (N·s)', data: cmjStd.map(c=>c.p1||null),
+            borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.08)',
+            pointRadius:3, borderWidth:2, tension:0.3, spanGaps:true },
+          { label:'P2 Impulse (N·s)', data: cmjStd.map(c=>c.p2||null),
+            borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.08)',
+            pointRadius:3, borderWidth:2, tension:0.3, spanGaps:true },
+        ]},
+        options:{ ...cloneOpts(), scales:{
+          x:{ grid:{color:C.border}, ticks:{color:C.text2,font:{family:"DM Mono",size:10}} },
+          y:{ grid:{color:C.border}, ticks:{color:C.text2,font:{family:"DM Mono",size:10}} }
+        }}
+      });
+      // Stats
+      const p1vals = cmjStd.map(c=>c.p1).filter(Boolean);
+      const p2vals = cmjStd.map(c=>c.p2).filter(Boolean);
+      const statsEl = document.getElementById('cmjImpulseStats');
+      if (statsEl && p1vals.length) {
+        const latP1 = p1vals[p1vals.length-1], latP2 = p2vals[p2vals.length-1]||0;
+        statsEl.innerHTML = `<span style="color:#22c55e;">P1 <strong>${latP1.toFixed(1)}</strong></span> <span style="color:#f59e0b;margin-left:8px;">P2 <strong>${latP2.toFixed(1)}</strong></span>`;
+      }
+    }
+  } else {
+    const el = document.getElementById('cmjImpulseChart');
+    if (el && el.parentElement) el.parentElement.parentElement.style.display = 'none';
+  }
+
+  // ── RSI-Modified
+  const hasRsi = cmjStd.some(c=>c.rsiMod);
+  if (hasRsi) {
+    mkCMJChart('cmjRsiChart', clStd, cmjStd.map(c=>c.rsiMod||null), {color:'#06b6d4', colorRgb:'6,182,212'});
+    const rsiVals = cmjStd.map(c=>c.rsiMod).filter(Boolean);
+    const rsiStats = document.getElementById('cmjRsiStats');
+    if (rsiStats && rsiVals.length) {
+      const lat = rsiVals[rsiVals.length-1];
+      const avg = rsiVals.reduce((a,b)=>a+b,0)/rsiVals.length;
+      const pr  = Math.max(...rsiVals);
+      rsiStats.innerHTML = `<span style="color:var(--text2);">latest <strong style="color:#06b6d4;">${lat.toFixed(2)}</strong></span> <span>avg <strong style="color:rgba(255,255,255,0.4);">${avg.toFixed(2)}</strong></span> <span style="color:#f59e0b;">PR <strong>${pr.toFixed(2)}</strong></span>`;
+    }
+  } else {
+    const el = document.getElementById('cmjRsiChart');
+    if (el && el.parentElement) el.parentElement.parentElement.style.display = 'none';
+  }
+
   // ── ABCMJ charts
   mkCMJChart('abcmjJumpChart', clAB, cmjAB.map(c=>c.jump),       {color:'rgba(239,68,68,0.9)',  colorRgb:'239,68,68'});
   mkCMJChart('abcmjPPBMChart', clAB, cmjAB.map(c=>c.ppbm),       {color:'rgba(245,158,11,0.9)',colorRgb:'245,158,11'});
@@ -6410,66 +6242,7 @@ function renderSwingWorkloadChart() {
     }
   });
 }
-function renderWellnessChart(p) {
-  const key = currentPlayer;
-  const base = (p.wellness || []);
-  const extra = wellnessLog[key] || [];
-  const all = [...base, ...extra];
-  if (!all.length) return;
 
-  // Fill missing BW using most recent known value
-  let lastBW = null;
-  const allWithBW = all.map(w => {
-    if (w.bw) lastBW = w.bw;
-    return { ...w, bwFilled: w.bw || lastBW };
-  });
-
-  const labels = allWithBW.map(w=>w.date);
-  const co = {
-    responsive:true, maintainAspectRatio:false,
-    plugins:{ legend:{ labels:{ color:C.text2, font:{family:'DM Mono',size:10}, boxWidth:10, padding:10 }}},
-    scales:{
-      x:{ grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:9},maxRotation:45}},
-      y:{ grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10}}, min:0, max:10 },
-      y2:{ position:'right', grid:{display:false}, ticks:{color:C.text2,font:{family:'DM Mono',size:9}}, min:0.85, max:1.1 }
-    }
-  };
-  mkChart('wellnessChart',{type:'line',data:{labels,datasets:[
-    {label:'Soreness (inv)',data:all.map(w=>10-w.soreness),borderColor:'#ef4444',tension:0.4,pointRadius:3,yAxisID:'y'},
-    {label:'Energy',data:all.map(w=>w.energy),borderColor:'#f59e0b',tension:0.4,pointRadius:3,yAxisID:'y'},
-    {label:'Sleep',data:all.map(w=>w.sleep),borderColor:'#22c55e',tension:0.4,pointRadius:3,yAxisID:'y'},
-    {label:'Readiness',data:all.map(w=>w.readiness ? w.readiness*10 : null),borderColor:C.blue,borderDash:[4,4],tension:0.4,pointRadius:2,yAxisID:'y',borderWidth:1.5},
-    {label:'Swing Load',data:all.map(w=>({low:1,normal:2,high:3,extreme:4}[w.swingWorkload]||null)),borderColor:'#a855f7',backgroundColor:'rgba(168,85,247,0.1)',fill:false,tension:0,pointRadius:6,pointStyle:'rectRot',yAxisID:'swing',borderWidth:2},
-  ]},options:{...co,scales:{...co.scales,swing:{type:'linear',position:'right',min:0.5,max:4.5,grid:{display:false},ticks:{color:'rgba(168,85,247,0.7)',font:{family:"DM Mono",size:9},stepSize:1,callback:function(v){return{1:"L",2:"N",3:"H",4:"X"}[v]||""}}}}}});
-
-  renderWellnessTable(all);
-}
-
-function renderWellnessTable(entries) {
-  const tbody = document.getElementById('wellnessTableBody');
-  if (!tbody) return;
-  // Sort chronologically — oldest first, most recent at bottom
-  const parseDisplayDate = (d) => {
-    try { return new Date(d + ' ' + new Date().getFullYear()); } catch { return new Date(0); }
-  };
-  const sorted = [...entries].sort((a, b) => parseDisplayDate(a.date) - parseDisplayDate(b.date));
-  tbody.innerHTML = sorted.map(w => {
-    const comp = w.soreness != null ? ((10-w.soreness) + w.energy + w.sleep) / 3 : 0;
-    const flag = w.soreness >= 7 ? '🔴 High Soreness' : w.energy <= 3 ? '🟡 Low Energy' : w.sleep <= 4 ? '🟡 Poor Sleep' : '🟢 OK';
-    const compColor = comp >= 7 ? 'var(--green)' : comp >= 5 ? 'var(--yellow)' : 'var(--red)';
-    return `<tr>
-      <td class="date-col">${w.date}</td>
-      <td style="color:${w.soreness>=7?'var(--red)':w.soreness>=5?'var(--yellow)':'var(--green)'}">${w.soreness!=null?w.soreness+'/10':'—'}</td>
-      <td style="color:${w.energy<=3?'var(--red)':w.energy<=6?'var(--yellow)':'var(--green)'}">${w.energy!=null?w.energy+'/10':'—'}</td>
-      <td style="color:${w.sleep<=4?'var(--red)':w.sleep<=6?'var(--yellow)':'var(--green)'}">${w.sleep!=null?w.sleep+'/10':'—'}</td>
-      <td style="font-family:'DM Mono',monospace;color:var(--text2);">${w.bw ? w.bw.toFixed(1)+' lbs' : '—'}</td>
-      <td style="font-family:'DM Mono',monospace;color:${compColor};">${w.soreness!=null?comp.toFixed(1):'—'}</td>
-      <td style="font-family:'DM Mono',monospace;">${w.readiness ? w.readiness.toFixed(3) : '—'}</td>
-      <td style="text-align:center;">${(()=>{const sw=w.swingWorkload;if(!sw||sw==='normal')return '⚾';if(sw==='low')return '📉';if(sw==='high')return '📈';if(sw==='extreme')return '🔥';return '⚾';})()}</td>
-      <td style="font-size:11px;">${flag}</td>
-    </tr>`;
-  }).join('');
-}
 
 function populateBWInput() {
   // Show last known BW as a label but leave input BLANK
@@ -6485,42 +6258,8 @@ function populateBWInput() {
   }
 }
 
-function updateSlider(metric, val) {
-  val = parseInt(val);
-  const fills = {soreness:'sorenessFill', energy:'energyFill', sleep:'sleepFill'};
-  const vals  = {soreness:'sorenessVal',  energy:'energyVal',  sleep:'sleepVal'};
-  document.getElementById(vals[metric]).textContent = val;
-  const pct = ((val-1)/9)*100;
-  const fillEl = document.getElementById(fills[metric]);
-  fillEl.style.width = pct + '%';
-  // color: soreness inverted (high=bad), energy+sleep: high=good
-  let color;
-  if (metric === 'soreness') color = val<=3?'var(--green)':val<=6?'var(--yellow)':'var(--red)';
-  else color = val>=7?'var(--green)':val>=5?'var(--yellow)':'var(--red)';
-  fillEl.style.background = color;
-  document.getElementById(vals[metric]).style.color = color;
-  updateComposite();
-}
 
-function updateComposite() {
-  const s = parseInt(document.getElementById('sorenessInput').value);
-  const e = parseInt(document.getElementById('energyInput').value);
-  const sl = parseInt(document.getElementById('sleepInput').value);
-  const p  = PLAYERS[currentPlayer];
-  const acwr = p ? p.acwr : 1.0;
 
-  // Live preview: what readiness WILL be after logging
-  const preview = calcReadiness(s, e, sl, acwr);
-  const status  = readinessToStatus(preview, acwr);
-  const color   = preview >= 1.00 && acwrZone(acwr)==='green' ? 'var(--green)'
-                : preview < 0.88 || acwrZone(acwr)==='red'   ? 'var(--red)'
-                : 'var(--yellow)';
-
-  const scoreEl = document.getElementById('wellnessCompositeScore');
-  const labelEl = document.getElementById('wellnessCompositeLabel');
-  if (scoreEl) { scoreEl.textContent = preview.toFixed(3); scoreEl.style.color = color; }
-  if (labelEl) { labelEl.textContent = status; labelEl.style.color = color; }
-}
 
 
 // ══════════════════════════════════════════════
@@ -6578,51 +6317,6 @@ function getSwingWorkloadFromSlider() {
 }
 
 
-function logWellness() {
-  const s  = parseInt(document.getElementById('sorenessInput').value);
-  const e  = parseInt(document.getElementById('energyInput').value);
-  const sl = parseInt(document.getElementById('sleepInput').value);
-  const p  = PLAYERS[currentPlayer];
-  // Allow backlog — use date picker if user selected one, else today
-  const datePicker = document.getElementById('wellnessDateInput');
-  const pickedDate = datePicker?.value; // YYYY-MM-DD or empty
-  const today = pickedDate
-    ? new Date(pickedDate + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})
-    : new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
-
-  // Calculate new readiness from wellness + ACWR
-  const newReadiness = calcReadiness(s, e, sl, p.acwr);
-  const newStatus    = readinessToStatus(newReadiness, p.acwr);
-
-  // Update player live data
-  p.readiness = newReadiness;
-  p.status    = newStatus;
-
-  // Body weight — use today's manual entry or fall back to most recent known weight
-  const bwInput = document.getElementById('bwInput');
-  const bwVal   = bwInput && bwInput.value.trim() ? parseFloat(bwInput.value) : null;
-  // Only include bw in entry if user explicitly typed a value
-  const entry = { date:today, soreness:s, energy:e, sleep:sl, readiness:newReadiness, swingWorkload:getSwingWorkloadFromSlider() };
-  if (bwVal && bwVal > 50) entry.bw = bwVal; // only save if valid lbs value entered
-
-  if (!wellnessLog[currentPlayer]) wellnessLog[currentPlayer] = [];
-  wellnessLog[currentPlayer] = wellnessLog[currentPlayer].filter(w=>w.date!==today);
-  wellnessLog[currentPlayer].push(entry);
-
-  persistWellness();
-  const msg = document.getElementById('wellnessLogMsg');
-  msg.textContent = `✓ Logged — Readiness: ${newReadiness.toFixed(3)} (${newStatus}) for ${currentPlayer}`;
-  setTimeout(()=>{ msg.textContent=''; }, 4000);
-
-  // Reset swing slider to Normal after logging
-  var swInp = document.getElementById('swingInput');
-  if (swInp) { swInp.value = 2; updateSwingSlider(2); }
-
-  // Re-render dashboard with updated readiness
-  renderDashboard();
-  buildPlayerList();
-  buildTeamList();
-}
 
 // ══════════════════════════════════════════════
 // TEAM SUMMARY
@@ -10331,7 +10025,7 @@ function initAnnualPlan() {
   sel.innerHTML = '';
   var roster = ['Nico Hoerner','Dansby Swanson','Ian Happ','Pete Crow-Armstrong',
                 'Matt Shaw','Carson Kelly','Miguel Amaya','Michael Busch',
-                'Alex Bregman','Moises Ballesteros','Seiya Suzuki'];
+                'Alex Bregman','Moises Ballesteros','Seiya Suzuki','Michael Conforto'];
   // Use PLAYERS if available, fallback to hardcoded roster
   var names = (typeof PLAYERS !== 'undefined' && Object.keys(PLAYERS).length)
     ? Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); })
@@ -11698,8 +11392,13 @@ function handleCMJUpload(input) {
       const jump     = parseFloat(getField(row, 'Jump Height (Imp-Mom) [cm]', 'Jump Height [cm]') || 0);
       const ppbm     = parseFloat(getField(row, 'Peak Power / BM [W/kg]', 'Peak Power/BM [W/kg]') || 0);
       const conc     = parseFloat(getField(row, 'Concentric Mean Power [W]', 'Concentric Mean Power') || 0);
-      const stiff    = parseFloat(getField(row, 'CMJ Stiffness [N/m]', 'Stiffness [N/m]') || 0);
-      const vto      = parseFloat(getField(row, 'Vertical Velocity at Takeoff [m/s]', 'Vertical Velocity At Takeoff [m/s]') || 0);
+      const stiff    = parseFloat(getField(row, 'CMJ Stiffness [N/m] ', 'CMJ Stiffness [N/m]', 'Stiffness [N/m]') || 0);
+      const p1       = parseFloat(getField(row, 'P1 Concentric Impulse [N s] ', 'P1 Concentric Impulse [N s]') || 0);
+      const p2       = parseFloat(getField(row, 'P2 Concentric Impulse [N s] ', 'P2 Concentric Impulse [N s]') || 0);
+      const rsiMod   = parseFloat(getField(row, 'RSI-modified (Imp-Mom) [m/s] ', 'RSI-modified [m/s]') || 0);
+      const pkPow    = parseFloat(getField(row, 'Peak Power [W] ', 'Peak Power [W]') || 0);
+      const cmDepth  = parseFloat(getField(row, 'Countermovement Depth [cm] ', 'Countermovement Depth [cm]') || 0);
+      const vto      = parseFloat(getField(row, 'Vertical Velocity at Takeoff [m/s] ', 'Vertical Velocity at Takeoff [m/s]', 'Vertical Velocity At Takeoff [m/s]') || 0);
       // Use native lbs column if present, otherwise convert from kg
       const bwLbsRaw = parseFloat(getField(row, 'Bodyweight in Pounds [lbs] ', 'Bodyweight in Pounds [lbs]', 'BW [LBS]', 'BW [lbs]') || 0);
       const bwKgRaw  = parseFloat(getField(row, 'BW [KG]', 'Body Weight [KG]', 'Bodyweight [kg]') || 0);
@@ -11710,7 +11409,7 @@ function handleCMJUpload(input) {
 
       // Tag each row with its test type — CMJ or ABCMJ treated separately
       const isABCMJ = testType.includes('ABCMJ') || testType.includes('AB CMJ');
-      parsedCMJRows.push({ name: matchedName, rawName: name, date, jump, ppbm, conc, stiff, vto, bw, testType: isABCMJ ? 'ABCMJ' : 'CMJ', matched: !!match });
+      parsedCMJRows.push({ name: matchedName, rawName: name, date, jump, ppbm, conc, stiff, vto, bw, p1, p2, rsiMod, pkPow, cmDepth, testType: isABCMJ ? 'ABCMJ' : 'CMJ', matched: !!match });
 
       const tr = document.createElement('tr');
       const isAB = testType.includes('ABCMJ') || testType.includes('AB CMJ');
@@ -11743,7 +11442,7 @@ function applyCMJData() {
 
     if (!store[r.name]) store[r.name] = [];
     store[r.name] = store[r.name].filter(x => x.date !== r.date);
-    store[r.name].push({ date:r.date, jump:r.jump, ppbm:r.ppbm, conc:r.conc, stiff:r.stiff, vto:r.vto||0, bw:r.bw });
+    store[r.name].push({ date:r.date, jump:r.jump, ppbm:r.ppbm, conc:r.conc, stiff:r.stiff, vto:r.vto||0, bw:r.bw, p1:r.p1||0, p2:r.p2||0, rsiMod:r.rsiMod||0, pkPow:r.pkPow||0, cmDepth:r.cmDepth||0 });
 
     // Update PLAYERS live data — use CMJ (not ABCMJ) for primary latestJump/PPBM
     const p = PLAYERS[r.name];
@@ -11767,7 +11466,7 @@ function applyCMJData() {
       p.cmjTrends = p.cmjTrends || [];
       // Remove existing entry for this date + type
       p.cmjTrends = p.cmjTrends.filter(x => !(x.date === dateStr && x.type === (isABCMJ ? 'ABCMJ' : 'CMJ')));
-      p.cmjTrends.push({ date:dateStr, rawDate:r.date, jump:r.jump, ppbm:r.ppbm, conc:r.conc, stiff:r.stiff, vto:r.vto||0, type: isABCMJ ? 'ABCMJ' : 'CMJ' });
+      p.cmjTrends.push({ date:dateStr, rawDate:r.date, jump:r.jump, ppbm:r.ppbm, conc:r.conc, stiff:r.stiff, vto:r.vto||0, p1:r.p1||0, p2:r.p2||0, rsiMod:r.rsiMod||0, pkPow:r.pkPow||0, cmDepth:r.cmDepth||0, type: isABCMJ ? 'ABCMJ' : 'CMJ' });
       p.cmjTrends.sort((a,b) => new Date(a.rawDate||a.date) - new Date(b.rawDate||b.date));
     }
     applied++;
