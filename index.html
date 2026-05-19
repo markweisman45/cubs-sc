@@ -6538,7 +6538,7 @@ function buildTeamList() {
 
       \x3C!-- Readiness -->
       <div style="text-align:right;min-width:64px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;">${p.readiness.toFixed(3)}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:13px;">${(p.readiness||0).toFixed(3)}</div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">Readiness</div>
       </div>
 
