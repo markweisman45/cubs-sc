@@ -6205,11 +6205,8 @@ function renderAllCharts(p) {
   mkCMJChart('cmjStiffChart', clStd, cmjStd.map(c=>c.stiff),      {color:C.purple, colorRgb:'168,85,247'});
 
   // ── P1 / P2 Concentric Impulse (dual line on same chart)
-  console.log('[CMJ Debug] cmjStd length:', cmjStd.length);
-  console.log('[CMJ Debug] sample entry:', cmjStd[0]);
-  console.log('[CMJ Debug] p1 values:', cmjStd.map(c=>c.p1));
-  const hasImpulse = cmjStd.some(c=>c.p1||c.p2);
-  console.log('[CMJ Debug] hasImpulse:', hasImpulse);
+  // Always show charts — use null for sessions without p1/p2 data
+  const hasImpulse = true;
   if (hasImpulse) {
     const impulseCanvas = document.getElementById('cmjImpulseChart');
     if (impulseCanvas) {
@@ -6237,13 +6234,10 @@ function renderAllCharts(p) {
         statsEl.innerHTML = `<span style="color:#22c55e;">P1 <strong>${latP1.toFixed(1)}</strong></span> <span style="color:#f59e0b;margin-left:8px;">P2 <strong>${latP2.toFixed(1)}</strong></span>`;
       }
     }
-  } else {
-    const el = document.getElementById('cmjImpulseChart');
-    if (el && el.parentElement) el.parentElement.parentElement.style.display = 'none';
   }
 
   // ── RSI-Modified
-  const hasRsi = cmjStd.some(c=>c.rsiMod);
+  const hasRsi = true;
   if (hasRsi) {
     mkCMJChart('cmjRsiChart', clStd, cmjStd.map(c=>c.rsiMod||null), {color:'#06b6d4', colorRgb:'6,182,212'});
     const rsiVals = cmjStd.map(c=>c.rsiMod).filter(Boolean);
@@ -6254,9 +6248,6 @@ function renderAllCharts(p) {
       const pr  = Math.max(...rsiVals);
       rsiStats.innerHTML = `<span style="color:var(--text2);">latest <strong style="color:#06b6d4;">${lat.toFixed(2)}</strong></span> <span>avg <strong style="color:rgba(255,255,255,0.4);">${avg.toFixed(2)}</strong></span> <span style="color:#f59e0b;">PR <strong>${pr.toFixed(2)}</strong></span>`;
     }
-  } else {
-    const el = document.getElementById('cmjRsiChart');
-    if (el && el.parentElement) el.parentElement.parentElement.style.display = 'none';
   }
 
   // ── ABCMJ charts
