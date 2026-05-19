@@ -6205,7 +6205,11 @@ function renderAllCharts(p) {
   mkCMJChart('cmjStiffChart', clStd, cmjStd.map(c=>c.stiff),      {color:C.purple, colorRgb:'168,85,247'});
 
   // ── P1 / P2 Concentric Impulse (dual line on same chart)
+  console.log('[CMJ Debug] cmjStd length:', cmjStd.length);
+  console.log('[CMJ Debug] sample entry:', cmjStd[0]);
+  console.log('[CMJ Debug] p1 values:', cmjStd.map(c=>c.p1));
   const hasImpulse = cmjStd.some(c=>c.p1||c.p2);
+  console.log('[CMJ Debug] hasImpulse:', hasImpulse);
   if (hasImpulse) {
     const impulseCanvas = document.getElementById('cmjImpulseChart');
     if (impulseCanvas) {
