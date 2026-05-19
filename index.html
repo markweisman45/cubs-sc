@@ -2219,7 +2219,7 @@ body {
         <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px;">Expected ForceDecks columns</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            ${['Name','Date','Type','Jump Ht (cm)','PP/BM (W/kg)','VTO (m/s)','Conc Power (W)','Stiffness (N/m)','BW (kg)'].map(c=>
+            ${['Name','Date','Type','Jump Ht (cm)','PP/BM (W/kg)','VTO (m/s)','Conc Power (W)','Stiffness (N/m)','BW (lbs)','P1 Impulse [N s]','P2 Impulse [N s]','RSI-mod [m/s]'].map(c=>
               `<span style="font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;background:rgba(59,122,196,0.15);border-radius:4px;color:var(--cubs-light-blue);">${c}</span>`
             ).join('')}
           </div>
@@ -2231,7 +2231,7 @@ body {
           <div style="overflow-x:auto;">
             <table class="data-table" id="cmjPreviewTable">
               <thead><tr>
-                <th>Player</th><th>Date</th><th>Type</th><th>Jump Ht (cm)</th><th>PP/BM (W/kg)</th><th>VTO (m/s)</th><th>Conc (W)</th><th>Stiff (N/m)</th><th>BW (lbs)</th><th>Match</th>
+                <th>Player</th><th>Date</th><th>Type</th><th>Jump (cm)</th><th>PP/BM</th><th>VTO</th><th>Conc (W)</th><th>Stiff (N/m)</th><th>BW</th><th>P1</th><th>P2</th><th>RSI-mod</th><th>Match</th>
               </tr></thead>
               <tbody id="cmjPreviewBody"></tbody>
             </table>
