@@ -11335,7 +11335,7 @@ function rebuildCMJTrends() {
         const dateStr = dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
         // Remove existing entry for this date+type
         const existing = trends.findIndex(t => t.rawDate === r.date && t.type === 'CMJ');
-        const entry = {date:dateStr, rawDate:r.date, jump:r.jump, ppbm:r.ppbm, conc:r.conc, stiff:r.stiff, vto:r.vto||0, type:'CMJ'};
+        const entry = {date:dateStr, rawDate:r.date, jump:r.jump, ppbm:r.ppbm, conc:r.conc, stiff:r.stiff, vto:r.vto||0, p1:r.p1||0, p2:r.p2||0, rsiMod:r.rsiMod||0, pkPow:r.pkPow||0, cmDepth:r.cmDepth||0, type:'CMJ'};
         if (existing >= 0) trends[existing] = entry;
         else trends.push(entry);
       } catch(e) {}
@@ -11348,7 +11348,7 @@ function rebuildCMJTrends() {
         if (isNaN(dt)) return;
         const dateStr = dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
         const existing = trends.findIndex(t => t.rawDate === r.date && t.type === 'ABCMJ');
-        const entry = {date:dateStr, rawDate:r.date, jump:r.jump, ppbm:r.ppbm, conc:r.conc, stiff:r.stiff, vto:r.vto||0, type:'ABCMJ'};
+        const entry = {date:dateStr, rawDate:r.date, jump:r.jump, ppbm:r.ppbm, conc:r.conc, stiff:r.stiff, vto:r.vto||0, p1:r.p1||0, p2:r.p2||0, rsiMod:r.rsiMod||0, pkPow:r.pkPow||0, cmDepth:r.cmDepth||0, type:'ABCMJ'};
         if (existing >= 0) trends[existing] = entry;
         else trends.push(entry);
       } catch(e) {}
