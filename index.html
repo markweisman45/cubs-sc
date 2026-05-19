@@ -11575,6 +11575,9 @@ function handleCMJUpload(input) {
         <td style="font-family:'DM Mono',monospace;">${conc.toFixed(0)}</td>
         <td style="font-family:'DM Mono',monospace;">${stiff.toFixed(0)}</td>
         <td style="font-family:'DM Mono',monospace;">${bw.toFixed(1)}</td>
+        <td style="font-family:'DM Mono',monospace;">${p1?p1.toFixed(1):'—'}</td>
+        <td style="font-family:'DM Mono',monospace;">${p2?p2.toFixed(1):'—'}</td>
+        <td style="font-family:'DM Mono',monospace;">${rsiMod?rsiMod.toFixed(2):'—'}</td>
         <td><span class="pill ${match?'green':'red'}">${match?'✓ '+match:'NO MATCH'}</span></td>`;
       tbody.appendChild(tr);
     });
