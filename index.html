@@ -5688,19 +5688,13 @@ function acwrLabel(acwr) {
 
 // ── Compute Monotony & Strain from importedData.statcast (7-day rolling)
 function computeMonotonyStrain(playerName, refDate) {
-  // Read directly from localStorage — works before importedData is populated
+  // Read from importedData (Supabase-synced) as primary source
   var rows = [];
   try {
-    // Try localStorage first
-    var stored = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
-    var key = Object.keys(stored).find(function(k){ return k===playerName; })
-           || Object.keys(stored).find(function(k){ return k.toLowerCase()===playerName.toLowerCase(); });
-    if (key) rows = (stored[key]||[]).slice().sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
-    // Fall back to importedData if localStorage empty
-    if (!rows.length && typeof importedData !== 'undefined' && importedData.statcast) {
-      var ikey = Object.keys(importedData.statcast).find(function(k){ return k===playerName || k.toLowerCase()===playerName.toLowerCase(); });
-      if (ikey) rows = (importedData.statcast[ikey]||[]).slice().sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
-    }
+    var statcast = (typeof importedData !== 'undefined' && importedData.statcast) ? importedData.statcast : {};
+    var key = Object.keys(statcast).find(function(k){ return k === playerName; })
+           || Object.keys(statcast).find(function(k){ return k.toLowerCase() === playerName.toLowerCase(); });
+    if (key) rows = (statcast[key]||[]).slice().sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
   } catch(e) {}
   if (!rows.length) return { monotony: 0, strain: 0, weeklyHE: 0, daily: [] };
 
@@ -5769,12 +5763,12 @@ function calcACWR(rows, refDate) {
 function computeLiveACWR(playerName) {
   var rows = [];
   try {
-    var stored = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
-    var key = Object.keys(stored).find(k=>k===playerName)||Object.keys(stored).find(k=>k.toLowerCase()===playerName.toLowerCase());
-    if (key) rows = (stored[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
+    var statcast = (typeof importedData !== 'undefined' && importedData.statcast) ? importedData.statcast : {};
+    var key = Object.keys(statcast).find(k=>k===playerName)||Object.keys(statcast).find(k=>k.toLowerCase()===playerName.toLowerCase());
+    if (key) rows = (statcast[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
   } catch(e) {}
   if (!rows.length) return null;
-  return calcACWR(rows, safeParseDate(rows[rows.length-1].date));
+  return calcACWR(rows, new Date());
 }
 
 function renderACWR(p) {
@@ -5879,9 +5873,9 @@ function renderAllCharts(p) {
   // Strain mini chart — rolling 7-day strain per game date
   const allStatcastRows = (() => {
     try {
-      const stored = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
-      const key = Object.keys(stored).find(k=>k===currentPlayer)||Object.keys(stored).find(k=>k.toLowerCase()===currentPlayer.toLowerCase());
-      return key ? (stored[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date)) : [];
+      const statcast = (typeof importedData !== 'undefined' && importedData.statcast) ? importedData.statcast : {};
+      const key = Object.keys(statcast).find(k=>k===currentPlayer) || Object.keys(statcast).find(k=>k.toLowerCase()===currentPlayer.toLowerCase());
+      return key ? (statcast[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date)) : [];
     } catch(e) { return []; }
   })();
   const strainData = games.map(function(g) {
