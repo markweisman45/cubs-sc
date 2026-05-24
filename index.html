@@ -5534,11 +5534,13 @@ function renderReadinessHero(p) {
   const ms = _strainRows.length ? (function(){
     // Always anchor to last game date
     var ref = safeParseDate(_strainRows[_strainRows.length-1].date); ref.setHours(0,0,0,0);
+    console.log('[STRAIN] rows:', _strainRows.length, 'last date:', _strainRows[_strainRows.length-1].date, 'ref:', ref.toDateString());
     var daily = [];
     for (var i=6;i>=0;i--) {
       var day=new Date(ref);day.setDate(day.getDate()-i);day.setHours(0,0,0,0);
       var row=_strainRows.find(function(r){var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===day.getTime();});
       daily.push(row?(row.heDist||0):0);
+      console.log('[STRAIN]', day.toDateString(), ':', row?(row.heDist||0):0, row?'game':'off');
     }
     var wkHE=daily.reduce(function(s,v){return s+v;},0);
     var avg=wkHE/7;
