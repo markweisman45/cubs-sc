@@ -5691,10 +5691,16 @@ function computeMonotonyStrain(playerName, refDate) {
   // Read directly from localStorage — works before importedData is populated
   var rows = [];
   try {
+    // Try localStorage first
     var stored = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
     var key = Object.keys(stored).find(function(k){ return k===playerName; })
            || Object.keys(stored).find(function(k){ return k.toLowerCase()===playerName.toLowerCase(); });
     if (key) rows = (stored[key]||[]).slice().sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
+    // Fall back to importedData if localStorage empty
+    if (!rows.length && typeof importedData !== 'undefined' && importedData.statcast) {
+      var ikey = Object.keys(importedData.statcast).find(function(k){ return k===playerName || k.toLowerCase()===playerName.toLowerCase(); });
+      if (ikey) rows = (importedData.statcast[ikey]||[]).slice().sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
+    }
   } catch(e) {}
   if (!rows.length) return { monotony: 0, strain: 0, weeklyHE: 0, daily: [] };
 
@@ -5879,15 +5885,9 @@ function renderAllCharts(p) {
     } catch(e) { return []; }
   })();
   const strainData = games.map(function(g) {
-    // g.date is "May 12" — find matching raw statcast date
-    var match = allStatcastRows.find(function(r){
-      return fmtDate(r.date) === g.date ||
-             fmtDate(r.date).replace(' ','') === g.date.replace(' ','');
-    });
-    // If no exact match try parsing g.date directly
-    var refD = match ? safeParseDate(match.date) : safeParseDate(g.date + ' ' + new Date().getFullYear());
-    if (!refD || isNaN(refD.getTime())) return 0;
-    var ms = computeMonotonyStrain(currentPlayer, refD);
+    var match = allStatcastRows.find(function(r){ return fmtDate(r.date) === g.date; });
+    if (!match) return 0;
+    var ms = computeMonotonyStrain(currentPlayer, safeParseDate(match.date));
     return ms.strain > 0 ? ms.strain : 0;
   });
   // Strain chart — render manually so y-axis starts at 0
