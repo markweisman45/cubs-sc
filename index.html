@@ -5524,8 +5524,30 @@ function renderReadinessHero(p) {
       heroImg.style.opacity = '0.3'; // show placeholder opacity if image fails
     };
   }
-  // Compute strain from statcast data
-  const ms = computeMonotonyStrain(p._name || currentPlayer);
+  // Compute strain from statcast data using importedData directly
+  var _strainRows = [];
+  try {
+    var _s = (typeof importedData!=='undefined'&&importedData.statcast)?importedData.statcast:{};
+    var _k = Object.keys(_s).find(function(k){return k===currentPlayer||k.toLowerCase()===currentPlayer.toLowerCase();});
+    if (_k) _strainRows = (_s[_k]||[]).sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);});
+  } catch(e){}
+  const ms = _strainRows.length ? (function(){
+    // yesterday or last game date, whichever more recent
+    var yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1); yesterday.setHours(0,0,0,0);
+    var lastGame  = safeParseDate(_strainRows[_strainRows.length-1].date); lastGame.setHours(0,0,0,0);
+    var ref = lastGame > yesterday ? lastGame : yesterday;
+    var daily = [];
+    for (var i=6;i>=0;i--) {
+      var day=new Date(ref);day.setDate(day.getDate()-i);day.setHours(0,0,0,0);
+      var row=_strainRows.find(function(r){var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===day.getTime();});
+      daily.push(row?(row.heDist||0):0);
+    }
+    var wkHE=daily.reduce(function(s,v){return s+v;},0);
+    var avg=wkHE/7;
+    var sd=Math.sqrt(daily.reduce(function(s,v){return s+Math.pow(v-avg,2);},0)/7);
+    var mono=sd>0?parseFloat((avg/sd).toFixed(2)):0;
+    return {strain:parseFloat((wkHE*mono).toFixed(0)),weeklyHE:wkHE,monotony:mono};
+  })() : {strain:0,weeklyHE:0,monotony:0};
   const strain = ms.strain;
   const weeklyHE = ms.weeklyHE;
   const monotony = ms.monotony;
@@ -5903,11 +5925,31 @@ function renderAllCharts(p) {
       return key ? (statcast[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date)) : [];
     } catch(e) { return []; }
   })();
+  // For strain chart: find raw date from importedData matching each game
+  const rawStatcast = (() => {
+    try {
+      var s = (typeof importedData!=='undefined'&&importedData.statcast)?importedData.statcast:{};
+      var k = Object.keys(s).find(function(k){return k===currentPlayer||k.toLowerCase()===currentPlayer.toLowerCase();});
+      return k ? (s[k]||[]).sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);}) : [];
+    } catch(e){return [];}
+  })();
   const strainData = games.map(function(g) {
-    var match = allStatcastRows.find(function(r){ return fmtDate(r.date) === g.date; });
+    // Find matching raw statcast row by formatted date
+    var match = rawStatcast.find(function(r){ return fmtDate(r.date)===g.date; });
     if (!match) return 0;
-    var ms = computeMonotonyStrain(currentPlayer, safeParseDate(match.date));
-    return ms.strain > 0 ? ms.strain : 0;
+    // Build 7-day window ending on this game date
+    var ref = safeParseDate(match.date); ref.setHours(0,0,0,0);
+    var daily = [];
+    for (var i=6;i>=0;i--) {
+      var day = new Date(ref); day.setDate(day.getDate()-i); day.setHours(0,0,0,0);
+      var row = rawStatcast.find(function(r){ var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===day.getTime(); });
+      daily.push(row?(row.heDist||0):0);
+    }
+    var wkHE = daily.reduce(function(s,v){return s+v;},0);
+    var avg  = wkHE/7;
+    var sd   = Math.sqrt(daily.reduce(function(s,v){return s+Math.pow(v-avg,2);},0)/7);
+    var mono = sd>0?avg/sd:0;
+    return Math.round(wkHE*mono);
   });
   // Strain chart — render manually so y-axis starts at 0
   mkChart('readinessMiniChart', {
@@ -6542,7 +6584,22 @@ function buildTeamList() {
     const batSpeed   = lastGame?.bat    || p.latestBat   || 0;
     const exitVelo   = lastGame?.exit   || p.latestExit  || 0;
     const jumpHt     = p.latestJump || 0;
-    const ms         = computeMonotonyStrain(name) || { strain:0, weeklyHE:0, monotony:0 };
+    var _tsRows = [];
+    try {
+      var _ts = (typeof importedData!=='undefined'&&importedData.statcast)?importedData.statcast:{};
+      var _tk = Object.keys(_ts).find(function(k){return k===name||k.toLowerCase()===name.toLowerCase();});
+      if (_tk) _tsRows = (_ts[_tk]||[]).sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);});
+    } catch(e){}
+    var ms = {strain:0,weeklyHE:0,monotony:0};
+    if (_tsRows.length) {
+      var _ref=new Date();_ref.setDate(_ref.getDate()-1);_ref.setHours(0,0,0,0);
+      var _lg=safeParseDate(_tsRows[_tsRows.length-1].date);_lg.setHours(0,0,0,0);
+      if (_lg>_ref)_ref=_lg;
+      var _daily=[];
+      for(var _i=6;_i>=0;_i--){var _d=new Date(_ref);_d.setDate(_d.getDate()-_i);_d.setHours(0,0,0,0);var _r=_tsRows.find(function(r){var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===_d.getTime();});_daily.push(_r?(_r.heDist||0):0);}
+      var _wkHE=_daily.reduce(function(s,v){return s+v;},0),_avg=_wkHE/7,_sd=Math.sqrt(_daily.reduce(function(s,v){return s+Math.pow(v-_avg,2);},0)/7),_mono=_sd>0?_avg/_sd:0;
+      ms={strain:Math.round(_wkHE*_mono),weeklyHE:_wkHE,monotony:parseFloat(_mono.toFixed(2))};
+    }
     const coachNote  = getCoachNote(name, new Date().toISOString().slice(0,10));
     const acwrZoneColor = acwrColor(acwr);
     const acwrLbl    = acwrLabel(acwr);
