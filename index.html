@@ -5768,7 +5768,9 @@ function computeLiveACWR(playerName) {
     if (key) rows = (statcast[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
   } catch(e) {}
   if (!rows.length) return null;
-  return calcACWR(rows, new Date());
+  // Use last game date as ref — avoids EWMA decay from off days after last game
+  var lastDate = safeParseDate(rows[rows.length-1].date);
+  return calcACWR(rows, lastDate);
 }
 
 function renderACWR(p) {
