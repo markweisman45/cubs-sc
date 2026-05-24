@@ -5880,9 +5880,14 @@ function renderAllCharts(p) {
   })();
   const strainData = games.map(function(g) {
     // g.date is "May 12" — find matching raw statcast date
-    var match = allStatcastRows.find(function(r){ return fmtDate(r.date) === g.date; });
-    if (!match) return null;
-    var ms = computeMonotonyStrain(currentPlayer, safeParseDate(match.date));
+    var match = allStatcastRows.find(function(r){
+      return fmtDate(r.date) === g.date ||
+             fmtDate(r.date).replace(' ','') === g.date.replace(' ','');
+    });
+    // If no exact match try parsing g.date directly
+    var refD = match ? safeParseDate(match.date) : safeParseDate(g.date + ' ' + new Date().getFullYear());
+    if (!refD || isNaN(refD.getTime())) return 0;
+    var ms = computeMonotonyStrain(currentPlayer, refD);
     return ms.strain > 0 ? ms.strain : 0;
   });
   // Strain chart — render manually so y-axis starts at 0
@@ -6518,7 +6523,7 @@ function buildTeamList() {
     const batSpeed   = lastGame?.bat    || p.latestBat   || 0;
     const exitVelo   = lastGame?.exit   || p.latestExit  || 0;
     const jumpHt     = p.latestJump || 0;
-    const ms         = computeMonotonyStrain(name);
+    const ms         = computeMonotonyStrain(name) || { strain:0, weeklyHE:0, monotony:0 };
     const coachNote  = getCoachNote(name, new Date().toISOString().slice(0,10));
     const acwrZoneColor = acwrColor(acwr);
     const acwrLbl    = acwrLabel(acwr);
