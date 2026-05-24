@@ -11990,6 +11990,7 @@ function applyStatcastData() {
   document.getElementById('statcastFileName').textContent = `✅ ${parsedStatcastRows.length} records applied (${dateRange})`;
   saveStatcast();
   persistImportedData();
+  if (typeof syncToSupabase === 'function') setTimeout(syncToSupabase, 1000);
   requestAnimationFrame(() => {
     renderDashboard();
     buildPlayerList();
@@ -14105,7 +14106,7 @@ function handleHittingCSVUpload(input) {
       localStorage.setItem(HITTING_KEY,JSON.stringify(hitData));
       importedData.hitting=hitData;
       mergeHittingIntoRecentGames();
-      saveHitting(); persistImportedData();
+      saveHitting(); persistImportedData(); if (typeof syncToSupabase === 'function') setTimeout(syncToSupabase, 1000);
       requestAnimationFrame(() => { rebuildCMJTrends(); buildPlayerList(); renderDashboard(); });
       showStatus('Hitting CSV: '+n+' roster rows imported'+(sk?' ('+sk+' non-roster skipped)':''));
       alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':''));
