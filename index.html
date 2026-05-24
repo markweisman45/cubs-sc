@@ -5698,8 +5698,13 @@ function computeMonotonyStrain(playerName, refDate) {
   } catch(e) {}
   if (!rows.length) return { monotony: 0, strain: 0, weeklyHE: 0, daily: [] };
 
-  // Reference date — use today for current strain, game date for historical
-  var ref = refDate ? new Date(refDate) : new Date();
+  // Reference date — use last game date when no date passed (avoids zero-decay from off days)
+  var ref;
+  if (refDate) {
+    ref = new Date(refDate);
+  } else {
+    ref = new Date(safeParseDate(rows[rows.length-1].date));
+  }
   ref.setHours(0,0,0,0);
 
   // Build 7 daily HE values ending on ref date
