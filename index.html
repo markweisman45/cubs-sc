@@ -5688,23 +5688,37 @@ function acwrLabel(acwr) {
 
 // ── Compute Monotony & Strain from importedData.statcast (7-day rolling)
 function computeMonotonyStrain(playerName, refDate) {
-  // Read from importedData (Supabase-synced) as primary source
+  // Use recentGames from PLAYERS as primary source — always up to date
+  var p = PLAYERS[playerName];
   var rows = [];
-  try {
-    var statcast = (typeof importedData !== 'undefined' && importedData.statcast) ? importedData.statcast : {};
-    var key = Object.keys(statcast).find(function(k){ return k === playerName; })
-           || Object.keys(statcast).find(function(k){ return k.toLowerCase() === playerName.toLowerCase(); });
-    if (key) rows = (statcast[key]||[]).slice().sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
-  } catch(e) {}
+
+  // Build rows from recentGames (has he/dist fields)
+  if (p && p.recentGames && p.recentGames.length) {
+    rows = p.recentGames.map(function(g) {
+      return { date: g.date, heDist: g.he||0, dist: g.dist||0 };
+    }).sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
+  }
+
+  // Fall back to importedData if recentGames empty
+  if (!rows.length) {
+    try {
+      var statcast = (typeof importedData !== 'undefined' && importedData.statcast) ? importedData.statcast : {};
+      var key = Object.keys(statcast).find(function(k){ return k===playerName||k.toLowerCase()===playerName.toLowerCase(); });
+      if (key) rows = (statcast[key]||[]).slice().sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
+    } catch(e) {}
+  }
+
   if (!rows.length) return { monotony: 0, strain: 0, weeklyHE: 0, daily: [] };
 
-  // Reference date — use yesterday when no date passed (always last 7 calendar days including off days)
+  // Reference: use yesterday for current strain, specific date for historical
   var ref;
   if (refDate) {
     ref = new Date(refDate);
   } else {
-    ref = new Date();
-    ref.setDate(ref.getDate() - 1); // yesterday
+    // Use the most recent game date or yesterday, whichever is more recent
+    var lastGameDate = safeParseDate(rows[rows.length-1].date);
+    var yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+    ref = lastGameDate > yesterday ? lastGameDate : yesterday;
   }
   ref.setHours(0,0,0,0);
 
@@ -5712,7 +5726,10 @@ function computeMonotonyStrain(playerName, refDate) {
   var daily = [];
   for (var i = 6; i >= 0; i--) {
     var day = new Date(ref); day.setDate(day.getDate()-i); day.setHours(0,0,0,0);
-    var game = rows.find(function(r){ var rd=safeParseDate(r.date); rd.setHours(0,0,0,0); return rd.getTime()===day.getTime(); });
+    var game = rows.find(function(r){
+      var rd = safeParseDate(r.date); rd.setHours(0,0,0,0);
+      return rd.getTime() === day.getTime();
+    });
     daily.push(game ? (game.heDist||0) : 0);
   }
 
