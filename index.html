@@ -5525,22 +5525,39 @@ function renderReadinessHero(p) {
     };
   }
   // Compute strain from statcast data using importedData directly
+  // Build strain rows from recentGames (always most up to date) + fill heDist from statcast
   var _strainRows = [];
   try {
-    var _s = (typeof importedData!=='undefined'&&importedData.statcast)?importedData.statcast:{};
-    var _k = Object.keys(_s).find(function(k){return k===currentPlayer||k.toLowerCase()===currentPlayer.toLowerCase();});
-    if (_k) _strainRows = (_s[_k]||[]).sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);});
-  } catch(e){}
+    // Primary: use recentGames which has all data including most recent uploads
+    var _p = PLAYERS[currentPlayer];
+    if (_p && _p.recentGames && _p.recentGames.length) {
+      // recentGames has formatted dates ("May 23") — convert back via a lookup
+      var _sc = (typeof importedData!=='undefined'&&importedData.statcast)?importedData.statcast:{};
+      var _sk = Object.keys(_sc).find(function(k){return k===currentPlayer||k.toLowerCase()===currentPlayer.toLowerCase();});
+      var _scRows = _sk ? (_sc[_sk]||[]) : [];
+      // Build lookup: formatted date → heDist from statcast
+      var _scMap = {};
+      _scRows.forEach(function(r){ _scMap[fmtDate(r.date)] = {heDist:r.heDist||0, rawDate:r.date}; });
+      // Build strain rows from recentGames
+      _p.recentGames.forEach(function(g) {
+        var sc = _scMap[g.date];
+        _strainRows.push({
+          date: sc ? sc.rawDate : g.date,  // prefer raw date for parsing
+          heDist: g.he || (sc ? sc.heDist : 0),
+          formattedDate: g.date
+        });
+      });
+      _strainRows.sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
+    }
+  } catch(e){ console.error('strain build error:', e); }
+
   const ms = _strainRows.length ? (function(){
-    // Always anchor to last game date
     var ref = safeParseDate(_strainRows[_strainRows.length-1].date); ref.setHours(0,0,0,0);
-    console.log('[STRAIN] rows:', _strainRows.length, 'last date:', _strainRows[_strainRows.length-1].date, 'ref:', ref.toDateString());
     var daily = [];
     for (var i=6;i>=0;i--) {
       var day=new Date(ref);day.setDate(day.getDate()-i);day.setHours(0,0,0,0);
       var row=_strainRows.find(function(r){var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===day.getTime();});
       daily.push(row?(row.heDist||0):0);
-      console.log('[STRAIN]', day.toDateString(), ':', row?(row.heDist||0):0, row?'game':'off');
     }
     var wkHE=daily.reduce(function(s,v){return s+v;},0);
     var avg=wkHE/7;
