@@ -5698,12 +5698,13 @@ function computeMonotonyStrain(playerName, refDate) {
   } catch(e) {}
   if (!rows.length) return { monotony: 0, strain: 0, weeklyHE: 0, daily: [] };
 
-  // Reference date — use last game date when no date passed (avoids zero-decay from off days)
+  // Reference date — use yesterday when no date passed (always last 7 calendar days including off days)
   var ref;
   if (refDate) {
     ref = new Date(refDate);
   } else {
-    ref = new Date(safeParseDate(rows[rows.length-1].date));
+    ref = new Date();
+    ref.setDate(ref.getDate() - 1); // yesterday
   }
   ref.setHours(0,0,0,0);
 
