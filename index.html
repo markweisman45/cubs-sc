@@ -2181,6 +2181,41 @@ body {
           <div class="chart-wrap"><canvas id="teamAcwrChart"></canvas></div>
         </div>
       </div>
+
+      <!-- ── TEAM ACWR HEATMAP ── -->
+      <div class="card section-mb" style="margin-top:16px;">
+        <div class="card-title" style="margin-bottom:12px;">🌡️ TEAM LOAD HEATMAP — Last 14 Days</div>
+        <div id="teamHeatmap" style="overflow-x:auto;"></div>
+      </div>
+
+      <!-- ── PERFORMANCE CORRELATIONS ── -->
+      <div class="card section-mb" style="margin-top:16px;">
+        <div class="card-title" style="margin-bottom:12px;">📊 PERFORMANCE CORRELATION</div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:11px;color:var(--text3);">X Axis</label>
+            <select id="corr-x" onchange="renderCorrelation()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:11px;">
+              <option value="ppbm">CMJ PP/BM</option>
+              <option value="jump">CMJ Jump Ht</option>
+              <option value="acwr">ACWR</option>
+              <option value="strain">Strain</option>
+              <option value="he">HE Distance</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:11px;color:var(--text3);">Y Axis</label>
+            <select id="corr-y" onchange="renderCorrelation()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:11px;">
+              <option value="exit">Exit Velocity</option>
+              <option value="bat">Bat Speed</option>
+              <option value="ppbm">CMJ PP/BM</option>
+              <option value="he">HE Distance</option>
+              <option value="strain">Strain</option>
+            </select>
+          </div>
+          <div id="corr-r" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;"></div>
+        </div>
+        <div style="height:320px;position:relative;"><canvas id="corrChart"></canvas></div>
+      </div>
     </div>
 
     <!-- ══ DATA IMPORT ══ -->
@@ -6546,6 +6581,104 @@ function getSwingWorkloadFromSlider() {
 // ══════════════════════════════════════════════
 // TEAM SUMMARY
 // ══════════════════════════════════════════════
+// ── TEAM HEATMAP ──────────────────────────────────────────────────────────────
+function renderTeamHeatmap() {
+  var el = document.getElementById('teamHeatmap');
+  if (!el) return;
+  var players = Object.entries(PLAYERS).filter(function(e){ return !['SP','RP'].includes(e[1].pos); }).map(function(e){ return e[0]; });
+  var dates = [];
+  for (var i=13; i>=0; i--) { var d=new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0); dates.push(d); }
+  var dateLabels = dates.map(function(d){ return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); });
+  var lookup = {};
+  players.forEach(function(name) {
+    lookup[name] = {};
+    var p = PLAYERS[name];
+    if (p && p.recentGames) p.recentGames.forEach(function(g){ lookup[name][g.date] = g.he||0; });
+  });
+  function heColor(v) {
+    if (!v) return 'rgba(255,255,255,0.04)';
+    if (v>600) return 'rgba(239,68,68,0.8)';
+    if (v>400) return 'rgba(245,158,11,0.75)';
+    if (v>200) return 'rgba(34,197,94,0.65)';
+    return 'rgba(96,165,250,0.5)';
+  }
+  var h = '<table style="border-collapse:collapse;font-family:\'DM Mono\',monospace;"><thead><tr>';
+  h += '<th style="padding:4px 8px;font-size:10px;color:var(--text2);text-align:right;min-width:110px;border:1px solid rgba(255,255,255,0.04);">Player</th>';
+  dateLabels.forEach(function(d){ h += '<th style="min-width:46px;font-size:8px;color:var(--text3);padding:3px 2px;text-align:center;border:1px solid rgba(255,255,255,0.04);">'+d+'</th>'; });
+  h += '</tr></thead><tbody>';
+  players.forEach(function(name) {
+    h += '<tr><td style="padding:4px 8px;font-size:10px;color:var(--text2);text-align:right;border:1px solid rgba(255,255,255,0.04);">'+name.split(' ').pop()+'</td>';
+    dates.forEach(function(d) {
+      var lbl = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      var val = lookup[name][lbl]||0;
+      var txt = val>0?(val>=1000?(val/1000).toFixed(1)+'k':val):'';
+      h += '<td style="min-width:46px;height:28px;background:'+heColor(val)+';border:1px solid rgba(255,255,255,0.04);text-align:center;vertical-align:middle;font-size:9px;" title="'+name+' '+lbl+': '+val+' ft HE">'+txt+'</td>';
+    });
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  h += '<div style="display:flex;gap:10px;margin-top:8px;font-size:9px;color:var(--text3);align-items:center;flex-wrap:wrap;">HE Distance: ';
+  [['rgba(96,165,250,0.5)','1-200ft'],['rgba(34,197,94,0.65)','201-400ft'],['rgba(245,158,11,0.75)','401-600ft'],['rgba(239,68,68,0.8)','>600ft'],['rgba(255,255,255,0.04)','Off']].forEach(function(c){
+    h += '<span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;border-radius:2px;background:'+c[0]+';display:inline-block;"></span>'+c[1]+'</span>';
+  });
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+// ── PERFORMANCE CORRELATIONS ──────────────────────────────────────────────────
+function getMetricValue(name, p, key) {
+  var lastGame = p.recentGames&&p.recentGames.length ? p.recentGames[p.recentGames.length-1] : null;
+  if (key==='ppbm')  return p.latestPPBM||0;
+  if (key==='jump')  return p.latestJump||0;
+  if (key==='acwr')  return p.acwr||0;
+  if (key==='he')    return lastGame?(lastGame.he||0):(p.latestHE||0);
+  if (key==='exit')  return lastGame?(lastGame.exit||0):(p.latestExit||0);
+  if (key==='bat')   return lastGame?(lastGame.bat||0):(p.latestBat||0);
+  if (key==='strain') {
+    var ms = computeMonotonyStrain(name); return ms?ms.strain:0;
+  }
+  return 0;
+}
+
+function renderCorrelation() {
+  var xKey = (document.getElementById('corr-x')||{}).value||'ppbm';
+  var yKey = (document.getElementById('corr-y')||{}).value||'exit';
+  var xLabels = {ppbm:'CMJ PP/BM',jump:'Jump Ht (cm)',acwr:'ACWR',strain:'Strain',he:'HE Dist (ft)'};
+  var yLabels = {exit:'Exit Velo (mph)',bat:'Bat Speed (mph)',ppbm:'CMJ PP/BM',he:'HE Dist (ft)',strain:'Strain'};
+  var points = [];
+  Object.entries(PLAYERS).filter(function(e){ return !['SP','RP'].includes(e[1].pos); }).forEach(function(e) {
+    var x=getMetricValue(e[0],e[1],xKey), y=getMetricValue(e[0],e[1],yKey);
+    if (x>0&&y>0) points.push({x:x,y:y,label:e[0].split(' ').pop()});
+  });
+  if (!points.length) return;
+  var n=points.length,sx=points.reduce(function(s,p){return s+p.x;},0),sy=points.reduce(function(s,p){return s+p.y;},0);
+  var sxy=points.reduce(function(s,p){return s+p.x*p.y;},0),sx2=points.reduce(function(s,p){return s+p.x*p.x;},0),sy2=points.reduce(function(s,p){return s+p.y*p.y;},0);
+  var r=(n*sxy-sx*sy)/Math.sqrt((n*sx2-sx*sx)*(n*sy2-sy*sy)); r=isNaN(r)?0:r;
+  var rEl=document.getElementById('corr-r');
+  if (rEl) { var rc=Math.abs(r)>0.7?'var(--green)':Math.abs(r)>0.4?'var(--yellow)':'var(--text3)'; rEl.innerHTML='r = <strong style="color:'+rc+';">'+r.toFixed(2)+'</strong> &nbsp;'+(Math.abs(r)>0.7?'Strong':Math.abs(r)>0.4?'Moderate':'Weak')+' correlation'; }
+  var ctx=document.getElementById('corrChart'); if (!ctx) return;
+  if (ctx._chart) ctx._chart.destroy();
+  ctx._chart = new Chart(ctx, {
+    type:'scatter',
+    data:{ datasets:[{ data:points, backgroundColor:'rgba(99,102,241,0.75)', pointRadius:8, pointHoverRadius:11 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return c.raw.label+': ('+c.raw.x.toFixed(1)+', '+c.raw.y.toFixed(1)+')'; } } } },
+      scales:{
+        x:{ title:{display:true,text:xLabels[xKey],color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#94a3b8',font:{size:10}} },
+        y:{ title:{display:true,text:yLabels[yKey],color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#94a3b8',font:{size:10}} }
+      }
+    }
+  });
+  // Draw labels
+  var orig = ctx._chart.draw.bind(ctx._chart);
+  ctx._chart.draw = function(){
+    orig();
+    var c2=ctx._chart.ctx; c2.save(); c2.font='9px DM Mono'; c2.fillStyle='#94a3b8';
+    ctx._chart.getDatasetMeta(0).data.forEach(function(el,i){ if(el&&points[i]) c2.fillText(points[i].label, el.x+7, el.y-3); });
+    c2.restore();
+  };
+}
+
 function buildTeamList() {
   const el = document.getElementById('teamList');
   if (!el) return;
@@ -6593,6 +6726,14 @@ function buildTeamList() {
     const sc         = status === 'GREEN' ? 'green' : status === 'RED' ? 'red' : 'yellow';
     const init       = name.split(' ').map(n=>n[0]).join('');
     const lastGame   = p.recentGames?.length ? p.recentGames[p.recentGames.length-1] : null;
+
+    // CMJ Drop Alert — flag if latest PPBM < 95% of 30-day average
+    const cmjTrends = p.cmjTrends || [];
+    const cmjStd30  = cmjTrends.filter(c => !c.type || c.type === 'CMJ').slice(-30);
+    const cmjAvg30  = cmjStd30.length > 3 ? cmjStd30.reduce((s,c)=>s+(c.ppbm||0),0)/cmjStd30.length : 0;
+    const cmjLatest = p.latestPPBM || 0;
+    const cmjDrop   = cmjAvg30 > 0 && cmjLatest > 0 ? ((cmjLatest - cmjAvg30) / cmjAvg30 * 100) : null;
+    const cmjAlert  = cmjDrop !== null && cmjDrop < -5;
     const topSpeed   = lastGame?.speed  || p.latestSpeed || 0;
     const heDist     = lastGame?.he     || p.latestHE    || 0;
     const totalDist  = lastGame?.dist   || p.latestDist  || 0;
@@ -6616,11 +6757,12 @@ function buildTeamList() {
     const coachNote  = getCoachNote(name, new Date().toISOString().slice(0,10));
     const acwrZoneColor = acwrColor(acwr);
     const acwrLbl    = acwrLabel(acwr);
+    const cmjAlertBadge = cmjAlert ? `<span style="background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);border-radius:4px;padding:1px 5px;font-size:9px;color:var(--red);margin-left:4px;" title="CMJ PP/BM dropped ${Math.abs(cmjDrop).toFixed(1)}% from 30-day avg">▼CMJ ${Math.abs(cmjDrop).toFixed(0)}%</span>` : '';
 
     return `<div class="team-row" onclick="selectPlayer('${name.replace(/'/g,"\\'")}');switchTab('dashboard',document.querySelector('.nav-btn'))" style="cursor:pointer;">
       <div class="player-avatar" style="width:38px;height:38px;font-size:13px;flex-shrink:0;">${init}</div>
       <div style="min-width:120px;flex:0 0 auto;">
-        <div class="team-name">${name.split(' ').pop()}</div>
+        <div class="team-name">${name.split(' ').pop()}${cmjAlertBadge}</div>
         <div class="team-pos">${p.pos} · #${p.number}${coachNote ? ' · 📝' : ''}</div>
       </div>
 
@@ -6759,6 +6901,8 @@ function buildTeamList() {
       }
     });
   }, 100);
+  renderTeamHeatmap();
+  renderCorrelation();
 }
 
 // ══════════════════════════════════════════════
