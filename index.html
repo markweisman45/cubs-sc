@@ -2195,21 +2195,55 @@ body {
           <div style="display:flex;align-items:center;gap:6px;">
             <label style="font-size:11px;color:var(--text3);">X Axis</label>
             <select id="corr-x" onchange="renderCorrelation()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:11px;">
-              <option value="ppbm">CMJ PP/BM</option>
-              <option value="jump">CMJ Jump Ht</option>
-              <option value="acwr">ACWR</option>
-              <option value="strain">Strain</option>
-              <option value="he">HE Distance</option>
+              <optgroup label="CMJ (No Arm Swing)">
+                <option value="ppbm">CMJ PP/BM (W/kg)</option>
+                <option value="jump">CMJ Jump Height (cm)</option>
+                <option value="vto">CMJ VTO (m/s)</option>
+                <option value="conc">CMJ Conc Power (W)</option>
+                <option value="stiff">CMJ Stiffness (N/m)</option>
+                <option value="p1">CMJ P1 Impulse (N·s)</option>
+                <option value="p2">CMJ P2 Impulse (N·s)</option>
+                <option value="rsiMod">RSI-Modified (m/s)</option>
+              </optgroup>
+              <optgroup label="ABCMJ (Arm Swing)">
+                <option value="abppbm">ABCMJ PP/BM (W/kg)</option>
+                <option value="abjump">ABCMJ Jump Height (cm)</option>
+                <option value="abvto">ABCMJ VTO (m/s)</option>
+              </optgroup>
+              <optgroup label="Workload">
+                <option value="acwr">ACWR</option>
+                <option value="strain">Strain</option>
+                <option value="he">HE Distance</option>
+              </optgroup>
             </select>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">
             <label style="font-size:11px;color:var(--text3);">Y Axis</label>
             <select id="corr-y" onchange="renderCorrelation()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:11px;">
-              <option value="exit">Exit Velocity</option>
-              <option value="bat">Bat Speed</option>
-              <option value="ppbm">CMJ PP/BM</option>
-              <option value="he">HE Distance</option>
-              <option value="strain">Strain</option>
+              <optgroup label="Performance (90th pct season)">
+                <option value="exit">Exit Velocity 90% (mph)</option>
+                <option value="bat">Bat Speed 90% (mph)</option>
+                <option value="speed">Max Velo Running 90% (ft/s)</option>
+              </optgroup>
+              <optgroup label="CMJ (No Arm Swing)">
+                <option value="ppbm">CMJ PP/BM (W/kg)</option>
+                <option value="jump">CMJ Jump Height (cm)</option>
+                <option value="vto">CMJ VTO (m/s)</option>
+                <option value="conc">CMJ Conc Power (W)</option>
+                <option value="stiff">CMJ Stiffness (N/m)</option>
+                <option value="p1">CMJ P1 Impulse (N·s)</option>
+                <option value="p2">CMJ P2 Impulse (N·s)</option>
+                <option value="rsiMod">RSI-Modified (m/s)</option>
+              </optgroup>
+              <optgroup label="ABCMJ (Arm Swing)">
+                <option value="abppbm">ABCMJ PP/BM (W/kg)</option>
+                <option value="abjump">ABCMJ Jump Height (cm)</option>
+              </optgroup>
+              <optgroup label="Workload">
+                <option value="acwr">ACWR</option>
+                <option value="strain">Strain</option>
+                <option value="he">HE Distance</option>
+              </optgroup>
             </select>
           </div>
           <div id="corr-r" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;"></div>
@@ -6628,23 +6662,59 @@ function renderTeamHeatmap() {
 // ── PERFORMANCE CORRELATIONS ──────────────────────────────────────────────────
 function getMetricValue(name, p, key) {
   var lastGame = p.recentGames&&p.recentGames.length ? p.recentGames[p.recentGames.length-1] : null;
-  if (key==='ppbm')  return p.latestPPBM||0;
-  if (key==='jump')  return p.latestJump||0;
+  var cmj  = (p.cmjTrends||[]).filter(function(c){ return !c.type||c.type==='CMJ'; });
+  var abcmj= (p.cmjTrends||[]).filter(function(c){ return c.type==='ABCMJ'; });
+
+  // Helper: 90th percentile of season values (non-zero)
+  function pct90(arr) {
+    var vals = arr.filter(function(v){return v>0;}).sort(function(a,b){return a-b;});
+    if (!vals.length) return 0;
+    var idx = Math.floor(vals.length * 0.9);
+    return vals[Math.min(idx, vals.length-1)];
+  }
+
+  // CMJ metrics — use latest non-zero value
+  if (key==='ppbm')  return cmj.length  ? (cmj[cmj.length-1].ppbm||0)   : (p.latestPPBM||0);
+  if (key==='jump')  return cmj.length  ? (cmj[cmj.length-1].jump||0)   : (p.latestJump||0);
+  if (key==='vto')   return cmj.length  ? (cmj[cmj.length-1].vto||0)    : 0;
+  if (key==='conc')  return cmj.length  ? (cmj[cmj.length-1].conc||0)   : 0;
+  if (key==='stiff') return cmj.length  ? (cmj[cmj.length-1].stiff||0)  : 0;
+  if (key==='p1')    return cmj.length  ? (cmj[cmj.length-1].p1||0)     : 0;
+  if (key==='p2')    return cmj.length  ? (cmj[cmj.length-1].p2||0)     : 0;
+  if (key==='rsiMod')return cmj.length  ? (cmj[cmj.length-1].rsiMod||0) : 0;
+
+  // ABCMJ metrics
+  if (key==='abppbm')return abcmj.length ? (abcmj[abcmj.length-1].ppbm||0) : 0;
+  if (key==='abjump')return abcmj.length ? (abcmj[abcmj.length-1].jump||0) : 0;
+  if (key==='abvto') return abcmj.length ? (abcmj[abcmj.length-1].vto||0)  : 0;
+
+  // Workload
   if (key==='acwr')  return p.acwr||0;
   if (key==='he')    return lastGame?(lastGame.he||0):(p.latestHE||0);
-  if (key==='exit')  return lastGame?(lastGame.exit||0):(p.latestExit||0);
-  if (key==='bat')   return lastGame?(lastGame.bat||0):(p.latestBat||0);
-  if (key==='strain') {
-    var ms = computeMonotonyStrain(name); return ms?ms.strain:0;
+  if (key==='strain'){ var ms=computeMonotonyStrain(name); return ms?ms.strain:0; }
+
+  // Performance — 90th percentile of season
+  if (key==='exit') {
+    var vals = (p.recentGames||[]).map(function(g){return g.exit||0;});
+    return pct90(vals) || p.latestExit||0;
   }
+  if (key==='bat') {
+    var vals = (p.recentGames||[]).map(function(g){return g.bat||0;});
+    return pct90(vals) || p.latestBat||0;
+  }
+  if (key==='speed') {
+    var vals = (p.recentGames||[]).map(function(g){return g.speed||0;});
+    return pct90(vals) || p.latestSpeed||0;
+  }
+
   return 0;
 }
 
 function renderCorrelation() {
   var xKey = (document.getElementById('corr-x')||{}).value||'ppbm';
   var yKey = (document.getElementById('corr-y')||{}).value||'exit';
-  var xLabels = {ppbm:'CMJ PP/BM',jump:'Jump Ht (cm)',acwr:'ACWR',strain:'Strain',he:'HE Dist (ft)'};
-  var yLabels = {exit:'Exit Velo (mph)',bat:'Bat Speed (mph)',ppbm:'CMJ PP/BM',he:'HE Dist (ft)',strain:'Strain'};
+  var xLabels = {ppbm:'CMJ PP/BM (W/kg)',jump:'CMJ Jump Ht (cm)',vto:'CMJ VTO (m/s)',conc:'CMJ Conc Power (W)',stiff:'CMJ Stiffness (N/m)',p1:'P1 Impulse (N·s)',p2:'P2 Impulse (N·s)',rsiMod:'RSI-Modified (m/s)',abppbm:'ABCMJ PP/BM (W/kg)',abjump:'ABCMJ Jump Ht (cm)',abvto:'ABCMJ VTO (m/s)',acwr:'ACWR',strain:'Strain',he:'HE Dist (ft)'};
+  var yLabels = {exit:'Exit Velo 90% (mph)',bat:'Bat Speed 90% (mph)',speed:'Max Velo 90% (ft/s)',ppbm:'CMJ PP/BM (W/kg)',jump:'CMJ Jump Ht (cm)',vto:'CMJ VTO (m/s)',conc:'CMJ Conc Power (W)',stiff:'CMJ Stiffness (N/m)',p1:'P1 Impulse (N·s)',p2:'P2 Impulse (N·s)',rsiMod:'RSI-Modified (m/s)',abppbm:'ABCMJ PP/BM (W/kg)',abjump:'ABCMJ Jump Ht (cm)',acwr:'ACWR',strain:'Strain',he:'HE Dist (ft)'};
   var points = [];
   Object.entries(PLAYERS).filter(function(e){ return !['SP','RP'].includes(e[1].pos); }).forEach(function(e) {
     var x=getMetricValue(e[0],e[1],xKey), y=getMetricValue(e[0],e[1],yKey);
