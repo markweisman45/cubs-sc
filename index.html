@@ -637,6 +637,7 @@ body {
     <button class="nav-btn" onclick="switchTab('program', this)">💪 Program Builder</button>
     <button class="nav-btn" onclick="switchTab('programs', this)">📁 My Programs</button>
     <button class="nav-btn" onclick="switchTab('calendar', this)">📆 Calendar</button>
+    <button class="nav-btn" onclick="switchTab('brief', this)">📋 Daily Brief</button>
     <button class="nav-btn" onclick="switchTab('team', this)">👥 Team Summary</button>
     <button class="nav-btn" onclick="switchTab('import', this)">📥 Data Import</button>
   </div>
@@ -2221,6 +2222,74 @@ body {
 
     <!-- ══ TEAM SUMMARY ══ -->
     
+
+<div id="page-brief" class="page">
+  <div style="max-width:900px;margin:0 auto;">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">📋 DAILY BRIEF</div>
+        <div id="brief-date" style="font-size:13px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace;"></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="refreshBrief()" style="padding:8px 16px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:6px;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;">🔄 Refresh</button>
+        <button onclick="printBrief()" style="padding:8px 16px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;">🖨️ Print</button>
+      </div>
+    </div>
+
+    <!-- Alert Banner -->
+    <div id="brief-alerts" style="margin-bottom:16px;"></div>
+
+    <!-- Team Status Grid -->
+    <div class="card" style="margin-bottom:16px;padding:16px;">
+      <div class="card-title" style="margin-bottom:12px;">👥 TEAM STATUS</div>
+      <div id="brief-team-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;"></div>
+    </div>
+
+    <!-- Two column: High Concern + Ready to Train -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div class="card" style="padding:16px;">
+        <div class="card-title" style="margin-bottom:10px;color:var(--red);">🔴 HIGH CONCERN</div>
+        <div id="brief-concern" style="font-size:12px;"></div>
+      </div>
+      <div class="card" style="padding:16px;">
+        <div class="card-title" style="margin-bottom:10px;color:var(--green);">🟢 OPTIMAL LOAD</div>
+        <div id="brief-optimal" style="font-size:12px;"></div>
+      </div>
+    </div>
+
+    <!-- CMJ Drops -->
+    <div class="card" style="margin-bottom:16px;padding:16px;">
+      <div class="card-title" style="margin-bottom:10px;">📉 CMJ ALERTS (>5% drop from 30-day avg)</div>
+      <div id="brief-cmj" style="font-size:12px;"></div>
+    </div>
+
+    <!-- Load Summary Table -->
+    <div class="card" style="margin-bottom:16px;padding:16px;">
+      <div class="card-title" style="margin-bottom:10px;">⚡ LOAD SUMMARY — Last 7 Days</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;font-family:'DM Mono',monospace;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="padding:6px 8px;text-align:left;color:var(--text3);">Player</th>
+            <th style="padding:6px 8px;text-align:right;color:var(--text3);">Weekly HE</th>
+            <th style="padding:6px 8px;text-align:right;color:var(--text3);">Monotony</th>
+            <th style="padding:6px 8px;text-align:right;color:var(--text3);">Strain</th>
+            <th style="padding:6px 8px;text-align:right;color:var(--text3);">ACWR</th>
+            <th style="padding:6px 8px;text-align:center;color:var(--text3);">Status</th>
+          </tr>
+        </thead>
+        <tbody id="brief-load-table"></tbody>
+      </table>
+    </div>
+
+    <!-- Assigned Programs Today -->
+    <div class="card" style="padding:16px;">
+      <div class="card-title" style="margin-bottom:10px;">🏋️ TODAY'S PROGRAMS</div>
+      <div id="brief-programs" style="font-size:12px;color:var(--text3);">No programs assigned for today.</div>
+    </div>
+  </div>
+</div>
 
 <div id="page-team" class="page">
       <div class="card section-mb">
@@ -5111,13 +5180,14 @@ function switchTab(page, btn) {
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['dashboard','program','programs','calendar','team','import'].forEach(p => {
+  ['dashboard','program','programs','calendar','brief','team','import'].forEach(p => {
     const el = document.getElementById('page-'+p);
     if (!el) return;
     el.classList.toggle('page',   p !== page);
     el.classList.toggle('active', p === page);
   });
   document.getElementById('dashTabs').style.display = page === 'dashboard' ? 'flex' : 'none';
+  if (page === 'brief') { renderBrief(); }
   if (page === 'programs') renderProgramLibrary();
   if (page === 'calendar') { renderCalendar(); populateScheduleWorkoutProgramPicker(); }
   if (page === 'dashboard') renderDashboard();
@@ -6694,6 +6764,233 @@ function getSwingWorkloadFromSlider() {
 // TEAM SUMMARY
 // ══════════════════════════════════════════════
 // ── TEAM HEATMAP ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// DAILY BRIEF
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── PUSH PROGRAM TO PLAYER ────────────────────────────────────────────────────
+function showPushProgramModal(progId) {
+  var prog = SAVED_PROGRAMS.find(function(p){ return p.id===progId; });
+  if (!prog) return;
+
+  var players = Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); });
+  var playerOpts = players.map(function(n){
+    return '<option value="'+n+'"'+(prog.athlete===n?' selected':'')+'>'+n+'</option>';
+  }).join('');
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:420px;max-width:95vw;">'
+    +'<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">📤 Push Program to Player</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">'+prog.name+'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:12px;">'
+    +'<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Assign To</label>'
+    +'<select id="push-player-sel" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 10px;color:#fff;font-size:13px;">'+playerOpts+'</select></div>'
+    +'<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Start Date</label>'
+    +'<input type="date" id="push-start-date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 10px;color:#fff;font-size:13px;box-sizing:border-box;"></div>'
+    +'<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Note (optional)</label>'
+    +'<input type="text" id="push-note" placeholder="e.g. Post-series lift" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 10px;color:#fff;font-size:13px;box-sizing:border-box;"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end;">'
+    +'<button id="push-cancel" style="padding:8px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    +'<button id="push-confirm" style="padding:8px 20px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📤 Push Program</button>'
+    +'</div></div>';
+
+  document.body.appendChild(modal);
+
+  modal.querySelector('#push-confirm').onclick = function() {
+    var player    = modal.querySelector('#push-player-sel').value;
+    var startDate = modal.querySelector('#push-start-date').value;
+    var note      = modal.querySelector('#push-note').value;
+    // Mark program as assigned
+    prog.assignedTo   = player;
+    prog.assignedDate = startDate;
+    prog.note         = note;
+    // Also create a player-specific copy in their programs
+    var copy = JSON.parse(JSON.stringify(prog));
+    copy.id         = Date.now();
+    copy.name       = prog.name + ' — ' + player;
+    copy.athlete    = player;
+    copy.assignedTo = player;
+    copy.isAssigned = true;
+    SAVED_PROGRAMS.unshift(copy);
+    persistPrograms();
+    modal.remove();
+    showStatus('✅ "'+prog.name+'" pushed to '+player+' starting '+startDate);
+    // Show in daily brief if on that page
+    if (typeof renderBriefPrograms === 'function') renderBriefPrograms();
+  };
+  modal.querySelector('#push-cancel').onclick = function(){ modal.remove(); };
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+}
+
+function renderBrief() {
+  // Date header
+  var dateEl = document.getElementById('brief-date');
+  if (dateEl) {
+    var now = new Date();
+    dateEl.textContent = now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  }
+
+  var players = Object.entries(PLAYERS).filter(function(e){ return !['SP','RP'].includes(e[1].pos); });
+  var concern = [], optimal = [], cmjAlerts = [];
+
+  // ── Team status grid ──────────────────────────────────────────────────────
+  var teamGrid = document.getElementById('brief-team-grid');
+  if (teamGrid) {
+    teamGrid.innerHTML = players.map(function(entry) {
+      var name = entry[0], p = entry[1];
+      var ms = computeMonotonyStrain(name);
+      var acwr = p.acwr || 0;
+      var strain = ms.strain || 0;
+      var strainColor = strain>2500?'var(--red)':strain>1500?'var(--yellow)':'var(--green)';
+      var acwrColor2 = acwr>1.25||acwr<0.75?'var(--red)':acwr>1.15||acwr<0.85?'var(--yellow)':'var(--green)';
+
+      // CMJ check
+      var cmjTrends = (p.cmjTrends||[]).filter(function(c){return !c.type||c.type==='CMJ';});
+      var cmjAvg = cmjTrends.length>3 ? cmjTrends.reduce(function(s,c){return s+(c.ppbm||0);},0)/cmjTrends.length : 0;
+      var cmjLast = p.latestPPBM||0;
+      var cmjDrop = cmjAvg>0&&cmjLast>0 ? ((cmjLast-cmjAvg)/cmjAvg*100) : null;
+      var hasCmjAlert = cmjDrop!==null && cmjDrop<-5;
+
+      // Categorize
+      if (strain>2500 || acwr>1.25 || acwr<0.75) concern.push({name,p,ms,acwr,cmjDrop});
+      else if (strain<=1500 && acwr>=0.85 && acwr<=1.15) optimal.push({name,p,ms,acwr,cmjDrop});
+      if (hasCmjAlert) cmjAlerts.push({name,p,cmjDrop,cmjLast,cmjAvg});
+
+      var photo = typeof PLAYER_PHOTOS !== 'undefined' ? PLAYER_PHOTOS[name] : '';
+      var initials = name.split(' ').map(function(w){return w[0];}).join('');
+
+      return '<div style="background:var(--bg3);border-radius:8px;padding:10px;display:flex;gap:8px;align-items:center;">'
+        +'<div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text3);">'
+        +(photo?'<img src="'+photo+'" style="width:100%;height:100%;object-fit:cover;object-position:top;">':initials)
+        +'</div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+name.split(' ').pop()+(hasCmjAlert?' <span style="color:var(--red);font-size:9px;">▼CMJ</span>':'')+'</div>'
+        +'<div style="display:flex;gap:6px;margin-top:3px;">'
+        +'<span style="font-size:9px;color:'+strainColor+';font-family:\'DM Mono\';">S:'+strain.toLocaleString()+'</span>'
+        +'<span style="font-size:9px;color:'+acwrColor2+';font-family:\'DM Mono\';">ACWR:'+acwr.toFixed(2)+'</span>'
+        +'</div></div></div>';
+    }).join('');
+  }
+
+  // ── High concern list ─────────────────────────────────────────────────────
+  var concernEl = document.getElementById('brief-concern');
+  if (concernEl) {
+    if (!concern.length) {
+      concernEl.innerHTML = '<div style="color:var(--text3);padding:8px 0;">No players in high concern range ✓</div>';
+    } else {
+      concernEl.innerHTML = concern.map(function(c) {
+        var reasons = [];
+        if (c.ms.strain>2500) reasons.push('Strain: '+c.ms.strain.toLocaleString());
+        if (c.acwr>1.25) reasons.push('ACWR high: '+c.acwr.toFixed(2));
+        if (c.acwr<0.75) reasons.push('ACWR low: '+c.acwr.toFixed(2));
+        if (c.cmjDrop!==null&&c.cmjDrop<-5) reasons.push('CMJ ▼'+Math.abs(c.cmjDrop).toFixed(0)+'%');
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'
+          +'<div style="font-weight:600;color:#fff;margin-bottom:2px;">'+c.name+'</div>'
+          +'<div style="color:var(--red);font-size:10px;">'+reasons.join(' · ')+'</div>'
+          +'</div>';
+      }).join('');
+    }
+  }
+
+  // ── Optimal list ──────────────────────────────────────────────────────────
+  var optEl = document.getElementById('brief-optimal');
+  if (optEl) {
+    if (!optimal.length) {
+      optEl.innerHTML = '<div style="color:var(--text3);padding:8px 0;">No players in optimal range today</div>';
+    } else {
+      optEl.innerHTML = optimal.map(function(c) {
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'
+          +'<div style="font-weight:600;color:#fff;margin-bottom:2px;">'+c.name+'</div>'
+          +'<div style="color:var(--green);font-size:10px;">Strain: '+c.ms.strain.toLocaleString()+' · ACWR: '+c.acwr.toFixed(2)+'</div>'
+          +'</div>';
+      }).join('');
+    }
+  }
+
+  // ── CMJ alerts ────────────────────────────────────────────────────────────
+  var cmjEl = document.getElementById('brief-cmj');
+  if (cmjEl) {
+    if (!cmjAlerts.length) {
+      cmjEl.innerHTML = '<div style="color:var(--text3);padding:8px 0;">No significant CMJ drops detected ✓</div>';
+    } else {
+      cmjEl.innerHTML = cmjAlerts.map(function(c) {
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'
+          +'<div>'
+          +'<div style="font-weight:600;color:#fff;">'+c.name+'</div>'
+          +'<div style="font-size:10px;color:var(--text3);">Latest: '+c.cmjLast.toFixed(1)+' W/kg · 30-day avg: '+c.cmjAvg.toFixed(1)+' W/kg</div>'
+          +'</div>'
+          +'<div style="font-size:16px;font-weight:700;color:var(--red);">▼'+Math.abs(c.cmjDrop).toFixed(1)+'%</div>'
+          +'</div>';
+      }).join('');
+    }
+  }
+
+  // ── Load summary table ────────────────────────────────────────────────────
+  var loadTable = document.getElementById('brief-load-table');
+  if (loadTable) {
+    var rows = players.map(function(entry) {
+      var name = entry[0], p = entry[1];
+      var ms = computeMonotonyStrain(name);
+      var acwr = p.acwr||0;
+      var strainColor = ms.strain>2500?'var(--red)':ms.strain>1500?'var(--yellow)':'var(--green)';
+      var acwrColor2 = acwr>1.25||acwr<0.75?'var(--red)':acwr>1.15||acwr<0.85?'var(--yellow)':'var(--green)';
+      var statusDot = ms.strain>2500||acwr>1.25||acwr<0.75 ? '🔴' : ms.strain>1500||acwr>1.15||acwr<0.85 ? '🟡' : '🟢';
+      return {name, ms, acwr, strainColor, acwrColor2, statusDot, strain:ms.strain};
+    }).sort(function(a,b){return b.strain-a.strain;});
+
+    loadTable.innerHTML = rows.map(function(r) {
+      return '<tr style="border-bottom:1px solid var(--border);">'
+        +'<td style="padding:7px 8px;font-weight:600;color:#fff;">'+r.name+'</td>'
+        +'<td style="padding:7px 8px;text-align:right;color:var(--text2);">'+r.ms.weeklyHE.toLocaleString()+' ft</td>'
+        +'<td style="padding:7px 8px;text-align:right;color:var(--text3);">'+r.ms.monotony.toFixed(2)+'</td>'
+        +'<td style="padding:7px 8px;text-align:right;font-weight:700;color:'+r.strainColor+';">'+r.strain.toLocaleString()+'</td>'
+        +'<td style="padding:7px 8px;text-align:right;font-weight:600;color:'+r.acwrColor2+';">'+r.acwr.toFixed(3)+'</td>'
+        +'<td style="padding:7px 8px;text-align:center;font-size:14px;">'+r.statusDot+'</td>'
+        +'</tr>';
+    }).join('');
+  }
+
+  // ── Today's programs ──────────────────────────────────────────────────────
+  renderBriefPrograms();
+
+  // ── Alert banner ──────────────────────────────────────────────────────────
+  var alertEl = document.getElementById('brief-alerts');
+  if (alertEl) {
+    var alerts = [];
+    if (concern.length) alerts.push('<span style="color:var(--red);">⚠️ '+concern.length+' player'+(concern.length>1?'s':'')+' in high concern range</span>');
+    if (cmjAlerts.length) alerts.push('<span style="color:var(--yellow);">📉 '+cmjAlerts.length+' CMJ drop alert'+(cmjAlerts.length>1?'s':'')+'</span>');
+    if (!alerts.length) alerts.push('<span style="color:var(--green);">✅ All players within normal ranges</span>');
+    alertEl.innerHTML = '<div style="background:var(--bg3);border-radius:8px;padding:12px 16px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;border-left:4px solid '+(concern.length?'var(--red)':cmjAlerts.length?'var(--yellow)':'var(--green)')+';">'+alerts.join('<span style="color:var(--border);">|</span>')+'</div>';
+  }
+}
+
+function renderBriefPrograms() {
+  var el = document.getElementById('brief-programs');
+  if (!el) return;
+  // Find any programs assigned to players for today
+  var today = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  var assigned = [];
+  if (typeof SAVED_PROGRAMS !== 'undefined') {
+    SAVED_PROGRAMS.filter(function(p){ return p.assignedTo; }).forEach(function(prog) {
+      assigned.push('<div style="padding:6px 0;border-bottom:1px solid var(--border);">'
+        +'<span style="font-weight:600;color:#fff;">'+prog.assignedTo+'</span>'
+        +' <span style="color:var(--text3);">→</span> '
+        +'<span style="color:var(--blue);">'+prog.name+'</span>'
+        +(prog.note?'<div style="font-size:10px;color:var(--text3);margin-top:2px;">'+prog.note+'</div>':'')
+        +'</div>');
+    });
+  }
+  el.innerHTML = assigned.length ? assigned.join('') : '<div style="color:var(--text3);">No programs assigned. Use the Programs tab to assign programs to players.</div>';
+}
+
+function refreshBrief() { renderBrief(); showStatus('✅ Daily Brief refreshed'); }
+
+function printBrief() {
+  window.print();
+}
+
 function renderTeamHeatmap() {
   var el = document.getElementById('teamHeatmap');
   if (!el) return;
@@ -10665,6 +10962,7 @@ function pbSave() {
   persistPrograms();
   showStatus('✅ Saved "'+name+'" to My Programs');
   alert('Saved! Find it in My Programs under '+PB_STATE.athlete);
+  if (confirm('Push this program to '+PB_STATE.athlete+' now?')) { var prog = SAVED_PROGRAMS[0]; if(prog) showPushProgramModal(prog.id); }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
