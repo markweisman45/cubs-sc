@@ -666,6 +666,7 @@ body {
       <button class="tab-btn" onclick="switchDashTab('cmj', this)">CMJ Trends</button>
 
       <button class="tab-btn" onclick="switchDashTab('workload', this)">Workload</button>
+      <button class="tab-btn" onclick="switchDashTab('heruns', this)" style="color:#f59e0b;">⚡ HE Runs</button>
       <button class="tab-btn" onclick="switchDashTab('programs', this)">📋 Programs</button>
     </div>
   </div>
@@ -1864,7 +1865,81 @@ body {
     </div>
 
     <!-- ══ ATHLETE PROGRAMS TAB ══ -->
-    <div id="dash-programs" class="page">
+    <div id="dash-heruns" class="page">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="font-size:13px;font-weight:700;color:#f59e0b;">⚡ HIGH EFFORT RUNS</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;">
+          <input type="text" id="he-search" placeholder="Search play context..." oninput="filterHERuns()"
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;width:180px;">
+          <select id="he-date-filter" onchange="filterHERuns()"
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;">
+            <option value="all">All Dates</option>
+            <option value="7">Last 7 Days</option>
+            <option value="14">Last 14 Days</option>
+            <option value="30">Last 30 Days</option>
+          </select>
+          <select id="he-pos-filter" onchange="filterHERuns()"
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;">
+            <option value="all">All Positions</option>
+            <option value="Batter">Batter</option>
+            <option value="Runner">Runner</option>
+            <option value="Fielder">Fielder</option>
+          </select>
+          <button onclick="heShowTopSpeed()" id="he-top-btn"
+            style="padding:6px 12px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;font-size:11px;font-weight:600;cursor:pointer;">
+            🏆 Top Speed Only
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div id="he-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;"></div>
+
+      <!-- Top speed chart -->
+      <div class="card" style="margin-bottom:14px;padding:12px;">
+        <div class="card-title" style="margin-bottom:8px;">Top Speed per Game</div>
+        <div class="chart-wrap tall"><canvas id="heSpeedChart"></canvas></div>
+      </div>
+
+      <!-- Run detail table -->
+      <div class="card" style="padding:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div class="card-title" style="margin:0;">All High Effort Runs</div>
+          <div id="he-count" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;"></div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table id="he-table" style="width:100%;border-collapse:collapse;font-size:11px;font-family:'DM Mono',monospace;">
+            <thead>
+              <tr style="border-bottom:2px solid var(--border);">
+                <th onclick="heSort('date')" style="padding:6px 8px;text-align:left;color:var(--text3);cursor:pointer;white-space:nowrap;">Date ↕</th>
+                <th onclick="heSort('context')" style="padding:6px 8px;text-align:left;color:var(--text3);cursor:pointer;white-space:nowrap;">Play Context ↕</th>
+                <th style="padding:6px 8px;text-align:left;color:var(--text3);white-space:nowrap;">Position</th>
+                <th style="padding:6px 8px;text-align:left;color:var(--text3);white-space:nowrap;">Inning</th>
+                <th style="padding:6px 8px;text-align:left;color:var(--text3);white-space:nowrap;">Base State</th>
+                <th onclick="heSort('speed')" style="padding:6px 8px;text-align:right;color:#f59e0b;cursor:pointer;white-space:nowrap;">Top Speed ↕</th>
+                <th onclick="heSort('dist')" style="padding:6px 8px;text-align:right;color:var(--text3);cursor:pointer;white-space:nowrap;">Distance ↕</th>
+                <th style="padding:6px 8px;text-align:right;color:var(--text3);white-space:nowrap;">Burst</th>
+                <th style="padding:6px 8px;text-align:center;color:var(--text3);">Video</th>
+              </tr>
+            </thead>
+            <tbody id="he-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Upload section -->
+      <div class="card" style="margin-top:14px;padding:12px;">
+        <div class="card-title" style="margin-bottom:8px;">📤 Upload HE Runs CSV</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <label style="padding:7px 14px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;font-size:12px;font-weight:600;cursor:pointer;">
+            📂 Choose CSV <input type="file" accept=".csv" onchange="handleHERunsUpload(this)" style="display:none;">
+          </label>
+          <span id="he-upload-status" style="font-size:11px;color:var(--text3);"></span>
+        </div>
+      </div>
+    </div>
+
+        <div id="dash-programs" class="page">
       <div class="card section-mb">
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <span>📋 PROGRAM HISTORY</span>
@@ -5052,13 +5127,15 @@ function switchDashTab(tab, btn) {
   currentDashTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['overview','performance','cmj','wellness','workload','programs'].forEach(t => {
+  ['overview','performance','cmj','wellness','workload','heruns','programs'].forEach(t => {
     const el = document.getElementById('dash-'+t);
     if(el) { el.classList.remove('active'); el.classList.add('page'); el.style.display = 'none'; }
   });
   const active = document.getElementById('dash-'+tab);
   if(active) { active.classList.add('active'); active.classList.remove('page'); active.style.display = 'block'; }
-  if (tab === 'programs') {
+  if (tab === 'heruns') {
+    if (typeof renderHERuns === 'function') renderHERuns();
+  } else if (tab === 'programs') {
     renderAthletePrograms();
   } else if (tab === 'performance') {
     renderPerfTable(PLAYERS[currentPlayer]);
@@ -5519,6 +5596,7 @@ function selectPlayer(name) {
   document.getElementById('topbarMeta').innerHTML = `Chicago Cubs · ${p.pos} · #${p.number} · Updated <span>Today</span>`;
   document.getElementById('prog-athlete').value = name;
   renderDashboard();
+  if (typeof renderHERuns === 'function' && document.getElementById('dash-heruns') && document.getElementById('dash-heruns').classList.contains('active')) renderHERuns();
 
   // Sync program builder controls from dashboard data
   const playerData = PLAYERS[name];
@@ -6747,6 +6825,232 @@ function renderCorrelation() {
     ctx._chart.getDatasetMeta(0).data.forEach(function(el,i){ if(el&&points[i]) c2.fillText(points[i].label, el.x+7, el.y-3); });
     c2.restore();
   };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HE RUNS MODULE
+// ══════════════════════════════════════════════════════════════════════════════
+
+var HE_RUNS_KEY = 'cubs_sc_he_runs_v1';
+var heRunsData  = {}; // { playerName: [{date, context, position, inning, outs, baseState, speed, dist, burst, firstStep, link}] }
+var heSortCol   = 'date';
+var heSortDir   = -1; // -1 = desc
+var heTopOnly   = false;
+
+function loadHERuns() {
+  try {
+    var stored = localStorage.getItem(HE_RUNS_KEY);
+    if (stored) heRunsData = JSON.parse(stored);
+  } catch(e) {}
+}
+
+function saveHERuns() {
+  try { localStorage.setItem(HE_RUNS_KEY, JSON.stringify(heRunsData)); } catch(e) {}
+  if (typeof syncToSupabase === 'function') setTimeout(syncToSupabase, 1000);
+}
+
+function handleHERunsUpload(input) {
+  var file = input.files[0]; if (!file) return;
+  var status = document.getElementById('he-upload-status');
+  if (status) status.textContent = 'Parsing...';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var lines = e.target.result.split('\n');
+      var headers = lines[0].split(',').map(function(h){ return h.trim(); });
+      var parsed = 0;
+      for (var i=1; i<lines.length; i++) {
+        var line = lines[i].trim(); if (!line) continue;
+        // Handle quoted fields
+        var cols = []; var cur = ''; var inQ = false;
+        for (var c=0; c<line.length; c++) {
+          if (line[c]==='"') { inQ=!inQ; }
+          else if (line[c]===','&&!inQ) { cols.push(cur.trim()); cur=''; }
+          else { cur+=line[c]; }
+        }
+        cols.push(cur.trim());
+        var row = {};
+        headers.forEach(function(h,idx){ row[h] = (cols[idx]||'').trim(); });
+        var name = resolveRosterName(row['Player']||'');
+        if (!name) continue;
+        var date = row['Game Date']||'';
+        var run = {
+          date:     date,
+          link:     row['Play Link']||'',
+          pos:      row['Position']||'',
+          inning:   row['Inning']||'',
+          outs:     row['Outs']||'',
+          base:     row['Base State']||'',
+          context:  row['Play Context']||'',
+          dist:     parseFloat(row['Distance Covered (ft)'])||0,
+          speed:    parseFloat(row['Top Speed (ft/s)'])||0,
+          burst:    parseFloat(row['Burst (ft)'])||0,
+          step:     row['1st Step (s)']||'',
+        };
+        if (!run.speed || !run.date) continue;
+        if (!heRunsData[name]) heRunsData[name] = [];
+        heRunsData[name].push(run);
+        parsed++;
+      }
+      // Dedup by date+link
+      Object.keys(heRunsData).forEach(function(name) {
+        var seen = new Set();
+        heRunsData[name] = heRunsData[name].filter(function(r) {
+          var key = r.date+'|'+r.link+'|'+r.speed;
+          if (seen.has(key)) return false;
+          seen.add(key); return true;
+        }).sort(function(a,b){ return safeParseDate(b.date)-safeParseDate(a.date); });
+      });
+      saveHERuns();
+      if (status) status.textContent = '✅ Loaded '+parsed+' runs';
+      renderHERuns();
+    } catch(err) {
+      if (status) status.textContent = '❌ Error: '+err.message;
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function renderHERuns() {
+  var runs = heRunsData[currentPlayer] || [];
+  if (!runs.length) {
+    var tbody = document.getElementById('he-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:var(--text3);">No HE run data — upload a CSV above</td></tr>';
+    return;
+  }
+
+  // Apply filters
+  var search  = (document.getElementById('he-search')||{}).value||'';
+  var dateFlt = (document.getElementById('he-date-filter')||{}).value||'all';
+  var posFlt  = (document.getElementById('he-pos-filter')||{}).value||'all';
+  var cutoff  = dateFlt!=='all' ? new Date(Date.now()-parseInt(dateFlt)*86400000) : null;
+  var p90speed = percentile90(runs.map(function(r){return r.speed;}));
+
+  var filtered = runs.filter(function(r) {
+    if (cutoff && safeParseDate(r.date) < cutoff) return false;
+    if (posFlt!=='all' && !r.pos.toLowerCase().includes(posFlt.toLowerCase())) return false;
+    if (search && !r.context.toLowerCase().includes(search.toLowerCase()) &&
+        !r.base.toLowerCase().includes(search.toLowerCase())) return false;
+    if (heTopOnly && r.speed < p90speed) return false;
+    return true;
+  });
+
+  // Sort
+  filtered.sort(function(a,b) {
+    var av,bv;
+    if (heSortCol==='date')    { av=safeParseDate(a.date); bv=safeParseDate(b.date); }
+    else if (heSortCol==='speed') { av=a.speed; bv=b.speed; }
+    else if (heSortCol==='dist')  { av=a.dist;  bv=b.dist; }
+    else if (heSortCol==='context'){ av=a.context; bv=b.context; }
+    else { av=0; bv=0; }
+    return typeof av==='string' ? av.localeCompare(bv)*heSortDir : (av-bv)*heSortDir;
+  });
+
+  // Summary cards
+  var allSpeeds = runs.map(function(r){return r.speed;}).filter(Boolean);
+  var summary = document.getElementById('he-summary');
+  if (summary) {
+    var maxSpeed = allSpeeds.length ? Math.max.apply(null,allSpeeds) : 0;
+    var avgSpeed = allSpeeds.length ? (allSpeeds.reduce(function(s,v){return s+v;},0)/allSpeeds.length) : 0;
+    var p90 = percentile90(allSpeeds);
+    var cards = [
+      {label:'Total HE Runs',   val: runs.length,           color:'var(--blue)',   unit:''},
+      {label:'Max Speed',        val: maxSpeed.toFixed(2),   color:'#f59e0b',      unit:' ft/s'},
+      {label:'Avg Speed',        val: avgSpeed.toFixed(2),   color:'var(--green)', unit:' ft/s'},
+      {label:'90th Pct Speed',   val: p90.toFixed(2),        color:'#a78bfa',      unit:' ft/s'},
+    ];
+    summary.innerHTML = cards.map(function(c) {
+      return '<div class="card" style="padding:10px;text-align:center;">'
+        +'<div style="font-size:20px;font-weight:700;color:'+c.color+';font-family:\'DM Mono\',monospace;">'+c.val+c.unit+'</div>'
+        +'<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;">'+c.label+'</div>'
+        +'</div>';
+    }).join('');
+  }
+
+  // Speed chart — max speed per game
+  var byDate = {};
+  runs.forEach(function(r) {
+    var d = fmtDate(r.date);
+    if (!byDate[d] || r.speed > byDate[d]) byDate[d] = r.speed;
+  });
+  var chartDates = Object.keys(byDate).sort(function(a,b){ return safeParseDate(a)-safeParseDate(b); });
+  var chartSpeeds = chartDates.map(function(d){ return byDate[d]; });
+  var ctx = document.getElementById('heSpeedChart');
+  if (ctx) {
+    if (ctx._chart) ctx._chart.destroy();
+    ctx._chart = new Chart(ctx, {
+      type:'line',
+      data:{ labels:chartDates, datasets:[{
+        label:'Top Speed (ft/s)', data:chartSpeeds,
+        borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.1)',
+        pointRadius:4, borderWidth:2, tension:0.3, fill:true,
+        pointBackgroundColor: chartSpeeds.map(function(s){ return s>=p90speed?'#ef4444':'#f59e0b'; }),
+        pointRadius: chartSpeeds.map(function(s){ return s>=p90speed?6:3; }),
+      }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false},
+          annotation:{ annotations:{
+            p90line:{ type:'line', yMin:p90speed, yMax:p90speed, borderColor:'rgba(167,139,250,0.6)', borderDash:[4,4], borderWidth:1, label:{content:'90th pct',display:true,color:'#a78bfa',font:{size:9}} }
+          }}
+        },
+        scales:{
+          x:{ticks:{color:'#94a3b8',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.05)'}},
+          y:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'},title:{display:true,text:'ft/s',color:'#94a3b8',font:{size:10}}}
+        }
+      }
+    });
+  }
+
+  // Table
+  var tbody = document.getElementById('he-tbody');
+  var cnt   = document.getElementById('he-count');
+  if (cnt) cnt.textContent = filtered.length+' runs';
+  if (!tbody) return;
+
+  tbody.innerHTML = filtered.map(function(r) {
+    var isTop = r.speed >= p90speed;
+    var speedColor = r.speed >= p90speed ? '#ef4444' : r.speed >= p90speed*0.95 ? '#f59e0b' : 'var(--text)';
+    var rowBg = isTop ? 'rgba(245,158,11,0.05)' : 'transparent';
+    var posIcon = r.pos.includes('Batter')?'🏏':r.pos.includes('Runner')?'🏃':r.pos.includes('Field')?'🧤':'⚡';
+    return '<tr style="border-bottom:1px solid var(--border);background:'+rowBg+';transition:background 0.1s;" '
+      +'onmouseover="this.style.background=\'rgba(255,255,255,0.03)\'" onmouseout="this.style.background=\''+rowBg+'\'">'
+      +'<td style="padding:7px 8px;white-space:nowrap;">'+fmtDate(r.date)+'</td>'
+      +'<td style="padding:7px 8px;color:var(--text2);max-width:160px;">'+r.context+'</td>'
+      +'<td style="padding:7px 8px;color:var(--text3);">'+posIcon+' '+r.pos+'</td>'
+      +'<td style="padding:7px 8px;color:var(--text3);text-align:center;">'+r.inning+'</td>'
+      +'<td style="padding:7px 8px;color:var(--text3);max-width:120px;font-size:10px;">'+r.base+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;font-weight:700;color:'+speedColor+';">'+r.speed.toFixed(2)+(isTop?' ★':'')+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;color:var(--text3);">'+r.dist+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;color:var(--text3);">'+(r.burst||'—')+'</td>'
+      +'<td style="padding:7px 8px;text-align:center;">'
+      +(r.link ? '<a href="'+r.link+'" target="_blank" style="color:#f59e0b;text-decoration:none;font-size:13px;" title="Watch play">▶</a>' : '—')
+      +'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function percentile90(arr) {
+  var vals = arr.filter(function(v){return v>0;}).sort(function(a,b){return a-b;});
+  if (!vals.length) return 0;
+  return vals[Math.floor(vals.length*0.9)] || vals[vals.length-1];
+}
+
+function heSort(col) {
+  if (heSortCol===col) heSortDir*=-1; else { heSortCol=col; heSortDir=-1; }
+  renderHERuns();
+}
+
+function filterHERuns() { renderHERuns(); }
+
+function heShowTopSpeed() {
+  heTopOnly = !heTopOnly;
+  var btn = document.getElementById('he-top-btn');
+  if (btn) {
+    btn.style.background = heTopOnly ? 'rgba(245,158,11,0.4)' : 'rgba(245,158,11,0.15)';
+    btn.textContent = heTopOnly ? '✓ Top Speed Only' : '🏆 Top Speed Only';
+  }
+  renderHERuns();
 }
 
 function buildTeamList() {
@@ -10490,6 +10794,7 @@ function initAnnualPlan() {
     sel.appendChild(o);
   });
   if (typeof loadAnnualData === 'function') loadAnnualData();
+  if (typeof loadHERuns === 'function') loadHERuns();
   var swingDateEl = document.getElementById('swingDateInput');
   if (swingDateEl) swingDateEl.value = new Date().toISOString().slice(0,10);
   renderAnnualPlan();
