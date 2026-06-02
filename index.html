@@ -1962,6 +1962,44 @@ body {
         </div>
       </div>
 
+      <!-- Burst Score Analysis -->
+      <div class="card" style="margin-top:14px;padding:14px;">
+        <div class="card-title" style="margin-bottom:12px;">💥 BURST SCORE ANALYSIS — Acceleration vs Max Velocity</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Burst (ft) vs Top Speed (ft/s)</div>
+            <div style="height:260px;position:relative;"><canvas id="burstScatter"></canvas></div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">1st Step (s) vs Top Speed — where available</div>
+            <div style="height:260px;position:relative;"><canvas id="stepScatter"></canvas></div>
+          </div>
+        </div>
+        <div id="burst-metrics" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;"></div>
+      </div>
+
+      <!-- Team Speed Leaderboard -->
+      <div class="card" style="margin-top:14px;padding:14px;">
+        <div class="card-title" style="margin-bottom:12px;">🏆 TEAM SPEED LEADERBOARD</div>
+        <div style="overflow-x:auto;">
+          <table id="speed-leaderboard" style="width:100%;border-collapse:collapse;font-size:11px;font-family:'DM Mono',monospace;">
+            <thead>
+              <tr style="border-bottom:2px solid var(--border);">
+                <th style="padding:7px 8px;text-align:left;color:var(--text3);">Rank</th>
+                <th style="padding:7px 8px;text-align:left;color:var(--text3);">Player</th>
+                <th onclick="lbSort('max')"  style="padding:7px 8px;text-align:right;color:#f59e0b;cursor:pointer;">Max Speed ↕</th>
+                <th onclick="lbSort('p90')"  style="padding:7px 8px;text-align:right;color:#f59e0b;cursor:pointer;">90th Pct ↕</th>
+                <th onclick="lbSort('avg')"  style="padding:7px 8px;text-align:right;color:var(--text3);cursor:pointer;">Avg Speed ↕</th>
+                <th onclick="lbSort('burst')" style="padding:7px 8px;text-align:right;color:var(--blue);cursor:pointer;">Avg Burst ↕</th>
+                <th onclick="lbSort('step')" style="padding:7px 8px;text-align:right;color:var(--green);cursor:pointer;">Avg 1st Step ↕</th>
+                <th onclick="lbSort('runs')" style="padding:7px 8px;text-align:right;color:var(--text3);cursor:pointer;">Runs ↕</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Upload section -->
       <div class="card" style="margin-top:14px;padding:12px;">
         <div class="card-title" style="margin-bottom:8px;">📤 Upload HE Runs CSV</div>
@@ -7274,6 +7312,178 @@ function sprintToggle(type) {
   renderSprintProfile();
 }
 
+// ── BURST SCORE ANALYSIS ──────────────────────────────────────────────────────
+function renderBurstAnalysis() {
+  var runs = heRunsData[currentPlayer] || [];
+  var validBurst = runs.filter(function(r){ return r.burst>0 && r.speed>0; });
+  var validStep  = runs.filter(function(r){ return r.step && r.step!=='--' && parseFloat(r.step)>0 && r.speed>0; });
+
+  // ── Burst vs Speed scatter ─────────────────────────────────────────────────
+  var bCtx = document.getElementById('burstScatter');
+  if (bCtx && validBurst.length) {
+    if (bCtx._chart) bCtx._chart.destroy();
+    // Color by run type
+    var bData = validBurst.map(function(r){
+      var type = classifyRun(r);
+      return {x: r.burst, y: r.speed, t: type, ctx: r.context||''};
+    });
+    var colors = {'str':'rgba(59,130,246,0.65)','cur':'rgba(34,197,94,0.65)','fld':'rgba(168,85,247,0.55)','other':'rgba(148,163,184,0.5)'};
+    bCtx._chart = new Chart(bCtx, {
+      type:'scatter',
+      data:{ datasets:[{
+        label:'Burst vs Speed',
+        data: bData,
+        backgroundColor: bData.map(function(d){ return colors[d.t]||colors.other; }),
+        pointRadius: 5, pointHoverRadius: 8,
+      }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false},
+          tooltip:{ callbacks:{ label:function(c){
+            var type = c.raw.t==='str'?'⚡ Straight':c.raw.t==='cur'?'↺ Curved':'🧤 Field';
+            return type+': '+c.raw.x+'ft burst @ '+c.raw.y.toFixed(2)+' ft/s';
+          }}}
+        },
+        scales:{
+          x:{ title:{display:true,text:'Burst Distance (ft)',color:'#94a3b8',font:{size:10}}, ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'} },
+          y:{ title:{display:true,text:'Top Speed (ft/s)',color:'#94a3b8',font:{size:10}}, ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'} }
+        }
+      }
+    });
+  } else if (bCtx) {
+    if (bCtx._chart) bCtx._chart.destroy();
+    var c2=bCtx.getContext('2d'); c2.fillStyle='#94a3b8'; c2.font='12px DM Mono'; c2.textAlign='center';
+    c2.fillText('No burst data available', bCtx.width/2, bCtx.height/2);
+  }
+
+  // ── 1st Step vs Speed scatter ──────────────────────────────────────────────
+  var sCtx = document.getElementById('stepScatter');
+  if (sCtx && validStep.length) {
+    if (sCtx._chart) sCtx._chart.destroy();
+    var sData = validStep.map(function(r){
+      return {x: parseFloat(r.step), y: r.speed, ctx: r.context||''};
+    });
+    sCtx._chart = new Chart(sCtx, {
+      type:'scatter',
+      data:{ datasets:[{
+        label:'1st Step vs Speed',
+        data: sData,
+        backgroundColor:'rgba(245,158,11,0.65)',
+        pointRadius:6, pointHoverRadius:9,
+      }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false},
+          tooltip:{ callbacks:{ label:function(c){ return c.raw.x+'s → '+c.raw.y.toFixed(2)+' ft/s'; }}}
+        },
+        scales:{
+          x:{ title:{display:true,text:'1st Step Time (s) — lower = faster',color:'#94a3b8',font:{size:10}}, ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'}, reverse:true },
+          y:{ title:{display:true,text:'Top Speed (ft/s)',color:'#94a3b8',font:{size:10}}, ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'} }
+        }
+      }
+    });
+  } else if (sCtx) {
+    if (sCtx._chart) sCtx._chart.destroy();
+    var c3=sCtx.getContext('2d'); c3.clearRect(0,0,sCtx.width,sCtx.height);
+    c3.fillStyle='#94a3b8'; c3.font='12px DM Mono'; c3.textAlign='center';
+    c3.fillText('Only '+validStep.length+' runs with 1st Step data', sCtx.width/2, sCtx.height/2-10);
+    c3.fillText('(--  = not captured by VALD)', sCtx.width/2, sCtx.height/2+10);
+  }
+
+  // ── Burst metrics ──────────────────────────────────────────────────────────
+  var bmEl = document.getElementById('burst-metrics');
+  if (bmEl && validBurst.length) {
+    function avg(arr){ return arr.reduce(function(s,v){return s+v;},0)/arr.length; }
+    function p90(arr){ var s=arr.slice().sort(function(a,b){return a-b;}); return s[Math.floor(s.length*0.9)]; }
+    var bursts = validBurst.map(function(r){return r.burst;});
+    var corr = (function(){
+      var n=validBurst.length, sb=avg(bursts)*n, ss=avg(validBurst.map(function(r){return r.speed;}))*n;
+      var sbs=validBurst.reduce(function(s,r){return s+r.burst*r.speed;},0);
+      var sb2=validBurst.reduce(function(s,r){return s+r.burst*r.burst;},0);
+      var ss2=validBurst.reduce(function(s,r){return s+r.speed*r.speed;},0);
+      var r=(n*sbs-sb*ss)/Math.sqrt((n*sb2-sb*sb)*(n*ss2-ss*ss));
+      return isNaN(r)?0:r;
+    })();
+    var cards2 = [
+      {label:'Avg Burst',    val: avg(bursts).toFixed(1)+' ft',    color:'var(--blue)'},
+      {label:'Max Burst',    val: Math.max.apply(null,bursts)+' ft', color:'#f59e0b'},
+      {label:'90th Pct Burst', val: p90(bursts)+' ft',             color:'var(--green)'},
+      {label:'Burst→Speed r', val: corr.toFixed(2),                color: Math.abs(corr)>0.5?'var(--green)':'var(--text3)'},
+    ];
+    bmEl.innerHTML = cards2.map(function(c){
+      return '<div class="card" style="padding:10px;text-align:center;">'
+        +'<div style="font-size:18px;font-weight:700;color:'+c.color+';font-family:\'DM Mono\',monospace;">'+c.val+'</div>'
+        +'<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;">'+c.label+'</div>'
+        +'</div>';
+    }).join('');
+  }
+}
+
+// ── TEAM SPEED LEADERBOARD ────────────────────────────────────────────────────
+var lbSortCol = 'max';
+var lbSortDir = -1;
+
+function lbSort(col) {
+  if (lbSortCol===col) lbSortDir*=-1; else { lbSortCol=col; lbSortDir=-1; }
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  var tbody = document.getElementById('leaderboard-tbody');
+  if (!tbody) return;
+
+  function p90(arr){ if(!arr.length) return 0; var s=arr.slice().sort(function(a,b){return a-b;}); return s[Math.floor(s.length*0.9)]; }
+  function avg(arr){ return arr.length?arr.reduce(function(s,v){return s+v;},0)/arr.length:0; }
+
+  var players = Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); });
+
+  var data = players.map(function(name) {
+    var runs = (heRunsData[name]||[]).filter(function(r){ return r.speed>0; });
+    if (!runs.length) return null;
+    var speeds = runs.map(function(r){return r.speed;});
+    var bursts = runs.filter(function(r){return r.burst>0;}).map(function(r){return r.burst;});
+    var steps  = runs.filter(function(r){return r.step&&r.step!=='--'&&parseFloat(r.step)>0;}).map(function(r){return parseFloat(r.step);});
+    return {
+      name: name,
+      max:  Math.max.apply(null,speeds),
+      p90:  p90(speeds),
+      avg:  avg(speeds),
+      burst:bursts.length?avg(bursts):null,
+      step: steps.length?avg(steps):null,
+      runs: runs.length,
+    };
+  }).filter(Boolean);
+
+  // Sort
+  data.sort(function(a,b){
+    var av = a[lbSortCol], bv = b[lbSortCol];
+    if (av===null) av = lbSortDir<0 ? -Infinity : Infinity;
+    if (bv===null) bv = lbSortDir<0 ? -Infinity : Infinity;
+    return (av-bv)*lbSortDir;
+  });
+
+  // Speed bar helper
+  var maxSpd = Math.max.apply(null, data.map(function(d){return d.max;}));
+  function speedBar(val) {
+    var pct = val/maxSpd*100;
+    return '<div style="display:inline-block;background:rgba(245,158,11,0.3);border-radius:2px;height:6px;width:'+pct.toFixed(0)+'px;max-width:80px;vertical-align:middle;margin-left:4px;"></div>';
+  }
+
+  var medals = ['🥇','🥈','🥉'];
+  tbody.innerHTML = data.map(function(d, i) {
+    var isCurrentPlayer = d.name === currentPlayer;
+    var rowBg = isCurrentPlayer ? 'rgba(245,158,11,0.08)' : 'transparent';
+    return '<tr style="border-bottom:1px solid var(--border);background:'+rowBg+';cursor:pointer;" onclick="selectPlayer(\''+d.name+'\')">'
+      +'<td style="padding:7px 8px;text-align:center;font-size:14px;">'+(medals[i]||'#'+(i+1))+'</td>'
+      +'<td style="padding:7px 8px;font-weight:600;color:'+(isCurrentPlayer?'#f59e0b':'#fff')+';white-space:nowrap;">'+d.name+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;font-weight:700;color:#f59e0b;">'+d.max.toFixed(2)+speedBar(d.max)+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;color:#f59e0b;">'+d.p90.toFixed(2)+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;color:var(--text2);">'+d.avg.toFixed(2)+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;color:var(--blue);">'+(d.burst!==null?d.burst.toFixed(1)+' ft':'—')+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;color:var(--green);">'+(d.step!==null?d.step.toFixed(2)+'s':'—')+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;color:var(--text3);">'+d.runs+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
 function renderSprintProfile() {
   var runs = heRunsData[currentPlayer]||[];
   if (!runs.length) return;
@@ -7519,6 +7729,8 @@ function renderHERuns() {
   if (!tbody) return;
 
   renderSprintProfile();
+  renderBurstAnalysis();
+  renderLeaderboard();
   tbody.innerHTML = filtered.map(function(r) {
     var isTop = r.speed >= p90speed;
     var speedColor = r.speed >= p90speed ? '#ef4444' : r.speed >= p90speed*0.95 ? '#f59e0b' : 'var(--text)';
