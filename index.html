@@ -1928,6 +1928,40 @@ body {
         </div>
       </div>
 
+      <!-- Sprint Profile -->
+      <div class="card" style="margin-top:14px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div class="card-title" style="margin:0;">🏃 SPRINT PROFILE — Distance vs Top Speed</div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="sprintToggle('all')"   id="sp-all"   class="sp-btn sp-active" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.1);color:#fff;font-size:10px;cursor:pointer;">All</button>
+            <button onclick="sprintToggle('str')"   id="sp-str"   class="sp-btn" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(59,130,246,0.4);background:rgba(59,130,246,0.1);color:var(--blue);font-size:10px;cursor:pointer;">⚡ Straight</button>
+            <button onclick="sprintToggle('cur')"   id="sp-cur"   class="sp-btn" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.1);color:var(--green);font-size:10px;cursor:pointer;">↺ Curved</button>
+            <button onclick="sprintToggle('fld')"   id="sp-fld"   class="sp-btn" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(168,85,247,0.4);background:rgba(168,85,247,0.1);color:#a78bfa;font-size:10px;cursor:pointer;">🧤 Fielding</button>
+          </div>
+        </div>
+
+        <!-- Key metrics row -->
+        <div id="sprint-metrics" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;"></div>
+
+        <!-- Main scatter chart -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Distance vs Top Speed</div>
+            <div style="height:280px;position:relative;"><canvas id="sprintScatter"></canvas></div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Speed Distribution by Run Type</div>
+            <div style="height:280px;position:relative;"><canvas id="sprintDist"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Straight vs Curved comparison -->
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Straight vs Curved — Speed Comparison</div>
+          <div id="sprint-compare" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
+        </div>
+      </div>
+
       <!-- Upload section -->
       <div class="card" style="margin-top:14px;padding:12px;">
         <div class="card-title" style="margin-bottom:8px;">📤 Upload HE Runs CSV</div>
@@ -7209,6 +7243,185 @@ function handleHERunsUpload(input) {
   reader.readAsText(file);
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// SPRINT PROFILE
+// ══════════════════════════════════════════════════════════════════════════════
+
+var sprintFilter = 'all';
+
+function classifyRun(run) {
+  var pos = (run.pos||'').toLowerCase();
+  var ctx = (run.context||'').toLowerCase();
+  // Fielding: outfield/infield positions
+  if (pos.includes('field')||pos.includes('base')||pos.includes('short')||pos.includes('catcher')||pos.includes('pitcher')) return 'fld';
+  // Curved: baserunning
+  if (pos.includes('runner')||ctx.includes('from first')||ctx.includes('from second')||ctx.includes('from third')||
+      ctx.includes('first to')||ctx.includes('second to')||ctx.includes('third to')||ctx.includes('sb')||
+      ctx.includes('tag')||ctx.includes('rounding')) return 'cur';
+  // Straight: batter
+  if (pos.includes('batter')) return 'str';
+  return 'other';
+}
+
+function sprintToggle(type) {
+  sprintFilter = type;
+  document.querySelectorAll('.sp-btn').forEach(function(b){
+    b.style.fontWeight = '400';
+    b.style.opacity = '0.6';
+  });
+  var active = document.getElementById('sp-'+type);
+  if (active) { active.style.fontWeight = '700'; active.style.opacity = '1'; }
+  renderSprintProfile();
+}
+
+function renderSprintProfile() {
+  var runs = heRunsData[currentPlayer]||[];
+  if (!runs.length) return;
+
+  // Classify all runs
+  var classified = runs.map(function(r) {
+    return Object.assign({}, r, {runType: classifyRun(r)});
+  }).filter(function(r){ return r.speed>0 && r.dist>0; });
+
+  var straight = classified.filter(function(r){ return r.runType==='str'; });
+  var curved   = classified.filter(function(r){ return r.runType==='cur'; });
+  var fielding = classified.filter(function(r){ return r.runType==='fld'; });
+
+  // Filter for scatter
+  var filtered = sprintFilter==='str' ? straight : sprintFilter==='cur' ? curved : sprintFilter==='fld' ? fielding : classified;
+
+  // ── Key metrics ────────────────────────────────────────────────────────────
+  function p90(arr){ var s=arr.filter(Boolean).sort(function(a,b){return a-b;}); return s.length?s[Math.floor(s.length*0.9)]:0; }
+  var allSpeeds = classified.map(function(r){return r.speed;});
+  var strSpeeds = straight.map(function(r){return r.speed;});
+  var curSpeeds = curved.map(function(r){return r.speed;});
+  var maxSpd = allSpeeds.length ? Math.max.apply(null,allSpeeds) : 0;
+
+  var metricsEl = document.getElementById('sprint-metrics');
+  if (metricsEl) {
+    var cards = [
+      {label:'Max Speed (all)',     val: maxSpd.toFixed(2)+' ft/s',        color:'#f59e0b'},
+      {label:'Straight 90th%',      val: strSpeeds.length?p90(strSpeeds).toFixed(2)+' ft/s':'—', color:'var(--blue)'},
+      {label:'Curved 90th%',        val: curSpeeds.length?p90(curSpeeds).toFixed(2)+' ft/s':'—', color:'var(--green)'},
+      {label:'Curve Speed Loss',    val: (strSpeeds.length&&curSpeeds.length)?((p90(curSpeeds)-p90(strSpeeds)).toFixed(2)+' ft/s'):'—', color: p90(curSpeeds)<p90(strSpeeds)?'var(--red)':'var(--green)'},
+    ];
+    metricsEl.innerHTML = cards.map(function(c){
+      return '<div class="card" style="padding:10px;text-align:center;">'
+        +'<div style="font-size:18px;font-weight:700;color:'+c.color+';font-family:\'DM Mono\',monospace;">'+c.val+'</div>'
+        +'<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;">'+c.label+'</div>'
+        +'</div>';
+    }).join('');
+  }
+
+  // ── Scatter chart: Distance vs Speed ──────────────────────────────────────
+  var scatterCtx = document.getElementById('sprintScatter');
+  if (scatterCtx) {
+    if (scatterCtx._chart) scatterCtx._chart.destroy();
+
+    var datasets = [];
+    if (sprintFilter==='all'||sprintFilter==='str') {
+      datasets.push({ label:'⚡ Straight', data: straight.map(function(r){return {x:r.dist,y:r.speed,ctx:r.context};}),
+        backgroundColor:'rgba(59,130,246,0.6)', pointRadius:5, pointHoverRadius:7 });
+    }
+    if (sprintFilter==='all'||sprintFilter==='cur') {
+      datasets.push({ label:'↺ Curved', data: curved.map(function(r){return {x:r.dist,y:r.speed,ctx:r.context};}),
+        backgroundColor:'rgba(34,197,94,0.6)', pointRadius:5, pointHoverRadius:7 });
+    }
+    if (sprintFilter==='all'||sprintFilter==='fld') {
+      datasets.push({ label:'🧤 Fielding', data: fielding.map(function(r){return {x:r.dist,y:r.speed,ctx:r.context};}),
+        backgroundColor:'rgba(168,85,247,0.5)', pointRadius:4, pointHoverRadius:6 });
+    }
+
+    scatterCtx._chart = new Chart(scatterCtx, {
+      type:'scatter',
+      data:{ datasets: datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ labels:{color:'#94a3b8',font:{size:10},boxWidth:10} },
+          tooltip:{ callbacks:{ label:function(c){ return (c.raw.ctx||'Run')+': '+c.raw.x+'ft @ '+c.raw.y.toFixed(2)+' ft/s'; } } }
+        },
+        scales:{
+          x:{ title:{display:true,text:'Distance (ft)',color:'#94a3b8',font:{size:10}}, ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'} },
+          y:{ title:{display:true,text:'Top Speed (ft/s)',color:'#94a3b8',font:{size:10}}, ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'} }
+        }
+      }
+    });
+  }
+
+  // ── Speed distribution histogram ───────────────────────────────────────────
+  var distCtx = document.getElementById('sprintDist');
+  if (distCtx) {
+    if (distCtx._chart) distCtx._chart.destroy();
+
+    // Build bins 20-34 ft/s in 0.5 increments
+    var bins = []; var binLabels = [];
+    for (var b=20; b<=34; b+=1) { bins.push(b); binLabels.push(b.toFixed(0)); }
+
+    function binData(arr) {
+      return bins.map(function(b){ return arr.filter(function(v){ return v>=b && v<b+1; }).length; });
+    }
+
+    var datasets2 = [];
+    if (sprintFilter==='all'||sprintFilter==='str') {
+      datasets2.push({ label:'⚡ Straight', data: binData(strSpeeds), backgroundColor:'rgba(59,130,246,0.6)', borderColor:'rgba(59,130,246,0.9)', borderWidth:1 });
+    }
+    if (sprintFilter==='all'||sprintFilter==='cur') {
+      datasets2.push({ label:'↺ Curved', data: binData(curSpeeds), backgroundColor:'rgba(34,197,94,0.5)', borderColor:'rgba(34,197,94,0.8)', borderWidth:1 });
+    }
+    if (sprintFilter==='fld') {
+      var fldSpeeds = fielding.map(function(r){return r.speed;});
+      datasets2.push({ label:'🧤 Fielding', data: binData(fldSpeeds), backgroundColor:'rgba(168,85,247,0.5)', borderColor:'rgba(168,85,247,0.8)', borderWidth:1 });
+    }
+
+    distCtx._chart = new Chart(distCtx, {
+      type:'bar',
+      data:{ labels: binLabels, datasets: datasets2 },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{color:'#94a3b8',font:{size:10},boxWidth:10} } },
+        scales:{
+          x:{ title:{display:true,text:'Speed (ft/s)',color:'#94a3b8',font:{size:10}}, ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'} },
+          y:{ title:{display:true,text:'# Runs',color:'#94a3b8',font:{size:10}}, ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'rgba(255,255,255,0.05)'}  }
+        }
+      }
+    });
+  }
+
+  // ── Straight vs Curved comparison per play type ────────────────────────────
+  var compareEl = document.getElementById('sprint-compare');
+  if (compareEl) {
+    function avg(arr){ return arr.length ? arr.reduce(function(s,v){return s+v;},0)/arr.length : 0; }
+    var metrics = [
+      { label:'Max Speed',      str: strSpeeds.length?Math.max.apply(null,strSpeeds):0,      cur: curSpeeds.length?Math.max.apply(null,curSpeeds):0,      unit:' ft/s', fixed:2 },
+      { label:'Avg Speed',      str: avg(strSpeeds),     cur: avg(curSpeeds),     unit:' ft/s', fixed:2 },
+      { label:'90th Pct Speed', str: p90(strSpeeds),     cur: p90(curSpeeds),     unit:' ft/s', fixed:2 },
+    ];
+    compareEl.innerHTML = metrics.map(function(m){
+      var diff = m.cur - m.str;
+      var diffColor = diff >= 0 ? 'var(--green)' : 'var(--red)';
+      return '<div class="card" style="padding:10px;">'
+        +'<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">'+m.label+'</div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+        +'<span style="font-size:10px;color:var(--blue);">⚡ Straight</span>'
+        +'<span style="font-size:13px;font-weight:700;color:var(--blue);font-family:\'DM Mono\';">'+(m.str?m.str.toFixed(m.fixed):'—')+m.unit+'</span>'
+        +'</div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+        +'<span style="font-size:10px;color:var(--green);">↺ Curved</span>'
+        +'<span style="font-size:13px;font-weight:700;color:var(--green);font-family:\'DM Mono\';">'+(m.cur?m.cur.toFixed(m.fixed):'—')+m.unit+'</span>'
+        +'</div>'
+        +(m.str&&m.cur?'<div style="font-size:9px;color:'+diffColor+';text-align:right;border-top:1px solid var(--border);padding-top:4px;">'+(diff>=0?'+':'')+diff.toFixed(m.fixed)+m.unit+' curved vs straight</div>':'')
+        +'</div>';
+    }).join('');
+  }
+
+  // Activate all buttons on first render
+  document.querySelectorAll('.sp-btn').forEach(function(b){ b.style.opacity='1'; });
+  var activeBtn = document.getElementById('sp-'+sprintFilter);
+  document.querySelectorAll('.sp-btn').forEach(function(b){ b.style.fontWeight='400'; b.style.opacity='0.6'; });
+  if (activeBtn) { activeBtn.style.fontWeight='700'; activeBtn.style.opacity='1'; }
+}
+
 function renderHERuns() {
   var runs = heRunsData[currentPlayer] || [];
   if (!runs.length) {
@@ -7305,6 +7518,7 @@ function renderHERuns() {
   if (cnt) cnt.textContent = filtered.length+' runs';
   if (!tbody) return;
 
+  renderSprintProfile();
   tbody.innerHTML = filtered.map(function(r) {
     var isTop = r.speed >= p90speed;
     var speedColor = r.speed >= p90speed ? '#ef4444' : r.speed >= p90speed*0.95 ? '#f59e0b' : 'var(--text)';
