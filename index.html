@@ -668,7 +668,9 @@ body {
 
       <button class="tab-btn" onclick="switchDashTab('workload', this)">Workload</button>
       <button class="tab-btn" onclick="switchDashTab('heruns', this)" style="color:#f59e0b;">⚡ HE Runs</button>
+      <button class="tab-btn" onclick="switchDashTab('maxstrength', this)" style="color:#22c55e;">💪 1RM</button>
       <button class="tab-btn" onclick="switchDashTab('programs', this)">📋 Programs</button>
+      <button onclick="exportPlayerPDF()" style="margin-left:auto;padding:5px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#f87171;font-size:10px;font-weight:600;cursor:pointer;">📄 PDF Report</button>
     </div>
   </div>
 
@@ -757,7 +759,7 @@ body {
         <div class="card section-mb">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
             <div class="card-title" style="margin:0;">⚖️ Body Weight Trend (lbs)</div>
-            <div id="bwTrendStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
+            <div id="bwTrendStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
           </div>
           <div class="chart-wrap xl"><canvas id="bwTrendChart"></canvas></div>
         </div>
@@ -797,21 +799,21 @@ body {
           <div class="card">
             <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
               <span>🪄 Bat Speed</span>
-              <span id="batSpeedAvg" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--cubs-light-blue);"></span>
+              <span id="batSpeedAvg" style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--cubs-light-blue);"></span>
             </div>
             <div class="chart-wrap xl"><canvas id="batSpeedChart"></canvas></div>
           </div>
           <div class="card">
             <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
               <span>💥 Exit Velocity</span>
-              <span id="exitVeloAvg" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--cubs-red);"></span>
+              <span id="exitVeloAvg" style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--cubs-red);"></span>
             </div>
             <div class="chart-wrap xl"><canvas id="exitVeloChart"></canvas></div>
           </div>
           <div class="card">
             <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
               <span>🎯 Throw Velocity</span>
-              <span id="throwVeloAvg" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--cyan, #06b6d4);"></span>
+              <span id="throwVeloAvg" style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--cyan, #06b6d4);"></span>
             </div>
             <div class="chart-wrap xl"><canvas id="throwVeloChart"></canvas></div>
           </div>
@@ -850,49 +852,49 @@ body {
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">Jump Height (cm)</div>
-              <div id="cmjJumpStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
+              <div id="cmjJumpStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
             </div>
             <div class="chart-wrap xl"><canvas id="cmjJumpChart"></canvas></div>
           </div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">Peak Power / BM (W/kg)</div>
-              <div id="cmjPPBMStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
+              <div id="cmjPPBMStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
             </div>
             <div class="chart-wrap xl"><canvas id="cmjPPBMChart"></canvas></div>
           </div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">Vertical Takeoff Velocity (m/s)</div>
-              <div id="cmjVTOStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
+              <div id="cmjVTOStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
             </div>
             <div class="chart-wrap xl"><canvas id="cmjVTOChart"></canvas></div>
           </div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">Concentric Mean Power (W)</div>
-              <div id="cmjConcStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
+              <div id="cmjConcStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
             </div>
             <div class="chart-wrap xl"><canvas id="cmjConcChart"></canvas></div>
           </div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">CMJ Stiffness (N/m)</div>
-              <div id="cmjStiffStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);"></div>
+              <div id="cmjStiffStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);"></div>
             </div>
             <div class="chart-wrap xl"><canvas id="cmjStiffChart"></canvas></div>
           </div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">P1 &amp; P2 Concentric Impulse (N·s)</div>
-              <div id="cmjImpulseStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);"></div>
+              <div id="cmjImpulseStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);"></div>
             </div>
             <div class="chart-wrap xl"><canvas id="cmjImpulseChart"></canvas></div>
           </div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">RSI-Modified (Imp-Mom) [m/s]</div>
-              <div id="cmjRsiStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);"></div>
+              <div id="cmjRsiStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);"></div>
             </div>
             <div class="chart-wrap xl"><canvas id="cmjRsiChart"></canvas></div>
           </div>
@@ -907,21 +909,21 @@ body {
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">Jump Height (cm)</div>
-              <div id="abcmjJumpStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
+              <div id="abcmjJumpStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
             </div>
             <div class="chart-wrap xl"><canvas id="abcmjJumpChart"></canvas></div>
           </div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">Peak Power / BM (W/kg)</div>
-              <div id="abcmjPPBMStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
+              <div id="abcmjPPBMStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
             </div>
             <div class="chart-wrap xl"><canvas id="abcmjPPBMChart"></canvas></div>
           </div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">Vertical Takeoff Velocity (m/s)</div>
-              <div id="abcmjVTOStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
+              <div id="abcmjVTOStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
             </div>
             <div class="chart-wrap xl"><canvas id="abcmjVTOChart"></canvas></div>
           </div>
@@ -933,7 +935,7 @@ body {
         <div class="card" style="margin-bottom:16px;padding:14px;">
           <div class="card-title" style="margin-bottom:10px;">⚾ Log Daily Swing Workload</div>
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            <input type="date" id="swingDateInput" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+            <input type="date" id="swingDateInput" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:\'DM Mono\',monospace;">
             <div style="display:flex;gap:6px;">
               <button onclick="logSwingWorkload('low')"    style="padding:6px 14px;border-radius:6px;border:1px solid var(--blue);background:rgba(59,130,246,0.15);color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;">📉 Low</button>
               <button onclick="logSwingWorkload('normal')" style="padding:6px 14px;border-radius:6px;border:1px solid var(--green);background:rgba(34,197,94,0.15);color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">⚾ Normal</button>
@@ -961,7 +963,7 @@ body {
         <div class="card section-mb" style="margin-top:16px;">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
             <div class="card-title" style="margin:0;">⚾ Swing Workload — 30-Day Trend</div>
-            <div style="display:flex;gap:10px;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);">
+            <div style="display:flex;gap:10px;font-size:10px;font-family:\'DM Mono\',monospace;color:var(--text3);">
               <span style="color:#3B7AC4;">📉 Low</span>
               <span style="color:#22c55e;">⚾ Normal</span>
               <span style="color:#f59e0b;">📈 High</span>
@@ -1055,7 +1057,7 @@ body {
             <div class="card" style="padding:14px;">
               <div class="card-title" style="margin-bottom:8px;">💾 SAVE</div>
               <div style="display:flex;flex-direction:column;gap:6px;">
-                <input type="text" id="pb-program-name" placeholder="Program name..." style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+                <input type="text" id="pb-program-name" placeholder="Program name..." style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:\'DM Mono\',monospace;">
                 <button onclick="pbSave()" style="padding:8px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:12px;font-weight:700;cursor:pointer;">💾 Save to My Programs</button>
               </div>
             </div>
@@ -1158,7 +1160,7 @@ body {
                 </div>
                 <div>
                   <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Start Date</label>
-                  <input type="date" id="meso-start-date" style="width:100%;margin-top:3px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;box-sizing:border-box;">
+                  <input type="date" id="meso-start-date" style="width:100%;margin-top:3px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:\'DM Mono\',monospace;box-sizing:border-box;">
                 </div>
                 <button onclick="mesoRebuild()" style="padding:8px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:12px;font-weight:600;cursor:pointer;">🔄 Build Mesocycle</button>
                 <button onclick="mesoSave()" style="padding:8px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">💾 Save Mesocycle</button>
@@ -1421,7 +1423,7 @@ body {
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
               <label style="font-size:11px;color:var(--text3);white-space:nowrap;">Base Program</label>
               <select id="prog-template-context" onchange="loadTemplateContext()"
-                style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;">
+                style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;font-family:\'DM Mono\',monospace;">
                 <option value="">— None (generate from scratch) —</option>
               </select>
               <button onclick="loadProgramToSession()" 
@@ -1476,7 +1478,7 @@ body {
             <div style="padding:12px;border-bottom:1px solid var(--border);flex-shrink:0;">
               <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--text);margin-bottom:8px;">EXERCISE LIBRARY</div>
               <input id="grid-ex-search" placeholder="Search exercises…" oninput="gridFilterExercises()"
-                style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;box-sizing:border-box;">
+                style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:11px;box-sizing:border-box;">
               <select id="grid-ex-cat" onchange="gridFilterExercises()" style="width:100%;margin-top:6px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;box-sizing:border-box;">
                 <option value="">All Categories</option>
               </select>
@@ -1489,11 +1491,11 @@ body {
 
             <!-- Grid Toolbar -->
             <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0;background:var(--bg2);">
-              <select id="grid-athlete" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+              <select id="grid-athlete" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:\'DM Mono\',monospace;">
               </select>
               <div style="display:flex;align-items:center;gap:4px;">
                 <button onclick="gridChangeWeeks(-1)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 8px;cursor:pointer;">‹</button>
-                <span id="grid-week-label" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);white-space:nowrap;">Week 1–4</span>
+                <span id="grid-week-label" style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--text3);white-space:nowrap;">Week 1–4</span>
                 <button onclick="gridChangeWeeks(1)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 8px;cursor:pointer;">›</button>
               </div>
               <div style="display:flex;gap:4px;">
@@ -1525,7 +1527,7 @@ body {
         <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;">
           <div style="flex:1;">
             <input id="gsm-title" placeholder="Session name…" style="background:transparent;border:none;color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;width:100%;outline:none;">
-            <div id="gsm-meta" style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px;"></div>
+            <div id="gsm-meta" style="font-size:10px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-top:2px;"></div>
           </div>
           <button onclick="gridCloseSession()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:13px;padding:4px 10px;cursor:pointer;">✕ Close</button>
         </div>
@@ -1541,7 +1543,7 @@ body {
                 onkeydown="gsmSearchKeydown(event)"
                 onfocus="gsmSearchExercises()"
                 autocomplete="off" spellcheck="false"
-                style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;box-sizing:border-box;outline:none;">
+                style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:11px;box-sizing:border-box;outline:none;">
               <div id="gsm-ex-results"
                 style="position:absolute;top:100%;left:0;right:0;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;background:var(--bg2);display:none;z-index:10;"></div>
             </div>
@@ -1576,7 +1578,7 @@ body {
               placeholder="📋  Paste from Excel or Google Sheets (Exercise | Sets | Reps | Load | Notes)"
               onpaste="gsmHandlePaste(event)"
               rows="1"
-              style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;box-sizing:border-box;resize:none;overflow:hidden;outline:none;"
+              style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:10px;box-sizing:border-box;resize:none;overflow:hidden;outline:none;"
               onfocus="this.style.borderColor='var(--blue)'"
               onblur="this.style.borderColor='var(--border)'"
             ></textarea>
@@ -1585,7 +1587,7 @@ body {
           <!-- Row 2: Block controls -->
           <div style="display:flex;gap:6px;">
             <button onclick="gsmAddBlock()" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:5px;padding:5px 10px;color:var(--green);font-size:11px;cursor:pointer;font-weight:600;">＋ Block</button>
-            <select id="gsm-active-block" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;">
+            <select id="gsm-active-block" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;font-family:\'DM Mono\',monospace;">
             </select>
             <button onclick="gsmInsertProgram()" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:5px;padding:5px 10px;color:var(--yellow);font-size:11px;cursor:pointer;font-weight:600;" title="Insert a saved program">📋</button>
           </div>
@@ -1611,12 +1613,12 @@ body {
               <div class="card-title">⚙️ PHASE SETUP</div>
               <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
                 <div>
-                  <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Athlete</label>
+                  <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:\'DM Mono\',monospace;">Athlete</label>
                   <select id="perio-athlete" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;"></select>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                   <div>
-                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Phase</label>
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:\'DM Mono\',monospace;">Phase</label>
                     <select id="perio-phase" onchange="perioPhasePick()" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
                       <optgroup label="── Block Periodization ──">
                         <option value="accumulation">Accumulation (Z2 · 8-12 reps · 70-78%)</option>
@@ -1639,14 +1641,14 @@ body {
                     <div id="perio-phase-desc" style="font-size:10px;color:var(--text3);margin-top:4px;font-style:italic;"></div>
                   </div>
                   <div>
-                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Weeks</label>
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:\'DM Mono\',monospace;">Weeks</label>
                     <input id="perio-weeks" type="number" min="1" max="16" value="4"
-                      style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+                      style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:\'DM Mono\',monospace;">
                   </div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                   <div>
-                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Sessions/Week</label>
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:\'DM Mono\',monospace;">Sessions/Week</label>
                     <select id="perio-sessions-pw" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
                       <option value="2">2</option>
                       <option value="3" selected>3</option>
@@ -1655,7 +1657,7 @@ body {
                     </select>
                   </div>
                   <div>
-                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace;">Deload</label>
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:\'DM Mono\',monospace;">Deload</label>
                     <select id="perio-deload" style="width:100%;margin-top:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
                       <option value="none">None</option>
                       <option value="wk3" selected>Week 3 → Deload Wk4</option>
@@ -1715,7 +1717,7 @@ body {
         <div class="card section-mb">
           <div class="card-title">🏋️ Athlete 1RM Database</div>
           <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
-            Enter each athlete's tested 1RM in lbs. These values drive all load calculations in the Session Builder using <span style="font-family:'DM Mono',monospace;color:var(--cubs-light-blue);">MROUND(% × 1RM, 5)</span>.
+            Enter each athlete's tested 1RM in lbs. These values drive all load calculations in the Session Builder using <span style="font-family:\'DM Mono\',monospace;color:var(--cubs-light-blue);">MROUND(% × 1RM, 5)</span>.
           </div>
 
           <!-- Athlete selector -->
@@ -1871,7 +1873,7 @@ body {
         <div style="font-size:13px;font-weight:700;color:#f59e0b;">⚡ HIGH EFFORT RUNS</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;">
           <input type="text" id="he-search" placeholder="Search play context..." oninput="filterHERuns()"
-            style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;width:180px;">
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:11px;font-family:\'DM Mono\',monospace;width:180px;">
           <select id="he-date-filter" onchange="filterHERuns()"
             style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;">
             <option value="all">All Dates</option>
@@ -1906,10 +1908,10 @@ body {
       <div class="card" style="padding:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div class="card-title" style="margin:0;">All High Effort Runs</div>
-          <div id="he-count" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;"></div>
+          <div id="he-count" style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;"></div>
         </div>
         <div style="overflow-x:auto;">
-          <table id="he-table" style="width:100%;border-collapse:collapse;font-size:11px;font-family:'DM Mono',monospace;">
+          <table id="he-table" style="width:100%;border-collapse:collapse;font-size:11px;font-family:\'DM Mono\',monospace;">
             <thead>
               <tr style="border-bottom:2px solid var(--border);">
                 <th onclick="heSort('date')" style="padding:6px 8px;text-align:left;color:var(--text3);cursor:pointer;white-space:nowrap;">Date ↕</th>
@@ -1982,7 +1984,7 @@ body {
       <div class="card" style="margin-top:14px;padding:14px;">
         <div class="card-title" style="margin-bottom:12px;">🏆 TEAM SPEED LEADERBOARD</div>
         <div style="overflow-x:auto;">
-          <table id="speed-leaderboard" style="width:100%;border-collapse:collapse;font-size:11px;font-family:'DM Mono',monospace;">
+          <table id="speed-leaderboard" style="width:100%;border-collapse:collapse;font-size:11px;font-family:\'DM Mono\',monospace;">
             <thead>
               <tr style="border-bottom:2px solid var(--border);">
                 <th style="padding:7px 8px;text-align:left;color:var(--text3);">Rank</th>
@@ -2000,6 +2002,19 @@ body {
         </div>
       </div>
 
+      <!-- Season Speed Trend -->
+      <div class="card" style="margin-top:14px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div class="card-title" style="margin:0;">📈 SEASON SPEED TREND — 90th Percentile by Week</div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="speedTrendGroup('week')" id="stg-week" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.2);color:#f59e0b;font-size:10px;font-weight:700;cursor:pointer;">By Week</button>
+            <button onclick="speedTrendGroup('month')" id="stg-month" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--text3);font-size:10px;cursor:pointer;">By Month</button>
+          </div>
+        </div>
+        <div style="height:260px;position:relative;"><canvas id="speedTrendChart"></canvas></div>
+        <div id="speed-trend-insights" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;"></div>
+      </div>
+
       <!-- Upload section -->
       <div class="card" style="margin-top:14px;padding:12px;">
         <div class="card-title" style="margin-bottom:8px;">📤 Upload HE Runs CSV</div>
@@ -2012,13 +2027,94 @@ body {
       </div>
     </div>
 
+        <div id="dash-maxstrength" class="page">
+      <!-- 1RM Logger -->
+      <div style="display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start;">
+
+        <!-- Input panel -->
+        <div class="card" style="padding:16px;">
+          <div class="card-title" style="margin-bottom:12px;">💪 LOG NEW MAX</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div>
+              <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Date</label>
+              <input type="date" id="orm-date" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Exercise</label>
+              <input type="text" id="orm-exercise" placeholder="e.g. Back Squat, Trap Bar DL..." list="orm-exercise-list"
+                style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;box-sizing:border-box;">
+              <datalist id="orm-exercise-list">
+                <option value="Back Squat"><option value="Front Squat"><option value="Trap Bar Deadlift">
+                <option value="Romanian Deadlift"><option value="Hex Bar Jump"><option value="Bench Press">
+                <option value="Incline Press"><option value="Pull-Up"><option value="DB Row">
+                <option value="Hip Thrust"><option value="Nordic Curl"><option value="Split Squat">
+              </datalist>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div>
+                <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Weight (lbs)</label>
+                <input type="number" id="orm-weight" placeholder="e.g. 225" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Reps</label>
+                <input type="number" id="orm-reps" placeholder="1" value="1" min="1" max="10" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;box-sizing:border-box;">
+              </div>
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Notes</label>
+              <input type="text" id="orm-notes" placeholder="e.g. Belt, felt strong" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;box-sizing:border-box;">
+            </div>
+            <button onclick="logORM()" style="padding:9px;background:#22c55e;border:none;border-radius:6px;color:#000;font-size:13px;font-weight:700;cursor:pointer;width:100%;">+ Log Entry</button>
+            <div id="orm-status" style="font-size:11px;color:var(--green);text-align:center;min-height:16px;"></div>
+          </div>
+
+          <!-- Exercise selector for chart -->
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">View Exercise Trend</label>
+            <select id="orm-view-exercise" onchange="renderORMChart()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
+              <option value="">Select exercise...</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Chart + PRs -->
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <!-- PR cards -->
+          <div id="orm-pr-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;"></div>
+          <!-- Trend chart -->
+          <div class="card" style="padding:14px;">
+            <div class="card-title" style="margin-bottom:8px;">Estimated 1RM Trend</div>
+            <div style="height:280px;position:relative;"><canvas id="ormChart"></canvas></div>
+          </div>
+          <!-- History table -->
+          <div class="card" style="padding:14px;">
+            <div class="card-title" style="margin-bottom:8px;">Session History</div>
+            <div style="overflow-x:auto;">
+              <table id="orm-table" style="width:100%;border-collapse:collapse;font-size:11px;font-family:\'DM Mono\',monospace;">
+                <thead><tr style="border-bottom:2px solid var(--border);">
+                  <th style="padding:6px 8px;text-align:left;color:var(--text3);">Date</th>
+                  <th style="padding:6px 8px;text-align:left;color:var(--text3);">Exercise</th>
+                  <th style="padding:6px 8px;text-align:right;color:var(--text3);">Weight</th>
+                  <th style="padding:6px 8px;text-align:right;color:var(--text3);">Reps</th>
+                  <th style="padding:6px 8px;text-align:right;color:#22c55e;">Est 1RM</th>
+                  <th style="padding:6px 8px;text-align:left;color:var(--text3);">Notes</th>
+                  <th style="padding:6px 8px;"></th>
+                </tr></thead>
+                <tbody id="orm-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
         <div id="dash-programs" class="page">
       <div class="card section-mb">
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <span>📋 PROGRAM HISTORY</span>
           <div style="display:flex;gap:8px;align-items:center;">
             <input id="prog-search" placeholder="Search programs…" oninput="renderAthletePrograms()"
-              style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;width:200px;">
+              style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:12px;width:200px;">
             <button onclick="openDropProgramModal()" style="background:var(--blue);border:none;border-radius:6px;padding:7px 16px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">＋ Drop Program</button>
           </div>
         </div>
@@ -2139,10 +2235,10 @@ body {
       <div class="modal-box" style="width:560px;max-height:80vh;overflow-y:auto;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:8px;">⚾ Import Game Schedule</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
-          Paste game dates — one per line, or CSV with columns: <span style="font-family:'DM Mono',monospace;color:var(--cubs-light-blue);">Date, Opponent, Home/Away</span><br>
-          Accepted date formats: <span style="font-family:'DM Mono',monospace;">4/15/2026 · 2026-04-15 · Apr 15 2026</span>
+          Paste game dates — one per line, or CSV with columns: <span style="font-family:\'DM Mono\',monospace;color:var(--cubs-light-blue);">Date, Opponent, Home/Away</span><br>
+          Accepted date formats: <span style="font-family:\'DM Mono\',monospace;">4/15/2026 · 2026-04-15 · Apr 15 2026</span>
         </div>
-        <textarea id="gameScheduleInput" style="width:100%;height:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;resize:vertical;" placeholder="4/15/2026, Pittsburgh Pirates, Home&#10;4/16/2026, Pittsburgh Pirates, Home&#10;4/18/2026, St. Louis Cardinals, Away&#10;..."></textarea>
+        <textarea id="gameScheduleInput" style="width:100%;height:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:12px;resize:vertical;" placeholder="4/15/2026, Pittsburgh Pirates, Home&#10;4/16/2026, Pittsburgh Pirates, Home&#10;4/18/2026, St. Louis Cardinals, Away&#10;..."></textarea>
         <div id="gameImportPreview" style="margin-top:12px;font-size:11px;color:var(--text2);"></div>
         <div style="display:flex;gap:10px;margin-top:16px;">
           <button class="generate-btn" onclick="importGameSchedule()">✅ Import Games</button>
@@ -2302,7 +2398,7 @@ body {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">📋 DAILY BRIEF</div>
-        <div id="brief-date" style="font-size:13px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace;"></div>
+        <div id="brief-date" style="font-size:13px;color:var(--text3);margin-top:2px;font-family:\'DM Mono\',monospace;"></div>
       </div>
       <div style="display:flex;gap:8px;">
         <button onclick="refreshBrief()" style="padding:8px 16px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:6px;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;">🔄 Refresh</button>
@@ -2340,7 +2436,7 @@ body {
     <!-- Load Summary Table -->
     <div class="card" style="margin-bottom:16px;padding:16px;">
       <div class="card-title" style="margin-bottom:10px;">⚡ LOAD SUMMARY — Last 7 Days</div>
-      <table style="width:100%;border-collapse:collapse;font-size:11px;font-family:'DM Mono',monospace;">
+      <table style="width:100%;border-collapse:collapse;font-size:11px;font-family:\'DM Mono\',monospace;">
         <thead>
           <tr style="border-bottom:2px solid var(--border);">
             <th style="padding:6px 8px;text-align:left;color:var(--text3);">Player</th>
@@ -2367,7 +2463,7 @@ body {
       <div class="card section-mb">
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
           <span>👥 POSITION PLAYER READINESS</span>
-          <span style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:.3px;">Live ACWR · Today</span>
+          <span style="font-size:10px;color:var(--text3);font-family:\'DM Mono\',monospace;letter-spacing:.3px;">Live ACWR · Today</span>
         </div>
         <!-- Column headers -->
         <div style="display:flex;align-items:center;gap:12px;padding:6px 12px 6px 58px;border-bottom:1px solid var(--border);margin-bottom:4px;flex-wrap:wrap;">
@@ -2462,7 +2558,7 @@ body {
               </optgroup>
             </select>
           </div>
-          <div id="corr-r" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;"></div>
+          <div id="corr-r" style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;"></div>
         </div>
         <div style="height:320px;position:relative;"><canvas id="corrChart"></canvas></div>
       </div>
@@ -2505,7 +2601,7 @@ body {
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px;">Expected ForceDecks columns</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;">
             ${['Name','Date','Type','Jump Ht (cm)','PP/BM (W/kg)','VTO (m/s)','Conc Power (W)','Stiffness (N/m)','BW (lbs)','P1 Impulse [N s]','P2 Impulse [N s]','RSI-mod [m/s]'].map(c=>
-              `<span style="font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;background:rgba(59,122,196,0.15);border-radius:4px;color:var(--cubs-light-blue);">${c}</span>`
+              `<span style="font-family:\'DM Mono\',monospace;font-size:10px;padding:2px 8px;background:rgba(59,122,196,0.15);border-radius:4px;color:var(--cubs-light-blue);">${c}</span>`
             ).join('')}
           </div>
         </div>
@@ -2551,7 +2647,7 @@ body {
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px;">Expected Statcast columns</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;">
             ${['Player','Game Date','Total Distance Covered (ft)','Mid-Effort Runs','High-Effort Runs','High-Effort Distance Covered (ft)','Top Speed (ft/s)'].map(c=>
-              `<span style="font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;background:rgba(34,197,94,0.1);border-radius:4px;color:var(--green);">${c}</span>`
+              `<span style="font-family:\'DM Mono\',monospace;font-size:10px;padding:2px 8px;background:rgba(34,197,94,0.1);border-radius:4px;color:var(--green);">${c}</span>`
             ).join('')}
           </div>
         </div>
@@ -2581,7 +2677,7 @@ body {
           <div style="display:flex;align-items:center;gap:6px;">
             <label style="font-size:11px;color:var(--text3);white-space:nowrap;">Game Date</label>
             <input type="date" id="csv-game-date" value="2026-04-29"
-              style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+              style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:\'DM Mono\',monospace;">
           </div>
           <button onclick="deleteGameDateData()" style="padding:8px 14px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;">🗑 Delete Date</button>
           <button onclick="document.getElementById('hittingCSVInput').click()" style="padding:8px 14px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:8px;color:var(--green);font-size:13px;font-weight:600;cursor:pointer;">&#128202; Import Hitting CSV</button>
@@ -2617,7 +2713,7 @@ body {
       <!-- ── SECTION 4: PITCHER MANUAL ENTRY ── -->
       <div class="card section-mb">
         <div class="card-title">📋 Import Log</div>
-        <div id="importLog" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text2);max-height:200px;overflow-y:auto;line-height:1.8;">
+        <div id="importLog" style="font-size:11px;font-family:\'DM Mono\',monospace;color:var(--text2);max-height:200px;overflow-y:auto;line-height:1.8;">
           <div style="color:var(--text3);">No imports yet this session.</div>
         </div>
         <button onclick="clearAllImportedData()" style="margin-top:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:7px 14px;color:var(--red);font-size:11px;cursor:pointer;">
@@ -2832,7 +2928,7 @@ function renderAthletePrograms() {
   ) : all;
 
   if (!progs.length) {
-    container.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text3);font-family:'DM Mono',monospace;font-size:13px;">
+    container.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text3);font-family:\'DM Mono\',monospace;font-size:13px;">
       No programs yet for ${currentPlayer.split(' ')[0]}.<br>
       <span style="font-size:11px;opacity:.6;">Generate a program in the builder and drop it here, or click ＋ Drop Program above.</span>
     </div>`;
@@ -2853,7 +2949,7 @@ function renderAthletePrograms() {
     return `<div class="program-block" style="margin-bottom:12px;" id="prog-card-${p.id}">
       <div class="block-header" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;" onclick="toggleProgCard('${p.id}')">
         <div style="flex:1;min-width:0;">
-          <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</div>
+          <div style="font-family:\'DM Mono\',monospace;font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</div>
           <div style="font-size:11px;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;">
             <span style="color:${tc};font-weight:600;">${p.type}</span>
             <span style="color:${pc};">${p.phase}</span>
@@ -2874,7 +2970,7 @@ function renderAthletePrograms() {
       </div>
       ${p.notes ? `<div style="padding:8px 16px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);font-style:italic;">${p.notes}</div>` : ''}
       <div id="prog-body-${p.id}" style="display:none;padding:12px 16px;background:var(--bg2);">
-        ${isHTML ? p.content : `<pre style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text);white-space:pre-wrap;margin:0;">${p.content}</pre>`}
+        ${isHTML ? p.content : `<pre style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--text);white-space:pre-wrap;margin:0;">${p.content}</pre>`}
       </div>
     </div>`;
   }).join('');
@@ -2905,7 +3001,7 @@ function loadProgToBuilder(id) {
     const out = document.getElementById('programOutput');
     if (out) {
       out.innerHTML = prog.content.trim().startsWith('<') ? prog.content
-        : `<pre style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text);white-space:pre-wrap;">${prog.content}</pre>`;
+        : `<pre style="font-family:\'DM Mono\',monospace;font-size:12px;color:var(--text);white-space:pre-wrap;">${prog.content}</pre>`;
       afterGenerate();
       showStatus(`✅ "${prog.name}" loaded into builder`);
     }
@@ -2938,7 +3034,7 @@ function printAthleteProgram(id) {
     .stat{padding:10px 14px;border-right:1px solid #e0e0e0;}
     .stat:last-child{border-right:none;}
     .slabel{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#888;margin-bottom:3px;}
-    .sval{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;}
+    .sval{font-family:\'DM Mono\',monospace;font-size:18px;font-weight:500;}
     .prog-name{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#0E3386;margin-bottom:4px;letter-spacing:1px;}
     .prog-meta{font-size:11px;color:#666;margin-bottom:16px;}
     .program-block{border:1px solid #e0e0e0;border-radius:8px;margin-bottom:14px;overflow:hidden;break-inside:avoid;}
@@ -2954,7 +3050,7 @@ function printAthleteProgram(id) {
     @media print{body{padding:16px 20px;}.no-print{display:none!important;}.program-block{break-inside:avoid;}}
   \x3C/style></head><body>
   <div class="no-print" style="background:#0E3386;color:#fff;padding:10px 20px;display:flex;gap:12px;align-items:center;margin:-28px -36px 20px;">
-    <span style="font-family:'DM Mono',monospace;font-size:12px;flex:1;">${prog.name}</span>
+    <span style="font-family:\'DM Mono\',monospace;font-size:12px;flex:1;">${prog.name}</span>
     <button onclick="window.print()" style="background:#CC3433;border:none;color:#fff;padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:600;">🖨 Print / Save PDF</button>
   </div>
   <div class="hdr">
@@ -2977,7 +3073,7 @@ function printAthleteProgram(id) {
   ${prog.notes?`<div class="prog-meta" style="color:#0E3386;font-style:italic;">${prog.notes}</div>`:''}
   <div id="prog-content">
     ${prog.content.trim().startsWith('<') ? prog.content
-      : `<pre style="font-family:'DM Mono',monospace;font-size:12px;white-space:pre-wrap;">${prog.content}</pre>`}
+      : `<pre style="font-family:\'DM Mono\',monospace;font-size:12px;white-space:pre-wrap;">${prog.content}</pre>`}
   </div>
   <div class="footer">
     <span>Chicago Cubs S&amp;C — Confidential</span>
@@ -3152,7 +3248,7 @@ function renderGridView() {
   if (headers) {
     headers.style.gridTemplateColumns = `48px repeat(7, 1fr)`;
     headers.innerHTML = `<div style="padding:6px 4px;font-size:9px;color:var(--text3);text-align:center;"></div>` +
-      DAY_LABELS.map(d=>`<div style="padding:6px 4px;font-size:9px;font-weight:700;color:var(--text3);text-align:center;font-family:'DM Mono',monospace;letter-spacing:.5px;">${d}</div>`).join('');
+      DAY_LABELS.map(d=>`<div style="padding:6px 4px;font-size:9px;font-weight:700;color:var(--text3);text-align:center;font-family:\'DM Mono\',monospace;letter-spacing:.5px;">${d}</div>`).join('');
   }
 
   // Body rows
@@ -3168,7 +3264,7 @@ function renderGridView() {
     // Week label
     const wlabel = document.createElement('div');
     wlabel.style.cssText = 'display:flex;align-items:center;justify-content:center;border-right:1px solid var(--border);background:var(--bg2);';
-    wlabel.innerHTML = `<div style="transform:rotate(-90deg);font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);white-space:nowrap;letter-spacing:.5px;">WK ${weekNum}</div>`;
+    wlabel.innerHTML = `<div style="transform:rotate(-90deg);font-family:\'DM Mono\',monospace;font-size:9px;color:var(--text3);white-space:nowrap;letter-spacing:.5px;">WK ${weekNum}</div>`;
     row.appendChild(wlabel);
 
     // 7 day cells
@@ -3199,9 +3295,9 @@ function renderGridView() {
             ${session.title||'Session'}
           </div>
           ${(session.blocks||[]).map(b=>`
-            <div style="font-size:8px;color:rgba(255,255,255,0.35);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.3px;margin:2px 0 1px;">${b.label} ${b.tag}</div>
+            <div style="font-size:8px;color:rgba(255,255,255,0.35);font-family:\'DM Mono\',monospace;text-transform:uppercase;letter-spacing:.3px;margin:2px 0 1px;">${b.label} ${b.tag}</div>
             ${(b.exercises||[]).slice(0,2).map(ex=>`
-              <div style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:1px 0 1px 6px;">
+              <div style="font-size:9px;color:var(--text3);font-family:\'DM Mono\',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:1px 0 1px 6px;">
                 ${ex.name} <span style="color:var(--text2);">${ex.sets||''}${ex.reps?'×'+ex.reps:''}</span>
               </div>
             `).join('')}
@@ -3248,7 +3344,7 @@ function renderGridView() {
     banner.id = 'grid-clipboard-banner';
     banner.style.cssText = 'position:sticky;bottom:0;left:0;right:0;background:rgba(14,51,134,0.95);border-top:1px solid var(--blue);padding:8px 16px;display:flex;align-items:center;gap:10px;z-index:100;backdrop-filter:blur(8px);';
     banner.innerHTML = `
-      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--blue);">📋 "${gridState.clipboard.title||'Session'}" copied — click any empty day to paste</span>
+      <span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--blue);">📋 "${gridState.clipboard.title||'Session'}" copied — click any empty day to paste</span>
       <button onclick="gridState.clipboard=null;renderGridView()" style="margin-left:auto;background:none;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:var(--text3);font-size:10px;padding:3px 8px;cursor:pointer;">✕ Cancel</button>
     `;
     body.appendChild(banner);
@@ -3273,7 +3369,7 @@ function renderGridPhases(offset, vw) {
         const isStart = (weekNum === phase.startWeek && di === 1);
         const isEnd   = (weekNum === phase.endWeek   && di === 7);
         div.style.cssText = `background:${phase.color.bg};border-top:2px solid ${phase.color.border};height:100%;`;
-        if (isStart) div.innerHTML = `<span style="font-size:9px;font-weight:700;color:${phase.color.text};padding:4px 6px;display:block;font-family:'DM Mono',monospace;letter-spacing:.5px;">${phase.name}</span>`;
+        if (isStart) div.innerHTML = `<span style="font-size:9px;font-weight:700;color:${phase.color.text};padding:4px 6px;display:block;font-family:\'DM Mono\',monospace;letter-spacing:.5px;">${phase.name}</span>`;
       }
       container.appendChild(div);
     }
@@ -3462,7 +3558,7 @@ function gsmRenderExercises() {
 
   const blocks = session.blocks;
   if (!blocks.length || blocks.every(b => !b.exercises.length)) {
-    container.innerHTML = `<div style="padding:30px;text-align:center;color:var(--text3);font-size:12px;font-family:'DM Mono',monospace;">
+    container.innerHTML = `<div style="padding:30px;text-align:center;color:var(--text3);font-size:12px;font-family:\'DM Mono\',monospace;">
       <div style="font-size:24px;margin-bottom:8px;opacity:.3;">📋</div>
       Search for exercises above or drag from the library<br>
       <span style="font-size:10px;opacity:.6;">Click ＋ Block to add a new training block</span>
@@ -3476,7 +3572,7 @@ function gsmRenderExercises() {
     const exHTML = block.exercises.map((ex, ei) => `
       <div style="background:var(--bg1);border:1px solid rgba(255,255,255,0.06);border-radius:6px;margin-bottom:6px;overflow:hidden;">
         <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.05);">
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);min-width:16px;">${bi+1}${ei+1}</div>
+          <div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);min-width:16px;">${bi+1}${ei+1}</div>
           <div style="flex:1;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ex.name}</div>
           <div style="font-size:9px;color:var(--text3);flex-shrink:0;max-width:80px;overflow:hidden;text-overflow:ellipsis;">${ex.cat||''}</div>
           ${ex.video ? `<a href="${ex.video}" target="_blank" style="color:var(--red);font-size:11px;text-decoration:none;flex-shrink:0;" title="Watch video">▶</a>` : ''}
@@ -3486,7 +3582,7 @@ function gsmRenderExercises() {
         <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:6px 8px;">
           ${['sets','reps','load','tempo','rest','notes'].map((field,fi) => `
             <div>
-              <div style="font-size:8px;color:var(--text3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.3px;font-family:'DM Mono',monospace;">${['Sets','Reps','Load','Tempo','Rest','Notes'][fi]}</div>
+              <div style="font-size:8px;color:var(--text3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.3px;font-family:\'DM Mono\',monospace;">${['Sets','Reps','Load','Tempo','Rest','Notes'][fi]}</div>
               <input type="text" value="${ex[field]||''}"
                 placeholder="${['4','6','70%','3-1-1-0','90s',''][fi]}"
                 data-bi="${bi}" data-ei="${ei}" data-field="${field}"
@@ -3494,7 +3590,7 @@ function gsmRenderExercises() {
                 onblur="hideTempoTooltip();hideRestTooltip()"
                 oninput="field==='tempo'?showTempoTooltip(this):field==='rest'?showRestTooltip(this):null"
                 oninput="gsmUpdateEx(${bi},${ei},'${field}',this.value)"
-                style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;padding:3px 5px;box-sizing:border-box;outline:none;"
+                style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:10px;padding:3px 5px;box-sizing:border-box;outline:none;"
                 onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
             </div>
           `).join('')}
@@ -3844,7 +3940,7 @@ function gsmInsertProgram() {
       </div>
       <div style="padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;">
         <input placeholder="Search programs…" oninput="gsmFilterInsertList(this.value)"
-          style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;box-sizing:border-box;">
+          style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:11px;box-sizing:border-box;">
       </div>
       <div id="gsm-insert-list" style="flex:1;overflow-y:auto;padding:8px;">
         ${allProgs.map((p,i) => `
@@ -3852,7 +3948,7 @@ function gsmInsertProgram() {
             style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s;"
             onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">
             <div style="font-weight:600;font-size:13px;color:var(--text);">${p.name}</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:3px;font-family:'DM Mono',monospace;">
+            <div style="font-size:10px;color:var(--text3);margin-top:3px;font-family:\'DM Mono\',monospace;">
               ${p.type||''} · ${p.phase||''} · ${new Date(p.created).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
             </div>
             ${p.notes ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;font-style:italic;">${p.notes}</div>` : ''}
@@ -3877,7 +3973,7 @@ function gsmFilterInsertList(q) {
       style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s;"
       onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">
       <div style="font-weight:600;font-size:13px;color:var(--text);">${p.name}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:3px;font-family:'DM Mono',monospace;">${p.type||''} · ${p.phase||''}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px;font-family:\'DM Mono\',monospace;">${p.type||''} · ${p.phase||''}</div>
     </div>
   `).join('') || '<div style="padding:20px;text-align:center;color:var(--text3);">No matches</div>';
 }
@@ -4042,12 +4138,12 @@ function gsmOpenPeriodization() {
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;width:100%;max-width:800px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
       <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;">📈 PERIODIZATION VIEW</div>
-        <select id="perio-ex-sel" onchange="renderPerioChart()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;flex:1;max-width:300px;">
+        <select id="perio-ex-sel" onchange="renderPerioChart()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:11px;flex:1;max-width:300px;">
           ${exercises.map(e=>`<option value="${e.replace(/"/g,'&quot;')}">${e}</option>`).join('')}
         </select>
         <div style="display:flex;gap:4px;margin-left:auto;">
           ${['Sets','Reps','Load'].map(m=>`<button onclick="periToggleMetric('${m}')" id="perio-btn-${m}"
-            style="background:${m==='Reps'?'rgba(59,122,196,0.3)':'rgba(255,255,255,0.06)'};border:1px solid ${m==='Reps'?'var(--blue)':'var(--border)'};border-radius:4px;color:${m==='Reps'?'var(--blue)':'var(--text3)'};font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;cursor:pointer;" class="perio-metric-btn ${m==='Reps'?'active':''}">${m}</button>`).join('')}
+            style="background:${m==='Reps'?'rgba(59,122,196,0.3)':'rgba(255,255,255,0.06)'};border:1px solid ${m==='Reps'?'var(--blue)':'var(--border)'};border-radius:4px;color:${m==='Reps'?'var(--blue)':'var(--text3)'};font-family:\'DM Mono\',monospace;font-size:10px;padding:4px 10px;cursor:pointer;" class="perio-metric-btn ${m==='Reps'?'active':''}">${m}</button>`).join('')}
         </div>
         <button onclick="document.getElementById('perio-modal').remove()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;">✕</button>
       </div>
@@ -4060,7 +4156,7 @@ function gsmOpenPeriodization() {
 
         \x3C!-- Data table -->
         <div style="background:var(--bg3);border-radius:8px;overflow:hidden;">
-          <div style="padding:8px 12px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;">Session Data</div>
+          <div style="padding:8px 12px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);font-family:\'DM Mono\',monospace;">Session Data</div>
           <div id="perio-table" style="overflow-x:auto;"></div>
         </div>
       </div>
@@ -4144,7 +4240,7 @@ function renderPerioChart() {
   // Table
   const table = document.getElementById('perio-table');
   if (table) {
-    table.innerHTML = `<table style="width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:11px;">
+    table.innerHTML = `<table style="width:100%;border-collapse:collapse;font-family:\'DM Mono\',monospace;font-size:11px;">
       <thead><tr style="border-bottom:1px solid var(--border);">
         <th style="padding:6px 10px;text-align:left;color:var(--text3);">Session</th>
         <th style="padding:6px 10px;text-align:left;color:var(--text3);">Block</th>
@@ -4213,7 +4309,7 @@ function buildGridHTML(athlete) {
           <div class="col-head"><div>Exercise</div><div>Sets</div><div>Reps</div><div>Tempo</div><div>Load</div><div>Rest</div><div>Notes</div></div>
           ${(session.blocks||[{label:'A',tag:'',exercises:session.exercises||[]}]).map(block=>`
             <div style="margin-bottom:8px;">
-              <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.5px;margin-bottom:4px;font-family:'DM Mono',monospace;">${block.label} — ${block.tag}</div>
+              <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.5px;margin-bottom:4px;font-family:\'DM Mono\',monospace;">${block.label} — ${block.tag}</div>
               ${(block.exercises||[]).map(ex=>`
                 <div class="exercise-row">
                   <div class="ex-name">${ex.name}</div>
@@ -5269,7 +5365,7 @@ function switchDashTab(tab, btn) {
   currentDashTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['overview','performance','cmj','wellness','workload','heruns','programs'].forEach(t => {
+  ['overview','performance','cmj','wellness','workload','heruns','maxstrength','programs'].forEach(t => {
     const el = document.getElementById('dash-'+t);
     if(el) { el.classList.remove('active'); el.classList.add('page'); el.style.display = 'none'; }
   });
@@ -5277,6 +5373,8 @@ function switchDashTab(tab, btn) {
   if(active) { active.classList.add('active'); active.classList.remove('page'); active.style.display = 'block'; }
   if (tab === 'heruns') {
     if (typeof renderHERuns === 'function') renderHERuns();
+  } else if (tab === 'maxstrength') {
+    loadORM(); renderORMDashboard();
   } else if (tab === 'programs') {
     renderAthletePrograms();
   } else if (tab === 'performance') {
@@ -7313,6 +7411,200 @@ function sprintToggle(type) {
 }
 
 // ── BURST SCORE ANALYSIS ──────────────────────────────────────────────────────
+// ══ SPEED TREND + 1RM + PDF ══
+function renderSpeedTrend() {
+  var runs = (heRunsData[currentPlayer]||[]).filter(function(r){ return r.speed>0 && r.date; });
+  if (!runs.length) return;
+  function p90(arr){ if(!arr.length) return 0; var s=arr.slice().sort(function(a,b){return a-b;}); return s[Math.floor(s.length*0.9)]; }
+  function avg(arr){ return arr.reduce(function(s,v){return s+v;},0)/arr.length; }
+  var groups = {};
+  runs.forEach(function(r) {
+    var d = safeParseDate(r.date);
+    var key;
+    if (speedTrendGrouping==='week') {
+      var jan1=new Date(d.getFullYear(),0,1);
+      var week=Math.ceil((((d-jan1)/86400000)+jan1.getDay()+1)/7);
+      key=d.getFullYear()+'-W'+String(week).padStart(2,'0');
+    } else { key=d.toLocaleDateString('en-US',{month:'short',year:'numeric'}); }
+    if (!groups[key]) groups[key]=[];
+    groups[key].push(r.speed);
+  });
+  var labels=Object.keys(groups).sort();
+  var p90Data=labels.map(function(k){return p90(groups[k]);});
+  var maxData=labels.map(function(k){return Math.max.apply(null,groups[k]);});
+  var avgData=labels.map(function(k){return avg(groups[k]);});
+  var countData=labels.map(function(k){return groups[k].length;});
+  var n=p90Data.length,sx=0,sy=0,sxy=0,sx2=0;
+  p90Data.forEach(function(v,i){sx+=i;sy+=v;sxy+=i*v;sx2+=i*i;});
+  var slope=(n*sxy-sx*sy)/(n*sx2-sx*sx);
+  var intercept=(sy-slope*sx)/n;
+  var trendData=p90Data.map(function(_,i){return parseFloat((slope*i+intercept).toFixed(3));});
+  var ctx=document.getElementById('speedTrendChart'); if(!ctx) return;
+  if(ctx._chart) ctx._chart.destroy();
+  ctx._chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[
+    {label:'90th Pct',data:p90Data,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.1)',pointRadius:5,borderWidth:2,tension:0.3,fill:true,order:2},
+    {label:'Max',data:maxData,borderColor:'rgba(239,68,68,0.5)',backgroundColor:'transparent',pointRadius:2,borderWidth:1,borderDash:[4,4],order:3},
+    {label:'Avg',data:avgData,borderColor:'rgba(34,197,94,0.5)',backgroundColor:'transparent',pointRadius:2,borderWidth:1,borderDash:[4,4],order:3},
+    {label:'Trend',data:trendData,borderColor:'rgba(167,139,250,0.8)',backgroundColor:'transparent',pointRadius:0,borderWidth:2,borderDash:[6,3],order:1},
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#94a3b8',font:{size:10},boxWidth:10}},tooltip:{callbacks:{afterBody:function(items){return 'Runs: '+countData[items[0].dataIndex];}}}},
+    scales:{x:{ticks:{color:'#94a3b8',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.05)'}},y:{title:{display:true,text:'Speed (ft/s)',color:'#94a3b8',font:{size:10}},ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}}}
+  }});
+  var insEl=document.getElementById('speed-trend-insights');
+  if(insEl&&p90Data.length>=2){
+    var change=p90Data[p90Data.length-1]-p90Data[0];
+    var trendDir=slope>0.02?'📈 Improving':slope<-0.02?'📉 Declining':'➡️ Stable';
+    var trendColor=slope>0.02?'var(--green)':slope<-0.02?'var(--red)':'var(--text3)';
+    var bestWeek=labels[p90Data.indexOf(Math.max.apply(null,p90Data))];
+    insEl.innerHTML=[
+      {label:'Season Trend',val:trendDir,color:trendColor},
+      {label:'Season Change',val:(change>=0?'+':'')+change.toFixed(2)+' ft/s',color:change>=0?'var(--green)':'var(--red)'},
+      {label:'Peak Period',val:bestWeek,color:'#f59e0b'},
+      {label:'Total HE Runs',val:runs.length,color:'var(--text2)'},
+    ].map(function(c){return '<div class="card" style="padding:10px;text-align:center;"><div style="font-size:16px;font-weight:700;color:'+c.color+';font-family:\'DM Mono\',monospace;">'+c.val+'</div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;">'+c.label+'</div></div>';}).join('');
+  }
+}
+
+var speedTrendGrouping='week';
+function speedTrendGroup(g){
+  speedTrendGrouping=g;
+  document.getElementById('stg-week').style.cssText+=(g==='week'?';background:rgba(245,158,11,0.2);color:#f59e0b;font-weight:700;':';background:transparent;color:var(--text3);font-weight:400;');
+  document.getElementById('stg-month').style.cssText+=(g==='month'?';background:rgba(245,158,11,0.2);color:#f59e0b;font-weight:700;':';background:transparent;color:var(--text3);font-weight:400;');
+  renderSpeedTrend();
+}
+
+// 1RM Tracker
+var ORM_KEY='cubs_sc_orm_v1';
+var ormData={};
+function loadORM(){try{var s=localStorage.getItem(ORM_KEY);if(s)ormData=JSON.parse(s);}catch(e){}}
+function saveORM(){try{localStorage.setItem(ORM_KEY,JSON.stringify(ormData));}catch(e){} if(typeof syncToSupabase==='function')setTimeout(syncToSupabase,1000);}
+function epley(w,r){return r===1?w:Math.round(w*(1+r/30));}
+
+function logORM(){
+  var date=document.getElementById('orm-date').value;
+  var exercise=document.getElementById('orm-exercise').value.trim();
+  var weight=parseFloat(document.getElementById('orm-weight').value);
+  var reps=parseInt(document.getElementById('orm-reps').value)||1;
+  var notes=document.getElementById('orm-notes').value.trim();
+  if(!date||!exercise||!weight){showStatus('⚠️ Fill in date, exercise and weight');return;}
+  if(!ormData[currentPlayer])ormData[currentPlayer]=[];
+  var est1rm=epley(weight,reps);
+  ormData[currentPlayer].push({date,exercise,weight,reps,est1rm,notes});
+  ormData[currentPlayer].sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+  saveORM();
+  document.getElementById('orm-exercise').value='';
+  document.getElementById('orm-weight').value='';
+  document.getElementById('orm-reps').value='1';
+  document.getElementById('orm-notes').value='';
+  var st=document.getElementById('orm-status');
+  if(st){st.textContent='✅ Logged: '+exercise+' — Est 1RM: '+est1rm+' lbs';setTimeout(function(){st.textContent='';},3000);}
+  renderORMDashboard();
+}
+
+function deleteORM(idx){if(!ormData[currentPlayer])return;ormData[currentPlayer].splice(idx,1);saveORM();renderORMDashboard();}
+
+function renderORMDashboard(){
+  var entries=ormData[currentPlayer]||[];
+  var dateEl=document.getElementById('orm-date');
+  if(dateEl&&!dateEl.value)dateEl.value=new Date().toISOString().slice(0,10);
+  var exercises=[...new Set(entries.map(function(e){return e.exercise;}))].sort();
+  var sel=document.getElementById('orm-view-exercise');
+  if(sel){var cur=sel.value;sel.innerHTML='<option value="">Select exercise...</option>'+exercises.map(function(e){return '<option value="'+e+'"'+(e===cur?' selected':'')+'>'+e+'</option>';}).join('');}
+  var prEl=document.getElementById('orm-pr-cards');
+  if(prEl){
+    var prs={};entries.forEach(function(e){if(!prs[e.exercise]||e.est1rm>prs[e.exercise].est1rm)prs[e.exercise]=e;});
+    prEl.innerHTML=Object.entries(prs).sort(function(a,b){return b[1].est1rm-a[1].est1rm;}).slice(0,8).map(function(kv){
+      return '<div class="card" style="padding:10px;text-align:center;"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">'+kv[0]+'</div><div style="font-size:20px;font-weight:700;color:#22c55e;font-family:\'DM Mono\',monospace;">'+kv[1].est1rm+'</div><div style="font-size:9px;color:var(--text3);">lbs · '+fmtDate(kv[1].date)+'</div></div>';
+    }).join('');
+  }
+  renderORMChart();renderORMTable(entries);
+}
+
+function renderORMChart(){
+  var exercise=(document.getElementById('orm-view-exercise')||{}).value||'';
+  var entries=(ormData[currentPlayer]||[]).filter(function(e){return e.exercise===exercise;});
+  var ctx=document.getElementById('ormChart');if(!ctx)return;
+  if(ctx._chart)ctx._chart.destroy();if(!entries.length)return;
+  var labels=entries.map(function(e){return fmtDate(e.date);});
+  var rm1Data=entries.map(function(e){return e.est1rm;});
+  var wtData=entries.map(function(e){return e.weight;});
+  var maxRM=Math.max.apply(null,rm1Data);
+  ctx._chart=new Chart(ctx,{type:'line',data:{labels,datasets:[
+    {label:'Est 1RM',data:rm1Data,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.1)',pointRadius:rm1Data.map(function(v){return v===maxRM?8:4;}),pointBackgroundColor:rm1Data.map(function(v){return v===maxRM?'#f59e0b':'#22c55e';}),borderWidth:2,tension:0.3,fill:true,order:1},
+    {label:'Working Weight',data:wtData,borderColor:'rgba(99,102,241,0.6)',backgroundColor:'transparent',pointRadius:3,borderWidth:1,borderDash:[4,4],order:2},
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#94a3b8',font:{size:10},boxWidth:10}}},
+    scales:{x:{ticks:{color:'#94a3b8',font:{size:10},maxRotation:45},grid:{color:'rgba(255,255,255,0.05)'}},y:{title:{display:true,text:'lbs',color:'#94a3b8',font:{size:10}},ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}}}
+  }});
+}
+
+function renderORMTable(entries){
+  var tbody=document.getElementById('orm-tbody');if(!tbody)return;
+  var byEx=(document.getElementById('orm-view-exercise')||{}).value;
+  var filtered=byEx?entries.filter(function(e){return e.exercise===byEx;}):entries;
+  var sorted=filtered.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  var prs={};entries.forEach(function(e){if(!prs[e.exercise]||e.est1rm>prs[e.exercise])prs[e.exercise]=e.est1rm;});
+  tbody.innerHTML=sorted.map(function(e){
+    var isPR=e.est1rm===prs[e.exercise];
+    return '<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 8px;color:var(--text2);">'+fmtDate(e.date)+'</td><td style="padding:6px 8px;color:#fff;font-weight:600;">'+e.exercise+'</td><td style="padding:6px 8px;text-align:right;">'+e.weight+'</td><td style="padding:6px 8px;text-align:right;">'+e.reps+'</td><td style="padding:6px 8px;text-align:right;font-weight:700;color:'+(isPR?'#f59e0b':'#22c55e')+';">'+e.est1rm+(isPR?' ★':'')+'</td><td style="padding:6px 8px;color:var(--text3);font-size:10px;">'+e.notes+'</td><td style="padding:6px 8px;"><button onclick="deleteORM('+entries.indexOf(e)+')" style="background:none;border:none;color:var(--text3);cursor:pointer;">✕</button></td></tr>';
+  }).join('');
+}
+
+// PDF Export
+function exportPlayerPDF(){
+  var p=PLAYERS[currentPlayer];if(!p)return;
+  var ms=computeMonotonyStrain(currentPlayer);
+  var cmjTrends=(p.cmjTrends||[]).filter(function(c){return !c.type||c.type==='CMJ';});
+  var lastCMJ=cmjTrends.length?cmjTrends[cmjTrends.length-1]:{};
+  var cmjAvg=cmjTrends.length>3?cmjTrends.reduce(function(s,c){return s+(c.ppbm||0);},0)/cmjTrends.length:0;
+  var cmjDrop=cmjAvg>0&&lastCMJ.ppbm?((lastCMJ.ppbm-cmjAvg)/cmjAvg*100):null;
+  var heRuns=heRunsData[currentPlayer]||[];
+  var speeds=heRuns.map(function(r){return r.speed;}).filter(Boolean).sort(function(a,b){return a-b;});
+  var p90spd=speeds.length?speeds[Math.floor(speeds.length*0.9)]:0;
+  var orms=ormData[currentPlayer]||[];
+  var prs={};orms.forEach(function(e){if(!prs[e.exercise]||e.est1rm>prs[e.exercise])prs[e.exercise]=e.est1rm;});
+  var date=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  var strainStatus=ms.strain>2500?'HIGH STRAIN':ms.strain>1500?'MONITOR':'OPTIMAL';
+  var strainColor=ms.strain>2500?'#dc2626':ms.strain>1500?'#d97706':'#16a34a';
+  var acwrStatus=p.acwr>1.25||p.acwr<0.75?'HIGH RISK':p.acwr>1.15||p.acwr<0.85?'MONITOR':'OPTIMAL';
+  var acwrColor=p.acwr>1.25||p.acwr<0.75?'#dc2626':p.acwr>1.15||p.acwr<0.85?'#d97706':'#16a34a';
+  var w=window.open('','_blank','width=900,height=1200');
+  w.document.write('<!DOCTYPE html><html><head><title>'+currentPlayer+' Report</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Helvetica Neue,Arial,sans-serif;color:#111;padding:32px;font-size:12px;}h1{font-size:26px;font-weight:800;margin-bottom:2px;}h2{font-size:13px;font-weight:700;color:#1e40af;border-bottom:2px solid #1e40af;padding-bottom:4px;margin:18px 0 10px;text-transform:uppercase;letter-spacing:.5px;}.sub{font-size:11px;color:#6b7280;margin-bottom:20px;}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px;}.card{border:1px solid #e5e7eb;border-radius:8px;padding:12px;}.val{font-size:22px;font-weight:800;font-family:monospace;}.lbl{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}table{width:100%;border-collapse:collapse;font-size:11px;}th{padding:5px 8px;text-align:left;border-bottom:2px solid #e5e7eb;color:#6b7280;font-size:10px;text-transform:uppercase;}td{padding:5px 8px;border-bottom:1px solid #f3f4f6;}.footer{margin-top:28px;padding-top:10px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;display:flex;justify-content:space-between;}@media print{body{padding:20px;}}</style></head><body>');
+  w.document.write('<h1>'+currentPlayer+'</h1>');
+  w.document.write('<div class="sub">Chicago Cubs &middot; '+p.pos+' &middot; #'+p.number+' &nbsp;|&nbsp; Report: '+date+'</div>');
+  w.document.write('<h2>Load Status</h2><div class="grid4">');
+  w.document.write('<div class="card"><div class="val" style="color:'+strainColor+';">'+ms.strain.toLocaleString()+'</div><div class="lbl">Strain ('+strainStatus+')</div></div>');
+  w.document.write('<div class="card"><div class="val" style="color:'+acwrColor+';">'+(p.acwr?p.acwr.toFixed(3):'—')+'</div><div class="lbl">ACWR ('+acwrStatus+')</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(ms.weeklyHE>0?ms.weeklyHE.toLocaleString():'—')+'</div><div class="lbl">Weekly HE (ft)</div></div>');
+  w.document.write('<div class="card"><div class="val">'+ms.monotony.toFixed(2)+'</div><div class="lbl">Monotony</div></div></div>');
+  w.document.write('<h2>CMJ Force Plate</h2><div class="grid4">');
+  w.document.write('<div class="card"><div class="val">'+(lastCMJ.jump?lastCMJ.jump.toFixed(1)+'cm':'—')+'</div><div class="lbl">Jump Height</div></div>');
+  w.document.write('<div class="card"><div class="val" style="color:'+(cmjDrop!==null&&cmjDrop<-5?'#dc2626':'#111')+'">'+(lastCMJ.ppbm?lastCMJ.ppbm.toFixed(1):'—')+'</div><div class="lbl">PP/BM W/kg'+(cmjDrop!==null?' ('+(cmjDrop>=0?'+':'')+cmjDrop.toFixed(1)+'%)':'')+'</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(lastCMJ.rsiMod?lastCMJ.rsiMod.toFixed(2):'—')+'</div><div class="lbl">RSI-Modified</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(p.daysSinceCMJ||0)+'</div><div class="lbl">Days Since CMJ</div></div></div>');
+  w.document.write('<h2>Performance</h2><div class="grid4">');
+  w.document.write('<div class="card"><div class="val">'+(p.latestExit?p.latestExit.toFixed(1)+' mph':'—')+'</div><div class="lbl">Exit Velocity</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(p.latestBat?p.latestBat.toFixed(1)+' mph':'—')+'</div><div class="lbl">Bat Speed</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(p.latestThrow?p.latestThrow.toFixed(1)+' mph':'—')+'</div><div class="lbl">Throw Velocity</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(p90spd?p90spd.toFixed(2)+' ft/s':'—')+'</div><div class="lbl">Speed 90th Pct</div></div></div>');
+  if(Object.keys(prs).length){
+    w.document.write('<h2>Strength — Estimated 1RM PRs</h2><div class="grid4">');
+    Object.entries(prs).sort(function(a,b){return b[1]-a[1];}).forEach(function(kv){
+      w.document.write('<div class="card"><div class="val" style="color:#16a34a;">'+kv[1]+'</div><div class="lbl">'+kv[0]+'</div></div>');
+    });
+    w.document.write('</div>');
+  }
+  w.document.write('<h2>Recent Games (Last 10)</h2><table><thead><tr><th>Date</th><th>HE Dist</th><th>Total Dist</th><th>Top Speed</th><th>Exit Velo</th><th>Bat Speed</th><th>ACWR</th></tr></thead><tbody>');
+  (p.recentGames||[]).slice(-10).reverse().forEach(function(g){
+    w.document.write('<tr><td>'+g.date+'</td><td>'+(g.he||'—')+' ft</td><td>'+(g.dist?g.dist.toLocaleString():'—')+' ft</td><td>'+(g.speed?g.speed.toFixed(2)+' ft/s':'—')+'</td><td>'+(g.exit?g.exit.toFixed(1)+' mph':'—')+'</td><td>'+(g.bat?g.bat.toFixed(1)+' mph':'—')+'</td><td>'+(g.acwr?g.acwr.toFixed(3):'—')+'</td></tr>');
+  });
+  w.document.write('</tbody></table>');
+  w.document.write('<div class="footer"><span>Cubs S&C Dashboard &mdash; Confidential</span><span>Generated '+date+'</span></div>');
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(function(){w.print();},600);
+}
+
 function renderBurstAnalysis() {
   var runs = heRunsData[currentPlayer] || [];
   var validBurst = runs.filter(function(r){ return r.burst>0 && r.speed>0; });
@@ -7730,6 +8022,7 @@ function renderHERuns() {
 
   renderSprintProfile();
   renderBurstAnalysis();
+  renderSpeedTrend();
   renderLeaderboard();
   tbody.innerHTML = filtered.map(function(r) {
     var isTop = r.speed >= p90speed;
@@ -7816,7 +8109,7 @@ function buildTeamList() {
     const good = higherIsBetter ? pos : !pos;
     const color = good ? 'var(--green)' : 'var(--red)';
     const sign  = pos ? '+' : '';
-    return `<div style="font-size:9px;color:${color};font-family:'DM Mono',monospace;line-height:1.2;">${sign}${pct}%</div>`;
+    return `<div style="font-size:9px;color:${color};font-family:\'DM Mono\',monospace;line-height:1.2;">${sign}${pct}%</div>`;
   };
 
   el.innerHTML = sorted.map(({name, p, acwr, status}) => {
@@ -7865,71 +8158,71 @@ function buildTeamList() {
 
       \x3C!-- Readiness -->
       <div style="text-align:right;min-width:64px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;">${(p.readiness||0).toFixed(3)}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;">${(p.readiness||0).toFixed(3)}</div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">Readiness</div>
       </div>
 
       \x3C!-- ACWR -->
       <div style="text-align:right;min-width:64px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;color:${acwrZoneColor};">${acwr.toFixed(3)}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;color:${acwrZoneColor};">${acwr.toFixed(3)}</div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">ACWR</div>
       </div>
 
       \x3C!-- HE Distance -->
       <div style="text-align:right;min-width:56px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;color:${heDist&&teamAvgHE?(heDist>=teamAvgHE?'var(--green)':'var(--red)'):'var(--text)'};">${heDist ? heDist.toLocaleString() : '—'}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;color:${heDist&&teamAvgHE?(heDist>=teamAvgHE?'var(--green)':'var(--red)'):'var(--text)'};">${heDist ? heDist.toLocaleString() : '—'}</div>
         ${delta(heDist, teamAvgHE)}
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">HE ft</div>
       </div>
 
       \x3C!-- Total Distance -->
       <div style="text-align:right;min-width:64px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;">${totalDist ? totalDist.toLocaleString() : '—'}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;">${totalDist ? totalDist.toLocaleString() : '—'}</div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">Tot ft</div>
       </div>
 
       \x3C!-- Top Speed -->
       <div style="text-align:right;min-width:52px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;">${topSpeed ? topSpeed.toFixed(1) : '—'}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;">${topSpeed ? topSpeed.toFixed(1) : '—'}</div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">ft/s</div>
       </div>
 
       \x3C!-- Bat Speed -->
       <div style="text-align:right;min-width:52px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;color:${batSpeed&&teamAvgBat?(batSpeed>=teamAvgBat?'var(--green)':'var(--red)'):'var(--text)'};">${batSpeed ? batSpeed.toFixed(0) : '—'}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;color:${batSpeed&&teamAvgBat?(batSpeed>=teamAvgBat?'var(--green)':'var(--red)'):'var(--text)'};">${batSpeed ? batSpeed.toFixed(0) : '—'}</div>
         ${delta(batSpeed, teamAvgBat)}
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">Bat mph</div>
       </div>
 
       \x3C!-- Exit Velo -->
       <div style="text-align:right;min-width:52px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;color:${exitVelo&&teamAvgExit?(exitVelo>=teamAvgExit?'var(--green)':'var(--red)'):'var(--text)'};">${exitVelo ? exitVelo.toFixed(0) : '—'}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;color:${exitVelo&&teamAvgExit?(exitVelo>=teamAvgExit?'var(--green)':'var(--red)'):'var(--text)'};">${exitVelo ? exitVelo.toFixed(0) : '—'}</div>
         ${delta(exitVelo, teamAvgExit)}
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">EV mph</div>
       </div>
 
       \x3C!-- Jump Height -->
       <div style="text-align:right;min-width:52px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;color:${jumpHt&&teamAvgJump?(jumpHt>=teamAvgJump?'var(--green)':'var(--red)'):'var(--text)'};">${jumpHt ? jumpHt.toFixed(1) : '—'}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;color:${jumpHt&&teamAvgJump?(jumpHt>=teamAvgJump?'var(--green)':'var(--red)'):'var(--text)'};">${jumpHt ? jumpHt.toFixed(1) : '—'}</div>
         ${delta(jumpHt, teamAvgJump)}
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">Jump cm</div>
       </div>
 
       \x3C!-- Monotony -->
       <div style="text-align:right;min-width:52px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;color:${ms.monotony>1.5?'var(--red)':ms.monotony>1.0?'var(--yellow)':'var(--text)'};">${ms.monotony > 0 ? ms.monotony.toFixed(2) : '—'}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;color:${ms.monotony>1.5?'var(--red)':ms.monotony>1.0?'var(--yellow)':'var(--text)'};">${ms.monotony > 0 ? ms.monotony.toFixed(2) : '—'}</div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">Monotony</div>
       </div>
 
       \x3C!-- Strain -->
       <div style="text-align:right;min-width:56px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;color:${ms.strain>2500?'var(--red)':ms.strain>1500?'var(--yellow)':'var(--text)'};">${ms.strain > 0 ? ms.strain.toLocaleString() : '—'}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;color:${ms.strain>2500?'var(--red)':ms.strain>1500?'var(--yellow)':'var(--text)'};">${ms.strain > 0 ? ms.strain.toLocaleString() : '—'}</div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">Strain</div>
       </div>
 
       \x3C!-- Days since CMJ -->
       <div style="text-align:right;min-width:40px;">
-        <div style="font-family:'DM Mono',monospace;font-size:13px;">${p.daysSinceCMJ ?? '—'}d</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;">${p.daysSinceCMJ ?? '—'}d</div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">CMJ</div>
       </div>
 
@@ -8055,7 +8348,7 @@ function render1RMTable() {
         <input type="number" class="control-input" data-lift="${lift}"
           value="${val}" placeholder="lbs" min="0" max="2000" step="5"
           oninput="previewLoad(this,'${lift}','${athlete}')"
-          style="font-size:14px;font-family:'DM Mono',monospace;padding:6px 10px;flex:1;">
+          style="font-size:14px;font-family:\'DM Mono\',monospace;padding:6px 10px;flex:1;">
         <span style="font-size:10px;color:var(--text3);">lbs</span>
       </div>
       <div class="rm-preview-${lift.replace(/[^a-z]/gi,'_')}" style="font-size:10px;color:var(--cubs-light-blue);margin-top:4px;min-height:14px;"></div>
@@ -8115,7 +8408,7 @@ function update1RMStrip(athlete) {
     el.innerHTML = `<span style="color:var(--yellow);">⚠ No 1RM data — loads will show percentages only</span>`;
   } else {
     el.innerHTML = filled.slice(0,5).map(([l,v])=>
-      `<span style="font-family:'DM Mono',monospace;font-size:11px;background:rgba(59,122,196,0.12);padding:2px 8px;border-radius:4px;color:var(--cubs-light-blue);">${l}: ${v} lbs</span>`
+      `<span style="font-family:\'DM Mono\',monospace;font-size:11px;background:rgba(59,122,196,0.12);padding:2px 8px;border-radius:4px;color:var(--cubs-light-blue);">${l}: ${v} lbs</span>`
     ).join(' ') + (filled.length > 5 ? ` <span style="color:var(--text3)">+${filled.length-5} more</span>` : '');
   }
 }
@@ -10228,14 +10521,14 @@ function _tmplBuildBlock(block, def, prefix) {
     const uid = prefix + '-' + block.letter + '-' + ri;
     const exCell = `<div style="display:flex;gap:4px;align-items:center;min-width:0;flex:2;">
       <select class="tmpl-cat-sel" onchange="tmplOnCatChange(this)"
-        style="width:110px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-family:'DM Mono',monospace;font-size:10px;">${catOpts}</select>
+        style="width:110px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-family:\'DM Mono\',monospace;font-size:10px;">${catOpts}</select>
       <select class="tmpl-ex-sel" onchange="tmplOnExChange(this)"
-        style="flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;">
+        style="flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:10px;">
         <option value="">— Exercise —</option>
       </select>
     </div>`;
     const inp = (ph, val, w) => `<div style="min-width:${w||'52px'};"><input type="text" value="${val||''}" placeholder="${ph}"
-      style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:10px;padding:3px 5px;box-sizing:border-box;"></div>`;
+      style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:\'DM Mono\',monospace;font-size:10px;padding:3px 5px;box-sizing:border-box;"></div>`;
     if (type==='lift')  return `<div class="exercise-row" style="display:flex;gap:5px;align-items:center;padding:3px 6px;">${exCell}${inp(def.sets,'','48px')}${inp(def.reps,'','48px')}${inp(def.load,'','68px')}${inp(def.tempo,'','68px')}${inp(def.rest,'','48px')}${inp(def.rpe,'','36px')}${inp('Notes','','80px')}</div>`;
     if (type==='speed') return `<div class="exercise-row" style="display:flex;gap:5px;align-items:center;padding:3px 6px;">${exCell}${inp('Sets','','42px')}${inp('Dist','','58px')}${inp('Rest','','48px')}${inp('Int%','','48px')}${inp('Cues','','100px')}</div>`;
     if (type==='esd')   return `<div class="exercise-row" style="display:flex;gap:5px;align-items:center;padding:3px 6px;">${exCell}${inp('Sets','','42px')}${inp('Time','','58px')}${inp('Rest','','48px')}${inp('HR','','48px')}${inp('Notes','','100px')}</div>`;
@@ -10272,11 +10565,11 @@ function _tmplDayCard(dayKey, dayLabel, athlete, acwr, readiness, mesoLbl, bw, r
   const p = PLAYERS[athlete] || {};
   const hdrHTML = `<div style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;">${athlete} — ${dayLabel}</div>
-    <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:3px;display:flex;gap:14px;flex-wrap:wrap;">
+    <div style="font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-top:3px;display:flex;gap:14px;flex-wrap:wrap;">
       <span>${mesoLbl}</span><span>ACWR ${acwr}</span><span>Readiness ${p.readiness?.toFixed(3)||'—'}</span><span>BW ${bw?bw.toFixed(1)+' lbs':'—'}</span>
       ${rmLine ? `<span style="color:var(--text3);">1RM: ${rmLine}</span>` : ''}
     </div>
-    <div style="margin-top:6px;"><span style="font-size:10px;background:rgba(59,122,196,0.15);border:1px solid rgba(59,122,196,0.3);border-radius:4px;padding:2px 8px;color:var(--blue);font-family:'DM Mono',monospace;">${def.sets} sets · ${def.reps} reps · ${def.load} · ${def.tempo} · ${def.rest} rest · RPE ${def.rpe}</span></div>
+    <div style="margin-top:6px;"><span style="font-size:10px;background:rgba(59,122,196,0.15);border:1px solid rgba(59,122,196,0.3);border-radius:4px;padding:2px 8px;color:var(--blue);font-family:\'DM Mono\',monospace;">${def.sets} sets · ${def.reps} reps · ${def.load} · ${def.tempo} · ${def.rest} rest · RPE ${def.rpe}</span></div>
   </div>`;
 
   if (!collapsible) {
@@ -10288,7 +10581,7 @@ function _tmplDayCard(dayKey, dayLabel, athlete, acwr, readiness, mesoLbl, bw, r
     <div style="display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;" onclick="tmplToggleDay('${uid}')">
       <div style="flex:1;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;">${dayLabel}</div>
-        <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;">${blocks.length} blocks · click to expand</div>
+        <div style="font-size:10px;color:var(--text3);font-family:\'DM Mono\',monospace;">${blocks.length} blocks · click to expand</div>
       </div>
       <span id="${uid}-chev" style="color:var(--text3);font-size:16px;">▶</span>
     </div>
@@ -10611,7 +10904,7 @@ function generateTemplateWeek() {
   let html = `<div id="printable-output">
     <div class="card section-mb" style="border-color:rgba(59,122,196,0.4);">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;">${athlete} — Week ${weekNum} · ${mesoLbl}</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'DM Mono',monospace;">${days.length} training days · ${def.sets} sets · ${def.reps} reps · ${def.load} · ${def.tempo}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:\'DM Mono\',monospace;">${days.length} training days · ${def.sets} sets · ${def.reps} reps · ${def.load} · ${def.tempo}</div>
     </div>`;
 
   days.forEach((dayKey, i) => {
@@ -10669,7 +10962,7 @@ function generateTemplateMeso() {
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div>
           <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;">🗓 ${athlete} — ${totalWeeks}-Week ${mesoLbl} Template</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'DM Mono',monospace;">${days.length} days/week · ${totalWeeks} weeks · Fill Week 1, copy across, then send to Periodization</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:\'DM Mono\',monospace;">${days.length} days/week · ${totalWeeks} weeks · Fill Week 1, copy across, then send to Periodization</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
           <button onclick="tmplExpandWeek(1)" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text2);font-size:11px;cursor:pointer;">▼ Expand Week 1</button>
@@ -10685,7 +10978,7 @@ function generateTemplateMeso() {
       onclick="tmplExpandWeek(${wi+1})" title="Click to expand all sessions in this week">
       <div style="flex:1;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;">Week ${wi+1} — Click to expand ▼</div>
-        <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;">${def.sets} sets · ${def.reps} reps · ${def.load} · RPE ${def.rpe}</div>
+        <div style="font-size:10px;color:var(--text3);font-family:\'DM Mono\',monospace;">${def.sets} sets · ${def.reps} reps · ${def.load} · RPE ${def.rpe}</div>
       </div>
     </div>`;
 
@@ -11519,6 +11812,7 @@ function initAnnualPlan() {
   });
   if (typeof loadAnnualData === 'function') loadAnnualData();
   if (typeof loadHERuns === 'function') loadHERuns();
+  if (typeof loadORM === 'function') loadORM();
   var swingDateEl = document.getElementById('swingDateInput');
   if (swingDateEl) swingDateEl.value = new Date().toISOString().slice(0,10);
   renderAnnualPlan();
@@ -15435,7 +15729,7 @@ function hardReset(){
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
 const SUPA_URL = 'https://umcdnbnvzwedrlidzaqg.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtY2RuYm52endlZHJsaWR6YXFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjMwNjUsImV4cCI6MjA5MjYzOTA2NX0.g4t2GaT33M03b6-stee9Aiy2We1KdJpw5KVEKwScwJM';
-const SUPA_KEYS = ['cubs_sc_statcast_v1','cubs_sc_hitting_v1','cubs_sc_cmj_v1','cubs_sc_abcmj_v1','cubs_sc_players_state_v1','cubs_sc_wellness_v1','cubs_sc_coach_notes_v1','cubs_sc_he_runs_v1'];
+const SUPA_KEYS = ['cubs_sc_statcast_v1','cubs_sc_hitting_v1','cubs_sc_cmj_v1','cubs_sc_abcmj_v1','cubs_sc_players_state_v1','cubs_sc_wellness_v1','cubs_sc_coach_notes_v1','cubs_sc_he_runs_v1','cubs_sc_orm_v1'];
 let _supaClient = null;
 
 function getSupaClient() {
