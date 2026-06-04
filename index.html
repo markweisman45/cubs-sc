@@ -717,6 +717,7 @@ body {
               </div>
             </div>
             <div id="readinessTrend" style="font-size:12px;font-weight:600;margin-top:8px;text-align:center;"></div>
+            <div id="playerFlags" style="margin-top:10px;display:flex;flex-direction:column;gap:5px;"></div>
           </div>
 
           <!-- ACWR + Readiness Trend stacked on right -->
@@ -2425,6 +2426,12 @@ body {
         <div class="card-title" style="margin-bottom:10px;color:var(--green);">🟢 OPTIMAL LOAD</div>
         <div id="brief-optimal" style="font-size:12px;"></div>
       </div>
+    </div>
+
+    <!-- All Flags -->
+    <div class="card" style="margin-bottom:16px;padding:16px;">
+      <div class="card-title" style="margin-bottom:10px;">🚩 PLAYER FLAGS</div>
+      <div id="brief-flags" style="font-size:12px;"></div>
     </div>
 
     <!-- CMJ Drops -->
@@ -5894,6 +5901,182 @@ function renderCoachNotes(p) {
     </div>` : ''}`;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// PLAYER FLAGS SYSTEM
+// ══════════════════════════════════════════════════════════════════════════════
+
+function computePlayerFlags(playerName) {
+  var p = PLAYERS[playerName];
+  if (!p) return [];
+  var flags = [];
+
+  // ── Speed flags ─────────────────────────────────────────────────────────────
+  var heRuns = heRunsData[playerName] || [];
+  if (heRuns.length) {
+    var allSpeeds = heRuns.map(function(r){return r.speed;}).filter(Boolean);
+    var seasonMax = allSpeeds.length ? Math.max.apply(null, allSpeeds) : 0;
+    var threshold90 = seasonMax * 0.9;
+
+    // Flag 1: Hasn't hit 90% of max speed in last 7 days
+    if (seasonMax > 0) {
+      var sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate()-7);
+      var recentRuns = heRuns.filter(function(r){
+        return r.speed > 0 && safeParseDate(r.date) >= sevenDaysAgo;
+      });
+      var recentMax = recentRuns.length ? Math.max.apply(null, recentRuns.map(function(r){return r.speed;})) : 0;
+      if (recentMax < threshold90) {
+        var pct = recentMax > 0 ? Math.round(recentMax/seasonMax*100) : 0;
+        flags.push({
+          type: 'speed',
+          level: 'yellow',
+          icon: '⚡',
+          text: '90% max speed not reached in 7 days' + (recentMax>0 ? ' (recent best: '+recentMax.toFixed(1)+' ft/s = '+pct+'% of max)' : ' (no runs)'),
+        });
+      }
+    }
+
+    // Flag 2: Speed trending down (this week vs 2 weeks ago >5% drop)
+    var now = new Date();
+    var oneWeekAgo = new Date(); oneWeekAgo.setDate(now.getDate()-7);
+    var twoWeeksAgo = new Date(); twoWeeksAgo.setDate(now.getDate()-14);
+    var thisWeekSpeeds = heRuns.filter(function(r){return safeParseDate(r.date)>=oneWeekAgo&&r.speed>0;}).map(function(r){return r.speed;});
+    var lastWeekSpeeds = heRuns.filter(function(r){var d=safeParseDate(r.date);return d>=twoWeeksAgo&&d<oneWeekAgo&&r.speed>0;}).map(function(r){return r.speed;});
+    if (thisWeekSpeeds.length >= 3 && lastWeekSpeeds.length >= 3) {
+      function p90(a){var s=a.slice().sort(function(a,b){return a-b;});return s[Math.floor(s.length*0.9)];}
+      var thisP90 = p90(thisWeekSpeeds), lastP90 = p90(lastWeekSpeeds);
+      var drop = (thisP90-lastP90)/lastP90*100;
+      if (drop < -5) {
+        flags.push({
+          type: 'speed_trend',
+          level: 'yellow',
+          icon: '📉',
+          text: 'Speed trending down: 90th pct this week '+thisP90.toFixed(1)+' vs '+lastP90.toFixed(1)+' last week ('+drop.toFixed(1)+'%)',
+        });
+      }
+    }
+
+    // Flag 3: No HE runs in 3+ days (if they have recent data)
+    if (heRuns.length) {
+      var lastRun = heRuns.slice().sort(function(a,b){return safeParseDate(b.date)-safeParseDate(a.date);})[0];
+      var daysSince = Math.floor((now-safeParseDate(lastRun.date))/(1000*60*60*24));
+      if (daysSince >= 3) {
+        flags.push({
+          type: 'no_runs',
+          level: daysSince >= 5 ? 'red' : 'yellow',
+          icon: '🔕',
+          text: daysSince+' days since last HE run ('+fmtDate(lastRun.date)+')',
+        });
+      }
+    }
+  }
+
+  // ── Load flags ──────────────────────────────────────────────────────────────
+  var ms = computeMonotonyStrain(playerName);
+
+  // Flag 4: Single day spike — latest game HE > 2x 7-day avg
+  if (p.recentGames && p.recentGames.length >= 3) {
+    var recentGames7 = p.recentGames.slice(-7);
+    var avgHE = recentGames7.reduce(function(s,g){return s+(g.he||0);},0)/recentGames7.length;
+    var latestHE = p.recentGames[p.recentGames.length-1].he || 0;
+    if (avgHE > 0 && latestHE > avgHE * 2) {
+      flags.push({
+        type: 'spike',
+        level: 'red',
+        icon: '🔺',
+        text: 'Load spike: '+latestHE.toLocaleString()+'ft HE last game = '+(latestHE/avgHE).toFixed(1)+'x 7-day avg ('+Math.round(avgHE)+'ft)',
+      });
+    }
+  }
+
+  // ── CMJ flags ──────────────────────────────────────────────────────────────
+  var cmjTrends = (p.cmjTrends||[]).filter(function(c){return !c.type||c.type==='CMJ';});
+  if (cmjTrends.length > 3) {
+    var avg30 = function(field){ var last=cmjTrends.slice(-30);return last.reduce(function(s,c){return s+(c[field]||0);},0)/last.length; };
+    var lastCMJ = cmjTrends[cmjTrends.length-1];
+
+    // Flag 5: PP/BM drop > 5%
+    var ppbmAvg = avg30('ppbm');
+    if (ppbmAvg > 0 && lastCMJ.ppbm) {
+      var ppbmDrop = (lastCMJ.ppbm - ppbmAvg) / ppbmAvg * 100;
+      if (ppbmDrop < -5) {
+        flags.push({
+          type: 'cmj_ppbm',
+          level: ppbmDrop < -10 ? 'red' : 'yellow',
+          icon: '📉',
+          text: 'CMJ PP/BM: '+lastCMJ.ppbm.toFixed(1)+' W/kg ('+(ppbmDrop.toFixed(1))+'% vs 30-day avg)',
+        });
+      }
+    }
+
+    // Flag 6: RSI-Mod drop > 10% (if data available)
+    var rsiAvg = avg30('rsiMod');
+    if (rsiAvg > 0 && lastCMJ.rsiMod) {
+      var rsiDrop = (lastCMJ.rsiMod - rsiAvg) / rsiAvg * 100;
+      if (rsiDrop < -10) {
+        flags.push({
+          type: 'cmj_rsi',
+          level: 'yellow',
+          icon: '⏱️',
+          text: 'RSI-Mod: '+lastCMJ.rsiMod.toFixed(2)+' m/s ('+(rsiDrop.toFixed(1))+'% vs 30-day avg)',
+        });
+      }
+    }
+  }
+
+  // ── Performance flags ───────────────────────────────────────────────────────
+  if (p.recentGames && p.recentGames.length >= 5) {
+    // Flag 7: Exit velo below season avg 3 games in a row
+    var exitVals = (p.recentGames||[]).map(function(g){return g.exit||0;}).filter(Boolean);
+    if (exitVals.length >= 5) {
+      var exitAvg = exitVals.reduce(function(s,v){return s+v;},0)/exitVals.length;
+      var last3Exit = exitVals.slice(-3);
+      if (last3Exit.every(function(v){return v < exitAvg * 0.95;})) {
+        flags.push({
+          type: 'exit_velo',
+          level: 'yellow',
+          icon: '⚾',
+          text: 'Exit velo below avg 3 games in a row (avg: '+exitAvg.toFixed(1)+' mph, recent: '+last3Exit.map(function(v){return v.toFixed(1);}).join(', ')+')',
+        });
+      }
+    }
+
+    // Flag 8: Bat speed drop > 5% vs 30-day avg
+    var batVals = (p.recentGames||[]).map(function(g){return g.bat||0;}).filter(Boolean);
+    if (batVals.length >= 5) {
+      var batAvg = batVals.slice(-30).reduce(function(s,v){return s+v;},0)/Math.min(batVals.length,30);
+      var latestBat = batVals[batVals.length-1];
+      var batDrop = (latestBat-batAvg)/batAvg*100;
+      if (batDrop < -5) {
+        flags.push({
+          type: 'bat_speed',
+          level: 'yellow',
+          icon: '🪄',
+          text: 'Bat speed: '+latestBat.toFixed(1)+' mph ('+(batDrop.toFixed(1))+'% vs avg '+batAvg.toFixed(1)+')',
+        });
+      }
+    }
+  }
+
+  return flags;
+}
+
+function renderFlagsEl(el, flags) {
+  if (!el) return;
+  if (!flags.length) {
+    el.innerHTML = '<div style="font-size:10px;color:var(--green);padding:4px 0;">✓ No flags</div>';
+    return;
+  }
+  var colors = {red:'rgba(239,68,68,0.15)',yellow:'rgba(245,158,11,0.12)',green:'rgba(34,197,94,0.1)'};
+  var borders = {red:'rgba(239,68,68,0.4)',yellow:'rgba(245,158,11,0.35)',green:'rgba(34,197,94,0.3)'};
+  var textColors = {red:'var(--red)',yellow:'var(--yellow)',green:'var(--green)'};
+  el.innerHTML = flags.map(function(f) {
+    return '<div style="display:flex;align-items:flex-start;gap:6px;padding:6px 8px;background:'+colors[f.level]+';border:1px solid '+borders[f.level]+';border-radius:6px;font-size:10px;">'
+      +'<span style="flex-shrink:0;">'+f.icon+'</span>'
+      +'<span style="color:'+textColors[f.level]+';line-height:1.4;">'+f.text+'</span>'
+      +'</div>';
+  }).join('');
+}
+
 function renderReadinessHero(p) {
   if (!document.getElementById('readinessHero')) return;
   // Set player photo
@@ -5992,6 +6175,13 @@ function renderReadinessHero(p) {
     } else {
       trendEl.innerHTML = '<span style="color:var(--green);">✓ Within optimal range</span>';
     }
+  }
+
+  // Render flags on overview
+  var flagsEl = document.getElementById('playerFlags');
+  if (flagsEl) {
+    var flags = computePlayerFlags(currentPlayer);
+    renderFlagsEl(flagsEl, flags);
   }
 }
 
@@ -8251,7 +8441,10 @@ function buildTeamList() {
     return `<div class="team-row" onclick="selectPlayer('${name.replace(/'/g,"\\'")}');switchTab('dashboard',document.querySelector('.nav-btn'))" style="cursor:pointer;">
       <div class="player-avatar" style="width:38px;height:38px;font-size:13px;flex-shrink:0;">${init}</div>
       <div style="min-width:120px;flex:0 0 auto;">
-        <div class="team-name">${name.split(' ').pop()}${cmjAlertBadge}</div>
+        <div class="team-name" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">${name.split(' ').pop()}${cmjAlertBadge}${(function(){
+          var tf=computePlayerFlags(name);
+          return tf.length?'<span style="font-size:9px;font-weight:600;padding:1px 5px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:4px;color:var(--red);">'+tf.length+' flag'+(tf.length>1?'s':'')+'</span>':'';
+        })()}</div>
         <div class="team-pos">${p.pos} · #${p.number}${coachNote ? ' · 📝' : ''}</div>
       </div>
 
