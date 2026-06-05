@@ -6140,8 +6140,8 @@ function renderReadinessHero(p) {
   const monotony = ms.monotony;
 
   // Strain thresholds → status
-  const sc = strain > 2500 ? 'red' : strain > 1500 ? 'yellow' : 'green';
-  const statusText = strain > 2500 ? '● HIGH STRAIN' : strain > 1500 ? '● MONITOR' : '● OPTIMAL';
+  const sc = strain > 3000 ? 'red' : strain > 1500 ? 'yellow' : 'green';
+  const statusText = strain > 3000 ? '● HIGH STRAIN' : strain > 1500 ? '● MONITOR' : '● OPTIMAL';
 
   const hero = document.getElementById('readinessHero');
   hero.className = 'readiness-hero ' + sc + '-status';
@@ -6168,7 +6168,7 @@ function renderReadinessHero(p) {
   if (trendEl) {
     if (strain === 0) {
       trendEl.innerHTML = '<span style="color:var(--text3);">No data</span>';
-    } else if (strain > 2500) {
+    } else if (strain > 3000) {
       trendEl.innerHTML = '<span style="color:var(--red);">↑ High load — consider reducing</span>';
     } else if (strain > 1500) {
       trendEl.innerHTML = '<span style="color:var(--yellow);">→ Moderate — monitor</span>';
@@ -6569,7 +6569,7 @@ function renderAllCharts(p) {
         legend: { display: false },
         annotation: { annotations: {
           monitor: { type:'line', yMin:1500, yMax:1500, borderColor:C.yellow, borderDash:[4,4], borderWidth:1 },
-          high:    { type:'line', yMin:2500, yMax:2500, borderColor:C.red,    borderDash:[4,4], borderWidth:1 },
+          high:    { type:'line', yMin:3000, yMax:3000, borderColor:C.red,    borderDash:[4,4], borderWidth:1 },
         }}
       }
     }
@@ -7203,7 +7203,7 @@ function renderBrief() {
       var ms = computeMonotonyStrain(name);
       var acwr = p.acwr || 0;
       var strain = ms.strain || 0;
-      var strainColor = strain>2500?'var(--red)':strain>1500?'var(--yellow)':'var(--green)';
+      var strainColor = strain>3000?'var(--red)':strain>1500?'var(--yellow)':'var(--green)';
       var acwrColor2 = acwr>1.25||acwr<0.75?'var(--red)':acwr>1.15||acwr<0.85?'var(--yellow)':'var(--green)';
 
       // CMJ check
@@ -7214,7 +7214,7 @@ function renderBrief() {
       var hasCmjAlert = cmjDrop!==null && cmjDrop<-5;
 
       // Categorize
-      if (strain>2500 || acwr>1.25 || acwr<0.75) concern.push({name,p,ms,acwr,cmjDrop});
+      if (strain>3000 || acwr>1.25 || acwr<0.75) concern.push({name,p,ms,acwr,cmjDrop});
       else if (strain<=1500 && acwr>=0.85 && acwr<=1.15) optimal.push({name,p,ms,acwr,cmjDrop});
       if (hasCmjAlert) cmjAlerts.push({name,p,cmjDrop,cmjLast,cmjAvg});
 
@@ -7294,9 +7294,9 @@ function renderBrief() {
       var name = entry[0], p = entry[1];
       var ms = computeMonotonyStrain(name);
       var acwr = p.acwr||0;
-      var strainColor = ms.strain>2500?'var(--red)':ms.strain>1500?'var(--yellow)':'var(--green)';
+      var strainColor = ms.strain>3000?'var(--red)':ms.strain>1500?'var(--yellow)':'var(--green)';
       var acwrColor2 = acwr>1.25||acwr<0.75?'var(--red)':acwr>1.15||acwr<0.85?'var(--yellow)':'var(--green)';
-      var statusDot = ms.strain>2500||acwr>1.25||acwr<0.75 ? '🔴' : ms.strain>1500||acwr>1.15||acwr<0.85 ? '🟡' : '🟢';
+      var statusDot = ms.strain>3000||acwr>1.25||acwr<0.75 ? '🔴' : ms.strain>1500||acwr>1.15||acwr<0.85 ? '🟡' : '🟢';
       return {name, ms, acwr, strainColor, acwrColor2, statusDot, strain:ms.strain};
     }).sort(function(a,b){return b.strain-a.strain;});
 
@@ -7803,8 +7803,8 @@ function exportPlayerPDF(){
   var prs={};orms.forEach(function(e){if(!prs[e.exercise]||e.est1rm>prs[e.exercise])prs[e.exercise]=e.est1rm;});
 
   var date=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  var strainStatus=ms.strain>2500?'HIGH STRAIN':ms.strain>1500?'MONITOR':'OPTIMAL';
-  var strainColor=ms.strain>2500?'#dc2626':ms.strain>1500?'#d97706':'#16a34a';
+  var strainStatus=ms.strain>3000?'HIGH STRAIN':ms.strain>1500?'MONITOR':'OPTIMAL';
+  var strainColor=ms.strain>3000?'#dc2626':ms.strain>1500?'#d97706':'#16a34a';
   var acwrStatus=p.acwr>1.25||p.acwr<0.75?'HIGH RISK':p.acwr>1.15||p.acwr<0.85?'MONITOR':'OPTIMAL';
   var acwrColor=p.acwr>1.25||p.acwr<0.75?'#dc2626':p.acwr>1.15||p.acwr<0.85?'#d97706':'#16a34a';
 
@@ -8508,7 +8508,7 @@ function buildTeamList() {
 
       \x3C!-- Strain -->
       <div style="text-align:right;min-width:56px;">
-        <div style="font-family:\'DM Mono\',monospace;font-size:13px;color:${ms.strain>2500?'var(--red)':ms.strain>1500?'var(--yellow)':'var(--text)'};">${ms.strain > 0 ? ms.strain.toLocaleString() : '—'}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;color:${ms.strain>3000?'var(--red)':ms.strain>1500?'var(--yellow)':'var(--text)'};">${ms.strain > 0 ? ms.strain.toLocaleString() : '—'}</div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">Strain</div>
       </div>
 
