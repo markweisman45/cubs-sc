@@ -7749,149 +7749,242 @@ function exportPlayerPDF(){
   var cmjTrends=(p.cmjTrends||[]).filter(function(c){return !c.type||c.type==='CMJ';});
   var abTrends=(p.cmjTrends||[]).filter(function(c){return c.type==='ABCMJ';});
   var lastCMJ=cmjTrends.length?cmjTrends[cmjTrends.length-1]:{};
-
-  // 30-day CMJ averages for % comparison
   var cmj30=cmjTrends.slice(-30);
-  function cmjAvg(field){ return cmj30.length>3?cmj30.reduce(function(s,c){return s+(c[field]||0);},0)/cmj30.length:0; }
-  function pctVsAvg(val,avg){ return (avg>0&&val)?((val-avg)/avg*100):null; }
-  function pctStr(pct){ return pct===null?'':' ('+(pct>=0?'+':'')+pct.toFixed(1)+'%)'; }
-  function pctColor(pct,invert){ if(pct===null)return '#111'; var good=invert?pct<-3:pct>3; var bad=invert?pct>3:pct<-5; return bad?'#dc2626':good?'#16a34a':'#111'; }
-
+  function cmjAvg(field){return cmj30.length>3?cmj30.reduce(function(s,c){return s+(c[field]||0);},0)/cmj30.length:0;}
+  function pctVsAvg(val,avg){return (avg>0&&val)?((val-avg)/avg*100):null;}
+  function pctStr(pct){return pct===null?'':' ('+(pct>=0?'+':'')+pct.toFixed(1)+'%)';}
+  function pctColor(pct,invert){if(pct===null)return '#111';var bad=invert?pct>3:pct<-5;var good=invert?pct<-3:pct>3;return bad?'#dc2626':good?'#16a34a':'#111';}
   var jumpAvg=cmjAvg('jump'),ppbmAvg=cmjAvg('ppbm'),vtoAvg=cmjAvg('vto'),concAvg=cmjAvg('conc'),stiffAvg=cmjAvg('stiff'),p1Avg=cmjAvg('p1'),p2Avg=cmjAvg('p2'),rsiAvg=cmjAvg('rsiMod');
   var jumpPct=pctVsAvg(lastCMJ.jump,jumpAvg),ppbmPct=pctVsAvg(lastCMJ.ppbm,ppbmAvg),vtoPct=pctVsAvg(lastCMJ.vto,vtoAvg),concPct=pctVsAvg(lastCMJ.conc,concAvg),stiffPct=pctVsAvg(lastCMJ.stiff,stiffAvg),p1Pct=pctVsAvg(lastCMJ.p1,p1Avg),p2Pct=pctVsAvg(lastCMJ.p2,p2Avg),rsiPct=pctVsAvg(lastCMJ.rsiMod,rsiAvg);
-
-  // ABCMJ
   var lastAB=abTrends.length?abTrends[abTrends.length-1]:{};
   var ab30=abTrends.slice(-30);
   function abAvg(field){return ab30.length>3?ab30.reduce(function(s,c){return s+(c[field]||0);},0)/ab30.length:0;}
   var abPpbmAvg=abAvg('ppbm'),abJumpAvg=abAvg('jump');
   var abPpbmPct=pctVsAvg(lastAB.ppbm,abPpbmAvg),abJumpPct=pctVsAvg(lastAB.jump,abJumpAvg);
-
-  // Running velocity
   var heRuns=heRunsData[currentPlayer]||[];
   var allSpeeds=heRuns.map(function(r){return r.speed;}).filter(Boolean).sort(function(a,b){return a-b;});
   var p90spd=allSpeeds.length?allSpeeds[Math.floor(allSpeeds.length*0.9)]:0;
   var maxSpd=allSpeeds.length?Math.max.apply(null,allSpeeds):0;
   var avgSpd=allSpeeds.length?allSpeeds.reduce(function(s,v){return s+v;},0)/allSpeeds.length:0;
-  // Season speed trend
   var weekGroups={};
-  heRuns.forEach(function(r){
-    if(!r.speed||!r.date)return;
-    var d=safeParseDate(r.date),jan1=new Date(d.getFullYear(),0,1);
-    var wk=Math.ceil((((d-jan1)/86400000)+jan1.getDay()+1)/7);
-    var key=d.getFullYear()+'-W'+String(wk).padStart(2,'0');
-    if(!weekGroups[key])weekGroups[key]=[];
-    weekGroups[key].push(r.speed);
-  });
+  heRuns.forEach(function(r){if(!r.speed||!r.date)return;var d=safeParseDate(r.date),jan1=new Date(d.getFullYear(),0,1);var wk=Math.ceil((((d-jan1)/86400000)+jan1.getDay()+1)/7);var key=d.getFullYear()+'-W'+String(wk).padStart(2,'0');if(!weekGroups[key])weekGroups[key]=[];weekGroups[key].push(r.speed);});
   var wkKeys=Object.keys(weekGroups).sort();
   var wkP90s=wkKeys.map(function(k){var s=weekGroups[k].sort(function(a,b){return a-b;});return s[Math.floor(s.length*0.9)];});
   var spdTrend=wkP90s.length>=2?(wkP90s[wkP90s.length-1]-wkP90s[0]):null;
-  var spdTrendStr=spdTrend!==null?((spdTrend>=0?'+':'')+spdTrend.toFixed(2)+' ft/s season change'):'';
-
-  // Performance season 90th pcts
   var exitVals=(p.recentGames||[]).map(function(g){return g.exit||0;}).filter(Boolean).sort(function(a,b){return a-b;});
   var batVals=(p.recentGames||[]).map(function(g){return g.bat||0;}).filter(Boolean).sort(function(a,b){return a-b;});
   var throwVals=(p.recentGames||[]).map(function(g){return g.throwV||0;}).filter(Boolean).sort(function(a,b){return a-b;});
   function p90arr(a){return a.length?a[Math.floor(a.length*0.9)]:0;}
   var exitP90=p90arr(exitVals),batP90=p90arr(batVals),throwP90=p90arr(throwVals);
-  // Latest vs season 90th pct
   var lastGame=p.recentGames&&p.recentGames.length?p.recentGames[p.recentGames.length-1]:{};
   var exitLatestPct=pctVsAvg(lastGame.exit,exitP90),batLatestPct=pctVsAvg(lastGame.bat,batP90),throwLatestPct=pctVsAvg(lastGame.throwV,throwP90);
-
-  // 1RM PRs
   var orms=ormData[currentPlayer]||[];
   var prs={};orms.forEach(function(e){if(!prs[e.exercise]||e.est1rm>prs[e.exercise])prs[e.exercise]=e.est1rm;});
-
   var date=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var strainStatus=ms.strain>3000?'HIGH STRAIN':ms.strain>1500?'MONITOR':'OPTIMAL';
   var strainColor=ms.strain>3000?'#dc2626':ms.strain>1500?'#d97706':'#16a34a';
   var acwrStatus=p.acwr>1.25||p.acwr<0.75?'HIGH RISK':p.acwr>1.15||p.acwr<0.85?'MONITOR':'OPTIMAL';
   var acwrColor=p.acwr>1.25||p.acwr<0.75?'#dc2626':p.acwr>1.15||p.acwr<0.85?'#d97706':'#16a34a';
 
-  // ── Build report ────────────────────────────────────────────────────────────
-  var w=window.open('','_blank','width=960,height=1200');
-  var css='*{margin:0;padding:0;box-sizing:border-box;}body{font-family:"Helvetica Neue",Arial,sans-serif;color:#111;padding:28px 32px;font-size:12px;}h1{font-size:26px;font-weight:800;letter-spacing:-0.5px;}h2{font-size:11px;font-weight:700;color:#1e40af;border-bottom:2px solid #1e40af;padding-bottom:3px;margin:16px 0 8px;text-transform:uppercase;letter-spacing:.6px;}.sub{font-size:11px;color:#6b7280;margin-bottom:16px;}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px;}.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:6px;}.card{border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;}.val{font-size:20px;font-weight:800;font-family:monospace;line-height:1.1;}.pct{font-size:11px;font-weight:600;margin-top:2px;}.lbl{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-top:3px;}table{width:100%;border-collapse:collapse;font-size:10px;}th{padding:4px 6px;text-align:left;border-bottom:2px solid #e5e7eb;color:#6b7280;font-size:9px;text-transform:uppercase;}td{padding:4px 6px;border-bottom:1px solid #f3f4f6;}.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;}.footer{margin-top:20px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:9px;color:#9ca3af;display:flex;justify-content:space-between;}@media print{body{padding:16px 20px;}}';
+  // ── SVG Chart builder ───────────────────────────────────────────────────────
+  function makeSVG(data, opts) {
+    // data: array of numbers (nulls allowed), opts: {w,h,color,refLines,label,unit,yMin}
+    var W=opts.w||600, H=opts.h||120, pad={l:48,r:16,t:20,b:28};
+    var vals = data.filter(function(v){return v!==null&&v!==undefined&&!isNaN(v);});
+    if (!vals.length) return '<div style="height:'+H+'px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:11px;font-style:italic;">No data</div>';
+    var minV = opts.yMin!==undefined ? opts.yMin : Math.min.apply(null,vals)*0.97;
+    var maxV = Math.max.apply(null,vals)*1.03;
+    if (maxV===minV) { maxV+=1; minV-=1; }
+    var cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
+    function xp(i){return pad.l + (i/(data.length-1||1))*cW;}
+    function yp(v){return pad.t + cH - ((v-minV)/(maxV-minV))*cH;}
+    var color = opts.color||'#3b82f6';
 
+    // Build path
+    var pathD='', areaD='';
+    var first=true, firstX=0, lastX=0, lastY=0;
+    data.forEach(function(v,i){
+      if (v===null||v===undefined||isNaN(v)) { first=true; return; }
+      var x=xp(i), y=yp(v);
+      if (first) { pathD+='M'+x.toFixed(1)+','+y.toFixed(1); areaD+='M'+x.toFixed(1)+','+(pad.t+cH).toFixed(1)+' L'+x.toFixed(1)+','+y.toFixed(1); firstX=x; first=false; }
+      else { pathD+=' L'+x.toFixed(1)+','+y.toFixed(1); areaD+=' L'+x.toFixed(1)+','+y.toFixed(1); }
+      lastX=x; lastY=y;
+    });
+    areaD+=' L'+lastX.toFixed(1)+','+(pad.t+cH).toFixed(1)+' Z';
+
+    // Y axis ticks (4 lines)
+    var ticks=''; var gridLines='';
+    for (var ti=0;ti<=3;ti++) {
+      var tv = minV + (maxV-minV)*ti/3;
+      var ty = yp(tv);
+      ticks += '<text x="'+(pad.l-6).toFixed(1)+'" y="'+(ty+4).toFixed(1)+'" font-size="9" fill="#9ca3af" text-anchor="end">'+tv.toFixed(tv>100?0:1)+'</text>';
+      gridLines += '<line x1="'+pad.l+'" y1="'+ty.toFixed(1)+'" x2="'+(pad.l+cW)+'" y2="'+ty.toFixed(1)+'" stroke="#e5e7eb" stroke-width="0.5"/>';
+    }
+
+    // X axis labels (show ~6 evenly spaced)
+    var xLabels='';
+    if (opts.xLabels && opts.xLabels.length) {
+      var step = Math.max(1, Math.floor(opts.xLabels.length/6));
+      opts.xLabels.forEach(function(lbl,i){
+        if (i%step===0||i===opts.xLabels.length-1) {
+          xLabels += '<text x="'+xp(i).toFixed(1)+'" y="'+(H-6)+'" font-size="8" fill="#9ca3af" text-anchor="middle">'+lbl+'</text>';
+        }
+      });
+    }
+
+    // Reference lines
+    var refs='';
+    if (opts.refLines) opts.refLines.forEach(function(r){
+      if (r.y < minV || r.y > maxV) return;
+      var ry = yp(r.y);
+      refs += '<line x1="'+pad.l+'" y1="'+ry.toFixed(1)+'" x2="'+(pad.l+cW)+'" y2="'+ry.toFixed(1)+'" stroke="'+r.color+'" stroke-width="1" stroke-dasharray="4,3"/>';
+      refs += '<text x="'+(pad.l+cW-2)+'" y="'+(ry-3).toFixed(1)+'" font-size="8" fill="'+r.color+'" text-anchor="end">'+r.label+'</text>';
+    });
+
+    // Dots
+    var dots='';
+    data.forEach(function(v,i){
+      if (v===null||v===undefined||isNaN(v)) return;
+      var isLast = (i===data.length-1 || data.slice(i+1).every(function(x){return x===null||isNaN(x);}));
+      if (isLast) dots += '<circle cx="'+xp(i).toFixed(1)+'" cy="'+yp(v).toFixed(1)+'" r="4" fill="'+color+'" stroke="white" stroke-width="1.5"/>';
+    });
+
+    // Chart label
+    var lbl = opts.label ? '<text x="'+pad.l+'" y="13" font-size="10" fill="#374151" font-weight="600">'+opts.label+'</text>' : '';
+
+    return '<svg width="'+W+'" height="'+H+'" style="display:block;width:100%;" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'
+      +'<rect width="'+W+'" height="'+H+'" fill="white"/>'
+      + lbl + gridLines
+      + '<path d="'+areaD+'" fill="'+color+'" opacity="0.08"/>'
+      + '<path d="'+pathD+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round"/>'
+      + refs + ticks + xLabels + dots
+      +'</svg>';
+  }
+
+  // ── Build chart data ────────────────────────────────────────────────────────
+  // Strain trend (last 30 game dates)
+  var games30 = (p.recentGames||[]).slice(-30);
+  var gameLabels = games30.map(function(g){return g.date;});
+
+  // Per-game strain
+  var sc=(typeof importedData!=='undefined'&&importedData.statcast)?importedData.statcast:{};
+  var sk=Object.keys(sc).find(function(k){return k===currentPlayer||k.toLowerCase()===currentPlayer.toLowerCase();});
+  var scRows=sk?(sc[sk]||[]).sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);}):[];
+  var strainVals = games30.map(function(g){
+    var match=scRows.find(function(r){return fmtDate(r.date)===g.date;});
+    if(!match)return null;
+    var ref=safeParseDate(match.date);ref.setHours(0,0,0,0);
+    var daily=[];
+    for(var i=6;i>=0;i--){var d=new Date(ref);d.setDate(d.getDate()-i);d.setHours(0,0,0,0);var r=scRows.find(function(r){var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===d.getTime();});daily.push(r?(r.heDist||0):0);}
+    var wk=daily.reduce(function(s,v){return s+v;},0),avg=wk/7,sd=Math.sqrt(daily.reduce(function(s,v){return s+Math.pow(v-avg,2);},0)/7),mono=sd>0?avg/sd:0;
+    return Math.round(wk*mono);
+  });
+
+  // ACWR per game
+  var acwrVals = games30.map(function(g){return g.acwr||null;});
+
+  // HE runs per game
+  var heVals = games30.map(function(g){return g.he||null;});
+
+  // CMJ PP/BM (last 30)
+  var cmjLabels = cmjTrends.slice(-30).map(function(c){return c.date;});
+  var ppbmVals = cmjTrends.slice(-30).map(function(c){return c.ppbm||null;});
+  var jumpVals = cmjTrends.slice(-30).map(function(c){return c.jump||null;});
+
+  // Bat speed per game
+  var batGameVals = games30.map(function(g){return g.bat||null;});
+
+  // ── CSS & HTML ──────────────────────────────────────────────────────────────
+  var css='*{margin:0;padding:0;box-sizing:border-box;}body{font-family:"Helvetica Neue",Arial,sans-serif;color:#111;padding:24px 28px;font-size:12px;}h1{font-size:24px;font-weight:800;letter-spacing:-0.5px;}h2{font-size:10px;font-weight:700;color:#1e40af;border-bottom:2px solid #1e40af;padding-bottom:3px;margin:14px 0 7px;text-transform:uppercase;letter-spacing:.6px;}.sub{font-size:11px;color:#6b7280;margin-bottom:14px;}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px;}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px;}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;}.card{border:1px solid #e5e7eb;border-radius:6px;padding:9px 11px;}.val{font-size:19px;font-weight:800;font-family:monospace;line-height:1.1;}.pct{font-size:10px;font-weight:600;margin-top:1px;}.lbl{font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}table{width:100%;border-collapse:collapse;font-size:10px;}th{padding:4px 6px;text-align:left;border-bottom:2px solid #e5e7eb;color:#6b7280;font-size:9px;text-transform:uppercase;}td{padding:4px 6px;border-bottom:1px solid #f3f4f6;}.chart-card{border:1px solid #e5e7eb;border-radius:6px;padding:10px;margin-bottom:8px;}.chart-title{font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}.footer{margin-top:16px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:9px;color:#9ca3af;display:flex;justify-content:space-between;}@media print{body{padding:14px 18px;}}';
+
+  var w=window.open('','_blank','width=960,height=1200');
   w.document.write('<!DOCTYPE html><html><head><title>'+currentPlayer+' — S&C Report</title><style>'+css+'</style></head><body>');
 
-  // Header
   w.document.write('<h1>'+currentPlayer+'</h1>');
-  w.document.write('<div class="sub">Chicago Cubs &middot; '+p.pos+' &middot; #'+(p.number||'')+'&nbsp;&nbsp;|&nbsp;&nbsp;Report Date: '+date+'</div>');
+  w.document.write('<div class="sub">Chicago Cubs &middot; '+(p.pos||'')+' &middot; #'+(p.number||'')+'&nbsp;&nbsp;|&nbsp;&nbsp;Report: '+date+'</div>');
 
   // ── Load Status ─────────────────────────────────────────────────────────────
   w.document.write('<h2>Load Status</h2><div class="grid4">');
   w.document.write('<div class="card"><div class="val" style="color:'+strainColor+';">'+ms.strain.toLocaleString()+'</div><div class="lbl">Strain</div><div class="pct" style="color:'+strainColor+';">'+strainStatus+'</div></div>');
   w.document.write('<div class="card"><div class="val" style="color:'+acwrColor+';">'+(p.acwr?p.acwr.toFixed(3):'—')+'</div><div class="lbl">ACWR</div><div class="pct" style="color:'+acwrColor+';">'+acwrStatus+'</div></div>');
-  w.document.write('<div class="card"><div class="val">'+(ms.weeklyHE>0?ms.weeklyHE.toLocaleString():'—')+'</div><div class="lbl">Weekly HE Distance (ft)</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(ms.weeklyHE>0?ms.weeklyHE.toLocaleString():'—')+'</div><div class="lbl">Weekly HE (ft)</div></div>');
   w.document.write('<div class="card"><div class="val">'+ms.monotony.toFixed(2)+'</div><div class="lbl">Monotony</div></div></div>');
 
-  // ── CMJ ─────────────────────────────────────────────────────────────────────
-  w.document.write('<h2>CMJ — No Arm Swing (vs 30-day avg)</h2><div class="grid4">');
-  w.document.write('<div class="card"><div class="val">'+(lastCMJ.jump?lastCMJ.jump.toFixed(1):'—')+'<span style="font-size:12px;color:#6b7280;"> cm</span></div><div class="pct" style="color:'+pctColor(jumpPct,false)+';">'+pctStr(jumpPct)+'</div><div class="lbl">Jump Height</div></div>');
-  w.document.write('<div class="card"><div class="val">'+(lastCMJ.ppbm?lastCMJ.ppbm.toFixed(1):'—')+'<span style="font-size:12px;color:#6b7280;"> W/kg</span></div><div class="pct" style="color:'+pctColor(ppbmPct,false)+';">'+pctStr(ppbmPct)+'</div><div class="lbl">PP/BM</div></div>');
-  w.document.write('<div class="card"><div class="val">'+(lastCMJ.vto?lastCMJ.vto.toFixed(2):'—')+'<span style="font-size:12px;color:#6b7280;"> m/s</span></div><div class="pct" style="color:'+pctColor(vtoPct,false)+';">'+pctStr(vtoPct)+'</div><div class="lbl">VTO</div></div>');
+  // ── Trend Charts row 1: Strain + ACWR ───────────────────────────────────────
+  w.document.write('<h2>Workload Trends — Last 30 Games</h2><div class="grid2">');
+  w.document.write('<div class="chart-card"><div class="chart-title">Strain (Weekly HE × Monotony)</div>');
+  w.document.write(makeSVG(strainVals,{w:400,h:110,color:'#d97706',label:'',xLabels:gameLabels,yMin:0,refLines:[{y:1500,color:'#d97706',label:'1,500'},{y:3000,color:'#dc2626',label:'3,000'}]}));
+  w.document.write('</div>');
+  w.document.write('<div class="chart-card"><div class="chart-title">ACWR (Acute:Chronic Workload Ratio)</div>');
+  w.document.write(makeSVG(acwrVals,{w:400,h:110,color:'#3b82f6',label:'',xLabels:gameLabels,refLines:[{y:0.85,color:'#d97706',label:'0.85'},{y:1.15,color:'#d97706',label:'1.15'},{y:1.25,color:'#dc2626',label:'1.25'}]}));
+  w.document.write('</div></div>');
+
+  // ── Trend Charts row 2: HE Runs + Bat Speed ─────────────────────────────────
+  w.document.write('<div class="grid2">');
+  w.document.write('<div class="chart-card"><div class="chart-title">HE Distance Per Game (ft)</div>');
+  w.document.write(makeSVG(heVals,{w:400,h:110,color:'#22c55e',label:'',xLabels:gameLabels,yMin:0}));
+  w.document.write('</div>');
+  w.document.write('<div class="chart-card"><div class="chart-title">Bat Speed Per Game (mph)</div>');
+  w.document.write(makeSVG(batGameVals,{w:400,h:110,color:'#ef4444',label:'',xLabels:gameLabels,refLines:batP90>0?[{y:batP90,color:'#9ca3af',label:'90th'}]:[]}));
+  w.document.write('</div></div>');
+
+  // ── CMJ Charts ──────────────────────────────────────────────────────────────
+  w.document.write('<h2>CMJ Force Plate Trends — Last 30 Sessions</h2><div class="grid2">');
+  w.document.write('<div class="chart-card"><div class="chart-title">PP/BM — Peak Power per Body Mass (W/kg)</div>');
+  w.document.write(makeSVG(ppbmVals,{w:400,h:110,color:'#8b5cf6',label:'',xLabels:cmjLabels,refLines:ppbmAvg>0?[{y:ppbmAvg,color:'#9ca3af',label:'30d avg'}]:[]}));
+  w.document.write('</div>');
+  w.document.write('<div class="chart-card"><div class="chart-title">Jump Height (cm)</div>');
+  w.document.write(makeSVG(jumpVals,{w:400,h:110,color:'#06b6d4',label:'',xLabels:cmjLabels,refLines:jumpAvg>0?[{y:jumpAvg,color:'#9ca3af',label:'30d avg'}]:[]}));
+  w.document.write('</div></div>');
+
+  // ── CMJ metrics ─────────────────────────────────────────────────────────────
+  w.document.write('<h2>CMJ — No Arm Swing (latest vs 30-day avg)</h2><div class="grid4">');
+  w.document.write('<div class="card"><div class="val">'+(lastCMJ.jump?lastCMJ.jump.toFixed(1):'—')+'<span style="font-size:11px;color:#6b7280;"> cm</span></div><div class="pct" style="color:'+pctColor(jumpPct,false)+';">'+pctStr(jumpPct)+'</div><div class="lbl">Jump Height</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(lastCMJ.ppbm?lastCMJ.ppbm.toFixed(1):'—')+'<span style="font-size:11px;color:#6b7280;"> W/kg</span></div><div class="pct" style="color:'+pctColor(ppbmPct,false)+';">'+pctStr(ppbmPct)+'</div><div class="lbl">PP/BM</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(lastCMJ.vto?lastCMJ.vto.toFixed(2):'—')+'<span style="font-size:11px;color:#6b7280;"> m/s</span></div><div class="pct" style="color:'+pctColor(vtoPct,false)+';">'+pctStr(vtoPct)+'</div><div class="lbl">VTO</div></div>');
   w.document.write('<div class="card"><div class="val">'+(lastCMJ.rsiMod?lastCMJ.rsiMod.toFixed(2):'—')+'</div><div class="pct" style="color:'+pctColor(rsiPct,false)+';">'+pctStr(rsiPct)+'</div><div class="lbl">RSI-Modified</div></div></div>');
   w.document.write('<div class="grid4">');
-  w.document.write('<div class="card"><div class="val">'+(lastCMJ.conc?Math.round(lastCMJ.conc):'—')+'<span style="font-size:12px;color:#6b7280;"> W</span></div><div class="pct" style="color:'+pctColor(concPct,false)+';">'+pctStr(concPct)+'</div><div class="lbl">Conc Mean Power</div></div>');
-  w.document.write('<div class="card"><div class="val">'+(lastCMJ.stiff?Math.round(lastCMJ.stiff):'—')+'</div><div class="pct" style="color:'+pctColor(stiffPct,false)+';">'+pctStr(stiffPct)+'</div><div class="lbl">Stiffness (N/m)</div></div>');
-  w.document.write('<div class="card"><div class="val">'+(lastCMJ.p1?lastCMJ.p1.toFixed(1):'—')+'<span style="font-size:12px;color:#6b7280;"> N·s</span></div><div class="pct" style="color:'+pctColor(p1Pct,false)+';">'+pctStr(p1Pct)+'</div><div class="lbl">P1 Impulse</div></div>');
-  w.document.write('<div class="card"><div class="val">'+(lastCMJ.p2?lastCMJ.p2.toFixed(1):'—')+'<span style="font-size:12px;color:#6b7280;"> N·s</span></div><div class="pct" style="color:'+pctColor(p2Pct,false)+';">'+pctStr(p2Pct)+'</div><div class="lbl">P2 Impulse</div></div></div>');
-
-  // ABCMJ
-  if(lastAB.ppbm||lastAB.jump){
-    w.document.write('<div class="grid4" style="margin-top:4px;">');
-    w.document.write('<div class="card" style="border-color:#fca5a5;"><div class="val">'+(lastAB.jump?lastAB.jump.toFixed(1):'—')+'<span style="font-size:12px;color:#6b7280;"> cm</span></div><div class="pct" style="color:'+pctColor(abJumpPct,false)+';">'+pctStr(abJumpPct)+'</div><div class="lbl">ABCMJ Jump Ht</div></div>');
-    w.document.write('<div class="card" style="border-color:#fca5a5;"><div class="val">'+(lastAB.ppbm?lastAB.ppbm.toFixed(1):'—')+'<span style="font-size:12px;color:#6b7280;"> W/kg</span></div><div class="pct" style="color:'+pctColor(abPpbmPct,false)+';">'+pctStr(abPpbmPct)+'</div><div class="lbl">ABCMJ PP/BM</div></div>');
-    w.document.write('</div>');
-  }
+  w.document.write('<div class="card"><div class="val">'+(lastCMJ.conc?Math.round(lastCMJ.conc):'—')+'<span style="font-size:11px;color:#6b7280;"> W</span></div><div class="pct" style="color:'+pctColor(concPct,false)+';">'+pctStr(concPct)+'</div><div class="lbl">Conc Power</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(lastCMJ.stiff?Math.round(lastCMJ.stiff):'—')+'</div><div class="pct" style="color:'+pctColor(stiffPct,false)+';">'+pctStr(stiffPct)+'</div><div class="lbl">Stiffness</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(lastCMJ.p1?lastCMJ.p1.toFixed(1):'—')+'<span style="font-size:11px;color:#6b7280;"> N·s</span></div><div class="pct" style="color:'+pctColor(p1Pct,false)+';">'+pctStr(p1Pct)+'</div><div class="lbl">P1 Impulse</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(lastCMJ.p2?lastCMJ.p2.toFixed(1):'—')+'<span style="font-size:11px;color:#6b7280;"> N·s</span></div><div class="pct" style="color:'+pctColor(p2Pct,false)+';">'+pctStr(p2Pct)+'</div><div class="lbl">P2 Impulse</div></div></div>');
 
   // ── Running Velocity ────────────────────────────────────────────────────────
-  w.document.write('<h2>Running Velocity ('+allSpeeds.length+' HE Runs)</h2><div class="grid4">');
-  w.document.write('<div class="card"><div class="val" style="color:#d97706;">'+(maxSpd?maxSpd.toFixed(2):'—')+'<span style="font-size:12px;color:#6b7280;"> ft/s</span></div><div class="lbl">Max Speed (Season)</div></div>');
-  w.document.write('<div class="card"><div class="val">'+(p90spd?p90spd.toFixed(2):'—')+'<span style="font-size:12px;color:#6b7280;"> ft/s</span></div><div class="lbl">90th Pct Speed</div></div>');
-  w.document.write('<div class="card"><div class="val">'+(avgSpd?avgSpd.toFixed(2):'—')+'<span style="font-size:12px;color:#6b7280;"> ft/s</span></div><div class="lbl">Avg Speed</div></div>');
-  w.document.write('<div class="card"><div class="val" style="color:'+(spdTrend!==null&&spdTrend>0?'#16a34a':spdTrend!==null&&spdTrend<0?'#dc2626':'#111')+'">'+(spdTrend!==null?(spdTrend>=0?'+':'')+spdTrend.toFixed(2):'—')+'<span style="font-size:12px;color:#6b7280;"> ft/s</span></div><div class="lbl">Season Trend</div></div></div>');
+  w.document.write('<h2>Running Velocity</h2><div class="grid4">');
+  w.document.write('<div class="card"><div class="val" style="color:#d97706;">'+(maxSpd?maxSpd.toFixed(2):'—')+'<span style="font-size:11px;color:#6b7280;"> ft/s</span></div><div class="lbl">Max Speed</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(p90spd?p90spd.toFixed(2):'—')+'<span style="font-size:11px;color:#6b7280;"> ft/s</span></div><div class="lbl">90th Pct</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(avgSpd?avgSpd.toFixed(2):'—')+'<span style="font-size:11px;color:#6b7280;"> ft/s</span></div><div class="lbl">Avg Speed</div></div>');
+  w.document.write('<div class="card"><div class="val" style="color:'+(spdTrend!==null&&spdTrend>0?'#16a34a':spdTrend!==null&&spdTrend<0?'#dc2626':'#111')+'">'+(spdTrend!==null?(spdTrend>=0?'+':'')+spdTrend.toFixed(2):'—')+'<span style="font-size:11px;color:#6b7280;"> ft/s</span></div><div class="lbl">Season Trend</div></div></div>');
 
   // ── Performance ─────────────────────────────────────────────────────────────
   w.document.write('<h2>Performance (latest vs season 90th pct)</h2><div class="grid4">');
-  w.document.write('<div class="card"><div class="val">'+(lastGame.exit?lastGame.exit.toFixed(1):'—')+'<span style="font-size:12px;color:#6b7280;"> mph</span></div><div class="pct" style="color:'+pctColor(exitLatestPct,false)+';">'+pctStr(exitLatestPct)+'<span style="color:#9ca3af;font-size:9px;"> vs '+exitP90.toFixed(1)+'</span></div><div class="lbl">Exit Velocity</div></div>');
-  w.document.write('<div class="card"><div class="val">'+(lastGame.bat?lastGame.bat.toFixed(1):'—')+'<span style="font-size:12px;color:#6b7280;"> mph</span></div><div class="pct" style="color:'+pctColor(batLatestPct,false)+';">'+pctStr(batLatestPct)+'<span style="color:#9ca3af;font-size:9px;"> vs '+batP90.toFixed(1)+'</span></div><div class="lbl">Bat Speed</div></div>');
-  w.document.write('<div class="card"><div class="val">'+(lastGame.throwV?lastGame.throwV.toFixed(1):'—')+'<span style="font-size:12px;color:#6b7280;"> mph</span></div><div class="pct" style="color:'+pctColor(throwLatestPct,false)+';">'+pctStr(throwLatestPct)+'<span style="color:#9ca3af;font-size:9px;"> vs '+throwP90.toFixed(1)+'</span></div><div class="lbl">Throw Velocity</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(lastGame.exit?lastGame.exit.toFixed(1):'—')+'<span style="font-size:11px;color:#6b7280;"> mph</span></div><div class="pct" style="color:'+pctColor(exitLatestPct,false)+';">'+pctStr(exitLatestPct)+'<span style="color:#9ca3af;font-size:8px;"> vs '+exitP90.toFixed(1)+'</span></div><div class="lbl">Exit Velocity</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(lastGame.bat?lastGame.bat.toFixed(1):'—')+'<span style="font-size:11px;color:#6b7280;"> mph</span></div><div class="pct" style="color:'+pctColor(batLatestPct,false)+';">'+pctStr(batLatestPct)+'<span style="color:#9ca3af;font-size:8px;"> vs '+batP90.toFixed(1)+'</span></div><div class="lbl">Bat Speed</div></div>');
+  w.document.write('<div class="card"><div class="val">'+(lastGame.throwV?lastGame.throwV.toFixed(1):'—')+'<span style="font-size:11px;color:#6b7280;"> mph</span></div><div class="pct" style="color:'+pctColor(throwLatestPct,false)+';">'+pctStr(throwLatestPct)+'<span style="color:#9ca3af;font-size:8px;"> vs '+throwP90.toFixed(1)+'</span></div><div class="lbl">Throw Velocity</div></div>');
   w.document.write('<div class="card"><div class="val">'+(p.daysSinceCMJ||0)+'</div><div class="lbl">Days Since CMJ</div></div></div>');
 
   // ── 1RM PRs ─────────────────────────────────────────────────────────────────
   if(Object.keys(prs).length){
-    w.document.write('<h2>Strength — Estimated 1RM PRs (Epley)</h2><div class="grid4">');
+    w.document.write('<h2>Strength — Estimated 1RM PRs</h2><div class="grid4">');
     Object.entries(prs).sort(function(a,b){return b[1]-a[1];}).forEach(function(kv){
-      w.document.write('<div class="card"><div class="val" style="color:#16a34a;">'+kv[1]+'<span style="font-size:12px;color:#6b7280;"> lbs</span></div><div class="lbl">'+kv[0]+'</div></div>');
+      w.document.write('<div class="card"><div class="val" style="color:#16a34a;">'+kv[1]+'<span style="font-size:11px;color:#6b7280;"> lbs</span></div><div class="lbl">'+kv[0]+'</div></div>');
     });
     w.document.write('</div>');
   }
 
-  // ── Recent Games ────────────────────────────────────────────────────────────
+  // ── Recent Games Table ───────────────────────────────────────────────────────
   w.document.write('<h2>Recent Games (Last 10)</h2>');
-  w.document.write('<table><thead><tr><th>Date</th><th>HE Dist</th><th>Total Dist</th><th>Top Speed</th><th>Exit Velo</th><th>Bat Speed</th><th>Throw</th><th>ACWR</th><th>Strain</th></tr></thead><tbody>');
+  w.document.write('<table><thead><tr><th>Date</th><th>HE Dist</th><th>Total Dist</th><th>Top Speed</th><th>Exit Velo</th><th>Bat Speed</th><th>Throw</th><th>ACWR</th></tr></thead><tbody>');
   (p.recentGames||[]).slice(-10).reverse().forEach(function(g){
-    var gAcwr=g.acwr?g.acwr.toFixed(3):'—';
-    var gAcwrColor=g.acwr?(g.acwr>1.25||g.acwr<0.75?'#dc2626':g.acwr>1.15||g.acwr<0.85?'#d97706':'#111'):'#111';
-    w.document.write('<tr>');
-    w.document.write('<td>'+g.date+'</td>');
-    w.document.write('<td>'+(g.he||'—')+' ft</td>');
-    w.document.write('<td>'+(g.dist?g.dist.toLocaleString():'—')+' ft</td>');
-    w.document.write('<td>'+(g.speed?g.speed.toFixed(2)+' ft/s':'—')+'</td>');
-    w.document.write('<td>'+(g.exit?g.exit.toFixed(1)+' mph':'—')+'</td>');
-    w.document.write('<td>'+(g.bat?g.bat.toFixed(1)+' mph':'—')+'</td>');
-    w.document.write('<td>'+(g.throwV?g.throwV.toFixed(1)+' mph':'—')+'</td>');
-    w.document.write('<td style="color:'+gAcwrColor+';">'+gAcwr+'</td>');
-    w.document.write('<td>—</td>');
-    w.document.write('</tr>');
+    var ga=g.acwr?g.acwr.toFixed(3):'—';
+    var gc=g.acwr?(g.acwr>1.25||g.acwr<0.75?'#dc2626':g.acwr>1.15||g.acwr<0.85?'#d97706':'#111'):'#111';
+    w.document.write('<tr><td>'+g.date+'</td><td>'+(g.he||'—')+' ft</td><td>'+(g.dist?g.dist.toLocaleString():'—')+' ft</td><td>'+(g.speed?g.speed.toFixed(2)+' ft/s':'—')+'</td><td>'+(g.exit?g.exit.toFixed(1)+' mph':'—')+'</td><td>'+(g.bat?g.bat.toFixed(1)+' mph':'—')+'</td><td>'+(g.throwV?g.throwV.toFixed(1)+' mph':'—')+'</td><td style="color:'+gc+';">'+ga+'</td></tr>');
   });
   w.document.write('</tbody></table>');
-
   w.document.write('<div class="footer"><span>Cubs S&C Dashboard &mdash; Confidential</span><span>Generated '+date+'</span></div>');
   w.document.write('</body></html>');
   w.document.close();
-  setTimeout(function(){w.print();},600);
+  setTimeout(function(){w.print();},700);
 }
 
 function renderBurstAnalysis() {
