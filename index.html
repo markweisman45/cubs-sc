@@ -7777,7 +7777,7 @@ function exportPlayerPDF(){
   function p90arr(a){return a.length?a[Math.floor(a.length*0.9)]:0;}
   var exitP90=p90arr(exitVals),batP90=p90arr(batVals),throwP90=p90arr(throwVals);
   var lastGame=p.recentGames&&p.recentGames.length?p.recentGames[p.recentGames.length-1]:{};
-  var exitLatestPct=pctVsAvg(lastGame.exit,exitP90),batLatestPct=pctVsAvg(lastGame.bat,batP90),throwLatestPct=pctVsAvg(lastGame.throwV,throwP90);
+  var exitLatestPct=(lastGame.exit>0)?pctVsAvg(lastGame.exit,exitP90):null,batLatestPct=(lastGame.bat>0)?pctVsAvg(lastGame.bat,batP90):null,throwLatestPct=(lastGame.throwV>0)?pctVsAvg(lastGame.throwV,throwP90):null;
   var orms=ormData[currentPlayer]||[];
   var prs={};orms.forEach(function(e){if(!prs[e.exercise]||e.est1rm>prs[e.exercise])prs[e.exercise]=e.est1rm;});
   var date=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -13290,9 +13290,9 @@ function loadPersistedData() {
           existing.dist   = r.dist;
           existing.midEff = r.midEff;
           existing.highEff = r.highEff;
-          if (hit.bat)    existing.bat    = hit.bat;
-          if (hit.exit)   existing.exit   = hit.exit;
-          if (hit.throwV) existing.throwV = hit.throwV;
+          if (hit.bat>0)    existing.bat    = hit.bat;
+          if (hit.exit>0)   existing.exit   = hit.exit;
+          if (hit.throwV>0) existing.throwV = hit.throwV;
         } else {
           p.recentGames.push({
             date: dateStr, speed: r.speed, he: r.heDist, dist: r.dist,
@@ -13346,6 +13346,7 @@ function rebuildCMJTrends() {
         const dateStr = dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
         // Remove existing entry for this date+type
         const existing = trends.findIndex(t => t.rawDate === r.date && t.type === 'CMJ');
+        if (!r.jump || !r.ppbm || r.jump < 1 || r.ppbm < 1) return; // skip zero/invalid entries
         const entry = {date:dateStr, rawDate:r.date, jump:r.jump, ppbm:r.ppbm, conc:r.conc, stiff:r.stiff, vto:r.vto||0, p1:r.p1||0, p2:r.p2||0, rsiMod:r.rsiMod||0, pkPow:r.pkPow||0, cmDepth:r.cmDepth||0, type:'CMJ'};
         if (existing >= 0) trends[existing] = entry;
         else trends.push(entry);
@@ -13359,6 +13360,7 @@ function rebuildCMJTrends() {
         if (isNaN(dt)) return;
         const dateStr = dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
         const existing = trends.findIndex(t => t.rawDate === r.date && t.type === 'ABCMJ');
+        if (!r.jump || !r.ppbm || r.jump < 1 || r.ppbm < 1) return; // skip zero/invalid entries
         const entry = {date:dateStr, rawDate:r.date, jump:r.jump, ppbm:r.ppbm, conc:r.conc, stiff:r.stiff, vto:r.vto||0, p1:r.p1||0, p2:r.p2||0, rsiMod:r.rsiMod||0, pkPow:r.pkPow||0, cmDepth:r.cmDepth||0, type:'ABCMJ'};
         if (existing >= 0) trends[existing] = entry;
         else trends.push(entry);
