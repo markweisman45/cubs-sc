@@ -1028,15 +1028,69 @@ body {
                       <option value="inseason">In-Season (3-day)</option>
                       <option value="restore">Restoration / Deload</option>
                     </optgroup>
+                    <optgroup label="Custom">
+                      <option value="custom">⚙️ Custom Setup...</option>
+                    </optgroup>
                   </select>
                   <div id="pb-phase-desc" style="font-size:10px;color:var(--text3);margin-top:3px;font-style:italic;padding:4px 6px;background:rgba(255,255,255,0.03);border-radius:4px;"></div>
+                </div>
+
+                <!-- Custom Setup Panel (shown when Custom selected) -->
+                <div id="pb-custom-panel" style="display:none;background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.25);border-radius:8px;padding:12px;">
+                  <div style="font-size:10px;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">⚙️ Custom Week Structure</div>
+
+                  <!-- Deload week -->
+                  <div style="margin-bottom:10px;">
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Deload Week</label>
+                    <select id="pb-deload-week" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:11px;">
+                      <option value="none">No deload</option>
+                      <option value="last" selected>Last week</option>
+                      <option value="3">Week 3</option>
+                      <option value="4">Week 4</option>
+                    </select>
+                  </div>
+
+                  <!-- Day structure -->
+                  <div style="margin-bottom:10px;">
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Day Structure Template</label>
+                    <select id="pb-day-template" onchange="pbCustomDayTemplate()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:11px;">
+                      <option value="offseason">Off-Season (Lift/Speed/ESD)</option>
+                      <option value="inseason2">In-Season 2-Day Lift</option>
+                      <option value="inseason3">In-Season 3-Day Lift</option>
+                      <option value="speedfocus">Speed Focus (4 speed days)</option>
+                      <option value="liftfocus">Lift Focus (4 lift days)</option>
+                      <option value="blank">Blank (all OFF — build from scratch)</option>
+                    </select>
+                  </div>
+
+                  <!-- Custom day grid -->
+                  <div style="margin-bottom:8px;">
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Day Types</label>
+                    <div id="pb-custom-days" style="display:flex;flex-direction:column;gap:4px;"></div>
+                  </div>
+
+                  <!-- Deload factor -->
+                  <div>
+                    <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Deload Volume Factor</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <input type="range" id="pb-deload-factor" min="40" max="80" value="60" step="5"
+                        oninput="document.getElementById('pb-deload-pct').textContent=this.value+'%'"
+                        style="flex:1;accent-color:#818cf8;">
+                      <span id="pb-deload-pct" style="font-size:11px;color:#818cf8;font-family:'DM Mono',monospace;min-width:32px;">60%</span>
+                    </div>
+                  </div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                   <div>
                     <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Weeks</label>
                     <select id="pb-weeks" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;">
+                      <option value="3">3 weeks</option>
                       <option value="4" selected>4 weeks</option>
+                      <option value="5">5 weeks</option>
                       <option value="6">6 weeks</option>
+                      <option value="8">8 weeks</option>
+                      <option value="10">10 weeks</option>
+                      <option value="12">12 weeks</option>
                     </select>
                   </div>
                   <div>
@@ -11980,12 +12034,95 @@ function pbInit() {
 function pbPhaseChange() {
   var phase = (document.getElementById('pb-phase')||{}).value || 'accumulation';
   var desc  = document.getElementById('pb-phase-desc');
-  if (!desc) return;
-  var def = PHASE_DEFAULTS[phase];
-  if (def) desc.textContent = def.description || '';
+  if (desc) {
+    var def = PHASE_DEFAULTS[phase];
+    desc.textContent = (def && def.description) || '';
+  }
+  // Show/hide custom panel
+  var customPanel = document.getElementById('pb-custom-panel');
+  var weeksRow = document.querySelector('#pb-weeks')?.closest('div')?.parentElement;
+  if (customPanel) {
+    customPanel.style.display = phase === 'custom' ? 'block' : 'none';
+    if (phase === 'custom') {
+      pbCustomDayTemplate();
+    }
+  }
 }
 
 // Day structure per phase
+// ══════════════════════════════════════════════════════════════════════════════
+// CUSTOM PROGRAM SETUP
+// ══════════════════════════════════════════════════════════════════════════════
+
+var CUSTOM_DAY_TYPES = {
+  lift:  { label:'Lift',   color:'#818cf8', bg:'rgba(99,102,241,0.15)'  },
+  speed: { label:'Speed',  color:'#f59e0b', bg:'rgba(245,158,11,0.15)'  },
+  esd:   { label:'ESD',    color:'#22c55e', bg:'rgba(34,197,94,0.15)'   },
+  off:   { label:'OFF',    color:'#4b5563', bg:'rgba(75,85,99,0.12)'    },
+  game:  { label:'Game',   color:'#06b6d4', bg:'rgba(6,182,212,0.12)'   },
+  cond:  { label:'Conditioning', color:'#a78bfa', bg:'rgba(167,139,250,0.15)' },
+};
+
+var CUSTOM_DAY_TEMPLATES = {
+  offseason:  [{day:'Mon',type:'lift'},{day:'Tue',type:'speed'},{day:'Wed',type:'esd'},  {day:'Thu',type:'lift'},{day:'Fri',type:'speed'},{day:'Sat',type:'esd'},{day:'Sun',type:'off'}],
+  inseason2:  [{day:'Mon',type:'lift'},{day:'Tue',type:'off'}, {day:'Wed',type:'lift'},  {day:'Thu',type:'off'},{day:'Fri',type:'off'}, {day:'Sat',type:'off'},{day:'Sun',type:'off'}],
+  inseason3:  [{day:'Mon',type:'lift'},{day:'Tue',type:'off'}, {day:'Wed',type:'lift'},  {day:'Thu',type:'off'},{day:'Fri',type:'lift'},{day:'Sat',type:'off'},{day:'Sun',type:'off'}],
+  speedfocus: [{day:'Mon',type:'lift'},{day:'Tue',type:'speed'},{day:'Wed',type:'speed'},{day:'Thu',type:'lift'},{day:'Fri',type:'speed'},{day:'Sat',type:'speed'},{day:'Sun',type:'off'}],
+  liftfocus:  [{day:'Mon',type:'lift'},{day:'Tue',type:'speed'},{day:'Wed',type:'lift'}, {day:'Thu',type:'lift'},{day:'Fri',type:'speed'},{day:'Sat',type:'lift'},{day:'Sun',type:'off'}],
+  blank:      [{day:'Mon',type:'off'},{day:'Tue',type:'off'},{day:'Wed',type:'off'},{day:'Thu',type:'off'},{day:'Fri',type:'off'},{day:'Sat',type:'off'},{day:'Sun',type:'off'}],
+};
+
+// Current custom day state
+var pbCustomDays = JSON.parse(JSON.stringify(CUSTOM_DAY_TEMPLATES.offseason));
+
+function pbCustomDayTemplate() {
+  var tmpl = (document.getElementById('pb-day-template')||{}).value || 'offseason';
+  pbCustomDays = JSON.parse(JSON.stringify(CUSTOM_DAY_TEMPLATES[tmpl] || CUSTOM_DAY_TEMPLATES.offseason));
+  renderPBCustomDays();
+}
+
+function renderPBCustomDays() {
+  var el = document.getElementById('pb-custom-days');
+  if (!el) return;
+  el.innerHTML = pbCustomDays.map(function(d, i) {
+    var dt = CUSTOM_DAY_TYPES[d.type] || CUSTOM_DAY_TYPES.off;
+    // Build type selector buttons
+    var btns = Object.entries(CUSTOM_DAY_TYPES).map(function(kv) {
+      var k=kv[0], v=kv[1];
+      var active = d.type===k;
+      return '<button onclick="pbSetCustomDay('+i+',\''+k+'\')" style="padding:2px 6px;border-radius:4px;border:1px solid '+(active?v.color:'rgba(255,255,255,0.1)')+';background:'+(active?v.bg:'transparent')+';color:'+(active?v.color:'var(--text3)')+';font-size:9px;cursor:pointer;font-weight:'+(active?'700':'400')+';">'+v.label+'</button>';
+    }).join('');
+    return '<div style="display:flex;align-items:center;gap:6px;">'
+      +'<div style="width:36px;font-size:10px;font-weight:600;color:var(--text3);flex-shrink:0;">'+d.day+'</div>'
+      +'<div style="display:flex;gap:3px;flex-wrap:wrap;">'+btns+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function pbSetCustomDay(idx, type) {
+  pbCustomDays[idx].type = type;
+  renderPBCustomDays();
+}
+
+function pbGetCustomDays() {
+  var defaultLabels = { lift:'Lift Day', speed:'Speed Day', esd:'ESD Day', off:'OFF', game:'Game', cond:'Conditioning' };
+  return pbCustomDays.map(function(d) {
+    return { day:d.day, type:d.type, label:defaultLabels[d.type]||d.type };
+  });
+}
+
+function pbGetCustomDeload(weeks) {
+  var val = (document.getElementById('pb-deload-week')||{}).value || 'last';
+  if (val==='none') return -1;
+  if (val==='last') return weeks;
+  return parseInt(val) || weeks;
+}
+
+function pbGetCustomDeloadFactor() {
+  var val = parseInt((document.getElementById('pb-deload-factor')||{}).value || 60);
+  return val / 100;
+}
+
 function pbGetDays(phase) {
   var isInseason = phase === 'inseason' || phase === 'restore';
   if (isInseason) return [
@@ -12038,11 +12175,11 @@ function pbBuild() {
   var weeks   = parseInt((document.getElementById('pb-weeks')||{}).value||4);
   var prog    = (document.getElementById('pb-progression')||{}).value || 'linear';
   var athlete = pbMode==='sandbox' ? '(Sandbox)' : ((document.getElementById('pb-athlete')||{}).value || currentPlayer);
-  var deloadWk = weeks === 4 ? 3 : 4;
+  var deloadWk = phase === 'custom' ? pbGetCustomDeload(weeks) : (weeks === 4 ? 3 : 4);
 
   PB_STATE = { athlete, phase, weeks, progression:prog, activeWeek:0, weekData:[] };
 
-  var days = pbGetDays(phase);
+  var days = phase === 'custom' ? pbGetCustomDays() : pbGetDays(phase);
 
   for (var w=1; w<=weeks; w++) {
     var isDeload = (w === deloadWk);
