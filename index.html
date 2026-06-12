@@ -999,7 +999,12 @@ body {
             <div class="card" style="padding:14px;">
               <div class="card-title" style="margin-bottom:10px;">⚙️ BLOCK SETUP</div>
               <div style="display:flex;flex-direction:column;gap:8px;">
-                <div>
+                <!-- Sandbox toggle -->
+                <div style="display:flex;gap:6px;margin-bottom:2px;">
+                  <button onclick="pbSetMode('sandbox')" id="pb-mode-sandbox" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(167,139,250,0.5);background:rgba(167,139,250,0.2);color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;">🧪 Sandbox</button>
+                  <button onclick="pbSetMode('athlete')" id="pb-mode-athlete" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--text3);font-size:11px;cursor:pointer;">👤 Athlete</button>
+                </div>
+                <div id="pb-athlete-row">
                   <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Athlete</label>
                   <select id="pb-athlete" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;"></select>
                 </div>
@@ -1054,13 +1059,20 @@ body {
               <div id="pb-week-targets" style="font-size:11px;color:var(--text3);">Build a program to see progression</div>
             </div>
 
-            <!-- Save -->
+            <!-- Save & Drafts -->
             <div class="card" style="padding:14px;">
               <div class="card-title" style="margin-bottom:8px;">💾 SAVE</div>
               <div style="display:flex;flex-direction:column;gap:6px;">
-                <input type="text" id="pb-program-name" placeholder="Program name..." style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:\'DM Mono\',monospace;">
-                <button onclick="pbSave()" style="padding:8px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:12px;font-weight:700;cursor:pointer;">💾 Save to My Programs</button>
+                <input type="text" id="pb-program-name" placeholder="Program name (e.g. Accumulation Block A)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+                <button onclick="pbSaveDraft()" style="padding:7px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;">📝 Save as Draft</button>
+                <button onclick="pbSave()" style="padding:7px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:11px;font-weight:700;cursor:pointer;">💾 Save to My Programs</button>
               </div>
+            </div>
+
+            <!-- Saved Drafts -->
+            <div class="card" style="padding:14px;">
+              <div class="card-title" style="margin-bottom:8px;">📂 MY DRAFTS</div>
+              <div id="pb-drafts-list" style="max-height:200px;overflow-y:auto;"></div>
             </div>
           </div>
 
@@ -11777,18 +11789,189 @@ var PB_STATE = {
   weekData: []  // [{ week, isDeload, days:[{day,type,label,blocks:[]}] }]
 };
 
+// ══════════════════════════════════════════════════════════════════════════════
+// PROGRAM BUILDER — SANDBOX & DRAFT SYSTEM
+// ══════════════════════════════════════════════════════════════════════════════
+
+var PB_DRAFTS_KEY = 'cubs_sc_pb_drafts_v1';
+var pbDrafts = [];
+var pbMode = 'sandbox'; // 'sandbox' or 'athlete'
+
+function loadPBDrafts() {
+  try { var s = localStorage.getItem(PB_DRAFTS_KEY); if (s) pbDrafts = JSON.parse(s); } catch(e) {}
+}
+
+function savePBDrafts() {
+  try { localStorage.setItem(PB_DRAFTS_KEY, JSON.stringify(pbDrafts)); } catch(e) {}
+  if (typeof syncToSupabase === 'function') setTimeout(syncToSupabase, 1000);
+}
+
+function pbSetMode(mode) {
+  pbMode = mode;
+  var sandboxBtn = document.getElementById('pb-mode-sandbox');
+  var athleteBtn = document.getElementById('pb-mode-athlete');
+  var athleteRow = document.getElementById('pb-athlete-row');
+
+  if (mode === 'sandbox') {
+    if (sandboxBtn) { sandboxBtn.style.background='rgba(167,139,250,0.2)'; sandboxBtn.style.color='#a78bfa'; sandboxBtn.style.borderColor='rgba(167,139,250,0.5)'; sandboxBtn.style.fontWeight='700'; }
+    if (athleteBtn) { athleteBtn.style.background='transparent'; athleteBtn.style.color='var(--text3)'; athleteBtn.style.borderColor='rgba(255,255,255,0.1)'; athleteBtn.style.fontWeight='400'; }
+    if (athleteRow) athleteRow.style.display='none';
+    PB_STATE.athlete = '(Sandbox)';
+  } else {
+    if (athleteBtn) { athleteBtn.style.background='rgba(99,102,241,0.2)'; athleteBtn.style.color='#818cf8'; athleteBtn.style.borderColor='rgba(99,102,241,0.5)'; athleteBtn.style.fontWeight='700'; }
+    if (sandboxBtn) { sandboxBtn.style.background='transparent'; sandboxBtn.style.color='var(--text3)'; sandboxBtn.style.borderColor='rgba(255,255,255,0.1)'; sandboxBtn.style.fontWeight='400'; }
+    if (athleteRow) athleteRow.style.display='block';
+    PB_STATE.athlete = (document.getElementById('pb-athlete')||{}).value || currentPlayer;
+  }
+}
+
+function pbSaveDraft() {
+  if (!PB_STATE.weekData.length) { showStatus('⚠️ Build a program first'); return; }
+  var name = (document.getElementById('pb-program-name')||{}).value.trim();
+  if (!name) {
+    name = (pbMode==='sandbox'?'Sandbox':'') + ' ' + PB_STATE.phase + ' ' + PB_STATE.weeks + 'wk draft';
+  }
+
+  // Check if updating existing draft
+  var existingIdx = pbDrafts.findIndex(function(d){ return d.name === name; });
+  var draft = {
+    id: existingIdx >= 0 ? pbDrafts[existingIdx].id : Date.now(),
+    name: name,
+    athlete: pbMode==='sandbox' ? '(Sandbox)' : PB_STATE.athlete,
+    phase: PB_STATE.phase,
+    weeks: PB_STATE.weeks,
+    progression: PB_STATE.progression,
+    pbState: JSON.parse(JSON.stringify(PB_STATE)),
+    updated: new Date().toISOString(),
+    isDraft: true,
+  };
+
+  if (existingIdx >= 0) {
+    pbDrafts[existingIdx] = draft;
+    showStatus('✅ Draft updated: "'+name+'"');
+  } else {
+    pbDrafts.unshift(draft);
+    showStatus('✅ Draft saved: "'+name+'"');
+  }
+  savePBDrafts();
+  renderPBDrafts();
+}
+
+function pbLoadDraft(id) {
+  var draft = pbDrafts.find(function(d){ return d.id===id; });
+  if (!draft || !draft.pbState) { showStatus('⚠️ Draft not found'); return; }
+
+  // Restore full PB_STATE
+  Object.assign(PB_STATE, draft.pbState);
+
+  // Restore UI
+  var phaseEl = document.getElementById('pb-phase');
+  if (phaseEl) phaseEl.value = PB_STATE.phase || 'accumulation';
+
+  var weeksEl = document.getElementById('pb-weeks');
+  if (weeksEl) weeksEl.value = PB_STATE.weeks || 4;
+
+  var progEl = document.getElementById('pb-progression');
+  if (progEl) progEl.value = PB_STATE.progression || 'linear';
+
+  var nameEl = document.getElementById('pb-program-name');
+  if (nameEl) nameEl.value = draft.name;
+
+  // Set mode
+  if (draft.athlete === '(Sandbox)') {
+    pbSetMode('sandbox');
+  } else {
+    pbSetMode('athlete');
+    var athEl = document.getElementById('pb-athlete');
+    if (athEl) athEl.value = draft.athlete;
+  }
+
+  // Re-render the week grid
+  pbPhaseChange();
+  pbRenderWeekTabs();
+  pbRenderDayGrid();
+  pbCloseEditor();
+
+  showStatus('✅ Loaded draft: "'+draft.name+'"');
+  renderPBDrafts();
+}
+
+function pbDeleteDraft(id) {
+  if (!confirm('Delete this draft?')) return;
+  pbDrafts = pbDrafts.filter(function(d){ return d.id!==id; });
+  savePBDrafts();
+  renderPBDrafts();
+  showStatus('🗑 Draft deleted');
+}
+
+function pbDuplicateDraft(id) {
+  var draft = pbDrafts.find(function(d){ return d.id===id; });
+  if (!draft) return;
+  var copy = JSON.parse(JSON.stringify(draft));
+  copy.id = Date.now();
+  copy.name = draft.name + ' (copy)';
+  copy.updated = new Date().toISOString();
+  pbDrafts.unshift(copy);
+  savePBDrafts();
+  renderPBDrafts();
+  showStatus('✅ Duplicated: "'+copy.name+'"');
+}
+
+function pbPromoteToProgram(id) {
+  var draft = pbDrafts.find(function(d){ return d.id===id; });
+  if (!draft) return;
+  // Load draft state then save to programs
+  Object.assign(PB_STATE, draft.pbState);
+  var nameEl = document.getElementById('pb-program-name');
+  if (nameEl) nameEl.value = draft.name;
+  pbSave();
+}
+
+function renderPBDrafts() {
+  var el = document.getElementById('pb-drafts-list');
+  if (!el) return;
+  if (!pbDrafts.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:6px 0;">No drafts yet — build a program and click Save as Draft</div>';
+    return;
+  }
+  el.innerHTML = pbDrafts.map(function(d) {
+    var date = new Date(d.updated).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    var athleteColor = d.athlete==='(Sandbox)' ? '#a78bfa' : 'var(--blue)';
+    return '<div style="padding:8px;border-radius:6px;border:1px solid var(--border);margin-bottom:6px;background:rgba(255,255,255,0.02);">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:6px;">'
+      +   '<div style="min-width:0;">'
+      +     '<div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+d.name+'</div>'
+      +     '<div style="font-size:9px;color:'+athleteColor+';">'+d.athlete+' · '+d.phase+' · '+d.weeks+'wk · '+date+'</div>'
+      +   '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:4px;flex-wrap:wrap;">'
+      +   '<button onclick="pbLoadDraft('+d.id+')" style="padding:4px 8px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);border-radius:4px;color:#818cf8;font-size:10px;font-weight:600;cursor:pointer;">✏ Load & Edit</button>'
+      +   '<button onclick="pbDuplicateDraft('+d.id+')" style="padding:4px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:var(--text3);font-size:10px;cursor:pointer;">⧉ Copy</button>'
+      +   '<button onclick="pbPromoteToProgram('+d.id+')" style="padding:4px 8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;color:var(--green);font-size:10px;cursor:pointer;">💾 Save to Programs</button>'
+      +   '<button onclick="pbDeleteDraft('+d.id+')" style="padding:4px 8px;background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;">✕</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
 function pbInit() {
+  // Load drafts
+  if (typeof loadPBDrafts === 'function') loadPBDrafts();
   // Populate athlete dropdown
   var sel = document.getElementById('pb-athlete');
-  if (!sel || sel.options.length > 0) return;
-  Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); })
-    .forEach(function(n) {
-      var o = document.createElement('option');
-      o.value = n; o.textContent = n;
-      if (n === currentPlayer) o.selected = true;
-      sel.appendChild(o);
-    });
+  if (sel && sel.options.length === 0) {
+    Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); })
+      .forEach(function(n) {
+        var o = document.createElement('option');
+        o.value = n; o.textContent = n;
+        if (n === currentPlayer) o.selected = true;
+        sel.appendChild(o);
+      });
+  }
+  // Default to sandbox mode
+  pbSetMode('sandbox');
   pbPhaseChange();
+  renderPBDrafts();
 }
 
 function pbPhaseChange() {
@@ -11851,7 +12034,7 @@ function pbBuild() {
   var phase   = (document.getElementById('pb-phase')||{}).value || 'accumulation';
   var weeks   = parseInt((document.getElementById('pb-weeks')||{}).value||4);
   var prog    = (document.getElementById('pb-progression')||{}).value || 'linear';
-  var athlete = (document.getElementById('pb-athlete')||{}).value || currentPlayer;
+  var athlete = pbMode==='sandbox' ? '(Sandbox)' : ((document.getElementById('pb-athlete')||{}).value || currentPlayer);
   var deloadWk = weeks === 4 ? 3 : 4;
 
   PB_STATE = { athlete, phase, weeks, progression:prog, activeWeek:0, weekData:[] };
@@ -12228,7 +12411,7 @@ function pbSave() {
   persistPrograms();
   showStatus('✅ Saved "'+name+'" to My Programs');
   alert('Saved! Find it in My Programs under '+PB_STATE.athlete);
-  if (confirm('Push this program to '+PB_STATE.athlete+' now?')) { var prog = SAVED_PROGRAMS[0]; if(prog) showPushProgramModal(prog.id); }
+  if (PB_STATE.athlete && PB_STATE.athlete !== '(Sandbox)') { if (confirm('Push this program to '+PB_STATE.athlete+' now?')) { var saved = SAVED_PROGRAMS[0]; if(saved) showPushProgramModal(saved.id); } }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -12360,6 +12543,7 @@ function initAnnualPlan() {
   if (typeof loadAnnualData === 'function') loadAnnualData();
   if (typeof loadHERuns === 'function') loadHERuns();
   if (typeof loadORM === 'function') loadORM();
+  if (typeof loadPBDrafts === 'function') loadPBDrafts();
   var swingDateEl = document.getElementById('swingDateInput');
   if (swingDateEl) swingDateEl.value = new Date().toISOString().slice(0,10);
   renderAnnualPlan();
@@ -16278,7 +16462,7 @@ function hardReset(){
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
 const SUPA_URL = 'https://umcdnbnvzwedrlidzaqg.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtY2RuYm52endlZHJsaWR6YXFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjMwNjUsImV4cCI6MjA5MjYzOTA2NX0.g4t2GaT33M03b6-stee9Aiy2We1KdJpw5KVEKwScwJM';
-const SUPA_KEYS = ['cubs_sc_statcast_v1','cubs_sc_hitting_v1','cubs_sc_cmj_v1','cubs_sc_abcmj_v1','cubs_sc_players_state_v1','cubs_sc_wellness_v1','cubs_sc_coach_notes_v1','cubs_sc_he_runs_v1','cubs_sc_orm_v1'];
+const SUPA_KEYS = ['cubs_sc_statcast_v1','cubs_sc_hitting_v1','cubs_sc_cmj_v1','cubs_sc_abcmj_v1','cubs_sc_players_state_v1','cubs_sc_wellness_v1','cubs_sc_coach_notes_v1','cubs_sc_he_runs_v1','cubs_sc_orm_v1','cubs_sc_pb_drafts_v1'];
 let _supaClient = null;
 
 function getSupaClient() {
