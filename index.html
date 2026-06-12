@@ -12289,7 +12289,7 @@ function pbOpenDay(weekIdx, dayIdx) {
     var isSpeedBlock = block.blockType === 'speed';
     var exRows = block.exercises.map(function(ex, ei) {
       if (isSpeedBlock) {
-        var speedCats = ['Acceleration','Max Velocity Running','COD/Agility','Deceleration','Curvilinear','LB Plyos','UB Plyos','ESD'];
+        var speedCats = ['Acceleration','Max Velocity Running','COD/Agility','Deceleration','Curvilinear','LB Plyos','UB Plyos','ESD','Performance Prep'];
         var sCatOpts = '<option value="">— Category —</option>'+speedCats.map(function(c){ return '<option value="'+c+'"'+(ex.cat===c?' selected':'')+'>'+c+'</option>'; }).join('');
         var sExOpts = '<option value="">— Exercise —</option>';
         if (ex.cat) {
