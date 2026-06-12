@@ -12013,6 +12013,7 @@ function renderPBDrafts() {
 var _pbInited = false;
 function pbInit() {
   if (typeof loadPBDrafts === 'function') loadPBDrafts();
+  if (typeof loadPBPresets === 'function') loadPBPresets();
   renderPBDrafts();
   if (_pbInited) return; // only run setup once
   _pbInited = true;
@@ -12270,6 +12271,86 @@ function pbRenderWeekTargets() {
 // ── SESSION EDITOR ────────────────────────────────────────────────────────────
 var PB_ACTIVE_DAY = null; // {weekIdx, dayIdx}
 
+// ══════════════════════════════════════════════════════════════════════════════
+// PROGRAM BUILDER FIELD PRESETS
+// ══════════════════════════════════════════════════════════════════════════════
+
+var PB_PRESETS_KEY = 'cubs_sc_pb_presets_v1';
+var PB_PRESETS = {
+  sets:     ['1','2','3','4','5','6','8'],
+  reps:     ['1','2','3','4','5','6','8','10','12','15','20','AMRAP'],
+  load:     ['BW','50%','55%','60%','65%','70%','75%','80%','85%','90%','95%','100%','105%'],
+  tempo:    ['X010','X011','2010','2011','3010','3011','3012','4010','4011','1010','Explosive'],
+  rest:     [':30',':45','1:00','1:30','2:00','2:30','3:00','4:00','5:00'],
+  distance: ['10m','15m','20m','30m','40m','50m','60m','100m','10yd','20yd','30yd','40yd'],
+  pct:      ['50%','60%','70%','75%','80%','85%','90%','95%','100%','Max'],
+  notes:    [],
+};
+
+function loadPBPresets() {
+  try {
+    var s = localStorage.getItem(PB_PRESETS_KEY);
+    if (s) {
+      var saved = JSON.parse(s);
+      Object.keys(saved).forEach(function(k) {
+        if (PB_PRESETS[k]) {
+          // Merge custom values not already in defaults
+          saved[k].forEach(function(v) {
+            if (!PB_PRESETS[k].includes(v)) PB_PRESETS[k].push(v);
+          });
+        }
+      });
+    }
+  } catch(e) {}
+}
+
+function savePBPresets() {
+  try { localStorage.setItem(PB_PRESETS_KEY, JSON.stringify(PB_PRESETS)); } catch(e) {}
+}
+
+function pbAddCustomPreset(field, value) {
+  value = (value||'').trim();
+  if (!value || !PB_PRESETS[field]) return;
+  if (!PB_PRESETS[field].includes(value)) {
+    PB_PRESETS[field].push(value);
+    savePBPresets();
+  }
+}
+
+// Build a smart dropdown for a field
+function pbFieldSelect(bi, ei, field, currentVal, placeholder) {
+  var opts = PB_PRESETS[field] || [];
+  var selStyle = 'background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 2px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;width:100%;cursor:pointer;';
+
+  // Build options
+  var optHtml = '<option value="">'+placeholder+'</option>';
+  opts.forEach(function(o) {
+    optHtml += '<option value="'+o+'"'+(o===currentVal?' selected':'')+'>'+o+'</option>';
+  });
+  optHtml += '<option value="__custom__">+ Custom...</option>';
+
+  return '<select onchange="pbHandleFieldSelect('+bi+','+ei+',\''+field+'\',this)" style="'+selStyle+'">'
+    + optHtml
+    + '</select>';
+}
+
+function pbHandleFieldSelect(bi, ei, field, sel) {
+  if (sel.value === '__custom__') {
+    var custom = prompt('Enter custom ' + field + ' value:');
+    if (custom && custom.trim()) {
+      custom = custom.trim();
+      pbAddCustomPreset(field, custom);
+      pbSetExField(bi, ei, field, custom);
+    } else {
+      sel.value = ''; // reset if cancelled
+    }
+    // Re-render to show new value
+    pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+  } else {
+    pbSetExField(bi, ei, field, sel.value);
+  }
+}
+
 function pbOpenDay(weekIdx, dayIdx) {
   PB_ACTIVE_DAY = {weekIdx: weekIdx, dayIdx: dayIdx};
   var wk  = PB_STATE.weekData[weekIdx];
@@ -12300,11 +12381,11 @@ function pbOpenDay(weekIdx, dayIdx) {
         return '<div style="display:grid;grid-template-columns:110px 130px 45px 45px 65px 50px 50px 1fr 20px;gap:4px;align-items:center;margin-bottom:5px;">'
           +'<select onchange="pbSetExCat('+bi+','+ei+',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-size:10px;font-family:\'DM Mono\',monospace;">'+sCatOpts+'</select>'
           +'<select onchange="pbSetExField('+bi+','+ei+',\'name\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'+sExOpts+'</select>'
-          +'<input value="'+(ex.sets||'')+'" placeholder="Sets" onchange="pbSetExField('+bi+','+ei+',\'sets\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 4px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
-          +'<input value="'+(ex.reps||'')+'" placeholder="Reps" onchange="pbSetExField('+bi+','+ei+',\'reps\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 4px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
-          +'<input value="'+(ex.distance||'')+'" placeholder="Distance" onchange="pbSetExField('+bi+','+ei+',\'distance\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 4px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
-          +'<input value="'+(ex.pct||'')+'" placeholder="%" onchange="pbSetExField('+bi+','+ei+',\'pct\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 4px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
-          +'<input value="'+(ex.rest||'')+'" placeholder="Rest" onfocus="showRestTooltip(this)" onblur="hideRestTooltip()" onchange="pbSetExField('+bi+','+ei+',\'rest\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 4px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+          + pbFieldSelect(bi,ei,'sets',ex.sets||'','Sets')
+          + pbFieldSelect(bi,ei,'reps',ex.reps||'','Reps')
+          + pbFieldSelect(bi,ei,'distance',ex.distance||'','Dist')
+          + pbFieldSelect(bi,ei,'pct',ex.pct||'','%')
+          + pbFieldSelect(bi,ei,'rest',ex.rest||'','Rest')
           +'<input value="'+(ex.notes||'')+'" placeholder="Notes / times" onchange="pbSetExField('+bi+','+ei+',\'notes\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'
           +'<button onclick="pbRemoveEx('+bi+','+ei+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0;">✕</button>'
           +'</div>';
@@ -12318,11 +12399,11 @@ function pbOpenDay(weekIdx, dayIdx) {
       return '<div style="display:grid;grid-template-columns:130px 1fr 50px 60px 70px 65px 55px 20px;gap:4px;align-items:center;margin-bottom:5px;">'
         +'<select onchange="pbSetExCat('+bi+','+ei+',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-size:10px;font-family:\'DM Mono\',monospace;">'+catOpts.replace('value="'+ex.cat+'"','value="'+ex.cat+'" selected')+'</select>'
         +'<select onchange="pbSetExField('+bi+','+ei+',\'name\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'+exOpts+'</select>'
-        +'<input value="'+(ex.sets||'')+'" placeholder="Sets" onchange="pbSetExField('+bi+','+ei+',\'sets\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
-        +'<input value="'+(ex.reps||'')+'" placeholder="Reps" onchange="pbSetExField('+bi+','+ei+',\'reps\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
-        +'<input value="'+(ex.load||'')+'" placeholder="Load" onchange="pbSetExField('+bi+','+ei+',\'load\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
-        +'<input value="'+(ex.tempo||'')+'" placeholder="Tempo" onfocus="showTempoTooltip(this)" onblur="hideTempoTooltip()" onchange="pbSetExField('+bi+','+ei+',\'tempo\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
-        +'<input value="'+(ex.rest||'')+'" placeholder="Rest" onfocus="showRestTooltip(this)" onblur="hideRestTooltip()" onchange="pbSetExField('+bi+','+ei+',\'rest\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;">'
+        + pbFieldSelect(bi,ei,'sets',ex.sets||'','Sets')
+        + pbFieldSelect(bi,ei,'reps',ex.reps||'','Reps')
+        + pbFieldSelect(bi,ei,'load',ex.load||'','Load')
+        + pbFieldSelect(bi,ei,'tempo',ex.tempo||'','Tempo')
+        + pbFieldSelect(bi,ei,'rest',ex.rest||'','Rest')
         +'<button onclick="pbRemoveEx('+bi+','+ei+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0;">✕</button>'
         +'</div>';
     }).join('');
