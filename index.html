@@ -595,6 +595,22 @@ body {
 #prog-tab-perio .card { overflow: visible; }
   .block-header { background: #f5f5f5 !important; }
   .week-header { background: #e8e8e8 !important; }
+  /* PDF enrichment sections */
+  .ex-why-section { display: block !important; }
+  .brief-ex-row { break-inside: avoid; }
+}
+
+#ex-tooltip {
+  position: fixed;
+  z-index: 99999;
+  background: #1a1f2e;
+  border: 1px solid rgba(79,142,247,0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  max-width: 320px;
+  pointer-events: none;
+  display: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
 
 /* addExModal handled by .modal-overlay */
@@ -613,6 +629,12 @@ body {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+<div id="ex-tooltip">
+  <div id="ex-tooltip-name" style="font-size:12px;font-weight:700;color:#fff;margin-bottom:6px;"></div>
+  <div id="ex-tooltip-muscle" style="font-size:10px;color:#6BA3F8;margin-bottom:4px;"></div>
+  <div id="ex-tooltip-mechanism" style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.5;margin-bottom:6px;"></div>
+  <div id="ex-tooltip-baseball" style="font-size:11px;color:#F0997B;line-height:1.5;border-top:1px solid rgba(255,255,255,0.1);padding-top:6px;display:none;"></div>
+</div>
 <div class="app">
 
 <!-- ── SIDEBAR ── -->
@@ -1911,11 +1933,28 @@ body {
           <div>
             <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Position focus</label>
             <select id="pbai-position" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
-              <option value="position_player">Position player</option>
-              <option value="pitcher">Pitcher</option>
-              <option value="catcher">Catcher</option>
-              <option value="outfielder">Outfielder</option>
-              <option value="infielder">Infielder</option>
+              <optgroup label="⚾ Baseball">
+                <option value="position_player">Position player</option>
+                <option value="pitcher">Pitcher</option>
+                <option value="catcher">Catcher</option>
+                <option value="outfielder">Outfielder</option>
+                <option value="infielder">Infielder</option>
+              </optgroup>
+              <optgroup label="🏈 Football">
+                <option value="football_ol">OL — offensive lineman</option>
+                <option value="football_dl">DL / edge rusher</option>
+                <option value="football_wr_db">WR / DB — skill position</option>
+                <option value="football_qb">QB</option>
+                <option value="football_rb">RB / LB</option>
+              </optgroup>
+              <optgroup label="🏒 Hockey">
+                <option value="hockey_skater">Skater (forward/D)</option>
+                <option value="hockey_goalie">Goalie</option>
+              </optgroup>
+              <optgroup label="🏀 Basketball">
+                <option value="basketball_guard">Guard / wing</option>
+                <option value="basketball_big">Big (C / PF)</option>
+              </optgroup>
             </select>
           </div>
         </div>
@@ -7839,7 +7878,7 @@ function briefEnrichCard(exName, exData) {
 
   // Row 1: name + prescription + tags
   html += '<div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:4px;">';
-  html += '<span style="font-size:13px;font-weight:600;color:#fff;flex:1;min-width:160px;">' + exName + '</span>';
+  html += '<span data-exname="' + exName.replace(/"/g,'&quot;') + '" style="font-size:13px;font-weight:600;color:#fff;flex:1;min-width:160px;cursor:default;">' + exName + '</span>';
   if (prescLine) html += '<span style="font-size:11px;color:var(--text2);font-family:\'DM Mono\',monospace;white-space:nowrap;">' + prescLine + '</span>';
   html += '</div>';
 
@@ -7947,8 +7986,189 @@ function renderBriefPrograms() {
 
 function refreshBrief() { renderBrief(); showStatus('✅ Daily Brief refreshed'); }
 
+// ══════════════════════════════════════════════════════════════
+// GLOBAL EXERCISE TOOLTIP
+// ══════════════════════════════════════════════════════════════
+
+(function() {
+  var tooltip = null;
+  var hideTimer = null;
+
+  function showExTooltip(name, x, y) {
+    if (!tooltip) tooltip = document.getElementById('ex-tooltip');
+    if (!tooltip) return;
+
+    var dbEx = EXERCISE_DB && EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === name.toLowerCase(); });
+    if (!dbEx || (!dbEx.mechanism_text && !dbEx.muscle_group)) return; // only show if enriched
+
+    document.getElementById('ex-tooltip-name').textContent = dbEx.name;
+
+    var muscleEl = document.getElementById('ex-tooltip-muscle');
+    muscleEl.textContent = dbEx.muscle_group ? ('💪 ' + dbEx.muscle_group + (dbEx.muscle_head ? ' · ' + dbEx.muscle_head : '')) : '';
+    muscleEl.style.display = dbEx.muscle_group ? '' : 'none';
+
+    var mechEl = document.getElementById('ex-tooltip-mechanism');
+    mechEl.textContent = dbEx.mechanism_text || '';
+    mechEl.style.display = dbEx.mechanism_text ? '' : 'none';
+
+    var btEl = document.getElementById('ex-tooltip-baseball');
+    var bt = '';
+    if (Array.isArray(dbEx.sport_transfer)) {
+      var b = dbEx.sport_transfer.find(function(t){ return t.sport === 'Baseball'; });
+      if (b) bt = '⚾ ' + b.text;
+    }
+    btEl.textContent = bt;
+    btEl.style.display = bt ? '' : 'none';
+
+    // Position near cursor, keep in viewport
+    var tw = 320, th = 200;
+    var px = Math.min(x + 14, window.innerWidth - tw - 16);
+    var py = Math.min(y + 14, window.innerHeight - th - 16);
+    tooltip.style.left = px + 'px';
+    tooltip.style.top  = py + 'px';
+    tooltip.style.display = 'block';
+  }
+
+  function hideExTooltip() {
+    if (tooltip) tooltip.style.display = 'none';
+  }
+
+  document.addEventListener('mouseover', function(e) {
+    var target = e.target;
+    // Check if we're hovering an element that carries an exercise name
+    var name = target.getAttribute('data-exname')
+      || (target.tagName === 'OPTION' && target.closest('select[data-ex-type="name"]') ? target.textContent.split(' (')[0].trim() : null);
+
+    // Also check parent elements for data-exname
+    if (!name) {
+      var p = target.closest('[data-exname]');
+      if (p) name = p.getAttribute('data-exname');
+    }
+
+    if (name && name.length > 2 && name !== '— Exercise —') {
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(function(){ showExTooltip(name, e.clientX, e.clientY); }, 400);
+    }
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (tooltip && tooltip.style.display === 'block') {
+      var tw = 320;
+      var px = Math.min(e.clientX + 14, window.innerWidth - tw - 16);
+      var py = Math.min(e.clientY + 14, window.innerHeight - 220);
+      tooltip.style.left = px + 'px';
+      tooltip.style.top  = py + 'px';
+    }
+  });
+
+  document.addEventListener('mouseout', function(e) {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hideExTooltip, 200);
+  });
+})();
+
+// ══════════════════════════════════════════════════════════════
+// ENRICHED PRINT / PDF BRIEF
+// ══════════════════════════════════════════════════════════════
+
 function printBrief() {
-  window.print();
+  // Build enriched print view in a new window
+  var today = new Date().toLocaleDateString('en-US', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+  var css = `
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: "Helvetica Neue", Arial, sans-serif; color: #111; padding: 24px 28px; font-size: 12px; }
+    h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 2px; color: #0E3386; }
+    .date { font-size: 11px; color: #6b7280; margin-bottom: 20px; }
+    h2 { font-size: 10px; font-weight: 700; color: #0E3386; border-bottom: 2px solid #0E3386; padding-bottom: 3px; margin: 18px 0 10px; text-transform: uppercase; letter-spacing: .6px; }
+    .program-block { break-inside: avoid; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+    .program-header { background: #0E3386; color: #fff; padding: 8px 12px; }
+    .program-player { font-size: 14px; font-weight: 800; }
+    .program-name { font-size: 10px; opacity: 0.8; margin-top: 1px; }
+    .ex-row { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; break-inside: avoid; }
+    .ex-row:last-child { border-bottom: none; }
+    .ex-name { font-size: 12px; font-weight: 700; color: #111; }
+    .ex-presc { font-size: 10px; color: #6b7280; font-family: monospace; margin-top: 1px; }
+    .ex-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .tag { font-size: 9px; padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+    .tag-muscle { background: #dbeafe; color: #1e40af; }
+    .tag-bucket { background: #ede9fe; color: #5b21b6; }
+    .ex-why { margin-top: 6px; padding: 6px 8px; background: #f9fafb; border-left: 3px solid #0E3386; border-radius: 0 4px 4px 0; }
+    .why-label { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #6b7280; margin-bottom: 2px; }
+    .why-text { font-size: 10px; color: #374151; line-height: 1.5; }
+    .baseball-text { font-size: 10px; color: #b45309; line-height: 1.5; margin-top: 4px; }
+    .no-programs { color: #6b7280; font-style: italic; font-size: 12px; }
+    .footer { margin-top: 24px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 9px; color: #9ca3af; display: flex; justify-content: space-between; }
+    @media print { body { padding: 14px 18px; } .program-block { break-inside: avoid; } }
+  `;
+
+  var body = '<h1>⚾ DAILY BRIEF</h1><div class="date">' + today + '</div>';
+  body += '<h2>🏋️ Today\'s Programs</h2>';
+
+  var programs = (typeof SAVED_PROGRAMS !== 'undefined')
+    ? SAVED_PROGRAMS.filter(function(p){ return p.assignedTo; })
+    : [];
+
+  if (!programs.length) {
+    body += '<div class="no-programs">No programs assigned.</div>';
+  } else {
+    programs.forEach(function(prog) {
+      var exercises = briefExtractExercises(prog);
+      body += '<div class="program-block">';
+      body += '<div class="program-header"><div class="program-player">' + prog.assignedTo + '</div>';
+      body += '<div class="program-name">' + prog.name + (prog.note ? ' · ' + prog.note : '') + '</div></div>';
+
+      if (exercises.length) {
+        exercises.forEach(function(ex) {
+          var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
+          var presc = [];
+          if (ex.sets) presc.push(ex.sets + '×');
+          if (ex.reps) presc.push(ex.reps);
+          if (ex.load) presc.push(ex.load);
+          if (ex.tempo) presc.push(ex.tempo);
+          if (ex.rest) presc.push(ex.rest + ' rest');
+
+          body += '<div class="ex-row">';
+          body += '<div class="ex-name">' + ex.name + '</div>';
+          if (presc.length) body += '<div class="ex-presc">' + presc.join(' · ') + '</div>';
+
+          if (dbEx && (dbEx.muscle_group || dbEx.bucket)) {
+            body += '<div class="ex-tags">';
+            if (dbEx.muscle_group) body += '<span class="tag tag-muscle">💪 ' + dbEx.muscle_group + (dbEx.muscle_head ? ' · ' + dbEx.muscle_head : '') + '</span>';
+            if (dbEx.bucket) body += '<span class="tag tag-bucket">' + dbEx.bucket.replace(/_/g,' ') + '</span>';
+            body += '</div>';
+          }
+
+          if (dbEx && (dbEx.mechanism_text || dbEx.sport_transfer)) {
+            body += '<div class="ex-why">';
+            if (dbEx.mechanism_text) {
+              body += '<div class="why-label">Why this exercise</div>';
+              body += '<div class="why-text">' + dbEx.mechanism_text + '</div>';
+            }
+            if (Array.isArray(dbEx.sport_transfer)) {
+              var bt = dbEx.sport_transfer.find(function(t){ return t.sport === 'Baseball'; });
+              if (bt) body += '<div class="baseball-text">⚾ ' + bt.text + '</div>';
+            }
+            body += '</div>';
+          }
+
+          body += '</div>';
+        });
+      } else {
+        body += '<div class="ex-row" style="color:#6b7280;font-style:italic;">Program not parsed — open and resave from Program Builder.</div>';
+      }
+
+      body += '</div>';
+    });
+  }
+
+  body += '<div class="footer"><span>Cubs S&amp;C Dashboard</span><span>' + today + '</span></div>';
+
+  var win = window.open('', '_blank', 'width=800,height=900');
+  win.document.write('<!DOCTYPE html><html><head><title>Daily Brief — ' + today + '</title><style>' + css + '</style></head><body>' + body + '</body></html>');
+  win.document.close();
+  win.focus();
+  setTimeout(function(){ win.print(); }, 500);
 }
 
 function renderTeamHeatmap() {
@@ -17831,11 +18051,24 @@ async function callPBDesignAPI(ctx) {
   var sessionLabel = sessionTypeLabels[ctx.sessionType] || ctx.sessionType;
 
   var positionLabels = {
-    position_player:'position player (hitter/fielder)',
-    pitcher:'pitcher (throwing arm care critical)',
-    catcher:'catcher (squat mechanics, hip ER, posterior cuff)',
-    outfielder:'outfielder (speed, first step, lateral)',
-    infielder:'infielder (lateral, rotational, arm)',
+    // Baseball
+    position_player:'baseball position player (hitter/fielder) — prioritize rotational power, hip strength, first-step quickness, deceleration',
+    pitcher:'baseball pitcher — arm care critical: no heavy overhead pressing, posterior cuff, scapular stability (serratus, Y-T-W), hip ER, thoracic rotation, avoid elbow valgus stress',
+    catcher:'baseball catcher — deep squat mechanics, hip ER strength, ankle mobility, posterior shoulder, single-leg stability from receiving stance',
+    outfielder:'baseball outfielder — linear speed, first step, deceleration, overhead reach stability, diagonal sprinting',
+    infielder:'baseball infielder — lateral quickness, hip ER, forearm pronation/supination, explosive rotational mechanics',
+    // Football
+    football_ol:'football offensive lineman — hip hinge power, lateral push strength, hand/wrist stability, knee-dominant lower body, anti-rotation core',
+    football_dl:'football DL/edge rusher — first-step explosion, hip extension power, rotational torque, grip strength, lateral shuffle deceleration',
+    football_wr_db:'football WR/DB skill position — acceleration, top-end speed, change of direction, hip ER, reactive agility, deceleration mechanics',
+    football_qb:'football QB — hip rotation, posterior shoulder health, anti-rotation core, single-leg stability, lower body drive without bilateral loading dominance',
+    football_rb:'football RB/LB — contact absorption, lower body power, lateral deceleration, hip hinge explosiveness, upper body collision strength',
+    // Hockey
+    hockey_skater:'hockey skater (forward/D) — hip adductor/abductor balance, lateral push power, hip ER in external-rotated stance, ankle/knee stability in skate position, single-leg power',
+    hockey_goalie:'hockey goalie — hip abduction and ER in extreme ranges, lateral split mobility, reactive single-leg balance, hip flexor length, adductor eccentric strength, minimal bilateral loading',
+    // Basketball
+    basketball_guard:'basketball guard/wing — vertical jump, reactive agility, lateral deceleration, hip ER, ankle stability, first-step explosion from athletic stance',
+    basketball_big:'basketball big (C/PF) — lower body vertical power, contact absorption, hip extension strength, upper body pushing strength for post play, ankle/knee landing mechanics',
   };
   var posLabel = positionLabels[ctx.position] || ctx.position;
 
@@ -17854,8 +18087,11 @@ async function callPBDesignAPI(ctx) {
     + '- Sets/reps/load must match the phase and progression modifiers given\n'
     + '- For pitchers: no heavy overhead pressing, include posterior cuff and scapular work\n'
     + '- For catchers: include hip ER work, deep squat pattern, posterior shoulder\n'
+    + '- For hockey goalies: include extreme hip abduction/ER range work, avoid bilateral squat dominance\n'
+    + '- For OL: emphasize hip hinge power and anti-rotation core\n'
+    + '- For WR/DB: emphasize deceleration, agility, and reactive patterns\n'
     + '- Tempo format: eccentric-pause-concentric-top (e.g. 3-1-1-0)\n'
-    + '- Be specific and biomechanically sound. Prioritise baseball transfer.';
+    + '- Be specific and biomechanically sound. Prioritise sport-position transfer.';
 
   var res = await fetch(SUPA_URL + '/functions/v1/enrich-exercise', {
     method: 'POST',
