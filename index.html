@@ -1856,6 +1856,7 @@ body {
                 <option value="">All Categories</option>
               </select>
               <button class="generate-btn" style="padding:8px 14px;" onclick="openAddExerciseModal()">+ Add Exercise</button>
+              <button onclick="openEnrichModal()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">✨ AI Enrich</button>
               <button onclick="libToggleSelect()" id="lib-select-btn" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">☑ Select</button>
               <button onclick="libDeleteSelected()" id="lib-delete-btn" style="display:none;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">🗑 Delete Selected (<span id="lib-sel-count">0</span>)</button>
               <button onclick="exportExerciseLibrary()" style="background:rgba(59,122,196,0.15);border:1px solid rgba(59,122,196,0.3);border-radius:6px;color:var(--cubs-blue);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">📤 Export</button>
@@ -1876,6 +1877,52 @@ body {
       </div>
 
     </div><!-- /page-program -->
+
+    <!-- ── AI ENRICH MODAL ── -->
+    <div id="enrichModal" class="modal-overlay" style="display:none;">
+      <div class="modal-box" style="width:520px;max-height:85vh;overflow-y:auto;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:6px;color:#6BA3F8;">✨ AI Exercise Enrichment</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">Generate muscle group, bucket, mechanism, and sport transfer notes for your exercise library. Results save automatically.</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <button id="enrich-mode-unenriched" onclick="setEnrichMode('unenriched')"
+            style="background:rgba(79,142,247,0.2);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:11px;padding:6px 12px;cursor:pointer;font-weight:600;">
+            All unenriched (<span id="enrich-count-badge">0</span>)
+          </button>
+          <button id="enrich-mode-manual" onclick="setEnrichMode('manual')"
+            style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:11px;padding:6px 12px;cursor:pointer;">
+            Enter names manually
+          </button>
+        </div>
+        <div id="enrich-manual-wrap" style="display:none;margin-bottom:12px;">
+          <textarea id="enrich-manual-names" rows="4"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;resize:vertical;"
+            placeholder="One exercise name per line…"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+          <select id="enrich-sports" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;">
+            <option value="Baseball,Basketball,Hockey,Football">All four sports</option>
+            <option value="Baseball">Baseball only</option>
+            <option value="Baseball,Football">Baseball + Football</option>
+          </select>
+          <button id="enrich-start-btn" onclick="startEnrichment()"
+            style="background:rgba(79,142,247,0.2);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:12px;font-weight:600;padding:7px 14px;cursor:pointer;">
+            ✨ Start ↗
+          </button>
+          <button id="enrich-stop-btn" onclick="enrichStopFlag=true" disabled
+            style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:6px;color:var(--red);font-size:12px;padding:7px 14px;cursor:pointer;opacity:0.4;">
+            Stop
+          </button>
+        </div>
+        <div style="height:3px;background:var(--bg3);border-radius:2px;margin-bottom:8px;overflow:hidden;">
+          <div id="enrich-progress-bar" style="height:3px;background:#6BA3F8;border-radius:2px;width:0%;transition:width 0.3s;"></div>
+        </div>
+        <div id="enrich-status" style="font-size:11px;color:var(--text2);min-height:16px;margin-bottom:8px;"></div>
+        <div id="enrich-log" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+          <button onclick="closeEnrichModal()" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 18px;color:var(--text2);font-size:13px;cursor:pointer;">Close</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ── ADD EXERCISE MODAL ── -->
     <div id="addExModal" class="modal-overlay" style="display:none;">
@@ -10403,12 +10450,46 @@ const EXERCISE_DB_KEY = 'cubs_sc_exercise_db_v1';
 
 function persistExerciseDB() {
   try {
+    // 1. Always save to localStorage first (fast, works offline)
     const toSave = JSON.stringify(EXERCISE_DB);
     localStorage.setItem(EXERCISE_DB_KEY, toSave);
-    console.log('[persistExerciseDB] saved', EXERCISE_DB.length, 'exercises (' + Math.round(toSave.length/1024) + 'KB)');
+    console.log('[persistExerciseDB] saved', EXERCISE_DB.length, 'exercises (' + Math.round(toSave.length/1024) + 'KB) to localStorage');
   } catch(e) {
-    console.error('[persistExerciseDB] error:', e);
+    console.error('[persistExerciseDB] localStorage error:', e);
     alert('Could not save exercise library: ' + e.message);
+  }
+  // 2. Async Supabase sync for enriched exercises (non-blocking)
+  persistExerciseDBToSupabase();
+}
+
+async function persistExerciseDBToSupabase() {
+  try {
+    if (!_supaClient) return;
+    const enriched = EXERCISE_DB.filter(e => e && (e.mechanism_text || e.bucket || e.muscle_group));
+    if (!enriched.length) return;
+    const rows = enriched.map(e => ({
+      name:           e.name,
+      cat:            e.cat            || '',
+      lift_key:       e.liftKey        || '',
+      video:          e.video          || '',
+      notes:          e.notes          || '',
+      muscle_group:   e.muscle_group   || null,
+      muscle_head:    e.muscle_head    || null,
+      fiber_type:     e.fiber_type     || null,
+      bucket:         e.bucket         || null,
+      sport_bucket:   e.sport_bucket   || null,
+      mechanism_text: e.mechanism_text || null,
+      program_gap:    e.program_gap    || null,
+      sport_transfer: e.sport_transfer || null,
+      updated_at:     new Date().toISOString(),
+    }));
+    const { error } = await _supaClient
+      .from('exercises')
+      .upsert(rows, { onConflict: 'name' });
+    if (error) console.error('[persistExerciseDB] Supabase sync error:', error);
+    else console.log('[persistExerciseDB] synced', rows.length, 'enriched exercises to Supabase');
+  } catch(err) {
+    console.error('[persistExerciseDB] Supabase error:', err);
   }
 }
 
@@ -10694,6 +10775,36 @@ function renderLibrary() {
     const vidTag = vid
       ? `<a href="${e.video}" target="_blank" rel="noopener" style="font-size:9px;background:rgba(239,68,68,0.15);color:#ff6b6b;padding:1px 6px;border-radius:4px;text-decoration:none;">▶ YouTube</a>`
       : '';
+    // ── enrichment badges ──
+    const bucketColors = {
+      primary_compound:   'rgba(127,119,221,0.25)',
+      strength_accessory: 'rgba(29,158,117,0.25)',
+      athletic_power:     'rgba(186,117,23,0.25)',
+      isolation_rehab:    'rgba(212,83,126,0.25)',
+    };
+    const bucketTextColors = {
+      primary_compound:   '#AFA9EC',
+      strength_accessory: '#5DCAA5',
+      athletic_power:     '#EF9F27',
+      isolation_rehab:    '#ED93B1',
+    };
+    const sportBucketColors = {
+      swing_bat:'rgba(216,90,48,0.2)',throw_ball:'rgba(24,95,165,0.2)',
+      acceleration:'rgba(186,117,23,0.2)',deceleration:'rgba(29,158,117,0.2)',
+      upright_running:'rgba(127,119,221,0.2)',agility:'rgba(212,83,126,0.2)',
+    };
+    const bucketTag = e.bucket
+      ? `<span style="font-size:9px;background:${bucketColors[e.bucket]||'rgba(255,255,255,0.08)'};color:${bucketTextColors[e.bucket]||'var(--text2)'};padding:1px 6px;border-radius:4px;">${e.bucket.replace(/_/g,' ')}</span>`
+      : '';
+    const sportBucketTag = e.sport_bucket
+      ? `<span style="font-size:9px;background:${sportBucketColors[e.sport_bucket]||'rgba(255,255,255,0.08)'};color:var(--text2);padding:1px 6px;border-radius:4px;">⚡ ${e.sport_bucket.replace(/_/g,' ')}</span>`
+      : '';
+    const muscleTag = e.muscle_group
+      ? `<span style="font-size:9px;background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);padding:1px 6px;border-radius:4px;">💪 ${e.muscle_group}${e.muscle_head ? ' · '+e.muscle_head : ''}</span>`
+      : '';
+    const enrichedTag = e.mechanism_text
+      ? `<span style="font-size:9px;background:rgba(34,197,94,0.15);color:var(--green);padding:1px 6px;border-radius:4px;">✓ enriched</span>`
+      : `<span style="font-size:9px;background:rgba(255,255,255,0.05);color:var(--text3);padding:1px 6px;border-radius:4px;">○ not enriched</span>`;
     const isSelMode = (document.getElementById('lib-select-btn')||{}).textContent === '✕ Done';
     const isSelected = LIB_SELECTED.has(e._idx);
     const selBorder = isSelected ? '2px solid var(--red)' : '1px solid var(--border)';
@@ -10711,9 +10822,14 @@ function renderLibrary() {
       <div style="padding:10px;border-top:2px solid ${color};">
         <div style="font-size:13px;font-weight:600;margin-bottom:4px;">${e.name}</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:6px;">${e.cat}</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">${lkTag}${vidTag}</div>
-        ${e.notes ? `<div style="font-size:10px;color:var(--text2);font-style:italic;">${e.notes}</div>` : ''}
-        ${!isSelMode ? `<button onclick="openEditExercise(${e._idx})" style="margin-top:8px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text3);font-size:10px;cursor:pointer;width:100%;">✏ Edit</button>` : ''}
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">${lkTag}${vidTag}${enrichedTag}</div>
+        ${bucketTag||muscleTag||sportBucketTag ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">${bucketTag}${sportBucketTag}${muscleTag}</div>` : ''}
+        ${e.notes ? `<div style="font-size:10px;color:var(--text2);font-style:italic;margin-bottom:4px;">${e.notes}</div>` : ''}
+        ${e.mechanism_text ? `<div style="font-size:10px;color:var(--text2);line-height:1.5;border-top:1px solid var(--border);padding-top:6px;margin-top:4px;">${e.mechanism_text}</div>` : ''}
+        ${!isSelMode ? `<div style="display:flex;gap:4px;margin-top:8px;">
+          <button onclick="openEditExercise(${e._idx})" style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text3);font-size:10px;cursor:pointer;">✏ Edit</button>
+          <button onclick="quickEnrichOne(${e._idx},event)" style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.25);border-radius:6px;padding:4px 8px;color:#6BA3F8;font-size:10px;cursor:pointer;" title="AI enrich this exercise">✨</button>
+        </div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -10767,7 +10883,18 @@ function saveExercise() {
 
   if (!name || !cat) { alert('Exercise name and category are required.'); return; }
 
-  const entry = { cat, name, liftKey, video, notes };
+  const entry = {
+    cat, name, liftKey, video, notes,
+    // preserve enrichment fields if editing an existing exercise
+    muscle_group:   (editingExIdx !== null ? EXERCISE_DB[editingExIdx].muscle_group  : '') || '',
+    muscle_head:    (editingExIdx !== null ? EXERCISE_DB[editingExIdx].muscle_head   : '') || '',
+    fiber_type:     (editingExIdx !== null ? EXERCISE_DB[editingExIdx].fiber_type    : '') || '',
+    bucket:         (editingExIdx !== null ? EXERCISE_DB[editingExIdx].bucket        : '') || '',
+    sport_bucket:   (editingExIdx !== null ? EXERCISE_DB[editingExIdx].sport_bucket  : '') || '',
+    mechanism_text: (editingExIdx !== null ? EXERCISE_DB[editingExIdx].mechanism_text: '') || '',
+    program_gap:    (editingExIdx !== null ? EXERCISE_DB[editingExIdx].program_gap   : '') || '',
+    sport_transfer: (editingExIdx !== null ? EXERCISE_DB[editingExIdx].sport_transfer: null) || null,
+  };
 
   if (editingExIdx !== null) {
     EXERCISE_DB[editingExIdx] = entry;
@@ -16790,6 +16917,159 @@ async function initWithSupabase() {
     showStatus('⚠️ Cloud load failed — using local data');
   }
 }
+
+// ══════════════════════════════════════════════════════════════
+// AI EXERCISE ENRICHMENT
+// ══════════════════════════════════════════════════════════════
+
+let enrichStopFlag = false;
+let enrichCurrentMode = 'unenriched';
+
+function openEnrichModal() {
+  enrichStopFlag = false;
+  const unenriched = EXERCISE_DB.filter(e => !e.mechanism_text).length;
+  document.getElementById('enrich-count-badge').textContent = unenriched;
+  document.getElementById('enrich-status').textContent = '';
+  document.getElementById('enrich-log').innerHTML = '';
+  document.getElementById('enrich-progress-bar').style.width = '0%';
+  document.getElementById('enrich-start-btn').disabled = false;
+  document.getElementById('enrich-stop-btn').disabled = true;
+  document.getElementById('enrich-stop-btn').style.opacity = '0.4';
+  setEnrichMode('unenriched');
+  openModal('enrichModal');
+}
+
+function closeEnrichModal() { closeModal('enrichModal'); }
+
+function setEnrichMode(mode) {
+  enrichCurrentMode = mode;
+  document.getElementById('enrich-manual-wrap').style.display = mode === 'manual' ? 'block' : 'none';
+  ['unenriched','manual'].forEach(m => {
+    const btn = document.getElementById('enrich-mode-' + m);
+    if (!btn) return;
+    const active = m === mode;
+    btn.style.background   = active ? 'rgba(79,142,247,0.2)' : 'rgba(255,255,255,0.05)';
+    btn.style.borderColor  = active ? 'rgba(79,142,247,0.4)' : 'rgba(255,255,255,0.1)';
+    btn.style.color        = active ? '#6BA3F8' : 'var(--text2)';
+    btn.style.fontWeight   = active ? '600' : '400';
+  });
+}
+
+async function startEnrichment() {
+  const sports = document.getElementById('enrich-sports').value;
+  let targets = [];
+
+  if (enrichCurrentMode === 'unenriched') {
+    targets = EXERCISE_DB.filter(e => !e.mechanism_text).map(e => e.name);
+  } else {
+    targets = (document.getElementById('enrich-manual-names').value || '')
+      .split('\n').map(l => l.trim()).filter(Boolean);
+  }
+
+  if (!targets.length) {
+    document.getElementById('enrich-status').textContent = 'No exercises to enrich.';
+    return;
+  }
+
+  enrichStopFlag = false;
+  document.getElementById('enrich-start-btn').disabled = true;
+  document.getElementById('enrich-stop-btn').disabled = false;
+  document.getElementById('enrich-stop-btn').style.opacity = '1';
+  document.getElementById('enrich-log').innerHTML = '';
+
+  for (let i = 0; i < targets.length; i++) {
+    if (enrichStopFlag) break;
+    const name = targets[i];
+    document.getElementById('enrich-status').textContent = `Processing ${i+1} of ${targets.length}: ${name}`;
+    document.getElementById('enrich-progress-bar').style.width = Math.round((i / targets.length) * 100) + '%';
+
+    // Add log row
+    const logRow = document.createElement('div');
+    logRow.id = 'elog-' + i;
+    logRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);';
+    logRow.innerHTML = `<span style="color:var(--text)">${name}</span><span style="color:var(--text3)">processing…</span>`;
+    document.getElementById('enrich-log').prepend(logRow);
+
+    try {
+      const parsed = await callEnrichAPI(name, sports);
+      const ex = EXERCISE_DB.find(e => e.name.toLowerCase() === name.toLowerCase());
+      if (ex) {
+        if (parsed.muscle)      ex.muscle_group   = parsed.muscle;
+        if (parsed.bucket)      ex.bucket         = parsed.bucket;
+        if (parsed.mechanism)   ex.mechanism_text = parsed.mechanism;
+        if (parsed.program_gap) ex.program_gap    = parsed.program_gap;
+        if (parsed.transfer)    ex.sport_transfer = parsed.transfer;
+      }
+      persistExerciseDB();
+      logRow.querySelector('span:last-child').textContent = '✓ enriched';
+      logRow.querySelector('span:last-child').style.color = 'var(--green)';
+    } catch(err) {
+      logRow.querySelector('span:last-child').textContent = 'error — ' + err.message;
+      logRow.querySelector('span:last-child').style.color = 'var(--red)';
+      console.error('[enrich]', name, err);
+    }
+
+    if (i < targets.length - 1 && !enrichStopFlag) {
+      await new Promise(r => setTimeout(r, 750));
+    }
+  }
+
+  document.getElementById('enrich-progress-bar').style.width = '100%';
+  const totalDone = EXERCISE_DB.filter(e => e.mechanism_text).length;
+  document.getElementById('enrich-status').textContent = enrichStopFlag
+    ? `Stopped. ${totalDone} exercises enriched total in library.`
+    : `✓ Done — ${totalDone} exercises now enriched. Saved to localStorage + Supabase.`;
+  document.getElementById('enrich-start-btn').disabled = false;
+  document.getElementById('enrich-stop-btn').disabled = true;
+  document.getElementById('enrich-stop-btn').style.opacity = '0.4';
+  renderLibrary(); // refresh cards to show new badges
+}
+
+// Single-exercise quick enrich from card button
+async function quickEnrichOne(idx, event) {
+  event.stopPropagation();
+  const ex = EXERCISE_DB[idx];
+  if (!ex) return;
+  showStatus(`✨ Enriching "${ex.name}"…`);
+  try {
+    const parsed = await callEnrichAPI(ex.name, 'Baseball,Basketball,Hockey,Football');
+    if (parsed.muscle)      ex.muscle_group   = parsed.muscle;
+    if (parsed.bucket)      ex.bucket         = parsed.bucket;
+    if (parsed.mechanism)   ex.mechanism_text = parsed.mechanism;
+    if (parsed.program_gap) ex.program_gap    = parsed.program_gap;
+    if (parsed.transfer)    ex.sport_transfer = parsed.transfer;
+    persistExerciseDB();
+    renderLibrary();
+    showStatus(`✅ "${ex.name}" enriched and saved.`);
+  } catch(err) {
+    showStatus(`❌ Enrich failed for "${ex.name}": ${err.message}`);
+    console.error('[quickEnrichOne]', err);
+  }
+}
+
+async function callEnrichAPI(name, sports) {
+  const prompt = `You are a strength and conditioning expert. Generate exercise enrichment for: "${name}". Sports: ${sports}
+Return ONLY valid JSON, no markdown, no backticks, no preamble:
+{"muscle":"specific muscles and heads targeted (1-2 lines)","bucket":"primary_compound|strength_accessory|athletic_power|isolation_rehab","mechanism":"2-3 sentences — joint angles, contraction type, which specific head is loaded, what makes this exercise unique","transfer":[{"sport":"Sport","text":"max 50 words on direct athletic transfer"}],"program_gap":"what this does NOT train and what to pair it with (1-2 sentences)"}
+Only include sports from this list: ${sports}. Be specific and biomechanically accurate.`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 900,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!res.ok) throw new Error(`API HTTP ${res.status}`);
+  const data = await res.json();
+  const text = data.content.map(c => c.text || '').join('');
+  const clean = text.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
 
 try {
   init();
