@@ -1934,12 +1934,13 @@ body {
           </div>
           <div>
             <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Phase</label>
-            <select id="pbai-phase-sel" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
+            <select id="pbai-phase-sel" onchange="pbAIUpdatePhasePriority()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
               <option value="offseason">Off-season</option>
               <option value="preseason">Pre-season</option>
               <option value="inseason" selected>In-season</option>
               <option value="postseason">Post-season</option>
             </select>
+            <div id="pbai-phase-hint" style="font-size:10px;color:var(--text3);margin-top:3px;"></div>
           </div>
           <div>
             <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Mode</label>
@@ -6337,6 +6338,109 @@ function computePlayerFlags(playerName) {
     }
   }
 
+  // ── Exercise gap flags ──────────────────────────────────────────────────────
+  // Check assigned programs for the last 7 days of training
+  if (typeof SAVED_PROGRAMS !== 'undefined' && typeof EXERCISE_DB !== 'undefined') {
+    var assignedProgs = SAVED_PROGRAMS.filter(function(p) { return p.assignedTo === playerName; });
+
+    // Collect all exercise names from assigned programs
+    var programExNames = [];
+    assignedProgs.forEach(function(prog) {
+      var exs = briefExtractExercises ? briefExtractExercises(prog) : [];
+      exs.forEach(function(ex) { if (ex.name) programExNames.push(ex.name.toLowerCase()); });
+    });
+
+    if (programExNames.length > 0) {
+      // Enrich: look up each name in EXERCISE_DB
+      var programDbExercises = programExNames.map(function(name) {
+        return EXERCISE_DB.find(function(e) { return e && e.name && e.name.toLowerCase() === name; });
+      }).filter(Boolean);
+
+      var hasMuscleHead = function(head) {
+        return programDbExercises.some(function(e) {
+          return (e.muscle_head || '').toLowerCase().includes(head.toLowerCase()) ||
+                 (e.muscle_group || '').toLowerCase().includes(head.toLowerCase());
+        });
+      };
+      var hasSportBucket = function(bucket) {
+        return programDbExercises.some(function(e) { return e.sport_bucket === bucket; });
+      };
+      var hasBucket = function(bucket) {
+        return programDbExercises.some(function(e) { return e.bucket === bucket; });
+      };
+
+      var pos = (PLAYERS[playerName] || {}).pos || '';
+      var isPitcher = pos === 'SP' || pos === 'RP';
+
+      // Flag: no posterior shoulder / rotator cuff work
+      var hasPostShoulder = hasMuscleHead('posterior deltoid') || hasMuscleHead('rotator cuff') || hasSportBucket('throw_ball');
+      if (!hasPostShoulder) {
+        flags.push({
+          type: 'ex_gap_shoulder',
+          level: isPitcher ? 'red' : 'yellow',
+          icon: '💪',
+          text: 'No posterior shoulder / arm care work in current program' + (isPitcher ? ' — CRITICAL for pitchers' : ''),
+        });
+      }
+
+      // Flag: no hamstring eccentric work
+      var hasHamEccentric = hasSportBucket('deceleration') ||
+        programDbExercises.some(function(e) {
+          return e.name && (e.name.toLowerCase().includes('nordic') ||
+            e.name.toLowerCase().includes('single-leg rdl') ||
+            e.name.toLowerCase().includes('glute-ham'));
+        });
+      if (!hasHamEccentric) {
+        flags.push({
+          type: 'ex_gap_hamstring',
+          level: 'yellow',
+          icon: '🦵',
+          text: 'No hamstring eccentric work (Nordic, RDL, GHR) — BF strain risk elevated',
+        });
+      }
+
+      // Flag: no primary compound lift
+      if (!hasBucket('primary_compound')) {
+        flags.push({
+          type: 'ex_gap_compound',
+          level: 'yellow',
+          icon: '🏋️',
+          text: 'No primary compound exercise in program — foundational strength may be undertrained',
+        });
+      }
+
+      // Flag: no deceleration / landing work
+      if (!hasSportBucket('deceleration') && !hasSportBucket('agility')) {
+        flags.push({
+          type: 'ex_gap_decel',
+          level: 'yellow',
+          icon: '⬇️',
+          text: 'No deceleration or agility work — sprint injury prevention undertrained',
+        });
+      }
+
+      // Flag: pitcher missing scapular work
+      if (isPitcher) {
+        var hasScapular = programDbExercises.some(function(e) {
+          return e.name && (
+            e.name.toLowerCase().includes('serratus') ||
+            e.name.toLowerCase().includes('y-t-w') ||
+            e.name.toLowerCase().includes('pull-apart') ||
+            e.name.toLowerCase().includes('face pull')
+          );
+        });
+        if (!hasScapular) {
+          flags.push({
+            type: 'ex_gap_scapular',
+            level: 'red',
+            icon: '🩺',
+            text: 'Pitcher: no scapular stability work (Y-T-W, face pull, serratus) — overhead health risk',
+          });
+        }
+      }
+    }
+  }
+
   return flags;
 }
 
@@ -7590,6 +7694,40 @@ function renderBrief() {
         +'<td style="padding:7px 8px;text-align:center;font-size:14px;">'+r.statusDot+'</td>'
         +'</tr>';
     }).join('');
+  }
+
+  // ── Player flags (including exercise gaps) ────────────────────────────────
+  var briefFlagsEl = document.getElementById('brief-flags');
+  if (briefFlagsEl) {
+    var allFlags = [];
+    players.forEach(function(entry) {
+      var name = entry[0];
+      var pFlags = computePlayerFlags(name);
+      if (pFlags.length) {
+        pFlags.forEach(function(f) {
+          allFlags.push({ playerName: name, flag: f });
+        });
+      }
+    });
+    if (!allFlags.length) {
+      briefFlagsEl.innerHTML = '<div style="font-size:11px;color:var(--green);padding:4px 0;">✓ No flags across all players</div>';
+    } else {
+      var colors  = { red:'rgba(239,68,68,0.15)', yellow:'rgba(245,158,11,0.12)', green:'rgba(34,197,94,0.1)' };
+      var borders = { red:'rgba(239,68,68,0.4)',  yellow:'rgba(245,158,11,0.35)', green:'rgba(34,197,94,0.3)' };
+      var textColors = { red:'var(--red)', yellow:'var(--yellow)', green:'var(--green)' };
+      // Sort: red first, then yellow
+      allFlags.sort(function(a,b) { return (a.flag.level==='red'?0:1) - (b.flag.level==='red'?0:1); });
+      briefFlagsEl.innerHTML = allFlags.map(function(item) {
+        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 10px;background:'+colors[item.flag.level]+';border:1px solid '+borders[item.flag.level]+';border-radius:6px;font-size:11px;margin-bottom:5px;">'
+          + '<span style="flex-shrink:0;">'+item.flag.icon+'</span>'
+          + '<div style="flex:1;">'
+          + '<span style="font-weight:600;color:#fff;">'+item.playerName.split(' ').pop()+'</span>'
+          + '<span style="color:var(--text3);margin:0 5px;">·</span>'
+          + '<span style="color:'+textColors[item.flag.level]+';">'+item.flag.text+'</span>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+    }
   }
 
   // ── Today's programs ──────────────────────────────────────────────────────
@@ -12805,8 +12943,48 @@ function pbOpenDay(weekIdx, dayIdx) {
   if (!editor) return;
   editor.style.display = 'block';
 
-  // Build category options from EXERCISE_DB
+  // Build bucket-grouped category options from EXERCISE_DB
   var cats = [...new Set(EXERCISE_DB.map(function(e){ return e&&e.cat; }).filter(Boolean))].sort();
+
+  // Group exercises by bucket for smart picker
+  var bucketGroups = {
+    primary_compound:   { label:'🏆 Primary compound', exs:[] },
+    strength_accessory: { label:'💪 Strength / accessory', exs:[] },
+    athletic_power:     { label:'⚡ Athletic / power', exs:[] },
+    isolation_rehab:    { label:'🩺 Isolation / rehab', exs:[] },
+    untagged:           { label:'📋 Other', exs:[] },
+  };
+  EXERCISE_DB.forEach(function(e) {
+    if (!e || !e.name) return;
+    var b = e.bucket || 'untagged';
+    if (!bucketGroups[b]) b = 'untagged';
+    bucketGroups[b].exs.push(e);
+  });
+
+  // Build bucket-aware optgroup select for exercise name picker
+  function buildBucketExSelect(bi, ei, selectedName, selectedCat) {
+    var opts = '<option value="">— Exercise —</option>';
+    // If a category is already selected, show filtered list first
+    if (selectedCat) {
+      opts += '<optgroup label="— ' + selectedCat + ' —">';
+      EXERCISE_DB.filter(function(e){ return e && e.cat === selectedCat; })
+        .sort(function(a,b){ return a.name.localeCompare(b.name); })
+        .forEach(function(e){ opts += '<option value="'+e.name+'"'+(e.name===selectedName?' selected':'')+'>'+e.name+'</option>'; });
+      opts += '</optgroup>';
+    }
+    // Then show by bucket
+    ['primary_compound','strength_accessory','athletic_power','isolation_rehab','untagged'].forEach(function(bk) {
+      var grp = bucketGroups[bk];
+      var filtered = selectedCat ? grp.exs.filter(function(e){ return e.cat !== selectedCat; }) : grp.exs;
+      if (!filtered.length) return;
+      opts += '<optgroup label="'+grp.label+'">';
+      filtered.sort(function(a,b){ return a.name.localeCompare(b.name); })
+        .forEach(function(e){ opts += '<option value="'+e.name+'"'+(e.name===selectedName?' selected':'')+'>'+e.name+(e.muscle_head?' ('+e.muscle_head+')':'')+'</option>'; });
+      opts += '</optgroup>';
+    });
+    return '<select onchange="pbSetExField('+bi+','+ei+',\'name\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'+opts+'</select>';
+  }
+
   var catOpts = '<option value="">— Category —</option>' + cats.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
 
   // Group blocks by session
@@ -12842,9 +13020,14 @@ function pbOpenDay(weekIdx, dayIdx) {
           .sort(function(a,b){ return a.name.localeCompare(b.name); })
           .forEach(function(e){ exOpts += '<option value="'+e.name+'"'+(e.name===ex.name?' selected':'')+'>'+e.name+'</option>'; });
       }
+      // Enrichment badge for selected exercise
+      var dbEx = ex.name ? EXERCISE_DB.find(function(e){ return e&&e.name===ex.name; }) : null;
+      var enrichBadge = dbEx && dbEx.bucket
+        ? '<span style="font-size:8px;color:#6BA3F8;margin-left:3px;" title="'+dbEx.bucket.replace(/_/g,' ')+(dbEx.muscle_head?' · '+dbEx.muscle_head:'')+'">●</span>'
+        : '';
       return '<div style="display:grid;grid-template-columns:130px 1fr 50px 60px 70px 65px 55px 20px;gap:4px;align-items:center;margin-bottom:5px;">'
         +'<select onchange="pbSetExCat('+bi+','+ei+',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-size:10px;font-family:\'DM Mono\',monospace;">'+catOpts.replace('value="'+ex.cat+'"','value="'+ex.cat+'" selected')+'</select>'
-        +'<select onchange="pbSetExField('+bi+','+ei+',\'name\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'+exOpts+'</select>'
+        + buildBucketExSelect(bi, ei, ex.name, ex.cat)
         + pbFieldSelect(bi,ei,'sets',ex.sets||'','Sets')
         + pbFieldSelect(bi,ei,'reps',ex.reps||'','Reps')
         + pbFieldSelect(bi,ei,'load',ex.load||'','Load')
@@ -12899,6 +13082,35 @@ function pbOpenDay(weekIdx, dayIdx) {
       +'</div>';
   }).join('');
 
+  // ── Session coverage summary ──────────────────────────────────────────────
+  var allSessionExNames = day.blocks.reduce(function(arr, b) {
+    return arr.concat((b.exercises||[]).map(function(e){ return e.name; }).filter(Boolean));
+  }, []);
+  var coverageSummary = '';
+  if (allSessionExNames.length > 0) {
+    var musclesCovered = {}, bucketsCovered = {}, missingPrimary = true;
+    allSessionExNames.forEach(function(name) {
+      var dbEx = EXERCISE_DB.find(function(e){ return e && e.name === name; });
+      if (!dbEx) return;
+      if (dbEx.muscle_group) musclesCovered[dbEx.muscle_group] = true;
+      if (dbEx.bucket) {
+        bucketsCovered[dbEx.bucket] = (bucketsCovered[dbEx.bucket]||0) + 1;
+        if (dbEx.bucket === 'primary_compound') missingPrimary = false;
+      }
+    });
+    var muscleList = Object.keys(musclesCovered);
+    var bColors = { primary_compound:'#AFA9EC', strength_accessory:'#5DCAA5', athletic_power:'#EF9F27', isolation_rehab:'#ED93B1' };
+    var bucketBadges = Object.entries(bucketsCovered).map(function(entry) {
+      return '<span style="font-size:9px;background:rgba(255,255,255,0.06);color:'+(bColors[entry[0]]||'var(--text3)')+';padding:1px 6px;border-radius:4px;">'+entry[0].replace(/_/g,' ')+' ×'+entry[1]+'</span>';
+    }).join('');
+    coverageSummary = '<div style="margin-top:10px;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:6px;border:1px solid rgba(255,255,255,0.06);">'
+      + '<div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Session coverage</div>'
+      + (bucketBadges ? '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:4px;">'+bucketBadges+'</div>' : '')
+      + (muscleList.length ? '<div style="font-size:10px;color:var(--text3);">Muscles: '+muscleList.join(' · ')+'</div>' : '')
+      + (missingPrimary ? '<div style="font-size:10px;color:var(--yellow);margin-top:3px;">⚠ No primary compound lift</div>' : '')
+      + '</div>';
+  }
+
   editor.innerHTML = '<div style="padding:14px;">'
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px;">'
     +'<div style="flex:1;min-width:200px;">'
@@ -12913,6 +13125,7 @@ function pbOpenDay(weekIdx, dayIdx) {
     +'<button onclick="pbCloseEditor()" style="padding:5px 8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:10px;cursor:pointer;">✕</button>'
     +'</div></div>'
     + blocksHtml
+    + coverageSummary
     +'</div>';
 }
 
@@ -17217,6 +17430,8 @@ async function initWithSupabase() {
       buildPlayerList();
       renderDashboard();
       buildTeamList(); // Rebuild team list after cloud data loads
+      // Load phase priorities for exercise library system
+      if (typeof loadPhasePriorities === 'function') loadPhasePriorities();
     } else {
       showStatus('⚠️ No cloud data yet — using local');
     }
@@ -17432,6 +17647,8 @@ function pbAIDesign() {
   document.getElementById('pbai-gen-btn').style.display = '';
 
   openModal('pbAIModal');
+  // Load phase priorities if not yet loaded, then update hint
+  loadPhasePriorities().then(function(){ pbAIUpdatePhasePriority(); });
 }
 
 async function pbAIGenerate() {
@@ -17662,6 +17879,133 @@ async function callPBDesignAPI(ctx) {
   var text = data.result || data.text || '';
   var clean = text.replace(/```json|```/g, '').trim();
   return JSON.parse(clean);
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PHASE-AWARE EXERCISE PRIORITY
+// ══════════════════════════════════════════════════════════════
+
+var _phasePriorities = {}; // { exerciseName: { offseason, preseason, inseason } }
+var _phasePrioritiesLoaded = false;
+
+async function loadPhasePriorities() {
+  if (_phasePrioritiesLoaded || !_supaClient) return;
+  try {
+    var { data, error } = await _supaClient
+      .from('exercise_phase_priority')
+      .select('exercise_id, phase, priority, default_sets, default_reps, default_intensity, session_type, notes');
+    if (error || !data) return;
+
+    // Also fetch exercise names to join
+    var { data: exData } = await _supaClient
+      .from('exercises')
+      .select('id, name');
+    var exMap = {};
+    (exData || []).forEach(function(e){ exMap[e.id] = e.name; });
+
+    data.forEach(function(row) {
+      var name = exMap[row.exercise_id];
+      if (!name) return;
+      if (!_phasePriorities[name]) _phasePriorities[name] = {};
+      _phasePriorities[name][row.phase] = {
+        priority: row.priority,
+        sets: row.default_sets,
+        reps: row.default_reps,
+        intensity: row.default_intensity,
+        sessionType: row.session_type,
+        notes: row.notes,
+      };
+    });
+    _phasePrioritiesLoaded = true;
+    console.log('[loadPhasePriorities] loaded', Object.keys(_phasePriorities).length, 'exercise phase priorities');
+  } catch(err) {
+    console.error('[loadPhasePriorities]', err);
+  }
+}
+
+// Save a phase priority for an exercise back to Supabase
+async function saveExercisePhasePriority(exerciseName, phase, priority, sets, reps, intensity) {
+  if (!_supaClient) return;
+  try {
+    // Look up exercise ID
+    var { data: exData } = await _supaClient
+      .from('exercises')
+      .select('id')
+      .eq('name', exerciseName)
+      .single();
+    if (!exData) return;
+
+    await _supaClient.from('exercise_phase_priority').upsert({
+      exercise_id: exData.id,
+      phase: phase,
+      priority: priority,
+      default_sets: sets || null,
+      default_reps: reps || null,
+      default_intensity: intensity || null,
+    }, { onConflict: 'exercise_id,phase' });
+
+    if (!_phasePriorities[exerciseName]) _phasePriorities[exerciseName] = {};
+    _phasePriorities[exerciseName][phase] = { priority, sets, reps, intensity };
+  } catch(err) {
+    console.error('[saveExercisePhasePriority]', err);
+  }
+}
+
+// Get exercises recommended for a given phase, optionally filtered by session type
+function getPhaseRecommendedExercises(phase, sessionType) {
+  var recommended = { primary:[], secondary:[], optional:[] };
+
+  // If we have Supabase phase priorities, use them
+  if (_phasePrioritiesLoaded && Object.keys(_phasePriorities).length > 0) {
+    Object.entries(_phasePriorities).forEach(function(entry) {
+      var name = entry[0];
+      var phases = entry[1];
+      var pr = phases[phase];
+      if (!pr) return;
+      var dbEx = EXERCISE_DB.find(function(e){ return e && e.name === name; });
+      if (sessionType && dbEx) {
+        // Filter by session type compatibility
+        var stMap = {
+          lower_hinge: ['lower','power'],
+          lower_knee:  ['lower','power'],
+          upper_push:  ['upper','power'],
+          upper_pull:  ['upper','power'],
+          full_body:   ['lower','upper','power','core'],
+          power:       ['power','lower'],
+          arm_care:    ['upper','rehab'],
+          decel_rehab: ['lower','rehab'],
+        };
+        var allowed = stMap[sessionType] || [];
+        var grp = (dbEx.muscle_group||'').toLowerCase();
+        var matches = !sessionType || allowed.some(function(a) { return grp.includes(a) || (dbEx.bucket||'').includes(a); });
+        if (!matches) return;
+      }
+      if (pr.priority === 'primary')   recommended.primary.push({ name, dbEx, priority: pr });
+      if (pr.priority === 'secondary') recommended.secondary.push({ name, dbEx, priority: pr });
+      if (pr.priority === 'optional')  recommended.optional.push({ name, dbEx, priority: pr });
+    });
+  }
+
+  return recommended;
+}
+
+// Called when phase selector changes in AI Design modal — update priority hint
+function pbAIUpdatePhasePriority() {
+  var phase = (document.getElementById('pbai-phase-sel')||{}).value || 'inseason';
+  var sessionType = (document.getElementById('pbai-session-type')||{}).value || '';
+  var rec = getPhaseRecommendedExercises(phase, sessionType);
+  var total = rec.primary.length + rec.secondary.length;
+  var statusEl = document.getElementById('pbai-phase-hint');
+  if (statusEl) {
+    if (total > 0) {
+      statusEl.textContent = total + ' exercises tagged as ' + phase + ' priority in your library';
+      statusEl.style.color = 'var(--green)';
+    } else {
+      statusEl.textContent = 'No phase priorities set yet — AI will use general knowledge';
+      statusEl.style.color = 'var(--text3)';
+    }
+  }
 }
 
 
