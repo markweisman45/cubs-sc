@@ -17048,26 +17048,27 @@ async function quickEnrichOne(idx, event) {
 }
 
 async function callEnrichAPI(name, sports) {
-  const prompt = `You are a strength and conditioning expert. Generate exercise enrichment for: "${name}". Sports: ${sports}
-Return ONLY valid JSON, no markdown, no backticks, no preamble:
-{"muscle":"specific muscles and heads targeted (1-2 lines)","bucket":"primary_compound|strength_accessory|athletic_power|isolation_rehab","mechanism":"2-3 sentences — joint angles, contraction type, which specific head is loaded, what makes this exercise unique","transfer":[{"sport":"Sport","text":"max 50 words on direct athletic transfer"}],"program_gap":"what this does NOT train and what to pair it with (1-2 sentences)"}
-Only include sports from this list: ${sports}. Be specific and biomechanically accurate.`;
+  // Routes through Supabase Edge Function to avoid CORS / API key exposure
+  const res = await fetch(
+    `${SUPA_URL}/functions/v1/enrich-exercise`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPA_KEY}`,
+      },
+      body: JSON.stringify({ name, sports }),
+    }
+  );
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 900,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Enrich function error ${res.status}: ${errText}`);
+  }
 
-  if (!res.ok) throw new Error(`API HTTP ${res.status}`);
   const data = await res.json();
-  const text = data.content.map(c => c.text || '').join('');
-  const clean = text.replace(/```json|```/g, '').trim();
-  return JSON.parse(clean);
+  if (data.error) throw new Error(data.error);
+  return data;
 }
 
 
