@@ -1868,32 +1868,82 @@ body {
       <!-- ── EXERCISE LIBRARY ── -->
       <div id="prog-tab-library" class="prog-tab" style="display:none;">
         <div class="card section-mb">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+
+          <!-- Top bar: title + actions -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
             <div class="card-title" style="margin:0;">📚 Exercise Library</div>
-            <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <input type="text" id="lib-search" placeholder="Search exercises…" oninput="filterLibrary()"
-                style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 12px;color:var(--text);font-size:12px;width:220px;">
-              <select id="lib-cat-filter" onchange="filterLibrary()"
-                style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 12px;color:var(--text);font-size:12px;">
-                <option value="">All Categories</option>
-              </select>
-              <button class="generate-btn" style="padding:8px 14px;" onclick="openAddExerciseModal()">+ Add Exercise</button>
-              <button onclick="openEnrichModal()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">✨ AI Enrich</button>
+            <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <button class="generate-btn" style="padding:7px 12px;" onclick="openAddExerciseModal()">+ Add</button>
+              <button onclick="openEnrichModal()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">✨ Enrich</button>
               <button onclick="libToggleSelect()" id="lib-select-btn" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">☑ Select</button>
-              <button onclick="libDeleteSelected()" id="lib-delete-btn" style="display:none;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">🗑 Delete Selected (<span id="lib-sel-count">0</span>)</button>
+              <button onclick="libDeleteSelected()" id="lib-delete-btn" style="display:none;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">🗑 Delete (<span id="lib-sel-count">0</span>)</button>
               <button onclick="exportExerciseLibrary()" style="background:rgba(59,122,196,0.15);border:1px solid rgba(59,122,196,0.3);border-radius:6px;color:var(--cubs-blue);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">📤 Export</button>
-              <button onclick="document.getElementById('xlsxImportInput').click()"
-                style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:8px 14px;color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">
-                📥 Import XLSX
-              </button>
-              <input type="file" id="xlsxImportInput" accept=".xlsx,.xls,.csv" style="display:none;"
-                onchange="importExerciseLibraryXLSX(this)">
-              <label style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);border-radius:6px;color:var(--green);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
-                📥 Import<input type="file" accept=".json" onchange="importExerciseLibrary(this)" style="display:none;">
+              <button onclick="document.getElementById('xlsxImportInput').click()" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:7px 12px;color:var(--green);font-size:11px;font-weight:600;cursor:pointer;">📥 XLSX</button>
+              <input type="file" id="xlsxImportInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importExerciseLibraryXLSX(this)">
+              <label style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);border-radius:6px;color:var(--green);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">
+                📥 JSON<input type="file" accept=".json" onchange="importExerciseLibrary(this)" style="display:none;">
               </label>
             </div>
           </div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:16px;" id="lib-count"></div>
+
+          <!-- Filter panel -->
+          <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+
+            <!-- Row 1: search + category -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+              <input type="text" id="lib-search" placeholder="Search exercises…" oninput="filterLibrary()"
+                style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 12px;color:var(--text);font-size:12px;flex:1;min-width:180px;">
+              <select id="lib-cat-filter" onchange="filterLibrary()"
+                style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 12px;color:var(--text);font-size:12px;min-width:160px;">
+                <option value="">All categories</option>
+              </select>
+              <select id="lib-muscle-filter" onchange="filterLibrary()"
+                style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 12px;color:var(--text);font-size:12px;min-width:160px;">
+                <option value="">All muscle groups</option>
+              </select>
+            </div>
+
+            <!-- Row 2: bucket pills -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+              <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;">Bucket</span>
+              <button id="lib-bucket-" onclick="libSetBucket('')" class="lib-bucket-btn lib-bucket-active"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.1);color:var(--text2);cursor:pointer;">All</button>
+              <button id="lib-bucket-primary_compound" onclick="libSetBucket('primary_compound')" class="lib-bucket-btn"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(127,119,221,0.4);background:rgba(127,119,221,0.12);color:#AFA9EC;cursor:pointer;">🏆 Primary compound</button>
+              <button id="lib-bucket-strength_accessory" onclick="libSetBucket('strength_accessory')" class="lib-bucket-btn"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(29,158,117,0.4);background:rgba(29,158,117,0.12);color:#5DCAA5;cursor:pointer;">💪 Strength accessory</button>
+              <button id="lib-bucket-athletic_power" onclick="libSetBucket('athletic_power')" class="lib-bucket-btn"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(186,117,23,0.4);background:rgba(186,117,23,0.12);color:#EF9F27;cursor:pointer;">⚡ Athletic power</button>
+              <button id="lib-bucket-isolation_rehab" onclick="libSetBucket('isolation_rehab')" class="lib-bucket-btn"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(212,83,126,0.4);background:rgba(212,83,126,0.12);color:#ED93B1;cursor:pointer;">🩺 Isolation / rehab</button>
+            </div>
+
+            <!-- Row 3: sport bucket pills -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+              <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;">Sport</span>
+              <button id="lib-sbucket-" onclick="libSetSportBucket('')" class="lib-sbucket-btn lib-sbucket-active"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.1);color:var(--text2);cursor:pointer;">All</button>
+              <button id="lib-sbucket-throw_ball" onclick="libSetSportBucket('throw_ball')" class="lib-sbucket-btn"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(24,95,165,0.4);background:rgba(24,95,165,0.12);color:#85B7EB;cursor:pointer;">⚾ Throw</button>
+              <button id="lib-sbucket-swing_bat" onclick="libSetSportBucket('swing_bat')" class="lib-sbucket-btn"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(216,90,48,0.4);background:rgba(216,90,48,0.12);color:#F0997B;cursor:pointer;">🏏 Swing</button>
+              <button id="lib-sbucket-acceleration" onclick="libSetSportBucket('acceleration')" class="lib-sbucket-btn"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(186,117,23,0.4);background:rgba(186,117,23,0.12);color:#EF9F27;cursor:pointer;">💨 Accel</button>
+              <button id="lib-sbucket-deceleration" onclick="libSetSportBucket('deceleration')" class="lib-sbucket-btn"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(29,158,117,0.4);background:rgba(29,158,117,0.12);color:#5DCAA5;cursor:pointer;">🛑 Decel</button>
+              <button id="lib-sbucket-upright_running" onclick="libSetSportBucket('upright_running')" class="lib-sbucket-btn"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(127,119,221,0.4);background:rgba(127,119,221,0.12);color:#AFA9EC;cursor:pointer;">🏃 Running</button>
+              <button id="lib-sbucket-agility" onclick="libSetSportBucket('agility')" class="lib-sbucket-btn"
+                style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(212,83,126,0.4);background:rgba(212,83,126,0.12);color:#ED93B1;cursor:pointer;">🔀 Agility</button>
+            </div>
+          </div>
+
+          <!-- Results count + clear -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-size:11px;color:var(--text3);" id="lib-count"></div>
+            <button onclick="libClearFilters()" id="lib-clear-btn" style="display:none;font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;text-decoration:underline;">✕ Clear filters</button>
+          </div>
+
           <div id="lib-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;"></div>
         </div>
       </div>
@@ -11442,29 +11492,109 @@ function ytId(url) {
   return m ? m[1] : null;
 }
 
-function renderLibrary() {
-  const search = (document.getElementById('lib-search')?.value || '').toLowerCase();
-  const catFilter = document.getElementById('lib-cat-filter')?.value || '';
+// ── Library filter state ─────────────────────────────────────
+var _libBucket      = '';
+var _libSportBucket = '';
 
-  // Populate category filter
+function libSetBucket(val) {
+  _libBucket = val;
+  document.querySelectorAll('.lib-bucket-btn').forEach(function(btn) {
+    var active = btn.id === 'lib-bucket-' + val;
+    btn.style.fontWeight = active ? '700' : '400';
+    btn.style.opacity    = active ? '1'   : '0.6';
+  });
+  renderLibrary();
+}
+
+function libSetSportBucket(val) {
+  _libSportBucket = val;
+  document.querySelectorAll('.lib-sbucket-btn').forEach(function(btn) {
+    var active = btn.id === 'lib-sbucket-' + val;
+    btn.style.fontWeight = active ? '700' : '400';
+    btn.style.opacity    = active ? '1'   : '0.6';
+  });
+  renderLibrary();
+}
+
+function libClearFilters() {
+  _libBucket = '';
+  _libSportBucket = '';
+  document.getElementById('lib-search').value = '';
+  document.getElementById('lib-cat-filter').value = '';
+  document.getElementById('lib-muscle-filter').value = '';
+  libSetBucket('');
+  libSetSportBucket('');
+}
+
+function renderLibrary() {
+  const search      = (document.getElementById('lib-search')?.value || '').toLowerCase();
+  const catFilter   = document.getElementById('lib-cat-filter')?.value || '';
+  const muscleFilter= document.getElementById('lib-muscle-filter')?.value || '';
+
+  // Populate category dropdown (once)
   const cf = document.getElementById('lib-cat-filter');
   if (cf && cf.options.length <= 1) {
-    const cats = [...new Set(EXERCISE_DB.map(e=>e.cat))].sort();
+    const cats = [...new Set(EXERCISE_DB.map(e=>e&&e.cat).filter(Boolean))].sort();
     cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; cf.appendChild(o); });
   }
 
-  const filtered = EXERCISE_DB.filter((e,i) => {
+  // Populate muscle group dropdown (once, from enriched data)
+  const mf = document.getElementById('lib-muscle-filter');
+  if (mf && mf.options.length <= 1) {
+    const muscles = [...new Set(EXERCISE_DB.map(e=>e&&e.muscle_group).filter(Boolean))].sort();
+    muscles.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; mf.appendChild(o); });
+  }
+
+  const filtered = EXERCISE_DB.filter(function(e, i) {
+    if (!e) return false;
     e._idx = i;
-    const matchSearch = !search || e.name.toLowerCase().includes(search) || e.cat.toLowerCase().includes(search);
-    const matchCat = !catFilter || e.cat === catFilter;
-    return matchSearch && matchCat;
+    const matchSearch  = !search || (e.name||'').toLowerCase().includes(search) || (e.cat||'').toLowerCase().includes(search) || (e.muscle_group||'').toLowerCase().includes(search);
+    const matchCat     = !catFilter    || e.cat         === catFilter;
+    const matchMuscle  = !muscleFilter || e.muscle_group === muscleFilter;
+    const matchBucket  = !_libBucket      || e.bucket        === _libBucket;
+    const matchSBucket = !_libSportBucket || e.sport_bucket   === _libSportBucket;
+    return matchSearch && matchCat && matchMuscle && matchBucket && matchSBucket;
   });
 
+  // Count badge on each bucket button
+  ['primary_compound','strength_accessory','athletic_power','isolation_rehab'].forEach(function(bk) {
+    var btn = document.getElementById('lib-bucket-' + bk);
+    if (!btn) return;
+    var n = EXERCISE_DB.filter(function(e){ return e && e.bucket === bk; }).length;
+    var label = {primary_compound:'🏆 Primary compound',strength_accessory:'💪 Strength accessory',athletic_power:'⚡ Athletic power',isolation_rehab:'🩺 Isolation / rehab'}[bk];
+    btn.textContent = label + ' ' + n;
+  });
+
+  // Count badge on each sport bucket button
+  ['throw_ball','swing_bat','acceleration','deceleration','upright_running','agility'].forEach(function(sb) {
+    var btn = document.getElementById('lib-sbucket-' + sb);
+    if (!btn) return;
+    var n = EXERCISE_DB.filter(function(e){ return e && e.sport_bucket === sb; }).length;
+    var labels = {throw_ball:'⚾ Throw',swing_bat:'🏏 Swing',acceleration:'💨 Accel',deceleration:'🛑 Decel',upright_running:'🏃 Running',agility:'🔀 Agility'};
+    btn.textContent = labels[sb] + ' ' + n;
+  });
+
+  // Show/hide clear button
+  var hasFilters = search || catFilter || muscleFilter || _libBucket || _libSportBucket;
+  var clearBtn = document.getElementById('lib-clear-btn');
+  if (clearBtn) clearBtn.style.display = hasFilters ? '' : 'none';
+
+  // Result count
   const countEl = document.getElementById('lib-count');
-  if (countEl) countEl.textContent = `${filtered.length} of ${EXERCISE_DB.length} exercises · ${[...new Set(EXERCISE_DB.map(e=>e.cat))].length} categories`;
+  if (countEl) {
+    var enrichedCount = filtered.filter(function(e){ return e && e.mechanism_text; }).length;
+    countEl.textContent = filtered.length + ' of ' + EXERCISE_DB.length + ' exercises'
+      + (enrichedCount < filtered.length ? ' · ' + enrichedCount + ' enriched' : ' · all enriched ✓')
+      + (hasFilters ? ' · filtered' : '');
+  }
 
   const grid = document.getElementById('lib-grid');
   if (!grid) return;
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--text3);font-size:13px;">No exercises match these filters. <button onclick="libClearFilters()" style="background:none;border:none;color:var(--cubs-light-blue);cursor:pointer;text-decoration:underline;">Clear filters</button></div>';
+    return;
+  }
 
   const catColors = {
     'Squat Variations':'rgba(59,122,196,0.2)','Deadlift Variations':'rgba(59,122,196,0.15)',
@@ -11476,50 +11606,25 @@ function renderLibrary() {
     'Acceleration':'rgba(245,158,11,0.15)','ESD':'rgba(100,180,255,0.12)',
     'Strongman Variations':'rgba(204,52,51,0.1)','Mobility':'rgba(100,220,180,0.12)',
   };
+  const bucketColors = { primary_compound:'rgba(127,119,221,0.25)', strength_accessory:'rgba(29,158,117,0.25)', athletic_power:'rgba(186,117,23,0.25)', isolation_rehab:'rgba(212,83,126,0.25)' };
+  const bucketTextColors = { primary_compound:'#AFA9EC', strength_accessory:'#5DCAA5', athletic_power:'#EF9F27', isolation_rehab:'#ED93B1' };
+  const sportBucketColors = { swing_bat:'rgba(216,90,48,0.2)', throw_ball:'rgba(24,95,165,0.2)', acceleration:'rgba(186,117,23,0.2)', deceleration:'rgba(29,158,117,0.2)', upright_running:'rgba(127,119,221,0.2)', agility:'rgba(212,83,126,0.2)' };
 
-  grid.innerHTML = filtered.map((e,i) => {
+  grid.innerHTML = filtered.map(function(e) {
     const vid = ytId(e.video);
     const color = catColors[e.cat] || 'rgba(255,255,255,0.04)';
-    const lkTag = e.liftKey
-      ? `<span style="font-size:9px;background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);padding:1px 6px;border-radius:4px;">🔗 ${e.liftKey}</span>`
-      : '';
-    const vidTag = vid
-      ? `<a href="${e.video}" target="_blank" rel="noopener" style="font-size:9px;background:rgba(239,68,68,0.15);color:#ff6b6b;padding:1px 6px;border-radius:4px;text-decoration:none;">▶ YouTube</a>`
-      : '';
-    // ── enrichment badges ──
-    const bucketColors = {
-      primary_compound:   'rgba(127,119,221,0.25)',
-      strength_accessory: 'rgba(29,158,117,0.25)',
-      athletic_power:     'rgba(186,117,23,0.25)',
-      isolation_rehab:    'rgba(212,83,126,0.25)',
-    };
-    const bucketTextColors = {
-      primary_compound:   '#AFA9EC',
-      strength_accessory: '#5DCAA5',
-      athletic_power:     '#EF9F27',
-      isolation_rehab:    '#ED93B1',
-    };
-    const sportBucketColors = {
-      swing_bat:'rgba(216,90,48,0.2)',throw_ball:'rgba(24,95,165,0.2)',
-      acceleration:'rgba(186,117,23,0.2)',deceleration:'rgba(29,158,117,0.2)',
-      upright_running:'rgba(127,119,221,0.2)',agility:'rgba(212,83,126,0.2)',
-    };
-    const bucketTag = e.bucket
-      ? `<span style="font-size:9px;background:${bucketColors[e.bucket]||'rgba(255,255,255,0.08)'};color:${bucketTextColors[e.bucket]||'var(--text2)'};padding:1px 6px;border-radius:4px;">${e.bucket.replace(/_/g,' ')}</span>`
-      : '';
-    const sportBucketTag = e.sport_bucket
-      ? `<span style="font-size:9px;background:${sportBucketColors[e.sport_bucket]||'rgba(255,255,255,0.08)'};color:var(--text2);padding:1px 6px;border-radius:4px;">⚡ ${e.sport_bucket.replace(/_/g,' ')}</span>`
-      : '';
-    const muscleTag = e.muscle_group
-      ? `<span style="font-size:9px;background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);padding:1px 6px;border-radius:4px;">💪 ${e.muscle_group}${e.muscle_head ? ' · '+e.muscle_head : ''}</span>`
-      : '';
-    const enrichedTag = e.mechanism_text
-      ? `<span style="font-size:9px;background:rgba(34,197,94,0.15);color:var(--green);padding:1px 6px;border-radius:4px;">✓ enriched</span>`
-      : `<span style="font-size:9px;background:rgba(255,255,255,0.05);color:var(--text3);padding:1px 6px;border-radius:4px;">○ not enriched</span>`;
+    const lkTag = e.liftKey ? `<span style="font-size:9px;background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);padding:1px 6px;border-radius:4px;">🔗 ${e.liftKey}</span>` : '';
+    const vidTag = vid ? `<a href="${e.video}" target="_blank" rel="noopener" style="font-size:9px;background:rgba(239,68,68,0.15);color:#ff6b6b;padding:1px 6px;border-radius:4px;text-decoration:none;">▶ YouTube</a>` : '';
+
+    const bucketTag = e.bucket ? `<span style="font-size:9px;background:${bucketColors[e.bucket]||'rgba(255,255,255,0.08)'};color:${bucketTextColors[e.bucket]||'var(--text2)'};padding:1px 6px;border-radius:4px;">${e.bucket.replace(/_/g,' ')}</span>` : '';
+    const sportBucketTag = e.sport_bucket ? `<span style="font-size:9px;background:${sportBucketColors[e.sport_bucket]||'rgba(255,255,255,0.08)'};color:var(--text2);padding:1px 6px;border-radius:4px;">⚡ ${e.sport_bucket.replace(/_/g,' ')}</span>` : '';
+    const muscleTag = e.muscle_group ? `<span style="font-size:9px;background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);padding:1px 6px;border-radius:4px;">💪 ${e.muscle_group}${e.muscle_head?' · '+e.muscle_head:''}</span>` : '';
+
     const isSelMode = (document.getElementById('lib-select-btn')||{}).textContent === '✕ Done';
     const isSelected = LIB_SELECTED.has(e._idx);
     const selBorder = isSelected ? '2px solid var(--red)' : '1px solid var(--border)';
     const selBg = isSelected ? 'rgba(239,68,68,0.12)' : 'var(--bg3)';
+
     return `<div data-libidx="${e._idx}"
       style="background:${selBg};border:${selBorder};border-radius:var(--radius-sm);overflow:hidden;cursor:${isSelMode?'pointer':'default'};position:relative;transition:all 0.15s;"
       onclick="${isSelMode ? 'libToggleCard('+e._idx+')' : ''}">
@@ -11531,15 +11636,15 @@ function renderLibrary() {
         </div>
       </div>` : ''}
       <div style="padding:10px;border-top:2px solid ${color};">
-        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">${e.name}</div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:6px;">${e.cat}</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">${lkTag}${vidTag}${enrichedTag}</div>
-        ${bucketTag||muscleTag||sportBucketTag ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">${bucketTag}${sportBucketTag}${muscleTag}</div>` : ''}
+        <div data-exname="${e.name.replace(/"/g,'&quot;')}" style="font-size:13px;font-weight:600;margin-bottom:4px;cursor:default;">${e.name}</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:5px;">${e.cat}</div>
+        ${bucketTag||muscleTag||sportBucketTag ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px;">${bucketTag}${sportBucketTag}${muscleTag}</div>` : ''}
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">${lkTag}${vidTag}</div>
         ${e.notes ? `<div style="font-size:10px;color:var(--text2);font-style:italic;margin-bottom:4px;">${e.notes}</div>` : ''}
         ${e.mechanism_text ? `<div style="font-size:10px;color:var(--text2);line-height:1.5;border-top:1px solid var(--border);padding-top:6px;margin-top:4px;">${e.mechanism_text}</div>` : ''}
         ${!isSelMode ? `<div style="display:flex;gap:4px;margin-top:8px;">
           <button onclick="openEditExercise(${e._idx})" style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--text3);font-size:10px;cursor:pointer;">✏ Edit</button>
-          <button onclick="quickEnrichOne(${e._idx},event)" style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.25);border-radius:6px;padding:4px 8px;color:#6BA3F8;font-size:10px;cursor:pointer;" title="AI enrich this exercise">✨</button>
+          <button onclick="quickEnrichOne(${e._idx},event)" style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.25);border-radius:6px;padding:4px 8px;color:#6BA3F8;font-size:10px;cursor:pointer;" title="AI enrich">✨</button>
         </div>` : ''}
       </div>
     </div>`;
