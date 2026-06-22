@@ -18307,7 +18307,17 @@ async function callPBDesignAPI(ctx) {
   if (data.error) throw new Error(data.error);
   var text  = data.result || data.text || '';
   var clean = text.replace(/```json|```/g,'').trim();
-  return JSON.parse(clean);
+
+  // Detect truncated response before trying to parse
+  if (!clean.endsWith('}')) {
+    throw new Error('Response was cut off — increase max_tokens in Edge Function to 4000 for full-day mode');
+  }
+
+  try {
+    return JSON.parse(clean);
+  } catch(parseErr) {
+    throw new Error('JSON parse failed — response may be truncated. Try fewer exercises or single-block mode. (' + parseErr.message + ')');
+  }
 }
 
 
