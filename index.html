@@ -11371,6 +11371,52 @@ function loadExerciseDB() {
   } catch(e) { console.error('[loadExerciseDB] error:', e); }
 }
 
+// Pull enrichment data from Supabase and merge into EXERCISE_DB
+// Called after initWithSupabase so _supaClient is ready
+async function loadEnrichedFromSupabase() {
+  try {
+    if (!_supaClient) return;
+    // Only fetch exercises that have enrichment data
+    const { data, error } = await _supaClient
+      .from('exercises')
+      .select('name, muscle_group, muscle_head, fiber_type, bucket, sport_bucket, mechanism_text, program_gap, sport_transfer')
+      .not('mechanism_text', 'is', null);
+    if (error || !data || !data.length) return;
+
+    let merged = 0;
+    data.forEach(function(row) {
+      const ex = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === row.name.toLowerCase(); });
+      if (!ex) return;
+      // Only merge if local doesn't already have enrichment (Supabase is fallback)
+      if (!ex.mechanism_text) {
+        ex.muscle_group   = row.muscle_group   || ex.muscle_group;
+        ex.muscle_head    = row.muscle_head    || ex.muscle_head;
+        ex.fiber_type     = row.fiber_type     || ex.fiber_type;
+        ex.bucket         = row.bucket         || ex.bucket;
+        ex.sport_bucket   = row.sport_bucket   || ex.sport_bucket;
+        ex.mechanism_text = row.mechanism_text || ex.mechanism_text;
+        ex.program_gap    = row.program_gap    || ex.program_gap;
+        ex.sport_transfer = row.sport_transfer || ex.sport_transfer;
+        merged++;
+      }
+    });
+
+    if (merged > 0) {
+      // Save back to localStorage so next load is instant
+      persistExerciseDB();
+      console.log('[loadEnrichedFromSupabase] merged', merged, 'enriched exercises from Supabase');
+      // Re-render library if it's currently visible
+      if (document.getElementById('page-library') && document.getElementById('page-library').classList.contains('active')) {
+        renderLibrary();
+      }
+    } else {
+      console.log('[loadEnrichedFromSupabase] all', data.length, 'Supabase enrichments already in localStorage');
+    }
+  } catch(err) {
+    console.error('[loadEnrichedFromSupabase]', err);
+  }
+}
+
 
 let editingExIdx = null; // index into EXERCISE_DB when editing
 
@@ -17652,6 +17698,8 @@ async function initWithSupabase() {
       buildTeamList(); // Rebuild team list after cloud data loads
       // Load phase priorities for exercise library system
       if (typeof loadPhasePriorities === 'function') loadPhasePriorities();
+      // Merge any enrichment from Supabase that isn't in localStorage
+      if (typeof loadEnrichedFromSupabase === 'function') loadEnrichedFromSupabase();
     } else {
       showStatus('⚠️ No cloud data yet — using local');
     }
