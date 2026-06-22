@@ -1963,23 +1963,70 @@ body {
           <button onclick="closeModal('pbAIModal')" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0;">✕</button>
         </div>
 
-        <!-- Session type row -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-          <div>
-            <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Session type</label>
-            <select id="pbai-session-type" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
-              <option value="lower_hinge">Lower — hip hinge dominant</option>
-              <option value="lower_knee">Lower — knee dominant</option>
-              <option value="upper_push">Upper — push dominant</option>
-              <option value="upper_pull">Upper — pull dominant</option>
-              <option value="full_body">Full body</option>
-              <option value="power">Power / Olympic emphasis</option>
-              <option value="speed_acc">Speed — acceleration</option>
-              <option value="speed_mv">Speed — max velocity</option>
-              <option value="arm_care">Arm care / shoulder health</option>
-              <option value="decel_rehab">Decel / injury prevention</option>
-            </select>
+        <!-- Design mode toggle -->
+        <div style="display:flex;gap:6px;margin-bottom:14px;">
+          <button id="pbai-mode-single" onclick="pbAISetMode('single')"
+            style="flex:1;padding:7px;border-radius:6px;border:1px solid rgba(79,142,247,0.4);background:rgba(79,142,247,0.2);color:#6BA3F8;font-size:11px;font-weight:700;cursor:pointer;">
+            Single block
+          </button>
+          <button id="pbai-mode-day" onclick="pbAISetMode('day')"
+            style="flex:1;padding:7px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text3);font-size:11px;cursor:pointer;">
+            Full day ✦
+          </button>
+        </div>
+
+        <!-- SINGLE BLOCK: session type (shown in single mode) -->
+        <div id="pbai-single-opts">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+            <div>
+              <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Session type</label>
+              <select id="pbai-session-type" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
+                <option value="lower_hinge">Lower — hip hinge dominant</option>
+                <option value="lower_knee">Lower — knee dominant</option>
+                <option value="upper_push">Upper — push dominant</option>
+                <option value="upper_pull">Upper — pull dominant</option>
+                <option value="full_body">Full body</option>
+                <option value="power">Power / Olympic emphasis</option>
+                <option value="speed_acc">Speed — acceleration</option>
+                <option value="speed_mv">Speed — max velocity</option>
+                <option value="arm_care">Arm care / shoulder health</option>
+                <option value="decel_rehab">Decel / injury prevention</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Exercises per block</label>
+              <select id="pbai-ex-count" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
+                <option value="3">3 exercises</option>
+                <option value="4">4 exercises</option>
+                <option value="5" selected>5 exercises</option>
+                <option value="6">6 exercises</option>
+                <option value="8">8 exercises</option>
+              </select>
+            </div>
           </div>
+        </div>
+
+        <!-- FULL DAY: modality toggles (shown in day mode) -->
+        <div id="pbai-day-opts" style="display:none;margin-bottom:12px;">
+          <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px;">Include in this day</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;" id="pbai-modality-grid">
+            <!-- modality toggles injected by JS -->
+          </div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;">Total exercises</label>
+            <select id="pbai-day-total" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;color:var(--text);font-size:12px;">
+              <option value="10">10 exercises</option>
+              <option value="12">12 exercises</option>
+              <option value="15" selected>15 exercises</option>
+              <option value="18">18 exercises</option>
+              <option value="20">20 exercises</option>
+            </select>
+            <span style="font-size:10px;color:var(--text3);">distributed across selected blocks</span>
+          </div>
+        </div>
+
+        <!-- Position + phase row (always shown) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
           <div>
             <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Position focus</label>
             <select id="pbai-position" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
@@ -2007,20 +2054,6 @@ body {
               </optgroup>
             </select>
           </div>
-        </div>
-
-        <!-- Exercise count + constraints -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
-          <div>
-            <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Exercises per block</label>
-            <select id="pbai-ex-count" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
-              <option value="3">3 exercises</option>
-              <option value="4">4 exercises</option>
-              <option value="5" selected>5 exercises</option>
-              <option value="6">6 exercises</option>
-              <option value="8">8 exercises</option>
-            </select>
-          </div>
           <div>
             <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Phase</label>
             <select id="pbai-phase-sel" onchange="pbAIUpdatePhasePriority()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
@@ -2032,10 +2065,10 @@ body {
             <div id="pbai-phase-hint" style="font-size:10px;color:var(--text3);margin-top:3px;"></div>
           </div>
           <div>
-            <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Mode</label>
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Insert mode</label>
             <select id="pbai-mode-sel" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;">
-              <option value="suggest">Suggest only</option>
-              <option value="insert" selected>Insert into session</option>
+              <option value="insert" selected>Replace day</option>
+              <option value="append">Append to day</option>
             </select>
           </div>
         </div>
@@ -17973,43 +18006,81 @@ async function callEnrichAPI(name, sports) {
 // AI PROGRAM DESIGN — SESSION BUILDER
 // ══════════════════════════════════════════════════════════════
 
-var _pbAILastResult = null; // holds last generated blocks for insert
+var _pbAILastResult  = null;
+var _pbAIDesignMode  = 'single';
+
+var PB_MODALITIES = [
+  { id:'perf_prep',   label:'Performance prep',      icon:'🔥', blockType:'lift',  desc:'Dynamic warmup, activation, mobility drills' },
+  { id:'speed_acc',   label:'Speed — accel',          icon:'💨', blockType:'speed', desc:'Acceleration, sled, resisted sprints' },
+  { id:'speed_mv',    label:'Speed — max vel',        icon:'🏃', blockType:'speed', desc:'Max velocity, fly runs, wickets' },
+  { id:'power',       label:'Power / Olympic',        icon:'⚡', blockType:'lift',  desc:'Cleans, jumps, throws, explosive work' },
+  { id:'lower_lift',  label:'Lower body lift',        icon:'🏋️', blockType:'lift',  desc:'Squat, hinge, hip — primary compound + accessories' },
+  { id:'upper_lift',  label:'Upper body lift',        icon:'💪', blockType:'lift',  desc:'Push/pull compound + accessories' },
+  { id:'arm_care',    label:'Arm care',               icon:'🩺', blockType:'lift',  desc:'Rotator cuff, scapular, posterior cuff' },
+  { id:'core',        label:'Core',                   icon:'🔄', blockType:'lift',  desc:'Anti-rotation, anti-extension, rotation' },
+  { id:'cod_agility', label:'COD / agility',          icon:'🔀', blockType:'speed', desc:'Change of direction, reactive drills' },
+  { id:'mobility',    label:'Mobility / flexibility', icon:'🧘', blockType:'lift',  desc:'Static stretch, PNF, loaded mobility' },
+  { id:'esd',         label:'ESD / conditioning',    icon:'❤️', blockType:'speed', desc:'Energy system development, aerobic/anaerobic' },
+  { id:'decel',       label:'Decel / landing',        icon:'🛑', blockType:'lift',  desc:'Eccentric, landing mechanics, injury prevention' },
+];
+
+var _pbAISelectedModalities = new Set(['perf_prep','speed_acc','lower_lift','upper_lift','arm_care']);
+
+function pbAISetMode(mode) {
+  _pbAIDesignMode = mode;
+  var single = document.getElementById('pbai-single-opts');
+  var day    = document.getElementById('pbai-day-opts');
+  var btnS   = document.getElementById('pbai-mode-single');
+  var btnD   = document.getElementById('pbai-mode-day');
+  if (mode === 'day') {
+    single.style.display = 'none'; day.style.display = '';
+    btnD.style.background = 'rgba(79,142,247,0.2)'; btnD.style.borderColor = 'rgba(79,142,247,0.4)'; btnD.style.color = '#6BA3F8'; btnD.style.fontWeight = '700';
+    btnS.style.background = 'rgba(255,255,255,0.04)'; btnS.style.borderColor = 'rgba(255,255,255,0.1)'; btnS.style.color = 'var(--text3)'; btnS.style.fontWeight = '400';
+    pbAIRenderModalityGrid();
+  } else {
+    single.style.display = ''; day.style.display = 'none';
+    btnS.style.background = 'rgba(79,142,247,0.2)'; btnS.style.borderColor = 'rgba(79,142,247,0.4)'; btnS.style.color = '#6BA3F8'; btnS.style.fontWeight = '700';
+    btnD.style.background = 'rgba(255,255,255,0.04)'; btnD.style.borderColor = 'rgba(255,255,255,0.1)'; btnD.style.color = 'var(--text3)'; btnD.style.fontWeight = '400';
+  }
+}
+
+function pbAIRenderModalityGrid() {
+  var grid = document.getElementById('pbai-modality-grid');
+  if (!grid) return;
+  grid.innerHTML = PB_MODALITIES.map(function(m) {
+    var on = _pbAISelectedModalities.has(m.id);
+    return '<div onclick="pbAIToggleModality(\'' + m.id + '\')" id="pbai-mod-' + m.id + '"'
+      + ' style="padding:8px 10px;border-radius:6px;cursor:pointer;border:1px solid '
+      + (on ? 'rgba(79,142,247,0.5)' : 'rgba(255,255,255,0.08)') + ';background:'
+      + (on ? 'rgba(79,142,247,0.15)' : 'rgba(255,255,255,0.02)') + ';transition:all .12s;">'
+      + '<div style="display:flex;align-items:center;gap:6px;">'
+      + '<span style="font-size:14px;">' + m.icon + '</span>'
+      + '<span style="font-size:11px;font-weight:' + (on?'700':'400') + ';color:' + (on?'#6BA3F8':'var(--text2)') + ';">' + m.label + '</span>'
+      + '</div>'
+      + '<div style="font-size:9px;color:var(--text3);margin-top:2px;">' + m.desc + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function pbAIToggleModality(id) {
+  if (_pbAISelectedModalities.has(id)) { _pbAISelectedModalities.delete(id); }
+  else { _pbAISelectedModalities.add(id); }
+  pbAIRenderModalityGrid();
+}
 
 function pbAIDesign() {
-  if (!PB_ACTIVE_DAY) {
-    showStatus('Open a day session first, then click ✨ AI Design');
-    return;
-  }
-
+  if (!PB_ACTIVE_DAY) { showStatus('Open a day session first, then click ✨ AI Design'); return; }
   var wk  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx];
   var day = wk.days[PB_ACTIVE_DAY.dayIdx];
-
-  // Pre-fill phase from current PB_STATE
-  var phaseMap = {
-    accumulation:'offseason', transmutation:'offseason', realization:'offseason',
-    z1_endurance:'offseason', z2_hypertrophy:'offseason', z3_funct_hyp:'offseason',
-    z4_relative:'offseason', power_ssc:'preseason',
-    inseason:'inseason', restore:'inseason', custom:'inseason'
-  };
+  var phaseMap = { accumulation:'offseason',transmutation:'offseason',realization:'offseason',z1_endurance:'offseason',z2_hypertrophy:'offseason',z3_funct_hyp:'offseason',z4_relative:'offseason',power_ssc:'preseason',inseason:'inseason',restore:'inseason',custom:'inseason' };
   var phaseSel = document.getElementById('pbai-phase-sel');
   if (phaseSel) phaseSel.value = phaseMap[PB_STATE.phase] || 'inseason';
-
-  // Pre-fill session type from day type
   var sessionTypeSel = document.getElementById('pbai-session-type');
   if (sessionTypeSel && day.type === 'speed') sessionTypeSel.value = 'speed_acc';
-
-  // Show athlete context
   var contextLine = document.getElementById('pbai-context-line');
-  if (contextLine) {
-    var athName = PB_STATE.athlete !== '(Sandbox)' ? PB_STATE.athlete : 'Sandbox';
-    contextLine.textContent = athName + ' · Week ' + wk.week + ' · ' + day.day + ' · ' + day.label;
-  }
-
-  // Update library count
+  if (contextLine) { var athName = PB_STATE.athlete !== '(Sandbox)' ? PB_STATE.athlete : 'Sandbox'; contextLine.textContent = athName + ' · Week ' + wk.week + ' · ' + day.day + ' · ' + day.label; }
   var libCount = document.getElementById('pbai-lib-count');
   if (libCount) libCount.textContent = EXERCISE_DB.filter(function(e){ return e && e.name; }).length;
-
-  // Reset results
   _pbAILastResult = null;
   document.getElementById('pbai-results').style.display = 'none';
   document.getElementById('pbai-preview').innerHTML = '';
@@ -18017,256 +18088,225 @@ function pbAIDesign() {
   document.getElementById('pbai-status').textContent = '';
   document.getElementById('pbai-progress').style.width = '0%';
   document.getElementById('pbai-regen-btn').style.display = 'none';
-  document.getElementById('pbai-gen-btn').style.display = '';
-
+  var genBtn = document.getElementById('pbai-gen-btn');
+  genBtn.style.display = ''; genBtn.disabled = false; genBtn.textContent = '✨ Generate ↗';
+  pbAISetMode(_pbAIDesignMode);
   openModal('pbAIModal');
-  // Load phase priorities if not yet loaded, then update hint
   loadPhasePriorities().then(function(){ pbAIUpdatePhasePriority(); });
 }
 
 async function pbAIGenerate() {
   if (!PB_ACTIVE_DAY) return;
-
   var wk  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx];
   var day = wk.days[PB_ACTIVE_DAY.dayIdx];
-
-  var sessionType   = document.getElementById('pbai-session-type').value;
-  var position      = document.getElementById('pbai-position').value;
-  var exCount       = parseInt(document.getElementById('pbai-ex-count').value) || 5;
-  var phase         = document.getElementById('pbai-phase-sel').value;
-  var extraContext  = (document.getElementById('pbai-context-input').value || '').trim();
-  var useLibrary    = document.getElementById('pbai-use-library').checked;
-
-  // Build library list for the prompt
-  var libraryList = '';
+  var position     = document.getElementById('pbai-position').value;
+  var phase        = document.getElementById('pbai-phase-sel').value;
+  var extraContext = (document.getElementById('pbai-context-input').value || '').trim();
+  var useLibrary   = document.getElementById('pbai-use-library').checked;
+  var libraryList  = '';
   if (useLibrary) {
-    var libNames = EXERCISE_DB
-      .filter(function(e){ return e && e.name && e.cat; })
-      .map(function(e){ return e.name + ' (' + e.cat + ')'; });
-    libraryList = libNames.join(', ');
+    libraryList = EXERCISE_DB.filter(function(e){ return e && e.name && e.cat; })
+      .map(function(e){ return e.name + ' (' + e.cat + (e.bucket ? ' · ' + e.bucket : '') + ')'; }).join(', ');
   }
-
   var athLabel = PB_STATE.athlete !== '(Sandbox)' ? PB_STATE.athlete : 'a baseball player';
-
-  // UI: show loading state
   var genBtn = document.getElementById('pbai-gen-btn');
   var status = document.getElementById('pbai-status');
   var progress = document.getElementById('pbai-progress');
-  genBtn.disabled = true;
-  genBtn.textContent = '⏳ Generating…';
-  status.textContent = 'Calling AI…';
+  genBtn.disabled = true; genBtn.textContent = '⏳ Generating…';
+  status.textContent = _pbAIDesignMode === 'day' ? 'Designing full day…' : 'Calling AI…';
   progress.style.width = '30%';
   document.getElementById('pbai-results').style.display = 'none';
-
   try {
-    var result = await callPBDesignAPI({
-      sessionType, position, exCount, phase,
-      extraContext, libraryList,
-      athlete: athLabel,
-      weekNum: wk.week, totalWeeks: PB_STATE.weeks,
-      dayLabel: day.label, dayType: day.type,
-      progMod: wk.progMod,
-    });
-
+    var ctx = { designMode:_pbAIDesignMode, position, phase, extraContext, libraryList, athlete:athLabel, weekNum:wk.week, totalWeeks:PB_STATE.weeks, dayLabel:day.label, dayType:day.type, progMod:wk.progMod };
+    if (_pbAIDesignMode === 'day') {
+      ctx.modalities     = Array.from(_pbAISelectedModalities);
+      ctx.totalExercises = parseInt(document.getElementById('pbai-day-total').value) || 15;
+    } else {
+      ctx.sessionType = document.getElementById('pbai-session-type').value;
+      ctx.exCount     = parseInt(document.getElementById('pbai-ex-count').value) || 5;
+    }
+    var result = await callPBDesignAPI(ctx);
     progress.style.width = '100%';
     _pbAILastResult = result;
     pbAIRenderPreview(result);
     status.textContent = '';
-    genBtn.textContent = '✨ Generate session ↗';
-    genBtn.disabled = false;
+    genBtn.textContent = '✨ Generate ↗'; genBtn.disabled = false;
     document.getElementById('pbai-regen-btn').style.display = '';
-
   } catch(err) {
-    progress.style.width = '0%';
-    status.textContent = '❌ ' + err.message;
-    genBtn.textContent = '✨ Generate session ↗';
-    genBtn.disabled = false;
+    progress.style.width = '0%'; status.textContent = '❌ ' + err.message;
+    genBtn.textContent = '✨ Generate ↗'; genBtn.disabled = false;
     console.error('[pbAIGenerate]', err);
   }
 }
 
 function pbAIRenderPreview(result) {
-  var preview = document.getElementById('pbai-preview');
-  var results = document.getElementById('pbai-results');
+  var preview   = document.getElementById('pbai-preview');
+  var results   = document.getElementById('pbai-results');
   var rationale = document.getElementById('pbai-rationale');
-
   if (!result || !result.blocks || !result.blocks.length) {
-    preview.innerHTML = '<div style="color:var(--text3);font-size:12px;">No exercises returned. Try again.</div>';
-    results.style.display = 'block';
-    return;
+    preview.innerHTML = '<div style="color:var(--text3);font-size:12px;">No exercises returned — try again.</div>';
+    results.style.display = 'block'; return;
   }
-
-  var bucketColors = {
-    primary_compound:   '#AFA9EC',
-    strength_accessory: '#5DCAA5',
-    athletic_power:     '#EF9F27',
-    isolation_rehab:    '#ED93B1',
-  };
-
-  preview.innerHTML = result.blocks.map(function(block, bi) {
-    var bColor = block.blockType === 'speed' ? '#f59e0b' : '#818cf8';
-    var bIcon  = block.blockType === 'speed' ? '⚡' : '🏋️';
-
+  var bucketColors   = { primary_compound:'#AFA9EC', strength_accessory:'#5DCAA5', athletic_power:'#EF9F27', isolation_rehab:'#ED93B1' };
+  var blockColors    = { speed:'#f59e0b', lift:'#818cf8', mobility:'#5DCAA5', esd:'#85B7EB', prep:'#ED93B1' };
+  var blockIcons     = { speed:'⚡', lift:'🏋️', mobility:'🧘', esd:'❤️', prep:'🔥' };
+  preview.innerHTML  = result.blocks.map(function(block, bi) {
+    var bt     = block.blockType || 'lift';
+    var bColor = blockColors[bt] || '#818cf8';
+    var bIcon  = blockIcons[bt]  || '🏋️';
     var exRows = (block.exercises || []).map(function(ex) {
-      var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === (ex.name||'').toLowerCase(); });
+      var dbEx  = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === (ex.name||'').toLowerCase(); });
       var inLib = !!dbEx;
-      var bucket = dbEx && dbEx.bucket ? dbEx.bucket : '';
-      var bktColor = bucketColors[bucket] || 'var(--text3)';
-      var muscle = dbEx && dbEx.muscle_group ? dbEx.muscle_group : '';
-
       var presc = [];
-      if (ex.sets) presc.push(ex.sets + '×');
-      if (ex.reps) presc.push(ex.reps);
-      if (ex.load) presc.push(ex.load);
-      if (ex.tempo) presc.push(ex.tempo);
-      if (ex.rest) presc.push(ex.rest + ' rest');
-
-      return '<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">'
-        + '<div style="flex:1;">'
-        + '<span style="font-size:12px;font-weight:600;color:'+(inLib?'#fff':'#f59e0b')+'">' + (ex.name||'?') + '</span>'
-        + (inLib ? '' : '<span style="font-size:9px;color:#f59e0b;margin-left:5px;" title="Not in your library">⚠ not in library</span>')
-        + (muscle ? '<span style="font-size:9px;color:var(--cubs-light-blue);margin-left:6px;">💪 ' + muscle + '</span>' : '')
-        + (bucket ? '<span style="font-size:9px;color:'+bktColor+';margin-left:5px;">' + bucket.replace(/_/g,' ') + '</span>' : '')
+      if (ex.sets)     presc.push(ex.sets + '×');
+      if (ex.reps)     presc.push(ex.reps);
+      if (ex.load)     presc.push(ex.load);
+      if (ex.distance) presc.push(ex.distance);
+      if (ex.tempo)    presc.push(ex.tempo);
+      if (ex.rest)     presc.push(ex.rest + ' rest');
+      var muscle = dbEx && dbEx.muscle_group ? dbEx.muscle_group : '';
+      var bucket = dbEx && dbEx.bucket       ? dbEx.bucket       : '';
+      return '<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">'
+        + '<div style="display:flex;align-items:baseline;gap:8px;">'
+        + '<span style="font-size:12px;font-weight:600;color:' + (inLib?'#fff':'#f59e0b') + ';flex:1;">' + (ex.name||'?') + (inLib?'':' ⚠') + '</span>'
+        + '<span style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;white-space:nowrap;">' + presc.join(' · ') + '</span>'
         + '</div>'
-        + '<div style="font-size:10px;color:var(--text3);font-family:\'DM Mono\',monospace;white-space:nowrap;">' + presc.join(' · ') + '</div>'
+        + (muscle||bucket ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;">'
+            + (muscle ? '<span style="font-size:9px;background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);padding:1px 5px;border-radius:3px;">💪 ' + muscle + '</span>' : '')
+            + (bucket ? '<span style="font-size:9px;color:' + (bucketColors[bucket]||'var(--text3)') + ';padding:1px 5px;">' + bucket.replace(/_/g,' ') + '</span>' : '')
+            + '</div>' : '')
         + (ex.notes ? '<div style="font-size:10px;color:var(--text3);font-style:italic;">' + ex.notes + '</div>' : '')
         + '</div>';
     }).join('');
-
-    return '<div style="background:var(--bg3);border-radius:8px;padding:10px 12px;border-left:3px solid '+bColor+';">'
-      + '<div style="font-size:10px;font-weight:700;color:'+bColor+';margin-bottom:8px;">' + bIcon + ' ' + (block.label || ('Block ' + String.fromCharCode(65+bi))) + '</div>'
-      + exRows
-      + '</div>';
+    return '<div style="background:var(--bg3);border-radius:8px;padding:10px 12px;border-left:3px solid ' + bColor + ';">'
+      + '<div style="font-size:10px;font-weight:700;color:' + bColor + ';margin-bottom:6px;">' + bIcon + ' ' + (block.label || ('Block ' + String.fromCharCode(65+bi))) + '</div>'
+      + exRows + '</div>';
   }).join('');
-
-  if (result.rationale) {
-    rationale.textContent = '📋 ' + result.rationale;
-    rationale.style.display = 'block';
-  }
-
+  if (result.rationale) { rationale.textContent = '📋 ' + result.rationale; rationale.style.display = 'block'; }
+  else { rationale.style.display = 'none'; }
   results.style.display = 'block';
 }
 
 function pbAIInsert() {
   if (!_pbAILastResult || !PB_ACTIVE_DAY) return;
-
-  var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
+  var day  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
   var mode = document.getElementById('pbai-mode-sel').value;
-
-  if (mode === 'insert') {
-    // Clear existing blocks first, then insert
-    day.blocks = [];
-  }
-
+  if (mode === 'insert') day.blocks = [];
   (_pbAILastResult.blocks || []).forEach(function(block) {
-    var blockType = block.blockType || 'lift';
-    var exercises = (block.exercises || []).map(function(ex) {
+    var bt  = block.blockType || 'lift';
+    var exs = (block.exercises || []).map(function(ex) {
       var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === (ex.name||'').toLowerCase(); });
-      if (blockType === 'speed') {
-        return {
-          type:'speed', name: ex.name||'', cat: (dbEx&&dbEx.cat)||ex.cat||'',
-          sets: ex.sets||'', reps: ex.reps||'', distance: ex.distance||'',
-          pct: ex.pct||'', rest: ex.rest||'', notes: ex.notes||''
-        };
+      if (bt === 'speed' || bt === 'esd') {
+        return { type:'speed', name:ex.name||'', cat:(dbEx&&dbEx.cat)||ex.cat||'', sets:ex.sets||'', reps:ex.reps||'', distance:ex.distance||'', pct:ex.pct||'', rest:ex.rest||'', notes:ex.notes||'' };
       }
-      return {
-        type:'lift', name: ex.name||'', cat: (dbEx&&dbEx.cat)||ex.cat||'',
-        sets: ex.sets||'', reps: ex.reps||'', load: ex.load||'',
-        tempo: ex.tempo||'', rest: ex.rest||'', notes: ex.notes||''
-      };
+      return { type:'lift', name:ex.name||'', cat:(dbEx&&dbEx.cat)||ex.cat||'', sets:ex.sets||'', reps:ex.reps||'', load:ex.load||'', tempo:ex.tempo||'', rest:ex.rest||'', notes:ex.notes||'' };
     });
-    day.blocks.push({ blockType: blockType, label: block.label||'', exercises: exercises });
+    day.blocks.push({ blockType:bt, label:block.label||'', exercises:exs });
   });
-
   closeModal('pbAIModal');
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
   pbRenderDayGrid();
-  showStatus('✅ AI session inserted — review and adjust as needed');
+  var totalEx = (_pbAILastResult.blocks||[]).reduce(function(n,b){ return n+(b.exercises||[]).length; }, 0);
+  showStatus('✅ Inserted ' + (_pbAILastResult.blocks||[]).length + ' blocks · ' + totalEx + ' exercises');
 }
 
 async function callPBDesignAPI(ctx) {
   var libSection = ctx.libraryList
-    ? 'EXERCISE LIBRARY (you MUST only use exercises from this list):\n' + ctx.libraryList + '\n\n'
+    ? 'EXERCISE LIBRARY — use ONLY exercises from this list (name must match exactly):\n' + ctx.libraryList + '\n\n'
     : '';
 
-  var sessionTypeLabels = {
-    lower_hinge:'Lower body — hip hinge dominant (deadlift, RDL, hamstring, glute)',
-    lower_knee:'Lower body — knee dominant (squat, leg press, quad, split squat)',
-    upper_push:'Upper body — push dominant (press, triceps, anterior shoulder)',
-    upper_pull:'Upper body — pull dominant (row, pulldown, biceps, rear delt)',
-    full_body:'Full body (compound primary lifts across lower and upper)',
-    power:'Power and Olympic emphasis (cleans, jumps, explosive movements)',
-    speed_acc:'Speed — acceleration focus (sled, resisted sprints, plyos)',
-    speed_mv:'Speed — max velocity (fly runs, wickets, bounding, pogo)',
-    arm_care:'Arm care and shoulder health (rotator cuff, scapular, posterior cuff)',
-    decel_rehab:'Deceleration and injury prevention (eccentric, landing mechanics)',
-  };
-  var sessionLabel = sessionTypeLabels[ctx.sessionType] || ctx.sessionType;
-
   var positionLabels = {
-    // Baseball
-    position_player:'baseball position player (hitter/fielder) — prioritize rotational power, hip strength, first-step quickness, deceleration',
-    pitcher:'baseball pitcher — arm care critical: no heavy overhead pressing, posterior cuff, scapular stability (serratus, Y-T-W), hip ER, thoracic rotation, avoid elbow valgus stress',
-    catcher:'baseball catcher — deep squat mechanics, hip ER strength, ankle mobility, posterior shoulder, single-leg stability from receiving stance',
-    outfielder:'baseball outfielder — linear speed, first step, deceleration, overhead reach stability, diagonal sprinting',
-    infielder:'baseball infielder — lateral quickness, hip ER, forearm pronation/supination, explosive rotational mechanics',
-    // Football
-    football_ol:'football offensive lineman — hip hinge power, lateral push strength, hand/wrist stability, knee-dominant lower body, anti-rotation core',
-    football_dl:'football DL/edge rusher — first-step explosion, hip extension power, rotational torque, grip strength, lateral shuffle deceleration',
-    football_wr_db:'football WR/DB skill position — acceleration, top-end speed, change of direction, hip ER, reactive agility, deceleration mechanics',
-    football_qb:'football QB — hip rotation, posterior shoulder health, anti-rotation core, single-leg stability, lower body drive without bilateral loading dominance',
-    football_rb:'football RB/LB — contact absorption, lower body power, lateral deceleration, hip hinge explosiveness, upper body collision strength',
-    // Hockey
-    hockey_skater:'hockey skater (forward/D) — hip adductor/abductor balance, lateral push power, hip ER in external-rotated stance, ankle/knee stability in skate position, single-leg power',
-    hockey_goalie:'hockey goalie — hip abduction and ER in extreme ranges, lateral split mobility, reactive single-leg balance, hip flexor length, adductor eccentric strength, minimal bilateral loading',
-    // Basketball
-    basketball_guard:'basketball guard/wing — vertical jump, reactive agility, lateral deceleration, hip ER, ankle stability, first-step explosion from athletic stance',
-    basketball_big:'basketball big (C/PF) — lower body vertical power, contact absorption, hip extension strength, upper body pushing strength for post play, ankle/knee landing mechanics',
+    position_player:'baseball position player — rotational power, hip strength, first-step quickness, deceleration',
+    pitcher:'baseball pitcher — arm care CRITICAL: no heavy overhead pressing, posterior cuff, scapular stability (Y-T-W, serratus, face pull), hip ER, thoracic rotation',
+    catcher:'baseball catcher — deep squat mechanics, hip ER, ankle mobility, posterior shoulder, single-leg stability',
+    outfielder:'baseball outfielder — linear speed, first step, deceleration, overhead reach stability',
+    infielder:'baseball infielder — lateral quickness, hip ER, forearm pronation/supination, rotational mechanics',
+    football_ol:'football OL — hip hinge power, lateral push strength, hand/wrist stability, anti-rotation core',
+    football_dl:'football DL/edge — first-step explosion, hip extension power, rotational torque, grip strength',
+    football_wr_db:'football WR/DB — acceleration, top-end speed, COD, hip ER, reactive agility, deceleration',
+    football_qb:'football QB — hip rotation, posterior shoulder, anti-rotation core, single-leg stability',
+    football_rb:'football RB/LB — contact absorption, lower body power, lateral deceleration, hip hinge explosiveness',
+    hockey_skater:'hockey skater — hip adductor/abductor balance, lateral push power, hip ER, ankle/knee stability, single-leg power',
+    hockey_goalie:'hockey goalie — extreme hip abduction/ER ranges, lateral split mobility, adductor eccentric, avoid bilateral squat dominance',
+    basketball_guard:'basketball guard/wing — vertical jump, reactive agility, lateral deceleration, hip ER, ankle stability',
+    basketball_big:'basketball big — vertical power, contact absorption, hip extension, upper body post strength, landing mechanics',
   };
   var posLabel = positionLabels[ctx.position] || ctx.position;
+  var progMod  = ctx.progMod || {};
 
-  var prompt = 'You are an expert baseball strength and conditioning coach (MLB level).\n\n'
-    + libSection
-    + 'Design a ' + sessionLabel + ' training session for ' + ctx.athlete + ', a baseball ' + posLabel + '.\n\n'
-    + 'Phase: ' + ctx.phase + ' | Week ' + ctx.weekNum + ' of ' + ctx.totalWeeks + '\n'
-    + 'Progression modifiers: Sets ×' + (ctx.progMod&&ctx.progMod.sets||1).toFixed(1) + ' · Reps ×' + (ctx.progMod&&ctx.progMod.reps||1).toFixed(1) + ' · Load ×' + (ctx.progMod&&ctx.progMod.load||1).toFixed(2) + '\n'
-    + (ctx.extraContext ? 'Additional context: ' + ctx.extraContext + '\n' : '')
-    + '\nReturn ONLY valid JSON, no markdown, no backticks:\n'
-    + '{"blocks":[{"blockType":"lift|speed","label":"Block A · Primary Compound","exercises":[{"name":"Exercise name","cat":"Category","sets":"4","reps":"4","load":"82%","tempo":"3-1-1-0","rest":"3 min","notes":"cue or note"}]}],"rationale":"1-2 sentence coaching rationale for this session design"}\n\n'
-    + 'Rules:\n'
-    + '- ' + ctx.exCount + ' exercises total across all blocks\n'
-    + '- Organise into 1-2 blocks (primary compound first, then accessories)\n'
-    + (ctx.libraryList ? '- ONLY use exercise names that appear EXACTLY in the library list above\n' : '')
-    + '- Sets/reps/load must match the phase and progression modifiers given\n'
-    + '- For pitchers: no heavy overhead pressing, include posterior cuff and scapular work\n'
-    + '- For catchers: include hip ER work, deep squat pattern, posterior shoulder\n'
-    + '- For hockey goalies: include extreme hip abduction/ER range work, avoid bilateral squat dominance\n'
-    + '- For OL: emphasize hip hinge power and anti-rotation core\n'
-    + '- For WR/DB: emphasize deceleration, agility, and reactive patterns\n'
-    + '- Tempo format: eccentric-pause-concentric-top (e.g. 3-1-1-0)\n'
-    + '- Be specific and biomechanically sound. Prioritise sport-position transfer.';
+  var prompt;
+
+  if (ctx.designMode === 'day') {
+    var selectedMods = (ctx.modalities || []).map(function(id) {
+      return PB_MODALITIES.find(function(m){ return m.id === id; });
+    }).filter(Boolean);
+    var modDescriptions = selectedMods.map(function(m, i) {
+      return (i+1) + '. ' + m.label + ' block (blockType: "' + m.blockType + '") — ' + m.desc;
+    }).join('\n');
+
+    prompt = 'You are an expert strength and conditioning coach (MLB level).\n\n'
+      + libSection
+      + 'Design a COMPLETE TRAINING DAY for ' + ctx.athlete + ', a ' + posLabel + '.\n\n'
+      + 'Phase: ' + ctx.phase + ' | Week ' + ctx.weekNum + ' of ' + ctx.totalWeeks + '\n'
+      + 'Progression: Sets ×' + (progMod.sets||1).toFixed(1) + ' · Reps ×' + (progMod.reps||1).toFixed(1) + ' · Load ×' + (progMod.load||1).toFixed(2) + '\n'
+      + (ctx.extraContext ? 'Coaching notes: ' + ctx.extraContext + '\n' : '')
+      + '\nInclude ALL of these blocks IN THIS ORDER:\n' + modDescriptions + '\n'
+      + '\nReturn ONLY valid JSON, no markdown, no backticks:\n'
+      + '{"blocks":[{"blockType":"lift|speed|mobility|esd|prep","label":"Block name","exercises":[{"name":"Exercise","sets":"3","reps":"8","load":"75%","tempo":"3-1-1-0","rest":"90s","distance":"","notes":"cue"}]}],"rationale":"2-3 sentence day rationale"}\n\n'
+      + 'Rules:\n'
+      + '- ' + ctx.totalExercises + ' exercises total across all ' + selectedMods.length + ' blocks\n'
+      + '- Performance prep / mobility: 3-5 items, use notes for cues, reps = "30s" for holds\n'
+      + '- Speed blocks: populate distance and rest, omit load/tempo\n'
+      + '- ESD block: use notes for modality + duration + zone, minimal exercise list\n'
+      + '- Lift blocks: sets, reps, load%, tempo, rest\n'
+      + (ctx.libraryList ? '- Exercise names must EXACTLY match the library list\n' : '')
+      + '- Sequence blocks correctly: prep → speed → power → strength → accessories → mobility/ESD\n'
+      + '- No heavy overhead pressing for pitchers. Arm care block = posterior cuff + scapular only\n'
+      + '- Core block = anti-rotation/extension/lateral, NOT crunches\n'
+      + '- Be biomechanically specific and sport-transfer focused';
+
+  } else {
+    var sessionTypeLabels = {
+      lower_hinge:'Lower body — hip hinge dominant (deadlift, RDL, hamstring, glute)',
+      lower_knee:'Lower body — knee dominant (squat, leg press, quad, split squat)',
+      upper_push:'Upper body — push dominant (press, triceps, anterior shoulder)',
+      upper_pull:'Upper body — pull dominant (row, pulldown, biceps, rear delt)',
+      full_body:'Full body (compound primary lifts across lower and upper)',
+      power:'Power and Olympic emphasis (cleans, jumps, explosive movements)',
+      speed_acc:'Speed — acceleration (sled, resisted sprints, plyos)',
+      speed_mv:'Speed — max velocity (fly runs, wickets, bounding, pogo)',
+      arm_care:'Arm care and shoulder health (rotator cuff, scapular, posterior cuff)',
+      decel_rehab:'Deceleration and injury prevention (eccentric, landing mechanics)',
+    };
+    var sessionLabel = sessionTypeLabels[ctx.sessionType] || ctx.sessionType;
+
+    prompt = 'You are an expert strength and conditioning coach (MLB level).\n\n'
+      + libSection
+      + 'Design a ' + sessionLabel + ' session for ' + ctx.athlete + ', a ' + posLabel + '.\n\n'
+      + 'Phase: ' + ctx.phase + ' | Week ' + ctx.weekNum + ' of ' + ctx.totalWeeks + '\n'
+      + 'Progression: Sets ×' + (progMod.sets||1).toFixed(1) + ' · Reps ×' + (progMod.reps||1).toFixed(1) + ' · Load ×' + (progMod.load||1).toFixed(2) + '\n'
+      + (ctx.extraContext ? 'Coaching notes: ' + ctx.extraContext + '\n' : '')
+      + '\nReturn ONLY valid JSON, no markdown, no backticks:\n'
+      + '{"blocks":[{"blockType":"lift|speed","label":"Block A · Primary Compound","exercises":[{"name":"Exercise","sets":"4","reps":"4","load":"82%","tempo":"3-1-1-0","rest":"3 min","notes":"cue"}]}],"rationale":"1-2 sentence rationale"}\n\n'
+      + 'Rules:\n'
+      + '- ' + ctx.exCount + ' exercises total, 1-2 blocks\n'
+      + (ctx.libraryList ? '- Exercise names must EXACTLY match the library list\n' : '')
+      + '- Sets/reps/load match the progression modifiers\n'
+      + '- Tempo: eccentric-pause-concentric-top (e.g. 3-1-1-0)\n'
+      + '- No heavy overhead pressing for pitchers\n'
+      + '- Biomechanically specific, sport-transfer focused';
+  }
 
   var res = await fetch(SUPA_URL + '/functions/v1/enrich-exercise', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + SUPA_KEY,
-      'apikey': SUPA_KEY,
-    },
-    body: JSON.stringify({ mode: 'program_design', prompt: prompt }),
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SUPA_KEY, 'apikey':SUPA_KEY },
+    body: JSON.stringify({ mode:'program_design', prompt:prompt }),
   });
-
-  if (!res.ok) {
-    var errText = await res.text();
-    throw new Error('Function error ' + res.status + ': ' + errText);
-  }
-
-  var data = await res.json();
+  if (!res.ok) { var e = await res.text(); throw new Error('Function error ' + res.status + ': ' + e); }
+  var data  = await res.json();
   if (data.error) throw new Error(data.error);
-
-  // The edge function returns {result: "raw text"} for program_design mode
-  var text = data.result || data.text || '';
-  var clean = text.replace(/```json|```/g, '').trim();
+  var text  = data.result || data.text || '';
+  var clean = text.replace(/```json|```/g,'').trim();
   return JSON.parse(clean);
 }
 
