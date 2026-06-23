@@ -3152,6 +3152,42 @@ function loadAthletePrograms() {
 
 function persistAthletePrograms() {
   try { localStorage.setItem(ATHLETE_PROGRAMS_KEY, JSON.stringify(athletePrograms)); } catch(e) {}
+  // Async sync to Supabase (non-blocking)
+  syncProgramsToSupabase();
+}
+
+async function syncProgramsToSupabase() {
+  try {
+    if (!_supaClient) return;
+    // Flatten all athlete programs into rows
+    var rows = [];
+    Object.entries(athletePrograms).forEach(function(entry) {
+      var athlete = entry[0];
+      var progs   = entry[1] || [];
+      progs.forEach(function(prog) {
+        if (!prog || !prog.id) return;
+        rows.push({
+          id:         String(prog.id),
+          athlete:    athlete,
+          name:       prog.name || '',
+          type:       prog.type || '',
+          phase:      prog.phase || '',
+          notes:      prog.notes || '',
+          content:    prog.content || '',
+          created_at: prog.created || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      });
+    });
+    if (!rows.length) return;
+    var { error } = await _supaClient
+      .from('athlete_programs')
+      .upsert(rows, { onConflict: 'id' });
+    if (error) console.error('[syncProgramsToSupabase]', error);
+    else console.log('[syncProgramsToSupabase] synced', rows.length, 'programs');
+  } catch(err) {
+    console.error('[syncProgramsToSupabase]', err);
+  }
 }
 
 function openDropProgramModal() {
@@ -8037,14 +8073,17 @@ function renderBriefPrograms() {
       if (prog.note) html += '<div style="font-size:10px;color:var(--text3);margin-top:2px;font-style:italic;">' + prog.note + '</div>';
       html += '</div>';
 
-      // Exercise count + enrichment badge
+      // Exercise count + enrichment badge + share button
       if (exercises.length) {
-        html += '<div style="text-align:right;flex-shrink:0;">';
+        html += '<div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">';
         html += '<div style="font-size:10px;color:var(--text3);">' + exercises.length + ' exercises</div>';
         if (enrichedCount > 0) {
-          html += '<div style="font-size:9px;color:var(--green);margin-top:2px;">✓ ' + enrichedCount + '/' + exercises.length + ' enriched</div>';
+          html += '<div style="font-size:9px;color:var(--green);">✓ ' + enrichedCount + '/' + exercises.length + ' enriched</div>';
         }
+        html += '<button onclick="shareProgram(\'' + String(prog.id||'') + '\')" style="font-size:10px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;padding:3px 10px;color:#6BA3F8;cursor:pointer;">🔗 Share</button>';
         html += '</div>';
+      } else {
+        html += '<button onclick="shareProgram(\'' + String(prog.id||'') + '\')" style="font-size:10px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;padding:3px 10px;color:#6BA3F8;cursor:pointer;">🔗 Share</button>';
       }
       html += '</div>';
 
@@ -8168,8 +8207,12 @@ function printBrief() {
     .program-header { background: #0E3386; color: #fff; padding: 8px 12px; }
     .program-player { font-size: 14px; font-weight: 800; }
     .program-name { font-size: 10px; opacity: 0.8; margin-top: 1px; }
-    .ex-row { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; break-inside: avoid; }
+    .ex-row { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; break-inside: avoid; display: flex; align-items: flex-start; gap: 10px; }
     .ex-row:last-child { border-bottom: none; }
+    .ex-content { flex: 1; }
+    .ex-qr { flex-shrink: 0; width: 56px; display: flex; flex-direction: column; align-items: center; }
+    .ex-qr canvas { width: 52px !important; height: 52px !important; }
+    .ex-qr-label { font-size: 7px; color: #9ca3af; margin-top: 2px; text-align: center; }
     .ex-name { font-size: 12px; font-weight: 700; color: #111; }
     .ex-presc { font-size: 10px; color: #6b7280; font-family: monospace; margin-top: 1px; }
     .ex-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
@@ -8192,6 +8235,8 @@ function printBrief() {
     ? SAVED_PROGRAMS.filter(function(p){ return p.assignedTo; })
     : [];
 
+  var qrIdx = 0;
+
   if (!programs.length) {
     body += '<div class="no-programs">No programs assigned.</div>';
   } else {
@@ -8212,6 +8257,7 @@ function printBrief() {
           if (ex.rest) presc.push(ex.rest + ' rest');
 
           body += '<div class="ex-row">';
+          body += '<div class="ex-content">';
           body += '<div class="ex-name">' + ex.name + '</div>';
           if (presc.length) body += '<div class="ex-presc">' + presc.join(' · ') + '</div>';
 
@@ -8234,8 +8280,16 @@ function printBrief() {
             }
             body += '</div>';
           }
+          body += '</div>'; // end ex-content
 
-          body += '</div>';
+          // QR code for YouTube link
+          var videoUrl = (dbEx && dbEx.video) ? dbEx.video : (ex.video || '');
+          if (videoUrl) {
+            body += '<div class="ex-qr"><canvas id="qr-' + qrIdx + '" data-url="' + videoUrl.replace(/"/g,'&quot;') + '"></canvas><div class="ex-qr-label">Scan for video</div></div>';
+            qrIdx++;
+          }
+
+          body += '</div>'; // end ex-row
         });
       } else {
         body += '<div class="ex-row" style="color:#6b7280;font-style:italic;">Program not parsed — open and resave from Program Builder.</div>';
@@ -8248,10 +8302,9 @@ function printBrief() {
   body += '<div class="footer"><span>Cubs S&amp;C Dashboard</span><span>' + today + '</span></div>';
 
   var win = window.open('', '_blank', 'width=800,height=900');
-  win.document.write('<!DOCTYPE html><html><head><title>Daily Brief — ' + today + '</title><style>' + css + '</style></head><body>' + body + '</body></html>');
+  win.document.write('<!DOCTYPE html><html><head><title>Daily Brief — ' + today + '</title><style>' + css + '</style></head><body>' + body + '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"><\/script><script>window.addEventListener("load",function(){document.querySelectorAll("canvas[data-url]").forEach(function(c){new QRious({element:c,value:c.getAttribute("data-url"),size:104,backgroundAlpha:0,foreground:"#111",level:"M"});});setTimeout(function(){window.print();},600);});<\/script></body></html>');
   win.document.close();
   win.focus();
-  setTimeout(function(){ win.print(); }, 500);
 }
 
 function renderTeamHeatmap() {
@@ -18445,6 +18498,25 @@ function pbAIUpdatePhasePriority() {
       statusEl.style.color = 'var(--text3)';
     }
   }
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// SHAREABLE PROGRAM LINKS
+// ══════════════════════════════════════════════════════════════
+
+function shareProgram(progId) {
+  if (!progId) { showStatus('No program ID — save the program first'); return; }
+  // Ensure the program is synced to Supabase first
+  syncProgramsToSupabase().then(function() {
+    var url = 'https://markweisman45.github.io/cubs-sc/program.html?id=' + encodeURIComponent(progId);
+    navigator.clipboard.writeText(url).then(function() {
+      showStatus('🔗 Link copied! Send to athlete: ' + url);
+    }).catch(function() {
+      // Fallback: prompt
+      window.prompt('Copy this link and send to the athlete:', url);
+    });
+  });
 }
 
 
