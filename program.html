@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Cubs S&C — Training Program</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e1a;--card:#111827;--border:rgba(255,255,255,0.08);
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  --blue:#1d5fcc;--blue-light:#6BA3F8;--cubs-red:#CC3333;
+  --green:#22c55e;--amber:#f59e0b;--purple:#a78bfa;
+  --radius:12px;--radius-sm:8px;
+}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;}
+
+/* Top bar */
+.topbar{background:#0E3386;padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;}
+.topbar-logo{font-size:18px;font-weight:900;letter-spacing:1px;color:#fff;}
+.topbar-sub{font-size:12px;color:rgba(255,255,255,0.7);}
+
+/* Content */
+.page{max-width:480px;margin:0 auto;padding:16px;}
+
+/* Program header card */
+.prog-header{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;}
+.prog-athlete{font-size:22px;font-weight:800;color:#fff;margin-bottom:2px;}
+.prog-name{font-size:14px;color:var(--blue-light);margin-bottom:4px;}
+.prog-meta{font-size:11px;color:var(--text3);}
+
+/* Block */
+.block{margin-bottom:14px;}
+.block-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:6px 14px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;}
+.block-lift{background:rgba(99,102,241,0.2);color:#a78bfa;}
+.block-speed{background:rgba(245,158,11,0.2);color:#f59e0b;}
+.block-mobility{background:rgba(34,197,94,0.15);color:#22c55e;}
+.block-esd{background:rgba(133,183,235,0.15);color:#85b7eb;}
+.block-prep{background:rgba(237,147,177,0.15);color:#ed93b1;}
+
+/* Exercise row */
+.ex{background:var(--card);border:1px solid var(--border);border-top:none;padding:14px;}
+.ex:first-of-type{border-top:1px solid var(--border);}
+.ex:last-child{border-radius:0 0 var(--radius-sm) var(--radius-sm);}
+.ex-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px;}
+.ex-thumb{width:72px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,0.05);cursor:pointer;}
+.ex-thumb-placeholder{width:72px;height:48px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.ex-info{flex:1;min-width:0;}
+.ex-name{font-size:14px;font-weight:700;color:#fff;margin-bottom:2px;line-height:1.3;}
+.ex-presc{font-size:12px;color:var(--blue-light);font-weight:600;margin-bottom:2px;}
+.ex-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}
+.tag{font-size:9px;padding:1px 7px;border-radius:20px;}
+.tag-muscle{background:rgba(59,122,196,0.2);color:var(--blue-light);}
+.tag-bucket-primary_compound{background:rgba(127,119,221,0.2);color:#afa9ec;}
+.tag-bucket-strength_accessory{background:rgba(29,158,117,0.2);color:#5dcaa5;}
+.tag-bucket-athletic_power{background:rgba(186,117,23,0.2);color:#ef9f27;}
+.tag-bucket-isolation_rehab{background:rgba(212,83,126,0.2);color:#ed93b1;}
+
+/* Why expandable */
+.why-toggle{width:100%;text-align:left;background:none;border:none;border-top:1px solid var(--border);padding:8px 0 0;color:var(--blue-light);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;margin-top:8px;}
+.why-body{display:none;margin-top:8px;padding:10px 12px;background:rgba(255,255,255,0.02);border-left:2px solid rgba(79,142,247,0.4);border-radius:0 4px 4px 0;}
+.why-body.open{display:block;}
+.why-section{margin-bottom:8px;}
+.why-section:last-child{margin-bottom:0;}
+.why-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:3px;}
+.why-text{font-size:12px;color:var(--text2);line-height:1.6;}
+.baseball-text{font-size:12px;color:#f0997b;line-height:1.6;}
+
+/* Video overlay */
+.video-wrap{position:relative;display:inline-block;cursor:pointer;}
+.play-btn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+.play-btn div{width:28px;height:28px;background:rgba(0,0,0,0.65);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;}
+
+/* Loading / error */
+.loading{text-align:center;padding:60px 20px;color:var(--text3);}
+.spinner{width:32px;height:32px;border:3px solid rgba(255,255,255,0.1);border-top-color:#6BA3F8;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-card{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:var(--radius);padding:20px;text-align:center;color:#f87171;}
+
+/* Footer */
+.footer{text-align:center;padding:24px 16px;font-size:11px;color:var(--text3);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-logo">⚾ CUBS S&amp;C</div>
+    <div class="topbar-sub">Training Program</div>
+  </div>
+</div>
+
+<div class="page" id="page">
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div>Loading program…</div>
+  </div>
+</div>
+
+<div class="footer">Chicago Cubs Strength &amp; Conditioning · Cubs S&amp;C Dashboard</div>
+
+<script>
+var SUPA_URL = 'https://umcdnbnvzwedrlidzaqg.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtY2RuYm52endlZHJsaWR6YXFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjMwNjUsImV4cCI6MjA5MjYzOTA2NX0.g4t2GaT33M03b6-stee9Aiy2We1KdJpw5KVEKwScwJM';
+
+var BUCKET_CLASSES = {
+  primary_compound:'tag-bucket-primary_compound',
+  strength_accessory:'tag-bucket-strength_accessory',
+  athletic_power:'tag-bucket-athletic_power',
+  isolation_rehab:'tag-bucket-isolation_rehab',
+};
+
+function ytId(url){
+  if(!url) return '';
+  var m = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : '';
+}
+
+function formatPresc(ex){
+  var parts=[];
+  if(ex.sets) parts.push(ex.sets+'×');
+  if(ex.reps) parts.push(ex.reps);
+  if(ex.load) parts.push(ex.load);
+  if(ex.distance) parts.push(ex.distance);
+  if(ex.tempo) parts.push(ex.tempo);
+  if(ex.rest) parts.push(ex.rest+' rest');
+  return parts.join(' · ');
+}
+
+function toggleWhy(id){
+  var el=document.getElementById('why-'+id);
+  var btn=document.getElementById('why-btn-'+id);
+  if(!el) return;
+  var open=el.classList.toggle('open');
+  btn.innerHTML='<span style="font-size:9px;">'+(open?'▾':'▸')+'</span> '+(open?'Hide':'Why this exercise');
+}
+
+function openVideo(url){
+  window.open(url,'_blank');
+}
+
+function renderExercise(ex, enrichMap, idx){
+  var enr = enrichMap[ex.name.toLowerCase()] || {};
+  var vid = ex.video ? ytId(ex.video) : (enr.video ? ytId(enr.video) : '');
+  var videoUrl = ex.video || enr.video || '';
+  var presc = formatPresc(ex);
+  var hasWhy = enr.mechanism_text || (Array.isArray(enr.sport_transfer) && enr.sport_transfer.find(function(t){return t.sport==='Baseball';}));
+
+  var html = '<div class="ex">';
+  html += '<div class="ex-top">';
+
+  // Thumbnail
+  if(vid){
+    html += '<div class="video-wrap" onclick="openVideo(\''+videoUrl+'\')">';
+    html += '<img class="ex-thumb" src="https://img.youtube.com/vi/'+vid+'/mqdefault.jpg" alt="'+ex.name+'" loading="lazy">';
+    html += '<div class="play-btn"><div>▶</div></div>';
+    html += '</div>';
+  } else {
+    html += '<div class="ex-thumb-placeholder">🏋️</div>';
+  }
+
+  html += '<div class="ex-info">';
+  html += '<div class="ex-name">'+ex.name+'</div>';
+  if(presc) html += '<div class="ex-presc">'+presc+'</div>';
+
+  // Tags
+  var tags='';
+  if(enr.muscle_group) tags+='<span class="tag tag-muscle">💪 '+enr.muscle_group+(enr.muscle_head?' · '+enr.muscle_head:'')+'</span>';
+  if(enr.bucket) tags+='<span class="tag '+(BUCKET_CLASSES[enr.bucket]||'')+'">'+enr.bucket.replace(/_/g,' ')+'</span>';
+  if(tags) html+='<div class="ex-tags">'+tags+'</div>';
+
+  if(ex.notes) html+='<div style="font-size:11px;color:var(--text3);margin-top:4px;font-style:italic;">'+ex.notes+'</div>';
+
+  html+='</div></div>'; // close ex-info, ex-top
+
+  // Why toggle
+  if(hasWhy){
+    var bt = Array.isArray(enr.sport_transfer) ? enr.sport_transfer.find(function(t){return t.sport==='Baseball';}) : null;
+    html+='<button class="why-toggle" id="why-btn-'+idx+'" onclick="toggleWhy('+idx+')">';
+    html+='<span style="font-size:9px;">▸</span> Why this exercise</button>';
+    html+='<div class="why-body" id="why-'+idx+'">';
+    if(enr.mechanism_text){
+      html+='<div class="why-section"><div class="why-label">Mechanism</div><div class="why-text">'+enr.mechanism_text+'</div></div>';
+    }
+    if(bt){
+      html+='<div class="why-section"><div class="why-label">⚾ Baseball transfer</div><div class="baseball-text">'+bt.text+'</div></div>';
+    }
+    html+='</div>';
+  }
+
+  html+='</div>';
+  return html;
+}
+
+function renderProgram(prog, enrichMap){
+  var page = document.getElementById('page');
+
+  var created = prog.created_at ? new Date(prog.created_at).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '';
+
+  var html='';
+
+  // Header
+  html+='<div class="prog-header">';
+  html+='<div class="prog-athlete">'+prog.athlete+'</div>';
+  html+='<div class="prog-name">'+prog.name+'</div>';
+  html+='<div class="prog-meta">'+(prog.phase||'')+(prog.type?' · '+prog.type:'')+(created?' · '+created:'')+'</div>';
+  html+='</div>';
+
+  // Parse exercises from metadata
+  var exercises=[];
+  var metaMatch=(prog.content||'').match(/data-exercises="([^"]+)"/);
+  if(metaMatch){
+    try{ exercises=JSON.parse(decodeURIComponent(metaMatch[1])); }catch(e){}
+  }
+
+  // Try to extract from PB weekData JSON if present
+  if(!exercises.length && prog.pb_week_data){
+    try{
+      var wd=typeof prog.pb_week_data==='string'?JSON.parse(prog.pb_week_data):prog.pb_week_data;
+      if(Array.isArray(wd)){
+        wd.forEach(function(wk){
+          (wk.days||[]).forEach(function(day){
+            if(day.blocks && day.blocks.length){
+              // Wrap each day as a "block group"
+              day.blocks.forEach(function(blk){
+                if((blk.exercises||[]).length) exercises.push({_block:blk.label||blk.blockType, _blockType:blk.blockType, _items:blk.exercises});
+              });
+            }
+          });
+        });
+      }
+    }catch(e){}
+  }
+
+  if(!exercises.length){
+    html+='<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;color:var(--text3);font-size:13px;">No exercise detail available for this program.<br>Open it in the S&C Dashboard and resave to enable full view.</div>';
+  } else {
+    // Check if we have block groups (from PB) or flat list
+    var hasBlocks = exercises.length && exercises[0]._block;
+    if(hasBlocks){
+      var exIdx=0;
+      exercises.forEach(function(blockGroup){
+        var bt=blockGroup._blockType||'lift';
+        html+='<div class="block">';
+        html+='<div class="block-label block-'+bt+'">'+blockGroup._block+'</div>';
+        (blockGroup._items||[]).forEach(function(ex){
+          html+=renderExercise(ex, enrichMap, exIdx++);
+        });
+        html+='</div>';
+      });
+    } else {
+      // Flat list — single block
+      html+='<div class="block">';
+      html+='<div class="block-label block-lift">🏋️ Session</div>';
+      exercises.forEach(function(ex, idx){
+        html+=renderExercise(ex, enrichMap, idx);
+      });
+      html+='</div>';
+    }
+  }
+
+  page.innerHTML=html;
+}
+
+function showError(msg){
+  document.getElementById('page').innerHTML='<div class="error-card" style="margin-top:24px;">'+msg+'</div>';
+}
+
+async function loadProgram(){
+  var params=new URLSearchParams(window.location.search);
+  var progId=params.get('id');
+  if(!progId){ showError('No program ID in URL.'); return; }
+
+  try{
+    var supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+
+    // Fetch program
+    var {data:prog, error:progErr}=await supa
+      .from('athlete_programs')
+      .select('*')
+      .eq('id',progId)
+      .single();
+
+    if(progErr||!prog){ showError('Program not found. It may not have been shared yet — ask your coach to share it from the dashboard.'); return; }
+
+    // Fetch enrichment for all exercise names in this program
+    var enrichMap={};
+    try{
+      var {data:exRows}=await supa
+        .from('exercises')
+        .select('name,muscle_group,muscle_head,bucket,sport_bucket,mechanism_text,sport_transfer,video')
+        .not('mechanism_text','is',null);
+      (exRows||[]).forEach(function(e){ enrichMap[e.name.toLowerCase()]=e; });
+    }catch(e){ console.warn('Could not load enrichment:', e); }
+
+    renderProgram(prog, enrichMap);
+
+  }catch(err){
+    showError('Error loading program: '+err.message);
+    console.error(err);
+  }
+}
+
+loadProgram();
+</script>
+
+</body>
+</html>
