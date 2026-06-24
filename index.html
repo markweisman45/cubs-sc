@@ -13484,8 +13484,18 @@ function pbOpenDay(weekIdx, dayIdx) {
   var sessions = day.sessions || [{ label:'Session 1', blockIndices: day.blocks.map(function(_,i){return i;}) }];
   // If no sessions structure yet, show all blocks flat
   var blocksHtml = day.blocks.map(function(block, bi) {
+    // Session header divider — handle first, before touching exercises
+    if (block.blockType === 'session-header') {
+      return '<div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px;">'
+        +'<div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>'
+        +'<div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;">'+block.label+'</div>'
+        +'<div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>'
+        +'<button onclick="pbRemoveBlock('+bi+')" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;">✕</button>'
+        +'</div>';
+    }
+
     var isSpeedBlock = block.blockType === 'speed';
-    var exRows = block.exercises.map(function(ex, ei) {
+    var exRows = (block.exercises || []).map(function(ex, ei) {
       if (isSpeedBlock) {
         var speedCats = ['Acceleration','Max Velocity Running','COD/Agility','Deceleration','Curvilinear','LB Plyos','UB Plyos','ESD','Performance Prep'];
         var sCatOpts = '<option value="">— Category —</option>'+speedCats.map(function(c){ return '<option value="'+c+'"'+(ex.cat===c?' selected':'')+'>'+c+'</option>'; }).join('');
@@ -13539,15 +13549,7 @@ function pbOpenDay(weekIdx, dayIdx) {
         +'</div>';
     }).join('');
 
-    // Session header divider
-    if (block.blockType === 'session-header') {
-      return '<div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px;">'
-        +'<div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>'
-        +'<div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;">'+block.label+'</div>'
-        +'<div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>'
-        +'<button onclick="pbRemoveBlock('+bi+')" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;">✕</button>'
-        +'</div>';
-    }
+    // Session header divider — handled at top of map
     var isSpd = block.blockType === 'speed';
     var isMob = block.blockType === 'mobility';
     var isEsd = block.blockType === 'esd';
