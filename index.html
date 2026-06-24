@@ -2073,12 +2073,26 @@ body {
           </div>
         </div>
 
-        <!-- Extra context -->
+        <!-- Extra context / manual structure -->
         <div style="margin-bottom:14px;">
-          <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Additional context (optional)</label>
-          <textarea id="pbai-context-input" rows="2"
-            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;resize:none;"
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Additional context</label>
+            <div style="display:flex;gap:4px;">
+              <button id="pbai-input-mode-ai" onclick="pbAISetInputMode('ai')"
+                style="font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid rgba(79,142,247,0.4);background:rgba(79,142,247,0.15);color:#6BA3F8;cursor:pointer;font-weight:600;">AI context</button>
+              <button id="pbai-input-mode-manual" onclick="pbAISetInputMode('manual')"
+                style="font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text3);cursor:pointer;">Manual structure</button>
+            </div>
+          </div>
+          <textarea id="pbai-context-input" rows="3"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;resize:vertical;"
             placeholder="e.g. 2 days post start, focus on posterior chain, avoid overhead pressing…"></textarea>
+          <div id="pbai-manual-hint" style="display:none;font-size:10px;color:var(--cubs-light-blue);margin-top:5px;line-height:1.5;">
+            Format: one block per line. Start with block name followed by colon, then exercises separated by commas.<br>
+            <span style="color:var(--text3);">Example: Block 1: Trap Bar Deadlift, RDL, Nordic Curl</span><br>
+            <span style="color:var(--text3);">Example: Acceleration: A-Skip, Power Skips, 2pt Start, Prowler Push 4×10yds</span><br>
+            Click <b style="color:#6BA3F8;">✨ Generate</b> — exercises will be looked up in your library automatically.
+          </div>
         </div>
 
         <!-- Use library toggle -->
@@ -18065,8 +18079,126 @@ async function callEnrichAPI(name, sports) {
 // AI PROGRAM DESIGN — SESSION BUILDER
 // ══════════════════════════════════════════════════════════════
 
-var _pbAILastResult  = null;
-var _pbAIDesignMode  = 'single';
+var _pbAIInputMode = 'ai'; // 'ai' | 'manual'
+
+function pbAISetInputMode(mode) {
+  _pbAIInputMode = mode;
+  var btnAI  = document.getElementById('pbai-input-mode-ai');
+  var btnMan = document.getElementById('pbai-input-mode-manual');
+  var hint   = document.getElementById('pbai-manual-hint');
+  var ta     = document.getElementById('pbai-context-input');
+
+  if (mode === 'manual') {
+    btnMan.style.background   = 'rgba(79,142,247,0.15)';
+    btnMan.style.borderColor  = 'rgba(79,142,247,0.4)';
+    btnMan.style.color        = '#6BA3F8';
+    btnMan.style.fontWeight   = '600';
+    btnAI.style.background    = 'rgba(255,255,255,0.04)';
+    btnAI.style.borderColor   = 'rgba(255,255,255,0.1)';
+    btnAI.style.color         = 'var(--text3)';
+    btnAI.style.fontWeight    = '400';
+    hint.style.display = '';
+    ta.rows = 6;
+    ta.placeholder = 'Block 1: Trap Bar Deadlift, RDL, Nordic Curl\nBlock 2: DB Split Squat, Copenhagen, Calf Raise\nAcceleration: A-Skip, Power Skips, 2pt Start, Prowler Push 4×10yds';
+    // Hide AI-only options
+    var genBtn = document.getElementById('pbai-gen-btn');
+    if (genBtn) genBtn.textContent = '✨ Build from structure ↗';
+  } else {
+    btnAI.style.background    = 'rgba(79,142,247,0.15)';
+    btnAI.style.borderColor   = 'rgba(79,142,247,0.4)';
+    btnAI.style.color         = '#6BA3F8';
+    btnAI.style.fontWeight    = '600';
+    btnMan.style.background   = 'rgba(255,255,255,0.04)';
+    btnMan.style.borderColor  = 'rgba(255,255,255,0.1)';
+    btnMan.style.color        = 'var(--text3)';
+    btnMan.style.fontWeight   = '400';
+    hint.style.display = 'none';
+    ta.rows = 3;
+    ta.placeholder = 'e.g. 2 days post start, focus on posterior chain, avoid overhead pressing…';
+    var genBtn = document.getElementById('pbai-gen-btn');
+    if (genBtn) genBtn.textContent = '✨ Generate ↗';
+  }
+}
+
+// Parse manual structure text into blocks directly — no AI call needed
+function pbAIParseManualStructure(text) {
+  var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+  var blocks = [];
+
+  // Speed-related keywords for blockType detection
+  var speedKeywords = ['acceleration','accel','speed','sprint','plyo','skip','bound','agility','cod','esd','conditioning','prowler','sled','1080'];
+
+  lines.forEach(function(line) {
+    // Each line: "Block name: Ex1, Ex2, Ex3" or "Block name: Ex1 paired with Ex2, Ex3 paired with Ex4"
+    var colonIdx = line.indexOf(':');
+    if (colonIdx === -1) return;
+
+    var blockName = line.slice(0, colonIdx).trim();
+    var exPart    = line.slice(colonIdx + 1).trim();
+
+    // Detect blockType from name
+    var nameLower = blockName.toLowerCase();
+    var isSpeed = speedKeywords.some(function(kw){ return nameLower.includes(kw); });
+    var blockType = isSpeed ? 'speed' : 'lift';
+
+    // Parse exercises — split by comma, handling "X paired with Y" as separate exercises
+    var rawExes = exPart.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    var exNames = [];
+    rawExes.forEach(function(raw) {
+      // "A paired with B" → two exercises
+      if (/\bpaired with\b/i.test(raw)) {
+        raw.split(/\bpaired with\b/i).forEach(function(p){
+          var n = p.trim();
+          if (n) exNames.push(n);
+        });
+      } else {
+        exNames.push(raw);
+      }
+    });
+
+    // Look up each exercise in EXERCISE_DB
+    var exercises = exNames.map(function(rawName) {
+      // Strip trailing descriptors like "4x10yds", "6x5yds", "Height", etc.
+      // But keep the name as-is for lookup first
+      var dbEx = EXERCISE_DB.find(function(e){
+        return e && e.name && e.name.toLowerCase() === rawName.toLowerCase();
+      });
+
+      // Fuzzy: try contains match if exact fails
+      if (!dbEx) {
+        dbEx = EXERCISE_DB.find(function(e){
+          return e && e.name && (
+            e.name.toLowerCase().includes(rawName.toLowerCase()) ||
+            rawName.toLowerCase().includes(e.name.toLowerCase())
+          );
+        });
+      }
+
+      if (blockType === 'speed') {
+        return {
+          type: 'speed',
+          name: dbEx ? dbEx.name : rawName,
+          cat:  dbEx ? dbEx.cat  : 'Acceleration',
+          sets: '', reps: '', distance: '', pct: '', rest: '', notes: '',
+        };
+      }
+      return {
+        type: 'lift',
+        name: dbEx ? dbEx.name : rawName,
+        cat:  dbEx ? dbEx.cat  : '',
+        sets: '', reps: '', load: '', tempo: '', rest: '', notes: '',
+      };
+    });
+
+    if (exercises.length) {
+      blocks.push({ blockType: blockType, label: blockName, exercises: exercises });
+    }
+  });
+
+  return blocks;
+}
+
+
 
 var PB_MODALITIES = [
   { id:'perf_prep',   label:'Performance prep',      icon:'🔥', blockType:'lift',  desc:'Dynamic warmup, activation, mobility drills' },
@@ -18158,9 +18290,27 @@ async function pbAIGenerate() {
   if (!PB_ACTIVE_DAY) return;
   var wk  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx];
   var day = wk.days[PB_ACTIVE_DAY.dayIdx];
+
+  var extraContext = (document.getElementById('pbai-context-input').value || '').trim();
+
+  // ── MANUAL STRUCTURE MODE — no AI call, parse directly ──────────────────
+  if (_pbAIInputMode === 'manual' && extraContext) {
+    var blocks = pbAIParseManualStructure(extraContext);
+    if (!blocks.length) {
+      document.getElementById('pbai-status').textContent = '❌ Could not parse — check format (BlockName: Ex1, Ex2, Ex3)';
+      return;
+    }
+    _pbAILastResult = { blocks: blocks, rationale: 'Manual structure — parsed from your input.' };
+    document.getElementById('pbai-progress').style.width = '100%';
+    pbAIRenderPreview(_pbAILastResult);
+    document.getElementById('pbai-status').textContent = '';
+    document.getElementById('pbai-regen-btn').style.display = 'none';
+    return;
+  }
+
+  // ── AI MODE ──────────────────────────────────────────────────────────────
   var position     = document.getElementById('pbai-position').value;
   var phase        = document.getElementById('pbai-phase-sel').value;
-  var extraContext = (document.getElementById('pbai-context-input').value || '').trim();
   var useLibrary   = document.getElementById('pbai-use-library').checked;
   var libraryList  = '';
   if (useLibrary) {
