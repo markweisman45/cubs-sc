@@ -13505,7 +13505,14 @@ function pbOpenDay(weekIdx, dayIdx) {
             .sort(function(a,b){ return a.name.localeCompare(b.name); })
             .forEach(function(e){ sExOpts += '<option value="'+e.name+'"'+(e.name===ex.name?' selected':'')+'>'+e.name+'</option>'; });
         }
-        return '<div style="display:grid;grid-template-columns:110px 130px 45px 45px 65px 50px 50px 1fr 20px;gap:4px;align-items:center;margin-bottom:5px;">'
+        // Pair selector for speed rows
+        var sPairLetters = ['','A','B','C','D','E','F','G','H'];
+        var sPairOpts = sPairLetters.map(function(l){ return '<option value="'+l+'"'+(ex.pair===l?' selected':'')+'>'+(l?l:'—')+'</option>'; }).join('');
+        var sPairColors = {A:'#AFA9EC',B:'#5DCAA5',C:'#EF9F27',D:'#ED93B1',E:'#85B7EB',F:'#F0997B',G:'#f59e0b',H:'#a78bfa'};
+        var sPairColor = ex.pair ? (sPairColors[ex.pair]||'#6BA3F8') : 'var(--text3)';
+        var sPairBg    = ex.pair ? 'rgba(79,142,247,0.12)' : 'transparent';
+        return '<div style="display:grid;grid-template-columns:28px 110px 130px 45px 45px 65px 50px 50px 1fr auto;gap:4px;align-items:center;margin-bottom:5px;">'
+          +'<select onchange="pbSetExField('+bi+','+ei+',\'pair\',this.value)" title="Pairing" style="background:'+sPairBg+';border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:2px 2px;color:'+sPairColor+';font-size:10px;font-weight:700;font-family:\'DM Mono\',monospace;text-align:center;">'+sPairOpts+'</select>'
           +'<select onchange="pbSetExCat('+bi+','+ei+',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-size:10px;font-family:\'DM Mono\',monospace;">'+sCatOpts+'</select>'
           +'<select onchange="pbSetExField('+bi+','+ei+',\'name\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'+sExOpts+'</select>'
           + pbFieldSelect(bi,ei,'sets',ex.sets||'','Sets')
@@ -13514,7 +13521,12 @@ function pbOpenDay(weekIdx, dayIdx) {
           + pbFieldSelect(bi,ei,'pct',ex.pct||'','%')
           + pbFieldSelect(bi,ei,'rest',ex.rest||'','Rest')
           +'<input value="'+(ex.notes||'')+'" placeholder="Notes / times" onchange="pbSetExField('+bi+','+ei+',\'notes\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'
-          +'<button onclick="pbRemoveEx('+bi+','+ei+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0;">✕</button>'
+          +'<div style="display:flex;gap:2px;flex-shrink:0;">'
+          +(ei > 0 ? '<button onclick="pbMoveEx('+bi+','+ei+',-1)" title="Move up" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↑</button>' : '<span style="width:20px;"></span>')
+          +(ei < (block.exercises||[]).length-1 ? '<button onclick="pbMoveEx('+bi+','+ei+',1)" title="Move down" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↓</button>' : '<span style="width:20px;"></span>')
+          +'<button onclick="pbDupEx('+bi+','+ei+')" title="Duplicate row" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">⧉</button>'
+          +'<button onclick="pbRemoveEx('+bi+','+ei+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:1px 3px;">✕</button>'
+          +'</div>'
           +'</div>';
       }
       var exOpts = '<option value="">— Exercise —</option>';
@@ -13565,7 +13577,8 @@ function pbOpenDay(weekIdx, dayIdx) {
       ? (bIcon + ' ' + block.label)
       : (bIcon + ' Block ' + String.fromCharCode(65+bi) + (isSpd ? ' · Speed' : ' · Lift'));
     var colHdr = isSpd
-      ? '<div style="display:grid;grid-template-columns:110px 130px 45px 45px 65px 50px 50px 1fr 20px;gap:4px;margin-bottom:6px;">'
+      ? '<div style="display:grid;grid-template-columns:28px 110px 130px 45px 45px 65px 50px 50px 1fr 20px;gap:4px;margin-bottom:6px;">'
+        +'<div style="font-size:8px;color:var(--text3);font-weight:600;text-align:center;">PAIR</div>'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">CATEGORY</div>'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">EXERCISE</div>'
         +'<div style="font-size:8px;color:#f59e0b;font-weight:600;text-align:center;">SETS</div>'
