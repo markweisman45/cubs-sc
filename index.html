@@ -12974,11 +12974,24 @@ function pbSaveDraft() {
 }
 
 function pbLoadDraft(id) {
-  var draft = pbDrafts.find(function(d){ return d.id===id; });
-  if (!draft || !draft.pbState) { showStatus('⚠️ Draft not found'); return; }
+  // Coerce ID to match stored type (could be number or string)
+  var draft = pbDrafts.find(function(d){ return d.id==id; }); // == not === to handle type mismatch
+  if (!draft) { showStatus('⚠️ Draft not found (id=' + id + ', drafts=' + pbDrafts.length + ')'); return; }
+  if (!draft.pbState) { showStatus('⚠️ Draft has no saved state — try resaving it'); return; }
 
-  // Restore full PB_STATE
-  Object.assign(PB_STATE, draft.pbState);
+  console.log('[pbLoadDraft] loading:', draft.name, 'weekData length:', draft.pbState.weekData && draft.pbState.weekData.length);
+
+  // Deep restore PB_STATE
+  PB_STATE = JSON.parse(JSON.stringify(draft.pbState));
+
+  // Guard: reset activeWeek if out of range
+  if (!PB_STATE.weekData || !PB_STATE.weekData.length) {
+    showStatus('⚠️ Draft has no week data — try rebuilding it');
+    return;
+  }
+  if (PB_STATE.activeWeek >= PB_STATE.weekData.length) {
+    PB_STATE.activeWeek = 0;
+  }
 
   // Restore UI inputs
   var phaseEl = document.getElementById('pb-phase');
@@ -13003,7 +13016,7 @@ function pbLoadDraft(id) {
   }
 
   // Switch to the builder tab so all DOM elements exist before rendering
-  switchProgTab('builder', null);
+  switchProgTab('builder', document.getElementById('ptab-builder'));
 
   // Re-render everything
   pbPhaseChange();
@@ -13012,7 +13025,7 @@ function pbLoadDraft(id) {
   pbRenderWeekTargets();
   pbCloseEditor();
 
-  showStatus('✅ Loaded draft: "'+draft.name+'"');
+  showStatus('✅ Loaded draft: "' + draft.name + '" · ' + PB_STATE.weekData.length + ' weeks · ' + PB_STATE.weekData.reduce(function(n,w){ return n + w.days.reduce(function(m,d){ return m + d.blocks.reduce(function(k,b){ return k+(b.exercises||[]).length; },0); },0); },0) + ' exercises');
   renderPBDrafts();
 }
 
