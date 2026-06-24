@@ -12980,7 +12980,7 @@ function pbLoadDraft(id) {
   // Restore full PB_STATE
   Object.assign(PB_STATE, draft.pbState);
 
-  // Restore UI
+  // Restore UI inputs
   var phaseEl = document.getElementById('pb-phase');
   if (phaseEl) phaseEl.value = PB_STATE.phase || 'accumulation';
 
@@ -12993,7 +12993,7 @@ function pbLoadDraft(id) {
   var nameEl = document.getElementById('pb-program-name');
   if (nameEl) nameEl.value = draft.name;
 
-  // Set mode
+  // Set mode and athlete
   if (draft.athlete === '(Sandbox)') {
     pbSetMode('sandbox');
   } else {
@@ -13002,10 +13002,14 @@ function pbLoadDraft(id) {
     if (athEl) athEl.value = draft.athlete;
   }
 
-  // Re-render the week grid
+  // Switch to the builder tab so all DOM elements exist before rendering
+  switchProgTab('builder', null);
+
+  // Re-render everything
   pbPhaseChange();
   pbRenderWeekTabs();
   pbRenderDayGrid();
+  pbRenderWeekTargets();
   pbCloseEditor();
 
   showStatus('✅ Loaded draft: "'+draft.name+'"');
