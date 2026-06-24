@@ -4004,7 +4004,7 @@ function gsmRenderExercises() {
   gsmUpdateBlockSelect();
 
   const blocks = session.blocks;
-  if (!blocks.length || blocks.every(b => !b.exercises.length)) {
+  if (!blocks.length || blocks.every(b => !(b.exercises||[]).length)) {
     container.innerHTML = `<div style="padding:30px;text-align:center;color:var(--text3);font-size:12px;font-family:\'DM Mono\',monospace;">
       <div style="font-size:24px;margin-bottom:8px;opacity:.3;">📋</div>
       Search for exercises above or drag from the library<br>
@@ -12411,7 +12411,7 @@ function tmplCopyWeek1ToAll() {
   // Read week 1
   const wk1Sessions = tmplReadWeekExercises(1);
 
-  const hasExercises = wk1Sessions.some(s => s?.blocks?.some(b => b.exercises.length > 0));
+  const hasExercises = wk1Sessions.some(s => s?.blocks?.some(b => (b.exercises||[]).length > 0));
   if (!hasExercises) {
     alert('Week 1 has no exercises yet. Fill in at least one session in Week 1 first, then copy.');
     return;
@@ -12437,7 +12437,7 @@ function tmplSendToPeriodization() {
   tmplExpandWeek(1);
   const wk1Sessions = tmplReadWeekExercises(1);
   console.log('[sendToPerio] wk1Sessions:', wk1Sessions.length, 'sessions');
-  wk1Sessions.forEach((s,i) => { if(s) console.log('  day'+i+':', s.blocks.reduce((t,b)=>t+b.exercises.length,0), 'exercises'); });
+  wk1Sessions.forEach((s,i) => { if(s) console.log('  day'+i+':', s.blocks.reduce((t,b)=>t+(b.exercises||[]).length,0), 'exercises'); });
   const athlete     = ctx.athlete;
   const mesoKey     = ctx.mesoKey;
   const phase       = (document.getElementById('perio-phase') || { value: mesoKey }).value || mesoKey;
@@ -13307,7 +13307,7 @@ function pbRenderDayGrid() {
   grid.innerHTML = wk.days.map(function(d,di) {
     var col = PB_DAY_COLORS[d.type] || '#334155';
     var isOff = d.type === 'off';
-    var exCount = d.blocks.reduce(function(s,b){ return s+b.exercises.length; }, 0);
+    var exCount = d.blocks.reduce(function(s,b){ return s+(b.exercises||[]).length; }, 0);
     return '<div onclick="'+(isOff?'':'pbOpenDay('+PB_STATE.activeWeek+','+di+')')+'" '
       +'style="border:1px solid '+col+(isOff?'33':'66')+';border-radius:8px;padding:10px;'
       +'cursor:'+(isOff?'default':'pointer')+';background:'+col+(isOff?'08':'12')+';">'
