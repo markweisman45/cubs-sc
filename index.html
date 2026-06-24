@@ -18251,7 +18251,15 @@ function pbAIInsert() {
   var day  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
   var mode = document.getElementById('pbai-mode-sel').value;
   if (mode === 'insert') day.blocks = [];
-  (_pbAILastResult.blocks || []).forEach(function(block) {
+
+  var blocksToInsert = _pbAILastResult.blocks || [];
+
+  // Auto-split: if only 1 block returned with 5+ exercises, split by bucket
+  if (blocksToInsert.length === 1 && (blocksToInsert[0].exercises||[]).length >= 5) {
+    blocksToInsert = pbAIAutoSplit(blocksToInsert[0]);
+  }
+
+  blocksToInsert.forEach(function(block) {
     var bt  = block.blockType || 'lift';
     var exs = (block.exercises || []).map(function(ex) {
       var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === (ex.name||'').toLowerCase(); });
@@ -18262,12 +18270,45 @@ function pbAIInsert() {
     });
     day.blocks.push({ blockType:bt, label:block.label||'', exercises:exs });
   });
+
   closeModal('pbAIModal');
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
   pbRenderDayGrid();
-  var totalEx = (_pbAILastResult.blocks||[]).reduce(function(n,b){ return n+(b.exercises||[]).length; }, 0);
-  showStatus('✅ Inserted ' + (_pbAILastResult.blocks||[]).length + ' blocks · ' + totalEx + ' exercises');
+  var totalEx = blocksToInsert.reduce(function(n,b){ return n+(b.exercises||[]).length; }, 0);
+  showStatus('✅ Inserted ' + blocksToInsert.length + ' blocks · ' + totalEx + ' exercises');
 }
+
+// Split a single oversized block into logical sub-blocks by bucket
+function pbAIAutoSplit(block) {
+  var exs = block.exercises || [];
+  var bt  = block.blockType || 'lift';
+  var bucketOrder  = ['primary_compound', 'athletic_power', 'strength_accessory', 'isolation_rehab', ''];
+  var bucketLabels = {
+    primary_compound:   'Primary Compound',
+    athletic_power:     'Power',
+    strength_accessory: 'Strength Accessories',
+    isolation_rehab:    'Accessories / Rehab',
+    '':                 'Supplemental',
+  };
+  var groups = {};
+  bucketOrder.forEach(function(b){ groups[b] = []; });
+  exs.forEach(function(ex) {
+    var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === (ex.name||'').toLowerCase(); });
+    var bucket = (dbEx && dbEx.bucket) || '';
+    if (!groups[bucket]) groups[bucket] = [];
+    groups[bucket].push(ex);
+  });
+  var result = [];
+  var letters = ['A','B','C','D','E'];
+  var li = 0;
+  bucketOrder.forEach(function(bucket) {
+    var grp = groups[bucket];
+    if (!grp || !grp.length) return;
+    result.push({ blockType:bt, label:letters[li++] + ' · ' + bucketLabels[bucket], exercises:grp });
+  });
+  return result.length > 1 ? result : [block];
+}
+
 
 async function callPBDesignAPI(ctx) {
   var libSection = ctx.libraryList
