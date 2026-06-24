@@ -13508,7 +13508,7 @@ function pbOpenDay(weekIdx, dayIdx) {
       var pairColor = ex.pair ? (pairColors[ex.pair]||'#6BA3F8') : 'var(--text3)';
       var pairBg    = ex.pair ? 'rgba(79,142,247,0.12)' : 'transparent';
 
-      return '<div style="display:grid;grid-template-columns:28px 130px 1fr 50px 60px 70px 65px 55px 20px;gap:4px;align-items:center;margin-bottom:5px;">'
+      return '<div style="display:grid;grid-template-columns:28px 120px 1fr 50px 55px 65px 60px 50px 1fr 20px;gap:4px;align-items:center;margin-bottom:5px;">'
         +'<select onchange="pbSetExField('+bi+','+ei+',\'pair\',this.value)" title="Pairing" style="background:'+pairBg+';border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:2px 2px;color:'+pairColor+';font-size:10px;font-weight:700;font-family:\'DM Mono\',monospace;text-align:center;">'+pairOpts+'</select>'
         +'<select onchange="pbSetExCat('+bi+','+ei+',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-size:10px;font-family:\'DM Mono\',monospace;">'+catOpts.replace('value="'+ex.cat+'"','value="'+ex.cat+'" selected')+'</select>'
         + buildBucketExSelect(bi, ei, ex.name, ex.cat)
@@ -13517,6 +13517,7 @@ function pbOpenDay(weekIdx, dayIdx) {
         + pbFieldSelect(bi,ei,'load',ex.load||'','Load')
         + pbFieldSelect(bi,ei,'tempo',ex.tempo||'','Tempo')
         + pbFieldSelect(bi,ei,'rest',ex.rest||'','Rest')
+        +'<input value="'+(ex.notes||'')+'" placeholder="Notes" onchange="pbSetExField('+bi+','+ei+',\'notes\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;width:100%;">'
         +'<button onclick="pbRemoveEx('+bi+','+ei+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0;">✕</button>'
         +'</div>';
     }).join('');
@@ -13550,7 +13551,7 @@ function pbOpenDay(weekIdx, dayIdx) {
         +'<div style="font-size:8px;color:#f59e0b;font-weight:600;text-align:center;">REST</div>'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">NOTES / TIMES</div>'
         +'<div></div></div>'
-      : '<div style="display:grid;grid-template-columns:28px 130px 1fr 50px 60px 70px 65px 55px 20px;gap:4px;margin-bottom:6px;">'
+      : '<div style="display:grid;grid-template-columns:28px 120px 1fr 50px 55px 65px 60px 50px 1fr 20px;gap:4px;margin-bottom:6px;">'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;text-align:center;">PAIR</div>'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">CATEGORY</div>'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">EXERCISE</div>'
@@ -13559,6 +13560,7 @@ function pbOpenDay(weekIdx, dayIdx) {
         +'<div style="font-size:8px;color:'+bColor+';font-weight:600;text-align:center;">LOAD</div>'
         +'<div style="font-size:8px;color:'+bColor+';font-weight:600;text-align:center;">TEMPO</div>'
         +'<div style="font-size:8px;color:'+bColor+';font-weight:600;text-align:center;">REST</div>'
+        +'<div style="font-size:8px;color:var(--text3);font-weight:600;">NOTES</div>'
         +'<div></div></div>';
     return '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:10px;border-left:3px solid '+bColor+';">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
