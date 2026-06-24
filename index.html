@@ -8011,6 +8011,11 @@ function briefEnrichCard(exName, exData) {
 
   // Row 1: name + prescription + tags
   html += '<div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:4px;">';
+  if (exData.pair) {
+    var pairColors2 = {A:'#AFA9EC',B:'#5DCAA5',C:'#EF9F27',D:'#ED93B1',E:'#85B7EB',F:'#F0997B',G:'#f59e0b',H:'#a78bfa'};
+    var pc = pairColors2[exData.pair] || '#6BA3F8';
+    html += '<span style="font-size:10px;font-weight:800;color:'+pc+';background:rgba(255,255,255,0.06);border-radius:4px;padding:0 5px;flex-shrink:0;line-height:1.8;">'+exData.pair+'</span>';
+  }
   html += '<span data-exname="' + exName.replace(/"/g,'&quot;') + '" style="font-size:13px;font-weight:600;color:#fff;flex:1;min-width:160px;cursor:default;">' + exName + '</span>';
   if (prescLine) html += '<span style="font-size:11px;color:var(--text2);font-family:\'DM Mono\',monospace;white-space:nowrap;">' + prescLine + '</span>';
   html += '</div>';
@@ -13491,12 +13496,20 @@ function pbOpenDay(weekIdx, dayIdx) {
           .sort(function(a,b){ return a.name.localeCompare(b.name); })
           .forEach(function(e){ exOpts += '<option value="'+e.name+'"'+(e.name===ex.name?' selected':'')+'>'+e.name+'</option>'; });
       }
-      // Enrichment badge for selected exercise
       var dbEx = ex.name ? EXERCISE_DB.find(function(e){ return e&&e.name===ex.name; }) : null;
-      var enrichBadge = dbEx && dbEx.bucket
-        ? '<span style="font-size:8px;color:#6BA3F8;margin-left:3px;" title="'+dbEx.bucket.replace(/_/g,' ')+(dbEx.muscle_head?' · '+dbEx.muscle_head:'')+'">●</span>'
-        : '';
-      return '<div style="display:grid;grid-template-columns:130px 1fr 50px 60px 70px 65px 55px 20px;gap:4px;align-items:center;margin-bottom:5px;">'
+
+      // Pairing letter selector
+      var pairLetters = ['','A','B','C','D','E','F','G','H'];
+      var pairOpts = pairLetters.map(function(l){
+        return '<option value="'+l+'"'+(ex.pair===l?' selected':'')+'>'+( l ? l : '—')+'</option>';
+      }).join('');
+      // Color per pair
+      var pairColors = {A:'#AFA9EC',B:'#5DCAA5',C:'#EF9F27',D:'#ED93B1',E:'#85B7EB',F:'#F0997B',G:'#f59e0b',H:'#a78bfa'};
+      var pairColor = ex.pair ? (pairColors[ex.pair]||'#6BA3F8') : 'var(--text3)';
+      var pairBg    = ex.pair ? 'rgba(79,142,247,0.12)' : 'transparent';
+
+      return '<div style="display:grid;grid-template-columns:28px 130px 1fr 50px 60px 70px 65px 55px 20px;gap:4px;align-items:center;margin-bottom:5px;">'
+        +'<select onchange="pbSetExField('+bi+','+ei+',\'pair\',this.value)" title="Pairing" style="background:'+pairBg+';border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:2px 2px;color:'+pairColor+';font-size:10px;font-weight:700;font-family:\'DM Mono\',monospace;text-align:center;">'+pairOpts+'</select>'
         +'<select onchange="pbSetExCat('+bi+','+ei+',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-size:10px;font-family:\'DM Mono\',monospace;">'+catOpts.replace('value="'+ex.cat+'"','value="'+ex.cat+'" selected')+'</select>'
         + buildBucketExSelect(bi, ei, ex.name, ex.cat)
         + pbFieldSelect(bi,ei,'sets',ex.sets||'','Sets')
@@ -13537,7 +13550,8 @@ function pbOpenDay(weekIdx, dayIdx) {
         +'<div style="font-size:8px;color:#f59e0b;font-weight:600;text-align:center;">REST</div>'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">NOTES / TIMES</div>'
         +'<div></div></div>'
-      : '<div style="display:grid;grid-template-columns:130px 1fr 50px 60px 70px 65px 55px 20px;gap:4px;margin-bottom:6px;">'
+      : '<div style="display:grid;grid-template-columns:28px 130px 1fr 50px 60px 70px 65px 55px 20px;gap:4px;margin-bottom:6px;">'
+        +'<div style="font-size:8px;color:var(--text3);font-weight:600;text-align:center;">PAIR</div>'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">CATEGORY</div>'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">EXERCISE</div>'
         +'<div style="font-size:8px;color:'+bColor+';font-weight:600;text-align:center;">SETS</div>'
@@ -13644,7 +13658,7 @@ function pbAddBlock(type) {
   type = type || 'lift';
   var emptyEx = type === 'speed'
     ? {type:'speed',name:'',sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
-    : {type:'lift', cat:'',name:'',sets:'',reps:'',load:'',tempo:'',rest:''};
+    : {type:'lift', cat:'',name:'',pair:'',sets:'',reps:'',load:'',tempo:'',rest:''};
   day.blocks.push({ blockType:type, exercises:[emptyEx] });
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
 }
@@ -13654,7 +13668,7 @@ function pbAddEx(bi) {
   var isSpd = day.blocks[bi] && day.blocks[bi].blockType === 'speed';
   var emptyEx = isSpd
     ? {type:'speed',name:'',sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
-    : {type:'lift', cat:'',name:'',sets:'',reps:'',load:'',tempo:'',rest:''};
+    : {type:'lift', cat:'',name:'',pair:'',sets:'',reps:'',load:'',tempo:'',rest:''};
   day.blocks[bi].exercises.push(emptyEx);
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
 }
@@ -16279,7 +16293,7 @@ function quickSaveProgram() {
             name: ex.name, cat: ex.cat || '', video: ex.video || '',
             sets: ex.sets || 3, reps: ex.reps || '',
             load: ex.loadOverride || ex.load || '', tempo: ex.tempo || '',
-            rest: ex.rest || '', notes: ex.notes || '',
+            rest: ex.rest || '', notes: ex.notes || '', pair: ex.pair || '',
           });
         }
       });
@@ -18143,53 +18157,39 @@ function pbAIParseManualStructure(text) {
     var isSpeed = speedKeywords.some(function(kw){ return nameLower.includes(kw); });
     var blockType = isSpeed ? 'speed' : 'lift';
 
-    // Parse exercises — split by comma, handling "X paired with Y" as separate exercises
+    // Parse exercises — split by comma, "X paired with Y" assigns same pair letter
     var rawExes = exPart.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-    var exNames = [];
+    var exercises = [];
+    var pairLetters = 'ABCDEFGH';
+    var pairIdx = 0;
+
+    function lookupEx(n) {
+      var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === n.toLowerCase(); });
+      if (!dbEx) dbEx = EXERCISE_DB.find(function(e){ return e && e.name && (e.name.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(e.name.toLowerCase())); });
+      return dbEx;
+    }
+
     rawExes.forEach(function(raw) {
-      // "A paired with B" → two exercises
       if (/\bpaired with\b/i.test(raw)) {
-        raw.split(/\bpaired with\b/i).forEach(function(p){
-          var n = p.trim();
-          if (n) exNames.push(n);
+        var letter = pairLetters[pairIdx++] || '';
+        raw.split(/\bpaired with\b/i).forEach(function(p) {
+          var n = p.trim(); if (!n) return;
+          var dbEx = lookupEx(n);
+          if (blockType === 'speed') {
+            exercises.push({ type:'speed', name:dbEx?dbEx.name:n, cat:dbEx?dbEx.cat:'Acceleration', pair:letter, sets:'',reps:'',distance:'',pct:'',rest:'',notes:'' });
+          } else {
+            exercises.push({ type:'lift', name:dbEx?dbEx.name:n, cat:dbEx?dbEx.cat:'', pair:letter, sets:'',reps:'',load:'',tempo:'',rest:'',notes:'' });
+          }
         });
       } else {
-        exNames.push(raw);
+        var n = raw;
+        var dbEx = lookupEx(n);
+        if (blockType === 'speed') {
+          exercises.push({ type:'speed', name:dbEx?dbEx.name:n, cat:dbEx?dbEx.cat:'Acceleration', pair:'', sets:'',reps:'',distance:'',pct:'',rest:'',notes:'' });
+        } else {
+          exercises.push({ type:'lift', name:dbEx?dbEx.name:n, cat:dbEx?dbEx.cat:'', pair:'', sets:'',reps:'',load:'',tempo:'',rest:'',notes:'' });
+        }
       }
-    });
-
-    // Look up each exercise in EXERCISE_DB
-    var exercises = exNames.map(function(rawName) {
-      // Strip trailing descriptors like "4x10yds", "6x5yds", "Height", etc.
-      // But keep the name as-is for lookup first
-      var dbEx = EXERCISE_DB.find(function(e){
-        return e && e.name && e.name.toLowerCase() === rawName.toLowerCase();
-      });
-
-      // Fuzzy: try contains match if exact fails
-      if (!dbEx) {
-        dbEx = EXERCISE_DB.find(function(e){
-          return e && e.name && (
-            e.name.toLowerCase().includes(rawName.toLowerCase()) ||
-            rawName.toLowerCase().includes(e.name.toLowerCase())
-          );
-        });
-      }
-
-      if (blockType === 'speed') {
-        return {
-          type: 'speed',
-          name: dbEx ? dbEx.name : rawName,
-          cat:  dbEx ? dbEx.cat  : 'Acceleration',
-          sets: '', reps: '', distance: '', pct: '', rest: '', notes: '',
-        };
-      }
-      return {
-        type: 'lift',
-        name: dbEx ? dbEx.name : rawName,
-        cat:  dbEx ? dbEx.cat  : '',
-        sets: '', reps: '', load: '', tempo: '', rest: '', notes: '',
-      };
     });
 
     if (exercises.length) {
@@ -18418,7 +18418,7 @@ function pbAIInsert() {
       if (bt === 'speed' || bt === 'esd') {
         return { type:'speed', name:ex.name||'', cat:(dbEx&&dbEx.cat)||ex.cat||'', sets:ex.sets||'', reps:ex.reps||'', distance:ex.distance||'', pct:ex.pct||'', rest:ex.rest||'', notes:ex.notes||'' };
       }
-      return { type:'lift', name:ex.name||'', cat:(dbEx&&dbEx.cat)||ex.cat||'', sets:ex.sets||'', reps:ex.reps||'', load:ex.load||'', tempo:ex.tempo||'', rest:ex.rest||'', notes:ex.notes||'' };
+      return { type:'lift', name:ex.name||'', cat:(dbEx&&dbEx.cat)||ex.cat||'', pair:ex.pair||'', sets:ex.sets||'', reps:ex.reps||'', load:ex.load||'', tempo:ex.tempo||'', rest:ex.rest||'', notes:ex.notes||'' };
     });
     day.blocks.push({ blockType:bt, label:block.label||'', exercises:exs });
   });
