@@ -18080,6 +18080,8 @@ async function callEnrichAPI(name, sports) {
 // ══════════════════════════════════════════════════════════════
 
 var _pbAIInputMode = 'ai'; // 'ai' | 'manual'
+var _pbAILastResult = null;
+var _pbAIDesignMode = 'single'; // 'single' | 'day'
 
 function pbAISetInputMode(mode) {
   _pbAIInputMode = mode;
