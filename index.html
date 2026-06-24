@@ -13535,7 +13535,7 @@ function pbOpenDay(weekIdx, dayIdx) {
       var pairColor = ex.pair ? (pairColors[ex.pair]||'#6BA3F8') : 'var(--text3)';
       var pairBg    = ex.pair ? 'rgba(79,142,247,0.12)' : 'transparent';
 
-      return '<div style="display:grid;grid-template-columns:28px 120px 1fr 50px 55px 65px 60px 50px 1fr 20px;gap:4px;align-items:center;margin-bottom:5px;">'
+      return '<div style="display:grid;grid-template-columns:28px 120px 1fr 50px 55px 65px 60px 50px 1fr auto;gap:4px;align-items:center;margin-bottom:5px;">'
         +'<select onchange="pbSetExField('+bi+','+ei+',\'pair\',this.value)" title="Pairing" style="background:'+pairBg+';border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:2px 2px;color:'+pairColor+';font-size:10px;font-weight:700;font-family:\'DM Mono\',monospace;text-align:center;">'+pairOpts+'</select>'
         +'<select onchange="pbSetExCat('+bi+','+ei+',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-size:10px;font-family:\'DM Mono\',monospace;">'+catOpts.replace('value="'+ex.cat+'"','value="'+ex.cat+'" selected')+'</select>'
         + buildBucketExSelect(bi, ei, ex.name, ex.cat)
@@ -13545,7 +13545,12 @@ function pbOpenDay(weekIdx, dayIdx) {
         + pbFieldSelect(bi,ei,'tempo',ex.tempo||'','Tempo')
         + pbFieldSelect(bi,ei,'rest',ex.rest||'','Rest')
         +'<input value="'+(ex.notes||'')+'" placeholder="Notes" onchange="pbSetExField('+bi+','+ei+',\'notes\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;width:100%;">'
-        +'<button onclick="pbRemoveEx('+bi+','+ei+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0;">✕</button>'
+        +'<div style="display:flex;gap:2px;flex-shrink:0;">'
+        +(ei > 0 ? '<button onclick="pbMoveEx('+bi+','+ei+',-1)" title="Move up" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↑</button>' : '<span style="width:20px;"></span>')
+        +(ei < (block.exercises||[]).length-1 ? '<button onclick="pbMoveEx('+bi+','+ei+',1)" title="Move down" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↓</button>' : '<span style="width:20px;"></span>')
+        +'<button onclick="pbDupEx('+bi+','+ei+')" title="Duplicate row" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">⧉</button>'
+        +'<button onclick="pbRemoveEx('+bi+','+ei+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:1px 3px;">✕</button>'
+        +'</div>'
         +'</div>';
     }).join('');
 
@@ -13582,10 +13587,14 @@ function pbOpenDay(weekIdx, dayIdx) {
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">NOTES</div>'
         +'<div></div></div>';
     return '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:10px;border-left:3px solid '+bColor+';">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px;">'
       +'<div style="font-size:11px;font-weight:700;color:'+bColor+';">'+blockDisplayLabel+'</div>'
-      +'<div style="display:flex;gap:6px;">'
+      +'<div style="display:flex;gap:4px;flex-wrap:wrap;">'
+      +(bi > 0 ? '<button onclick="pbMoveBlock('+bi+',-1)" title="Move block up" style="font-size:10px;color:var(--text3);background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:2px 6px;cursor:pointer;">↑</button>' : '')
+      +(bi < day.blocks.length-1 ? '<button onclick="pbMoveBlock('+bi+',1)" title="Move block down" style="font-size:10px;color:var(--text3);background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:2px 6px;cursor:pointer;">↓</button>' : '')
       +'<button onclick="pbAddEx('+bi+')" style="font-size:9px;color:'+bColor+';background:transparent;border:1px dashed '+bColor+'55;border-radius:4px;padding:2px 8px;cursor:pointer;">＋ Row</button>'
+      +'<button onclick="pbDupBlock('+bi+')" title="Duplicate block" style="font-size:9px;color:var(--text2);background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:2px 8px;cursor:pointer;">⧉ Dup</button>'
+      +'<button onclick="pbCopyBlockToDay('+bi+')" title="Copy block to another day" style="font-size:9px;color:var(--text2);background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:2px 8px;cursor:pointer;">→ Copy to day</button>'
       +'<button onclick="pbRemoveBlock('+bi+')" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;">Remove</button>'
       +'</div></div>'
       + colHdr
@@ -13634,6 +13643,8 @@ function pbOpenDay(weekIdx, dayIdx) {
     +'<button onclick="pbAddBlock(\'speed\')" style="padding:5px 10px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;font-size:10px;font-weight:600;cursor:pointer;">⚡ Speed Block</button>'
     +'<button onclick="pbAIDesign()" style="padding:5px 10px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:10px;font-weight:600;cursor:pointer;">✨ AI Design</button>'
     +'<button onclick="pbApplyToAllWeeks()" style="padding:5px 10px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:600;cursor:pointer;" title="Apply Week 1 to all weeks with progression">↕ All Weeks</button>'
+    +'<button onclick="pbCopyDayToWeek()" style="padding:5px 10px;background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.4);border-radius:6px;color:#5DCAA5;font-size:10px;font-weight:600;cursor:pointer;" title="Copy this day to another week">📋 Copy to week</button>'
+    +'<button onclick="pbClearDay()" style="padding:5px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:6px;color:var(--red);font-size:10px;cursor:pointer;" title="Clear all blocks from this day">🗑 Clear</button>'
     +'<button onclick="pbCloseEditor()" style="padding:5px 8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:10px;cursor:pointer;">✕</button>'
     +'</div></div>'
     + blocksHtml
@@ -18744,6 +18755,135 @@ function shareProgram(progId) {
       window.prompt('Copy this link and send to the athlete:', url);
     });
   });
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// SESSION EDITOR — ROW & BLOCK ACTIONS
+// ══════════════════════════════════════════════════════════════
+
+// Duplicate a row within a block
+function pbDupEx(bi, ei) {
+  if (!PB_ACTIVE_DAY) return;
+  var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
+  var block = day.blocks[bi];
+  if (!block) return;
+  var copy = JSON.parse(JSON.stringify(block.exercises[ei]));
+  block.exercises.splice(ei + 1, 0, copy);
+  pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+}
+
+// Move a row up or down within its block
+function pbMoveEx(bi, ei, dir) {
+  if (!PB_ACTIVE_DAY) return;
+  var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
+  var exs = day.blocks[bi].exercises;
+  var newIdx = ei + dir;
+  if (newIdx < 0 || newIdx >= exs.length) return;
+  var tmp = exs[ei];
+  exs[ei] = exs[newIdx];
+  exs[newIdx] = tmp;
+  pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+}
+
+// Duplicate an entire block
+function pbDupBlock(bi) {
+  if (!PB_ACTIVE_DAY) return;
+  var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
+  var copy = JSON.parse(JSON.stringify(day.blocks[bi]));
+  copy.label = (copy.label || '') + ' (copy)';
+  day.blocks.splice(bi + 1, 0, copy);
+  pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+}
+
+// Move a block up or down within the day
+function pbMoveBlock(bi, dir) {
+  if (!PB_ACTIVE_DAY) return;
+  var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
+  var newIdx = bi + dir;
+  if (newIdx < 0 || newIdx >= day.blocks.length) return;
+  var tmp = day.blocks[bi];
+  day.blocks[bi] = day.blocks[newIdx];
+  day.blocks[newIdx] = tmp;
+  pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+}
+
+// Copy a block to another day — shows a quick picker
+function pbCopyBlockToDay(bi) {
+  if (!PB_ACTIVE_DAY) return;
+  var srcDay = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
+  var block  = JSON.parse(JSON.stringify(srcDay.blocks[bi]));
+
+  // Build option list: all days across all weeks
+  var options = [];
+  PB_STATE.weekData.forEach(function(wk, wi) {
+    wk.days.forEach(function(d, di) {
+      if (wi === PB_ACTIVE_DAY.weekIdx && di === PB_ACTIVE_DAY.dayIdx) return; // skip current
+      if (d.type === 'off') return;
+      options.push({ label: 'Week ' + wk.week + ' · ' + d.day + ' · ' + d.label, wi: wi, di: di });
+    });
+  });
+
+  if (!options.length) { showStatus('No other training days to copy to.'); return; }
+
+  var choice = window.prompt(
+    'Copy "' + (block.label||'block') + '" to which day?\n\n' +
+    options.map(function(o, i){ return (i+1) + '. ' + o.label; }).join('\n') +
+    '\n\nEnter number:'
+  );
+
+  var idx = parseInt(choice) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= options.length) return;
+
+  var target = options[idx];
+  PB_STATE.weekData[target.wi].days[target.di].blocks.push(block);
+  showStatus('✅ Block copied to ' + target.label);
+  pbRenderDayGrid();
+}
+
+// Copy the entire current day to another week
+function pbCopyDayToWeek() {
+  if (!PB_ACTIVE_DAY) return;
+  var srcWkIdx  = PB_ACTIVE_DAY.weekIdx;
+  var srcDayIdx = PB_ACTIVE_DAY.dayIdx;
+  var srcDay    = PB_STATE.weekData[srcWkIdx].days[srcDayIdx];
+
+  var options = PB_STATE.weekData
+    .filter(function(wk, wi){ return wi !== srcWkIdx; })
+    .map(function(wk){ return 'Week ' + wk.week; });
+
+  if (!options.length) { showStatus('Only one week — nothing to copy to.'); return; }
+
+  var choice = window.prompt(
+    'Copy ' + srcDay.day + ' (' + srcDay.label + ') to which week?\n\n' +
+    options.map(function(o, i){ return (i+1) + '. ' + o; }).join('\n') +
+    '\n\nEnter number:'
+  );
+
+  var idx = parseInt(choice) - 1;
+  var weeks = PB_STATE.weekData.filter(function(wk, wi){ return wi !== srcWkIdx; });
+  if (isNaN(idx) || idx < 0 || idx >= weeks.length) return;
+
+  var targetWk = weeks[idx];
+  // Find same day index in target week
+  var targetDay = targetWk.days[srcDayIdx];
+  if (!targetDay) { showStatus('Day not found in target week.'); return; }
+
+  targetDay.blocks = JSON.parse(JSON.stringify(srcDay.blocks));
+  targetDay.label  = srcDay.label;
+  showStatus('✅ ' + srcDay.day + ' copied to Week ' + targetWk.week);
+  pbRenderDayGrid();
+}
+
+// Clear all blocks from the current day
+function pbClearDay() {
+  if (!PB_ACTIVE_DAY) return;
+  var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
+  if (!confirm('Clear all blocks from ' + day.day + ' · ' + day.label + '?')) return;
+  day.blocks = [];
+  pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+  pbRenderDayGrid();
+  showStatus('🗑 Day cleared');
 }
 
 
