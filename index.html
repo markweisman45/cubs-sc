@@ -7711,12 +7711,12 @@ function getSwingWorkloadFromSlider() {
 
 // ── PUSH PROGRAM TO PLAYER ────────────────────────────────────────────────────
 function showPushProgramModal(progId) {
-  var prog = SAVED_PROGRAMS.find(function(p){ return p.id===progId; });
+  var prog = SAVED_PROGRAMS.find(function(p){ return p.id==progId; }); // == not === for type safety
   if (!prog) return;
 
-  var players = Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); });
+  var players = Object.keys(PLAYERS);
   var playerOpts = players.map(function(n){
-    return '<option value="'+n+'"'+(prog.athlete===n?' selected':'')+'>'+n+'</option>';
+    return '<option value="'+n+'"'+(prog.athlete===n?' selected':'')+'>'+n+' ('+PLAYERS[n].pos+')</option>';
   }).join('');
 
   var modal = document.createElement('div');
