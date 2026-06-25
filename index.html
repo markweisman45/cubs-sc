@@ -13805,12 +13805,13 @@ function pbSave() {
     (PB_STATE.athlete+' '+PB_STATE.phase+' '+PB_STATE.weeks+'wk');
   if (!name.trim()) { alert('Enter a program name'); return; }
 
-  // Convert to SAVED_PROGRAMS format
+  // Convert to SAVED_PROGRAMS format — guard session-header blocks
   var sessions = [];
   PB_STATE.weekData.forEach(function(wk) {
     wk.days.forEach(function(day) {
-      if (!day.blocks.length) return;
+      if (!(day.blocks||[]).length) return;
       day.blocks.forEach(function(block) {
+        if (block.blockType === 'session-header' || !(block.exercises||[]).length) return;
         sessions.push({
           week: 'Week '+wk.week, day: day.day,
           session: day.label + (wk.isDeload?' (Deload)':''),
@@ -13830,15 +13831,20 @@ function pbSave() {
     html:'', content:'',
     created: new Date().toISOString(),
     isTemplate: false,
-    pbState: JSON.parse(JSON.stringify(PB_STATE)) // save full state for re-loading
+    pbState: JSON.parse(JSON.stringify(PB_STATE))
   };
 
   SAVED_PROGRAMS.unshift(prog);
   persistPrograms();
   showStatus('✅ Saved "'+name+'" to My Programs');
-  alert('Saved! Find it in My Programs under '+PB_STATE.athlete);
-  if (PB_STATE.athlete && PB_STATE.athlete !== '(Sandbox)') { if (confirm('Push this program to '+PB_STATE.athlete+' now?')) { var saved = SAVED_PROGRAMS[0]; if(saved) showPushProgramModal(saved.id); } }
+  if (PB_STATE.athlete && PB_STATE.athlete !== '(Sandbox)') {
+    if (confirm('Push this program to '+PB_STATE.athlete+' now?')) {
+      var saved = SAVED_PROGRAMS[0];
+      if (saved) showPushProgramModal(saved.id);
+    }
+  }
 }
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ANNUAL PLAN & MESOCYCLE BUILDER
