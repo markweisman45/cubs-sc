@@ -13675,7 +13675,10 @@ function pbSetExCat(bi, ei, cat) {
 function pbSetExField(bi, ei, field, val) {
   if (!PB_ACTIVE_DAY) return;
   var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
-  if (field === 'sets' || field === 'reps') val = String(parseInt(val)||val);
+  // Only parse pure integers — preserve text like "8 each", "10 each leg", "30s"
+  if ((field === 'sets' || field === 'reps') && /^\d+$/.test(String(val).trim())) {
+    val = String(parseInt(val));
+  }
   day.blocks[bi].exercises[ei][field] = val;
   pbRenderDayGrid();
 }
@@ -13739,29 +13742,34 @@ function pbCloseEditor() {
 // ── APPLY WEEK 1 TO ALL WEEKS WITH PROGRESSION ────────────────────────────────
 function pbApplyToAllWeeks() {
   if (!PB_STATE.weekData.length) { alert('Build a program first'); return; }
-  var srcWeek = PB_STATE.weekData[0]; // always copy from Week 1
-  var def = PHASE_DEFAULTS[PB_STATE.phase] || PHASE_DEFAULTS.inseason;
+
+  // Copy from the currently active week (not always Week 1)
+  var srcWeekIdx = PB_ACTIVE_DAY ? PB_ACTIVE_DAY.weekIdx : 0;
+  var srcWeek    = PB_STATE.weekData[srcWeekIdx];
 
   PB_STATE.weekData.forEach(function(wk, wi) {
-    if (wi === 0) return; // skip week 1 (source)
+    if (wi === srcWeekIdx) return; // skip source week
     var m = wk.progMod;
 
     wk.days.forEach(function(day, di) {
       var srcDay = srcWeek.days[di];
-      if (day.type === 'off' || !srcDay.blocks.length) return;
+      if (!srcDay || day.type === 'off' || !(srcDay.blocks||[]).length) return;
 
-      // Deep copy blocks from week 1
+      // Deep copy blocks from source week
       day.blocks = JSON.parse(JSON.stringify(srcDay.blocks)).map(function(block) {
+        // Skip session-header blocks (no exercises to scale)
+        if (block.blockType === 'session-header' || !(block.exercises||[]).length) return block;
+
         block.exercises = block.exercises.map(function(ex) {
-          // Scale sets
-          if (ex.sets && !isNaN(parseInt(ex.sets))) {
+          // Scale sets — only if purely numeric
+          if (ex.sets && /^\d+$/.test(String(ex.sets).trim())) {
             ex.sets = String(Math.max(1, Math.round(parseInt(ex.sets) * m.sets)));
           }
-          // Scale reps
-          if (ex.reps && !isNaN(parseInt(ex.reps))) {
+          // Scale reps — only if purely numeric (preserve "8 each", "30s" etc.)
+          if (ex.reps && /^\d+$/.test(String(ex.reps).trim())) {
             ex.reps = String(Math.max(1, Math.round(parseInt(ex.reps) * m.reps)));
           }
-          // Scale load
+          // Scale load %
           if (ex.load) {
             var pctMatch = ex.load.match(/(\d+)/);
             if (pctMatch) {
@@ -13777,9 +13785,9 @@ function pbApplyToAllWeeks() {
   });
 
   pbRenderDayGrid();
-  pbCloseEditor();
-  showStatus('✅ Week 1 applied to all '+PB_STATE.weeks+' weeks with progression adjustments');
-  alert('Applied! Sets/reps/loads scaled by '+(PB_STATE.progression)+' progression model.\nWeek '+(PB_STATE.weeks===4?3:4)+' is your deload 🔄');
+  // Re-open the active day so the editor reflects the updated data
+  if (PB_ACTIVE_DAY) pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+  showStatus('✅ Week ' + (srcWeekIdx+1) + ' applied to all other weeks with progression scaling');
 }
 
 function pbClearWeek() {
