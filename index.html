@@ -18881,22 +18881,46 @@ async function shareProgram(progId) {
 
   showStatus('⏳ Syncing to Supabase…');
 
-  // Find the program in SAVED_PROGRAMS (coerce type for comparison)
+  // Find the program — coerce type
   var prog = typeof SAVED_PROGRAMS !== 'undefined'
     ? SAVED_PROGRAMS.find(function(p){ return p && String(p.id) === String(progId); })
     : null;
 
-  // Push this specific program to Supabase now
+  if (!prog) { showStatus('⚠️ Program not found'); return; }
+
+  // Generate content if missing — try OC_PROGRAMS template first, then pbState
+  var content = prog.content || prog.html || '';
+  if (!content && prog.pbState) {
+    // Will be rendered on athlete page from pb_state column
+    content = '';
+  }
+  if (!content && typeof OC_PROGRAMS !== 'undefined') {
+    // Check if this is a template copy by stripping the suffix
+    var baseName = prog.name
+      .replace(/ — [^—]+$/, '')       // strip "— Athlete Name"
+      .replace(/\s*\(Copy\)\s*/g, '') // strip "(Copy)"
+      .trim();
+    var templateKey = Object.keys(OC_PROGRAMS).find(function(k){ return k === baseName || k === prog.name; });
+    if (templateKey && typeof renderTemplateHTML === 'function') {
+      content = renderTemplateHTML(templateKey);
+      // Save back so next share is instant
+      prog.content = content;
+      prog.html = content;
+      persistPrograms();
+    }
+  }
+
+  // Push to Supabase
   try {
-    if (_supaClient && prog) {
+    if (_supaClient) {
       var row = {
         id:         String(prog.id),
-        athlete:    prog.athlete || '',
+        athlete:    prog.assignedTo || prog.athlete || '',
         name:       prog.name || '',
         type:       prog.meso || prog.type || '',
         phase:      prog.meso || '',
         notes:      prog.notes || '',
-        content:    prog.content || '',
+        content:    content,
         pb_state:   prog.pbState ? JSON.stringify(prog.pbState) : null,
         created_at: prog.created || new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -18905,13 +18929,11 @@ async function shareProgram(progId) {
         .from('athlete_programs')
         .upsert(row, { onConflict: 'id' });
       if (error) {
-        console.error('[shareProgram] Supabase error:', error);
-        showStatus('⚠️ Sync failed: ' + error.message + ' — link may not work yet');
+        showStatus('⚠️ Sync failed: ' + error.message);
         return;
       }
     }
   } catch(err) {
-    console.error('[shareProgram]', err);
     showStatus('⚠️ Sync error: ' + err.message);
     return;
   }
@@ -18920,11 +18942,10 @@ async function shareProgram(progId) {
 
   try {
     await navigator.clipboard.writeText(url);
-    showStatus('🔗 Link copied to clipboard! Send to ' + (prog ? prog.athlete : 'athlete') + ': ' + url);
+    showStatus('🔗 Link copied! Send to ' + (prog.assignedTo || prog.athlete || 'athlete') + ': ' + url);
   } catch(e) {
-    // Clipboard blocked (file:// or non-HTTPS) — show prompt fallback
     window.prompt('Copy this link and send to the athlete:', url);
-    showStatus('🔗 Link ready — copy it from the box above');
+    showStatus('🔗 Link ready — copy from the box above');
   }
 }
 
