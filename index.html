@@ -2534,6 +2534,7 @@ body {
       <div style="display:flex;gap:10px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
         <select class="control-select" id="prog-lib-athlete" onchange="renderProgramLibrary()" style="width:200px;">
           <option value="">All Athletes</option>
+          <option value="(Sandbox)">(Sandbox)</option>
           <option>Nico Hoerner</option><option>Pete Crow-Armstrong</option>
           <option>Dansby Swanson</option><option>Matt Shaw</option>
           <option>Carson Kelly</option><option>Miguel Amaya</option>
@@ -16359,15 +16360,13 @@ function confirmSaveProgram() {
 
 function deleteProgram(id) {
   if (!confirm('Delete this program?')) return;
-  SAVED_PROGRAMS = SAVED_PROGRAMS.filter(p=>p.id!==id);
+  SAVED_PROGRAMS = SAVED_PROGRAMS.filter(function(p){ return p.id!=id; });
   persistPrograms();
   renderProgramLibrary();
 }
 
-// openProgram defined above
-
 function duplicateProgram(id) {
-  const prog = SAVED_PROGRAMS.find(p=>p.id===id);
+  const prog = SAVED_PROGRAMS.find(function(p){ return p.id==id; });
   if (!prog) return;
   const copy = { ...prog, id: Date.now(), name: prog.name + ' (Copy)', created: new Date().toISOString() };
   SAVED_PROGRAMS.unshift(copy);
@@ -16419,7 +16418,7 @@ function renderProgramLibrary() {
       </div>
       <div style="display:flex;border-top:1px solid var(--border);">
         <button onclick="openProgram(${p.id})" style="flex:1;padding:10px;background:transparent;border:none;border-right:1px solid var(--border);color:var(--cubs-light-blue);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">👁 View</button>
-        <button onclick="scheduleFromLibrary(${p.id})" style="flex:1;padding:10px;background:transparent;border:none;border-right:1px solid var(--border);color:var(--green);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📆 Schedule</button>
+        <button onclick="showPushProgramModal(${p.id})" style="flex:1;padding:10px;background:transparent;border:none;border-right:1px solid var(--border);color:var(--green);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">👤 Assign</button>
         <button onclick="duplicateProgram(${p.id})" style="flex:1;padding:10px;background:transparent;border:none;border-right:1px solid var(--border);color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">⧉ Dupe</button>
         <button onclick="deleteProgram(${p.id})" style="flex:1;padding:10px;background:transparent;border:none;color:var(--red);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑</button>
       </div>
