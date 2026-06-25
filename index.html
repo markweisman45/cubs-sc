@@ -3173,8 +3173,9 @@ function persistAthletePrograms() {
 async function syncProgramsToSupabase() {
   try {
     if (!_supaClient) return;
-    // Flatten all athlete programs into rows
     var rows = [];
+
+    // Sync athletePrograms
     Object.entries(athletePrograms).forEach(function(entry) {
       var athlete = entry[0];
       var progs   = entry[1] || [];
@@ -3188,12 +3189,36 @@ async function syncProgramsToSupabase() {
           phase:      prog.phase || '',
           notes:      prog.notes || '',
           content:    prog.content || '',
+          pb_state:   prog.pbState ? JSON.stringify(prog.pbState) : null,
           created_at: prog.created || new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
       });
     });
+
+    // Also sync SAVED_PROGRAMS (from program builder)
+    if (typeof SAVED_PROGRAMS !== 'undefined') {
+      SAVED_PROGRAMS.filter(function(p){ return p && p.id && !p.isTemplate; }).forEach(function(prog) {
+        rows.push({
+          id:         String(prog.id),
+          athlete:    prog.athlete || '',
+          name:       prog.name || '',
+          type:       prog.meso || prog.type || '',
+          phase:      prog.meso || '',
+          notes:      prog.notes || '',
+          content:    prog.content || '',
+          pb_state:   prog.pbState ? JSON.stringify(prog.pbState) : null,
+          created_at: prog.created || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      });
+    }
+
     if (!rows.length) return;
+    // Deduplicate by id
+    var seen = {};
+    rows = rows.filter(function(r){ if(seen[r.id]) return false; seen[r.id]=true; return true; });
+
     var { error } = await _supaClient
       .from('athlete_programs')
       .upsert(rows, { onConflict: 'id' });
