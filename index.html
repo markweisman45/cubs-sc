@@ -16121,7 +16121,7 @@ function renderTemplateHTML(name) {
 }
 
 function openProgram(id) {
-  var prog = SAVED_PROGRAMS.find(function(p){ return p.id===id; });
+  var prog = SAVED_PROGRAMS.find(function(p){ return p.id==id; });
   if (!prog) return;
   var existing = document.getElementById('oc-prog-modal');
   if (existing) existing.remove();
@@ -16129,27 +16129,109 @@ function openProgram(id) {
   modal.id = 'oc-prog-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;';
   var box = document.createElement('div');
-  box.style.cssText = 'background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;width:100%;max-width:940px;padding:24px;';
+  box.style.cssText = 'background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;width:100%;max-width:960px;padding:24px;';
+
+  // Build content — prefer pbState (Program Builder programs), fall back to html/content
+  var content = '';
   var templateKey = prog.isTemplate ? Object.keys(OC_PROGRAMS).find(function(k){return k===prog.name;}) : null;
-  var content = templateKey ? renderTemplateHTML(templateKey) : (prog.html||prog.content||'');
+  if (templateKey) {
+    content = renderTemplateHTML(templateKey);
+  } else if (prog.pbState && prog.pbState.weekData && prog.pbState.weekData.length) {
+    content = renderPBStateAsHTML(prog.pbState, prog.name);
+  } else {
+    content = prog.html || prog.content || '<div style="color:#888;padding:20px;text-align:center;">No content — open in Program Builder and resave.</div>';
+  }
+
   box.innerHTML = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">'
     +'<div style="flex:1;"><div style="font-size:17px;font-weight:700;color:#fff;">'+prog.name+'</div>'
     +'<div style="font-size:11px;color:#888;margin-top:2px;">'+(prog.notes||'')+'</div></div>'
-    +'<button id="oc-save-btn" style="padding:8px 16px;background:#3b7ac4;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Save Changes</button>'
+    +(prog.pbState ? '<button onclick="pbLoadFromProgram('+id+')" style="padding:8px 14px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.5);border-radius:6px;color:#818cf8;font-size:12px;font-weight:700;cursor:pointer;">✏ Edit in Builder</button>' : '')
+    +'<button onclick="shareProgram(\''+id+'\')" style="padding:8px 14px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:12px;cursor:pointer;">🔗 Share</button>'
     +'<button id="oc-close-btn" style="padding:8px 12px;background:rgba(255,255,255,0.08);border:none;border-radius:6px;color:#ccc;font-size:12px;cursor:pointer;">✕ Close</button>'
     +'</div>'
-    +'<div style="font-size:11px;color:#888;padding:8px 12px;background:rgba(77,159,255,0.06);border-radius:6px;border-left:3px solid #3b7ac4;margin-bottom:16px;">Click any cell to edit · Tab to move · Save when done</div>'
     +'<div id="oc-prog-content">'+content+'</div>';
+
   modal.appendChild(box);
   document.body.appendChild(modal);
-  document.getElementById('oc-save-btn').onclick = function() {
-    prog.html = document.getElementById('oc-prog-content').innerHTML;
-    prog.content = prog.html;
-    try { localStorage.setItem('cubs_sc_programs_v1', JSON.stringify(SAVED_PROGRAMS)); } catch(e) {}
-    showStatus('✅ Program saved');
-  };
   document.getElementById('oc-close-btn').onclick = function() { modal.remove(); };
   modal.addEventListener('click', function(e) { if(e.target===modal) modal.remove(); });
+}
+
+// Load a saved program back into Program Builder for editing
+function pbLoadFromProgram(id) {
+  var prog = SAVED_PROGRAMS.find(function(p){ return p.id==id; });
+  if (!prog || !prog.pbState) { showStatus('No builder state saved — rebuild manually'); return; }
+  var existing = document.getElementById('oc-prog-modal');
+  if (existing) existing.remove();
+  // Inject as a draft and load it
+  pbDrafts.unshift({ id: prog.id, name: prog.name, athlete: prog.pbState.athlete || prog.athlete, pbState: prog.pbState, updated: Date.now() });
+  pbLoadDraft(prog.id);
+  switchProgTab('builder', document.getElementById('ptab-builder'));
+}
+
+// Render pbState as readable HTML for the view modal
+function renderPBStateAsHTML(state, progName) {
+  var bucketColors = { primary_compound:'#AFA9EC', strength_accessory:'#5DCAA5', athletic_power:'#EF9F27', isolation_rehab:'#ED93B1' };
+  var pairColors = {A:'#AFA9EC',B:'#5DCAA5',C:'#EF9F27',D:'#ED93B1',E:'#85B7EB',F:'#F0997B',G:'#f59e0b',H:'#a78bfa'};
+
+  var html = '';
+  state.weekData.forEach(function(wk) {
+    html += '<div style="margin-bottom:24px;">'
+      +'<div style="font-size:13px;font-weight:700;color:#6BA3F8;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);">Week '+wk.week+(wk.isDeload?' · Deload':'')+'</div>';
+
+    wk.days.forEach(function(day) {
+      if (day.type === 'off' || !(day.blocks||[]).length) return;
+      html += '<div style="margin-bottom:14px;">'
+        +'<div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:6px;">'+day.day+' · '+day.label+'</div>';
+
+      day.blocks.forEach(function(block) {
+        if (block.blockType === 'session-header') {
+          html += '<div style="font-size:10px;color:var(--green,#22c55e);font-weight:700;text-transform:uppercase;margin:8px 0 4px;">— '+block.label+' —</div>';
+          return;
+        }
+        if (!(block.exercises||[]).length) return;
+
+        var isSpd = block.blockType === 'speed';
+        var bColor = isSpd ? '#f59e0b' : '#818cf8';
+        html += '<div style="margin-bottom:8px;border-left:2px solid '+bColor+';padding-left:8px;">'
+          +'<div style="font-size:10px;font-weight:700;color:'+bColor+';margin-bottom:4px;">'+(block.label||block.blockType)+'</div>'
+          +'<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+          +'<tr style="color:rgba(255,255,255,0.4);font-size:9px;font-weight:600;">'
+          +(block.exercises.some(function(e){ return e.pair; }) ? '<th style="text-align:left;padding:2px 6px 2px 0;width:20px;">P</th>' : '')
+          +'<th style="text-align:left;padding:2px 6px 2px 0;">Exercise</th>'
+          +'<th style="text-align:center;padding:2px 4px;width:36px;">Sets</th>'
+          +'<th style="text-align:center;padding:2px 4px;width:36px;">Reps</th>'
+          +(isSpd ? '<th style="text-align:center;padding:2px 4px;width:56px;">Dist</th>' : '<th style="text-align:center;padding:2px 4px;width:48px;">Load</th>')
+          +'<th style="text-align:center;padding:2px 4px;width:52px;">Rest</th>'
+          +'<th style="text-align:left;padding:2px 4px;">Notes</th>'
+          +'</tr>';
+
+        var hasPair = block.exercises.some(function(e){ return e.pair; });
+        block.exercises.filter(function(e){ return e.name; }).forEach(function(ex) {
+          var dbEx = EXERCISE_DB.find(function(e){ return e && e.name === ex.name; });
+          var pc = ex.pair ? (pairColors[ex.pair]||'#6BA3F8') : '';
+          html += '<tr style="border-top:1px solid rgba(255,255,255,0.04);">'
+            +(hasPair ? '<td style="padding:4px 6px 4px 0;text-align:center;font-weight:800;font-size:10px;color:'+pc+';">'+(ex.pair||'')+'</td>' : '')
+            +'<td style="padding:4px 6px 4px 0;color:#fff;font-weight:600;">'+ex.name
+            +(dbEx&&dbEx.muscle_head ? '<span style="font-size:9px;color:rgba(255,255,255,0.4);margin-left:4px;">'+dbEx.muscle_head+'</span>' : '')
+            +'</td>'
+            +'<td style="text-align:center;padding:4px;color:#94a3b8;">'+(ex.sets||'—')+'</td>'
+            +'<td style="text-align:center;padding:4px;color:#94a3b8;">'+(ex.reps||'—')+'</td>'
+            +(isSpd ? '<td style="text-align:center;padding:4px;color:#94a3b8;">'+(ex.distance||'—')+'</td>'
+                    : '<td style="text-align:center;padding:4px;color:#94a3b8;">'+(ex.load||'—')+'</td>')
+            +'<td style="text-align:center;padding:4px;color:#94a3b8;">'+(ex.rest||'—')+'</td>'
+            +'<td style="padding:4px;color:rgba(255,255,255,0.5);font-style:italic;font-size:10px;">'+(ex.notes||ex.tempo||'')+'</td>'
+            +'</tr>';
+        });
+
+        html += '</table></div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+
+  return html || '<div style="color:#888;padding:20px;text-align:center;">No sessions built yet.</div>';
 }
 
 function seedMyPrograms() {
