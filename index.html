@@ -7740,31 +7740,112 @@ function showPushProgramModal(progId) {
 
   document.body.appendChild(modal);
 
-  modal.querySelector('#push-confirm').onclick = function() {
+  modal.querySelector('#push-confirm').onclick = async function() {
     var player    = modal.querySelector('#push-player-sel').value;
     var startDate = modal.querySelector('#push-start-date').value;
     var note      = modal.querySelector('#push-note').value;
-    // Mark program as assigned
-    prog.assignedTo   = player;
-    prog.assignedDate = startDate;
-    prog.note         = note;
-    // Also create a player-specific copy in their programs
+    if (!player) { alert('Please select a player'); return; }
+
+    var btn = modal.querySelector('#push-confirm');
+    btn.disabled = true;
+    btn.textContent = 'Syncing...';
+
+    // 1. Create assigned copy with new ID
     var copy = JSON.parse(JSON.stringify(prog));
-    copy.id         = Date.now();
-    copy.name       = prog.name + ' — ' + player;
-    copy.athlete    = player;
-    copy.assignedTo = player;
-    copy.isAssigned = true;
+    copy.id           = Date.now();
+    copy.athlete      = player;
+    copy.assignedTo   = player;
+    copy.assignedDate = startDate;
+    copy.note         = note;
+    copy.isAssigned   = true;
+    copy.created      = new Date().toISOString();
+
+    // Populate content for template programs
+    if (!copy.content && !copy.pbState && typeof OC_PROGRAMS !== 'undefined') {
+      var baseName = (prog.name||'').replace(/ -- [^-]+$/, '').replace(/\s*\(Copy\)\s*/g,'').trim();
+      var tKey = Object.keys(OC_PROGRAMS).find(function(k){ return k===baseName||k===prog.name; });
+      if (tKey && typeof renderTemplateHTML === 'function') {
+        copy.content = renderTemplateHTML(tKey);
+        copy.html    = copy.content;
+      }
+    }
+
     SAVED_PROGRAMS.unshift(copy);
     persistPrograms();
-    modal.remove();
-    showStatus('✅ "'+prog.name+'" pushed to '+player+' starting '+startDate);
-    // Show in daily brief if on that page
+
+    // 2. Sync to Supabase immediately
+    var synced = false;
+    try {
+      if (_supaClient) {
+        var row = {
+          id:         String(copy.id),
+          athlete:    player,
+          name:       copy.name || '',
+          type:       copy.meso || copy.type || '',
+          phase:      copy.meso || '',
+          notes:      note || copy.notes || '',
+          content:    copy.content || '',
+          pb_state:   copy.pbState ? JSON.stringify(copy.pbState) : null,
+          created_at: copy.created,
+          updated_at: new Date().toISOString(),
+        };
+        var { error } = await _supaClient
+          .from('athlete_programs')
+          .upsert(row, { onConflict: 'id' });
+        if (!error) {
+          synced = true;
+        } else {
+          // pb_state column may not exist yet — retry without it
+          console.warn('[push] First attempt failed:', error.message, '— retrying without pb_state');
+          var rowFallback = Object.assign({}, row);
+          delete rowFallback.pb_state;
+          var { error: error2 } = await _supaClient
+            .from('athlete_programs')
+            .upsert(rowFallback, { onConflict: 'id' });
+          if (!error2) synced = true;
+          else console.error('[push] Supabase fallback error:', error2.message);
+        }
+      }
+    } catch(err) { console.error('[push]', err); }
+
+    // 3. Shareable URL
+    var url = 'https://markweisman45.github.io/cubs-sc/program.html?id=' + encodeURIComponent(String(copy.id));
+
+    // 4. Swap modal content to success view
+    var box = modal.querySelector('div[style*="border-radius:12px"]');
+    if (box) {
+      box.innerHTML =
+        '<div style="text-align:center;padding:16px 0 8px;">'
+        + '<div style="font-size:36px;margin-bottom:10px;">&#x2705;</div>'
+        + '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:4px;">' + (copy.name||prog.name) + '</div>'
+        + '<div style="font-size:12px;color:#888;margin-bottom:16px;">Assigned to ' + player + ' &middot; Starting ' + startDate + '</div>'
+        + (synced
+            ? '<div style="font-size:11px;color:#4ADE80;margin-bottom:12px;">&#10003; Synced to Supabase &mdash; link is live</div>'
+            : '<div style="font-size:11px;color:#FCD34D;margin-bottom:12px;">&#9888; Saved locally &mdash; Supabase sync failed</div>')
+        + '<div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 12px;margin-bottom:16px;text-align:left;">'
+        + '<div style="font-size:10px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Athlete link</div>'
+        + '<div id="push-url-display" style="font-size:11px;color:#6BA3F8;word-break:break-all;font-family:monospace;">' + url + '</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;justify-content:center;">'
+        + '<button id="push-copy-btn" style="padding:9px 22px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">&#128203; Copy link</button>'
+        + '<button id="push-done-btn" style="padding:9px 18px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Done</button>'
+        + '</div></div>';
+
+      document.getElementById('push-copy-btn').onclick = function() {
+        navigator.clipboard.writeText(url).then(function(){
+          document.getElementById('push-copy-btn').textContent = 'Copied!';
+        }).catch(function(){ window.prompt('Copy this link:', url); });
+      };
+      document.getElementById('push-done-btn').onclick = function(){ modal.remove(); };
+    }
+
     if (typeof renderBriefPrograms === 'function') renderBriefPrograms();
   };
+
   modal.querySelector('#push-cancel').onclick = function(){ modal.remove(); };
   modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
 }
+
 
 function renderBrief() {
   // Date header
@@ -18929,8 +19010,10 @@ async function shareProgram(progId) {
         .from('athlete_programs')
         .upsert(row, { onConflict: 'id' });
       if (error) {
-        showStatus('⚠️ Sync failed: ' + error.message);
-        return;
+        // Retry without pb_state if column missing
+        var rowFallback = Object.assign({}, row); delete rowFallback.pb_state;
+        var { error: e2 } = await _supaClient.from('athlete_programs').upsert(rowFallback, { onConflict: 'id' });
+        if (e2) { showStatus('⚠️ Sync failed: ' + e2.message + ' — run SQL: ALTER TABLE athlete_programs ADD COLUMN IF NOT EXISTS pb_state JSONB'); return; }
       }
     }
   } catch(err) {
