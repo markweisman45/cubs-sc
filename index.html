@@ -18877,18 +18877,56 @@ function pbAIUpdatePhasePriority() {
 // SHAREABLE PROGRAM LINKS
 // ══════════════════════════════════════════════════════════════
 
-function shareProgram(progId) {
+async function shareProgram(progId) {
   if (!progId) { showStatus('No program ID — save the program first'); return; }
-  // Ensure the program is synced to Supabase first
-  syncProgramsToSupabase().then(function() {
-    var url = 'https://markweisman45.github.io/cubs-sc/program.html?id=' + encodeURIComponent(progId);
-    navigator.clipboard.writeText(url).then(function() {
-      showStatus('🔗 Link copied! Send to athlete: ' + url);
-    }).catch(function() {
-      // Fallback: prompt
-      window.prompt('Copy this link and send to the athlete:', url);
-    });
-  });
+
+  showStatus('⏳ Syncing to Supabase…');
+
+  // Find the program in SAVED_PROGRAMS (coerce type for comparison)
+  var prog = typeof SAVED_PROGRAMS !== 'undefined'
+    ? SAVED_PROGRAMS.find(function(p){ return p && String(p.id) === String(progId); })
+    : null;
+
+  // Push this specific program to Supabase now
+  try {
+    if (_supaClient && prog) {
+      var row = {
+        id:         String(prog.id),
+        athlete:    prog.athlete || '',
+        name:       prog.name || '',
+        type:       prog.meso || prog.type || '',
+        phase:      prog.meso || '',
+        notes:      prog.notes || '',
+        content:    prog.content || '',
+        pb_state:   prog.pbState ? JSON.stringify(prog.pbState) : null,
+        created_at: prog.created || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      var { error } = await _supaClient
+        .from('athlete_programs')
+        .upsert(row, { onConflict: 'id' });
+      if (error) {
+        console.error('[shareProgram] Supabase error:', error);
+        showStatus('⚠️ Sync failed: ' + error.message + ' — link may not work yet');
+        return;
+      }
+    }
+  } catch(err) {
+    console.error('[shareProgram]', err);
+    showStatus('⚠️ Sync error: ' + err.message);
+    return;
+  }
+
+  var url = 'https://markweisman45.github.io/cubs-sc/program.html?id=' + encodeURIComponent(String(progId));
+
+  try {
+    await navigator.clipboard.writeText(url);
+    showStatus('🔗 Link copied to clipboard! Send to ' + (prog ? prog.athlete : 'athlete') + ': ' + url);
+  } catch(e) {
+    // Clipboard blocked (file:// or non-HTTPS) — show prompt fallback
+    window.prompt('Copy this link and send to the athlete:', url);
+    showStatus('🔗 Link ready — copy it from the box above');
+  }
 }
 
 
