@@ -7775,6 +7775,7 @@ function showPushProgramModal(progId) {
 
     // 2. Sync to Supabase immediately
     var synced = false;
+    var syncError = '';
     try {
       if (_supaClient) {
         var row = {
@@ -7802,8 +7803,11 @@ function showPushProgramModal(progId) {
           var { error: error2 } = await _supaClient
             .from('athlete_programs')
             .upsert(rowFallback, { onConflict: 'id' });
-          if (!error2) synced = true;
-          else console.error('[push] Supabase fallback error:', error2.message);
+        if (!error2) synced = true;
+          else {
+            console.error('[push] Supabase fallback error:', error2.message);
+            syncError = error2.message;
+          }
         }
       }
     } catch(err) { console.error('[push]', err); }
@@ -7821,7 +7825,7 @@ function showPushProgramModal(progId) {
         + '<div style="font-size:12px;color:#888;margin-bottom:16px;">Assigned to ' + player + ' &middot; Starting ' + startDate + '</div>'
         + (synced
             ? '<div style="font-size:11px;color:#4ADE80;margin-bottom:12px;">&#10003; Synced to Supabase &mdash; link is live</div>'
-            : '<div style="font-size:11px;color:#FCD34D;margin-bottom:12px;">&#9888; Saved locally &mdash; Supabase sync failed</div>')
+            : '<div style="font-size:11px;color:#FCD34D;margin-bottom:12px;">&#9888; Supabase sync failed' + (syncError ? ': ' + syncError : ' &mdash; check RLS policies or run SQL to disable RLS') + '</div>')
         + '<div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 12px;margin-bottom:16px;text-align:left;">'
         + '<div style="font-size:10px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Athlete link</div>'
         + '<div id="push-url-display" style="font-size:11px;color:#6BA3F8;word-break:break-all;font-family:monospace;">' + url + '</div>'
