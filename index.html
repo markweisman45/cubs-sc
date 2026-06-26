@@ -16460,6 +16460,60 @@ function duplicateProgram(id) {
 }
 
 // ── Program Library renderer
+async function forceSyncProgram(id) {
+  var prog = SAVED_PROGRAMS.find(function(p){ return p.id==id; });
+  if (!prog) { showStatus('Program not found'); return; }
+
+  // Need an athlete assigned — if sandbox, ask
+  var athlete = prog.assignedTo || prog.athlete;
+  if (!athlete || athlete === '(Sandbox)') {
+    showStatus('⚠️ Assign to an athlete first using 👤 Assign, then share the link from there');
+    return;
+  }
+
+  showStatus('⏳ Syncing to Supabase…');
+
+  try {
+    if (!_supaClient) throw new Error('Supabase not connected');
+
+    var row = {
+      id:         String(prog.id),
+      athlete:    athlete,
+      name:       prog.name || '',
+      type:       prog.meso || prog.type || '',
+      phase:      prog.meso || '',
+      notes:      prog.notes || '',
+      content:    prog.content || '',
+      pb_state:   prog.pbState ? JSON.stringify(prog.pbState) : null,
+      created_at: prog.created || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    var { error } = await _supaClient
+      .from('athlete_programs')
+      .upsert(row, { onConflict: 'id' });
+
+    if (error) {
+      // Retry without pb_state
+      delete row.pb_state;
+      var { error: e2 } = await _supaClient.from('athlete_programs').upsert(row, { onConflict: 'id' });
+      if (e2) throw new Error(e2.message);
+    }
+
+    var url = 'https://markweisman45.github.io/cubs-sc/program.html?id=' + encodeURIComponent(String(prog.id));
+    try {
+      await navigator.clipboard.writeText(url);
+      showStatus('✅ Synced! Link copied — send to ' + athlete + ': ' + url);
+    } catch(e) {
+      window.prompt('Link synced — copy and send to ' + athlete + ':', url);
+      showStatus('✅ Synced to Supabase');
+    }
+  } catch(err) {
+    showStatus('❌ Sync failed: ' + err.message);
+    console.error('[forceSyncProgram]', err);
+  }
+}
+
 function renderProgramLibrary() {
   const athleteFilter = document.getElementById('prog-lib-athlete')?.value || '';
   const typeFilter    = document.getElementById('prog-lib-type')?.value    || '';
@@ -16504,7 +16558,8 @@ function renderProgramLibrary() {
       <div style="display:flex;border-top:1px solid var(--border);">
         <button onclick="openProgram(${p.id})" style="flex:1;padding:10px;background:transparent;border:none;border-right:1px solid var(--border);color:var(--cubs-light-blue);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">👁 View</button>
         <button onclick="showPushProgramModal(${p.id})" style="flex:1;padding:10px;background:transparent;border:none;border-right:1px solid var(--border);color:var(--green);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">👤 Assign</button>
-        <button onclick="duplicateProgram(${p.id})" style="flex:1;padding:10px;background:transparent;border:none;border-right:1px solid var(--border);color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">⧉ Dupe</button>
+        <button onclick="forceSyncProgram(${p.id})" style="flex:1;padding:10px;background:transparent;border:none;border-right:1px solid var(--border);color:#6BA3F8;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">🔗 Share</button>
+        <button onclick="duplicateProgram(${p.id})" style="flex:1;padding:10px;background:transparent;border:none;border-right:1px solid var(--border);color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">⧉</button>
         <button onclick="deleteProgram(${p.id})" style="flex:1;padding:10px;background:transparent;border:none;color:var(--red);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑</button>
       </div>
     </div>`;
