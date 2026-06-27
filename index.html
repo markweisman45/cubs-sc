@@ -7762,6 +7762,22 @@ function showPushProgramModal(progId) {
     copy.isAssigned   = true;
     copy.created      = new Date().toISOString();
 
+    // Inject video URLs from EXERCISE_DB into pbState exercises
+    if (copy.pbState && copy.pbState.weekData) {
+      copy.pbState.weekData.forEach(function(wk) {
+        (wk.days||[]).forEach(function(day) {
+          (day.blocks||[]).forEach(function(block) {
+            (block.exercises||[]).forEach(function(ex) {
+              if (!ex.video && ex.name) {
+                var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
+                if (dbEx && dbEx.video) ex.video = dbEx.video;
+              }
+            });
+          });
+        });
+      });
+    }
+
     // Populate content for template programs
     if (!copy.content && !copy.pbState && typeof OC_PROGRAMS !== 'undefined') {
       var baseName = (prog.name||'').replace(/ -- [^-]+$/, '').replace(/\s*\(Copy\)\s*/g,'').trim();
@@ -19256,6 +19272,22 @@ async function shareProgram(progId) {
   if (!prog) { alert('Program not found in My Programs'); return; }
 
   showStatus('⏳ Syncing…');
+
+  // Inject video URLs from EXERCISE_DB into pbState
+  if (prog.pbState && prog.pbState.weekData) {
+    prog.pbState.weekData.forEach(function(wk) {
+      (wk.days||[]).forEach(function(day) {
+        (day.blocks||[]).forEach(function(block) {
+          (block.exercises||[]).forEach(function(ex) {
+            if (!ex.video && ex.name) {
+              var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
+              if (dbEx && dbEx.video) ex.video = dbEx.video;
+            }
+          });
+        });
+      });
+    });
+  }
 
   // Build the row — keep it minimal to avoid column errors
   var row = {
