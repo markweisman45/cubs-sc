@@ -693,6 +693,8 @@ body {
       <button class="tab-btn" onclick="switchDashTab('maxstrength', this)" style="color:#22c55e;">💪 1RM</button>
       <button class="tab-btn" onclick="switchDashTab('programs', this)">📋 Programs</button>
       <button onclick="exportPlayerPDF()" style="margin-left:auto;padding:5px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#f87171;font-size:10px;font-weight:600;cursor:pointer;">📄 PDF Report</button>
+      <button onclick="exportAllData()" style="padding:5px 12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:#4ADE80;font-size:10px;font-weight:600;cursor:pointer;" title="Export all data to move to another browser">📤 Export Data</button>
+      <button onclick="importAllData()" style="padding:5px 12px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:10px;font-weight:600;cursor:pointer;" title="Import data from another browser">📥 Import Data</button>
     </div>
   </div>
 
@@ -19244,78 +19246,70 @@ function pbAIUpdatePhasePriority() {
 // ══════════════════════════════════════════════════════════════
 
 async function shareProgram(progId) {
-  if (!progId) { showStatus('No program ID — save the program first'); return; }
+  if (!progId) { alert('No program ID'); return; }
 
-  showStatus('⏳ Syncing to Supabase…');
-
-  // Find the program — coerce type
+  // Find program
   var prog = typeof SAVED_PROGRAMS !== 'undefined'
     ? SAVED_PROGRAMS.find(function(p){ return p && String(p.id) === String(progId); })
     : null;
 
-  if (!prog) { showStatus('⚠️ Program not found'); return; }
+  if (!prog) { alert('Program not found in My Programs'); return; }
 
-  // Generate content if missing — try OC_PROGRAMS template first, then pbState
-  var content = prog.content || prog.html || '';
-  if (!content && prog.pbState) {
-    // Will be rendered on athlete page from pb_state column
-    content = '';
-  }
-  if (!content && typeof OC_PROGRAMS !== 'undefined') {
-    // Check if this is a template copy by stripping the suffix
-    var baseName = prog.name
-      .replace(/ — [^—]+$/, '')       // strip "— Athlete Name"
-      .replace(/\s*\(Copy\)\s*/g, '') // strip "(Copy)"
-      .trim();
-    var templateKey = Object.keys(OC_PROGRAMS).find(function(k){ return k === baseName || k === prog.name; });
-    if (templateKey && typeof renderTemplateHTML === 'function') {
-      content = renderTemplateHTML(templateKey);
-      // Save back so next share is instant
-      prog.content = content;
-      prog.html = content;
-      persistPrograms();
-    }
-  }
+  showStatus('⏳ Syncing…');
 
-  // Push to Supabase
-  try {
-    if (_supaClient) {
-      var row = {
-        id:         String(prog.id),
-        athlete:    prog.assignedTo || prog.athlete || '',
-        name:       prog.name || '',
-        type:       prog.meso || prog.type || '',
-        phase:      prog.meso || '',
-        notes:      prog.notes || '',
-        content:    content,
-        pb_state:   prog.pbState ? JSON.stringify(prog.pbState) : null,
-        created_at: prog.created || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      var { error } = await _supaClient
-        .from('athlete_programs')
-        .upsert(row, { onConflict: 'id' });
-      if (error) {
-        // Retry without pb_state if column missing
-        var rowFallback = Object.assign({}, row); delete rowFallback.pb_state;
-        var { error: e2 } = await _supaClient.from('athlete_programs').upsert(rowFallback, { onConflict: 'id' });
-        if (e2) { showStatus('⚠️ Sync failed: ' + e2.message + ' — run SQL: ALTER TABLE athlete_programs ADD COLUMN IF NOT EXISTS pb_state JSONB'); return; }
-      }
-    }
-  } catch(err) {
-    showStatus('⚠️ Sync error: ' + err.message);
+  // Build the row — keep it minimal to avoid column errors
+  var row = {
+    id:         String(prog.id),
+    athlete:    prog.assignedTo || prog.athlete || '',
+    name:       prog.name || '',
+    notes:      prog.notes || '',
+    updated_at: new Date().toISOString(),
+  };
+
+  // Try to add optional columns one by one
+  if (prog.meso || prog.type) row.type  = prog.meso || prog.type || '';
+  if (prog.meso)               row.phase = prog.meso || '';
+  if (prog.created)            row.created_at = prog.created;
+
+  var synced = false;
+  var syncErr = '';
+
+  if (!_supaClient) {
+    alert('Supabase not connected — check your internet connection');
     return;
   }
 
-  var url = 'https://markweisman45.github.io/cubs-sc/program.html?id=' + encodeURIComponent(String(progId));
+  // Try with pb_state
+  var rowFull = Object.assign({}, row);
+  if (prog.pbState) rowFull.pb_state = JSON.stringify(prog.pbState);
+  if (prog.content) rowFull.content = prog.content.slice(0, 50000); // cap at 50k
 
-  try {
-    await navigator.clipboard.writeText(url);
-    showStatus('🔗 Link copied! Send to ' + (prog.assignedTo || prog.athlete || 'athlete') + ': ' + url);
-  } catch(e) {
-    window.prompt('Copy this link and send to the athlete:', url);
-    showStatus('🔗 Link ready — copy from the box above');
+  var { error } = await _supaClient.from('athlete_programs').upsert(rowFull, { onConflict: 'id' });
+
+  if (error) {
+    // Try without pb_state and content
+    var { error: e2 } = await _supaClient.from('athlete_programs').upsert(row, { onConflict: 'id' });
+    if (e2) {
+      syncErr = e2.message;
+    } else {
+      synced = true;
+    }
+  } else {
+    synced = true;
   }
+
+  if (!synced) {
+    alert('❌ Supabase sync failed:\n' + syncErr + '\n\nMake sure you ran this SQL in Supabase:\nALTER TABLE athlete_programs DISABLE ROW LEVEL SECURITY;\nALTER TABLE athlete_programs ALTER COLUMN id TYPE TEXT;');
+    showStatus('❌ Sync failed: ' + syncErr);
+    return;
+  }
+
+  var url = 'https://markweisman45.github.io/cubs-sc/program.html?id=' + encodeURIComponent(String(prog.id));
+  showStatus('✅ Synced!');
+
+  // Copy + show in alert so it's impossible to miss
+  try { await navigator.clipboard.writeText(url); } catch(e) {}
+  alert('✅ Program synced to Supabase!\n\nAthlete link (also copied to clipboard):\n\n' + url + '\n\nSend this to ' + (prog.assignedTo || prog.athlete || 'the athlete'));
 }
 
 
@@ -19445,6 +19439,62 @@ function pbClearDay() {
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
   pbRenderDayGrid();
   showStatus('🗑 Day cleared');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// DATA EXPORT / IMPORT
+// ══════════════════════════════════════════════════════════════
+
+function exportAllData() {
+  var keys = [
+    'cubs_sc_programs_v1','cubs_sc_exercise_db_v1','cubs_sc_pb_drafts_v1',
+    'cubs_sc_statcast_v1','cubs_sc_hitting_v1','cubs_sc_cmj_v1',
+    'cubs_sc_abcmj_v1','cubs_sc_players_state_v1','cubs_sc_wellness_v1',
+    'cubs_sc_coach_notes_v1','cubs_sc_he_runs_v1','cubs_sc_orm_v1',
+  ];
+  var exportData = {};
+  keys.forEach(function(k) {
+    var v = localStorage.getItem(k);
+    if (v) exportData[k] = v;
+  });
+
+  var json = JSON.stringify(exportData);
+  var blob = new Blob([json], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'cubs-sc-data-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showStatus('✅ Exported ' + Object.keys(exportData).length + ' data keys — import this file on any browser');
+}
+
+function importAllData() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(evt) {
+      try {
+        var data = JSON.parse(evt.target.result);
+        var count = 0;
+        Object.entries(data).forEach(function(entry) {
+          localStorage.setItem(entry[0], entry[1]);
+          count++;
+        });
+        showStatus('✅ Imported ' + count + ' data keys — reloading…');
+        setTimeout(function() { location.reload(); }, 1000);
+      } catch(err) {
+        showStatus('❌ Import failed: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
 
