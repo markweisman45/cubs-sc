@@ -3,443 +3,666 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Cubs S&C — Training Program</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Cubs S&C</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
-  --bg:#07090F;--card:#0E1220;--border:rgba(255,255,255,0.08);
-  --text:#EEF2FF;--text2:#7A8BAD;--text3:#3D4F6B;
-  --blue:#1D4ED8;--blue-l:#6BA3F8;--green-l:#4ADE80;
-  --amber-l:#FCD34D;--purple-l:#A78BFA;
-  --pair-A:#A78BFA;--pair-B:#34D399;--pair-C:#FCD34D;
-  --pair-D:#F472B6;--pair-E:#60A5FA;--pair-F:#FB923C;
+  --bg:#060810;
+  --surface:#0C1018;
+  --surface2:#111620;
+  --border:rgba(255,255,255,0.06);
+  --border2:rgba(255,255,255,0.12);
+  --text:#F4F6FF;
+  --text2:#8892AA;
+  --text3:#3A4560;
+  --blue:#1A4FCC;
+  --blue-l:#5B8CF5;
+  --blue-xl:#A8C4FA;
+  --green:#15803D;
+  --green-l:#4ADE80;
+  --amber:#B45309;
+  --amber-l:#FCD34D;
+  --purple-l:#C4B5FD;
+  --teal-l:#5EEAD4;
+  --pink-l:#F9A8D4;
+  --pair-A:#C4B5FD;
+  --pair-B:#5EEAD4;
+  --pair-C:#FDE68A;
+  --pair-D:#F9A8D4;
+  --pair-E:#93C5FD;
+  --pair-F:#FCA5A1;
 }
-html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
-.topbar{background:rgba(7,9,15,0.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
-.brand{display:flex;align-items:center;gap:10px;}
-.badge{width:32px;height:32px;border-radius:7px;background:#0E3386;display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid rgba(255,255,255,0.15);}
-.brand-name{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.05em;}
-.brand-sub{font-size:9px;color:var(--text3);}
-.ring-wrap{width:34px;height:34px;}
-svg.ring{transform:rotate(-90deg);}
-svg.ring circle{fill:none;stroke-width:3;}
-.ring-track{stroke:rgba(255,255,255,0.08);}
-.ring-fill{stroke:var(--blue-l);stroke-linecap:round;stroke-dasharray:88;stroke-dashoffset:88;transition:stroke-dashoffset .3s;}
 
-.hero{background:linear-gradient(160deg,#0E3386 0%,#061640 55%,var(--bg) 100%);padding:20px 16px 24px;position:relative;}
-.hero-date{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(107,163,248,.8);margin-bottom:6px;}
-.hero-name{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.04em;line-height:1;color:#fff;margin-bottom:2px;}
-.hero-prog{font-size:13px;color:rgba(255,255,255,.6);}
+html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overscroll-behavior:none;}
 
-.week-tabs{display:flex;gap:6px;padding:10px 16px;overflow-x:auto;scrollbar-width:none;background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:52px;z-index:90;}
-.week-tabs::-webkit-scrollbar{display:none;}
-.wtab{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,.05);color:var(--text2);border:1px solid var(--border);transition:all .15s;}
-.wtab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
-.wtab.deload{border-color:rgba(252,211,77,.4);color:var(--amber-l);}
+/* ── TOPBAR ── */
+.topbar{
+  height:56px;padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;
+  background:rgba(6,8,16,0.92);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-logo{
+  width:34px;height:34px;border-radius:8px;
+  background:linear-gradient(135deg,#1A3B7A,#0E2355);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;border:1px solid rgba(255,255,255,0.12);
+  box-shadow:0 2px 8px rgba(0,0,0,0.4);
+}
+.brand-text .t1{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.12em;color:#fff;line-height:1;}
+.brand-text .t2{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-top:1px;}
 
-.day-grid{display:flex;gap:8px;padding:10px 16px;overflow-x:auto;scrollbar-width:none;}
-.day-grid::-webkit-scrollbar{display:none;}
-.day-btn{flex-shrink:0;padding:8px 12px;border-radius:10px;text-align:center;cursor:pointer;min-width:60px;background:var(--card);border:1px solid var(--border);transition:all .15s;}
-.day-btn.active{background:rgba(29,78,216,.2);border-color:rgba(107,163,248,.5);}
-.day-btn.off{opacity:.3;cursor:default;}
-.day-btn .dn{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:2px;}
-.day-btn .dl{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;}
-.day-btn.active .dn{color:var(--blue-l);}
-.day-btn .dc{font-size:9px;color:var(--text3);margin-top:2px;}
+/* Progress ring */
+.ring-svg{transform:rotate(-90deg);display:block;}
+.ring-track{fill:none;stroke:rgba(255,255,255,0.06);stroke-width:2.5;}
+.ring-prog{fill:none;stroke:var(--blue-l);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:82;stroke-dashoffset:82;transition:stroke-dashoffset .4s ease;}
 
-.session{padding:12px 16px 90px;}
-.block-wrap{margin-bottom:10px;border-radius:12px;overflow:hidden;border:1px solid var(--border);}
-.block-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);}
-.block-icon{font-size:14px;}
-.block-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.06em;flex:1;}
-.block-cnt{font-size:10px;color:var(--text3);}
-.lift-h{background:rgba(99,102,241,.15);} .lift-h .block-title{color:#a78bfa;}
-.speed-h{background:rgba(245,158,11,.12);} .speed-h .block-title{color:#fcd34d;}
-.mob-h{background:rgba(52,211,153,.1);} .mob-h .block-title{color:#34d399;}
-.esd-h{background:rgba(96,165,250,.1);} .esd-h .block-title{color:#60a5fa;}
-.prep-h{background:rgba(244,114,182,.1);} .prep-h .block-title{color:#f472b6;}
+/* ── HERO ── */
+.hero{
+  padding:24px 20px 20px;
+  background:linear-gradient(175deg,rgba(26,79,204,0.22) 0%,rgba(6,8,16,0) 70%);
+  border-bottom:1px solid var(--border);
+}
+.hero-date{
+  font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--blue-l);margin-bottom:8px;
+  display:flex;align-items:center;gap:6px;
+}
+.hero-date::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--blue-l);display:inline-block;}
+.hero-name{
+  font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:.03em;
+  line-height:.95;color:#fff;margin-bottom:6px;
+}
+.hero-prog{font-size:13px;color:var(--text2);font-weight:400;letter-spacing:.01em;}
 
-.ex-card{background:var(--card);border-bottom:1px solid var(--border);overflow:hidden;}
-.ex-card:last-child{border-bottom:none;}
-.ex-card[data-pair="A"]{border-left:3px solid var(--pair-A);}
-.ex-card[data-pair="B"]{border-left:3px solid var(--pair-B);}
-.ex-card[data-pair="C"]{border-left:3px solid var(--pair-C);}
-.ex-card[data-pair="D"]{border-left:3px solid var(--pair-D);}
-.ex-card[data-pair="E"]{border-left:3px solid var(--pair-E);}
-.ex-card[data-pair="F"]{border-left:3px solid var(--pair-F);}
+/* ── WEEK TABS ── */
+.week-row{
+  display:flex;gap:6px;padding:14px 20px;overflow-x:auto;
+  scrollbar-width:none;
+  background:var(--bg);
+  position:sticky;top:56px;z-index:150;
+  border-bottom:1px solid var(--border);
+}
+.week-row::-webkit-scrollbar{display:none;}
+.wtab{
+  flex-shrink:0;font-size:12px;font-weight:600;
+  padding:6px 16px;border-radius:100px;cursor:pointer;
+  color:var(--text2);background:transparent;
+  border:1px solid var(--border2);
+  transition:all .18s;letter-spacing:.02em;
+}
+.wtab:active{opacity:.7;}
+.wtab.active{background:var(--blue-l);color:#fff;border-color:transparent;box-shadow:0 0 16px rgba(91,140,245,0.35);}
+.wtab.deload{border-color:rgba(252,211,77,.3);color:var(--amber-l);}
+.wtab.deload.active{background:rgba(180,83,9,.5);border-color:var(--amber);}
 
-.ex-row{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;}
-.ex-row:active{background:rgba(255,255,255,.03);}
-.pair-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.ex-name{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.02em;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.ex-presc{font-family:'DM Mono',monospace;font-size:11px;color:var(--blue-l);white-space:nowrap;flex-shrink:0;}
-.chev{font-size:10px;color:var(--text3);flex-shrink:0;transition:transform .2s;}
-.ex-card.open .chev{transform:rotate(90deg);}
+/* ── DAY SCROLLER ── */
+.day-row{
+  display:flex;gap:8px;padding:12px 20px;
+  overflow-x:auto;scrollbar-width:none;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+.day-row::-webkit-scrollbar{display:none;}
+.day-card{
+  flex-shrink:0;padding:10px 14px;border-radius:12px;
+  cursor:pointer;min-width:72px;text-align:center;
+  background:transparent;border:1px solid var(--border);
+  transition:all .18s;
+}
+.day-card:active:not(.off){transform:scale(0.96);}
+.day-card.active{
+  background:rgba(91,140,245,0.12);
+  border-color:rgba(91,140,245,0.4);
+}
+.day-card.off{opacity:.25;cursor:default;}
+.dc-day{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:3px;}
+.dc-label{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:84px;}
+.day-card.active .dc-day{color:var(--blue-l);}
+.dc-prog{font-size:9px;color:var(--text3);margin-top:3px;}
+.dc-done{font-size:9px;color:var(--green-l);margin-top:3px;}
 
-.ex-detail{display:none;border-top:1px solid var(--border);}
-.ex-card.open .ex-detail{display:block;}
-.ex-inner{padding:12px 14px;}
+/* ── SESSION ── */
+.session{padding:16px 16px 100px;}
 
-.vid-wrap{width:100%;aspect-ratio:16/9;border-radius:8px;overflow:hidden;position:relative;cursor:pointer;margin-bottom:10px;background:#000;}
-.vid-wrap img{width:100%;height:100%;object-fit:cover;opacity:.85;}
-.vid-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
-.vid-play div{width:48px;height:48px;background:rgba(0,0,0,.7);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid rgba(255,255,255,.3);}
+.session-header-divider{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 0 6px;
+}
+.session-header-divider::before,.session-header-divider::after{
+  content:'';flex:1;height:1px;background:var(--border);
+}
+.session-header-divider span{
+  font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--green-l);
+}
 
-.pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
-.pill{font-family:'DM Mono',monospace;font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border);}
-.p-sets{background:rgba(29,78,216,.15);color:var(--blue-l);border-color:rgba(29,78,216,.25);}
-.p-reps{background:rgba(29,78,216,.08);color:var(--blue-l);}
-.p-load{background:rgba(217,119,6,.12);color:var(--amber-l);border-color:rgba(217,119,6,.2);}
-.p-rest{background:rgba(22,163,74,.1);color:var(--green-l);border-color:rgba(22,163,74,.2);}
-.p-tempo{background:rgba(167,139,250,.1);color:var(--purple-l);border-color:rgba(167,139,250,.2);}
-.ex-note{font-size:11px;color:var(--text2);font-style:italic;margin-bottom:10px;line-height:1.5;}
+/* ── BLOCK ── */
+.block{margin-bottom:12px;}
+.block-head{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 16px;
+  border-radius:12px 12px 0 0;
+  margin-bottom:0;
+}
+.block-icon{font-size:16px;flex-shrink:0;}
+.block-name{
+  font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.1em;flex:1;
+}
+.block-cnt{font-size:10px;font-weight:500;opacity:.5;letter-spacing:.04em;}
 
-.log-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
-.log-sets{display:flex;flex-direction:column;gap:5px;margin-bottom:8px;}
-.log-set{display:flex;align-items:center;gap:8px;}
-.set-n{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);width:16px;text-align:center;flex-shrink:0;}
-.log-inputs{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;}
-.log-inp{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;font-family:'DM Mono',monospace;text-align:center;width:100%;}
-.log-inp:focus{outline:none;border-color:var(--blue-l);}
-.log-inp::placeholder{color:var(--text3);}
-.set-chk{width:30px;height:30px;border-radius:8px;flex-shrink:0;background:rgba(255,255,255,.05);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--text3);transition:all .15s;}
-.set-chk.done{background:rgba(22,163,74,.2);border-color:rgba(74,222,128,.4);color:var(--green-l);}
+.lift-h{background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.2);} .lift-h .block-name{color:#C4B5FD;}
+.speed-h{background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.2);} .speed-h .block-name{color:#FDE68A;}
+.mob-h{background:rgba(20,184,166,.08);border:1px solid rgba(20,184,166,.18);} .mob-h .block-name{color:#5EEAD4;}
+.esd-h{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.18);} .esd-h .block-name{color:#93C5FD;}
+.prep-h{background:rgba(236,72,153,.08);border:1px solid rgba(236,72,153,.18);} .prep-h .block-name{color:#F9A8D4;}
 
-.why-btn{display:flex;align-items:center;gap:6px;width:100%;border:none;background:rgba(255,255,255,.02);padding:9px 14px;color:var(--text3);font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;border-top:1px solid var(--border);}
-.why-body{display:none;padding:10px 14px;background:rgba(255,255,255,.02);border-top:1px solid var(--border);}
+/* ── EXERCISE ── */
+.ex-list{
+  border:1px solid var(--border);border-top:none;
+  border-radius:0 0 12px 12px;overflow:hidden;
+}
+.ex{background:var(--surface);transition:background .1s;}
+.ex:not(:last-child){border-bottom:1px solid var(--border);}
+
+/* Pair accent */
+.ex[data-pair="A"]{border-left:3px solid var(--pair-A);}
+.ex[data-pair="B"]{border-left:3px solid var(--pair-B);}
+.ex[data-pair="C"]{border-left:3px solid var(--pair-C);}
+.ex[data-pair="D"]{border-left:3px solid var(--pair-D);}
+.ex[data-pair="E"]{border-left:3px solid var(--pair-E);}
+.ex[data-pair="F"]{border-left:3px solid var(--pair-F);}
+
+/* Collapsed row */
+.ex-summary{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;cursor:pointer;
+  user-select:none;
+}
+.ex-summary:active{background:rgba(255,255,255,.03);}
+.pair-pip{width:7px;height:7px;border-radius:50%;flex-shrink:0;opacity:.9;}
+.ex-title{
+  font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.02em;
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:#fff;
+}
+.ex-badge{
+  font-family:'DM Mono',monospace;font-size:11px;color:var(--blue-xl);
+  white-space:nowrap;flex-shrink:0;opacity:.85;
+}
+.ex-arrow{
+  width:22px;height:22px;border-radius:6px;
+  background:rgba(255,255,255,.05);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:var(--text3);flex-shrink:0;
+  transition:transform .2s,background .15s;
+}
+.ex.open .ex-arrow{transform:rotate(90deg);background:rgba(91,140,245,.15);color:var(--blue-l);}
+
+/* Expanded panel */
+.ex-panel{display:none;border-top:1px solid var(--border);}
+.ex.open .ex-panel{display:block;}
+
+/* Video */
+.ex-video{
+  width:100%;aspect-ratio:16/9;overflow:hidden;position:relative;
+  cursor:pointer;background:#000;
+}
+.ex-video img{width:100%;height:100%;object-fit:cover;opacity:.8;transition:opacity .2s;}
+.ex-video:active img{opacity:1;}
+.ex-video-play{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+}
+.ex-video-play div{
+  width:52px;height:52px;background:rgba(0,0,0,.65);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  border:2px solid rgba(255,255,255,.25);
+  box-shadow:0 4px 20px rgba(0,0,0,.6);
+}
+
+/* Prescription */
+.ex-body{padding:16px;}
+.ex-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.ep{
+  font-family:'DM Mono',monospace;font-size:12px;font-weight:500;
+  padding:5px 11px;border-radius:8px;letter-spacing:.01em;
+}
+.ep-sets{background:rgba(91,140,245,.15);color:#A8C4FA;border:1px solid rgba(91,140,245,.2);}
+.ep-reps{background:rgba(91,140,245,.08);color:#A8C4FA;border:1px solid rgba(91,140,245,.12);}
+.ep-load{background:rgba(252,211,77,.1);color:#FDE68A;border:1px solid rgba(252,211,77,.15);}
+.ep-rest{background:rgba(74,222,128,.08);color:#86EFAC;border:1px solid rgba(74,222,128,.12);}
+.ep-tempo{background:rgba(196,181,253,.08);color:#DDD6FE;border:1px solid rgba(196,181,253,.12);}
+
+.ex-note{
+  font-size:12px;color:var(--text2);line-height:1.65;
+  margin-bottom:16px;font-style:italic;font-weight:300;
+  padding:10px 12px;background:rgba(255,255,255,.025);
+  border-radius:8px;border-left:2px solid rgba(255,255,255,.08);
+}
+
+/* Set logger */
+.log-section-label{
+  font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:10px;
+}
+.log-sets{display:flex;flex-direction:column;gap:6px;margin-bottom:4px;}
+.log-row{display:flex;align-items:center;gap:8px;}
+.set-num{
+  font-family:'DM Mono',monospace;font-size:11px;font-weight:500;
+  color:var(--text3);width:18px;text-align:center;flex-shrink:0;
+}
+.log-fields{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;}
+.log-field{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:10px;
+  padding:10px 12px;
+  color:var(--text);
+  font-size:14px;
+  font-family:'DM Mono',monospace;
+  font-weight:500;
+  text-align:center;
+  width:100%;
+  transition:border-color .15s,background .15s;
+  -webkit-appearance:none;
+}
+.log-field:focus{
+  outline:none;
+  border-color:rgba(91,140,245,.5);
+  background:rgba(91,140,245,.07);
+}
+.log-field::placeholder{color:var(--text3);font-size:12px;}
+.log-check{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:16px;color:transparent;
+  transition:all .18s;
+}
+.log-check.done{
+  background:rgba(74,222,128,.15);
+  border-color:rgba(74,222,128,.35);
+  color:var(--green-l);
+  box-shadow:0 0 10px rgba(74,222,128,.15);
+}
+
+/* Why */
+.why-toggle{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 16px;
+  border-top:1px solid var(--border);
+  background:transparent;border-right:none;border-left:none;border-bottom:none;
+  width:100%;text-align:left;cursor:pointer;
+  color:var(--text3);font-size:11px;font-weight:500;
+  letter-spacing:.03em;font-family:'Inter',sans-serif;
+  transition:color .15s;
+}
+.why-toggle:hover{color:var(--blue-l);}
+.why-icon{font-size:12px;transition:transform .2s;}
+.why-toggle.open .why-icon{transform:rotate(90deg);color:var(--blue-l);}
+.why-body{
+  display:none;padding:14px 16px;
+  border-top:1px solid var(--border);
+  background:rgba(255,255,255,.015);
+}
 .why-body.open{display:block;}
-.why-mech{font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:8px;}
-.why-xfer{font-size:12px;color:#F0997B;line-height:1.7;padding:8px 10px;border-radius:6px;background:rgba(240,153,123,.06);border-left:2px solid rgba(240,153,123,.3);}
+.why-section{margin-bottom:12px;}
+.why-section:last-child{margin-bottom:0;}
+.why-lbl{
+  font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:5px;
+}
+.why-mech{font-size:12px;color:var(--text2);line-height:1.75;font-weight:300;}
+.why-bb{
+  font-size:12px;color:#FDBA74;line-height:1.75;font-weight:400;
+  padding:10px 12px;border-radius:8px;
+  background:rgba(251,146,60,.06);
+  border-left:2px solid rgba(251,146,60,.3);
+}
 
-.bottom-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:rgba(7,9,15,.96);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;gap:8px;}
-.done-btn{flex:1;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),#4F46E5);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;}
-.save-btn{padding:13px 16px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text2);font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
+/* ── BOTTOM BAR ── */
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:rgba(6,8,16,0.95);
+  backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+}
+.bottom-inner{display:flex;gap:8px;max-width:600px;margin:0 auto;}
+.btn-complete{
+  flex:1;padding:14px;border-radius:12px;border:none;
+  background:var(--blue-l);color:#fff;
+  font-size:14px;font-weight:700;cursor:pointer;
+  font-family:'Inter',sans-serif;letter-spacing:.02em;
+  transition:opacity .15s,transform .1s;
+  box-shadow:0 4px 16px rgba(91,140,245,.3);
+}
+.btn-complete:active{opacity:.85;transform:scale(0.98);}
+.btn-save{
+  padding:14px 18px;border-radius:12px;
+  border:1px solid var(--border2);
+  background:rgba(255,255,255,.05);
+  color:var(--text2);font-size:12px;font-weight:600;
+  cursor:pointer;font-family:'Inter',sans-serif;
+  white-space:nowrap;transition:all .15s;
+}
+.btn-save:active{background:rgba(255,255,255,.08);}
 
-.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.08);border-top-color:var(--blue-l);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px;}
+/* ── LOADING / ERROR ── */
+.loading{text-align:center;padding:100px 24px;color:var(--text3);}
+.spin{
+  width:32px;height:32px;border-radius:50%;margin:0 auto 20px;
+  border:2px solid rgba(255,255,255,.06);border-top-color:var(--blue-l);
+  animation:spin .7s linear infinite;
+}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading{text-align:center;padding:80px 20px;color:var(--text3);}
-.err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:24px;text-align:center;color:#f87171;font-size:13px;margin:24px 16px;}
+.err{
+  margin:24px 16px;padding:20px;border-radius:14px;text-align:center;
+  background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);
+  color:#FCA5A5;font-size:13px;line-height:1.7;
+}
 </style>
 </head>
 <body>
+
 <div class="topbar">
   <div class="brand">
-    <div class="badge">⚾</div>
-    <div><div class="brand-name">CUBS S&C</div><div class="brand-sub">Training Program</div></div>
+    <div class="brand-logo">⚾</div>
+    <div class="brand-text">
+      <div class="t1">CUBS S&C</div>
+      <div class="t2">Training Program</div>
+    </div>
   </div>
-  <div class="ring-wrap">
-    <svg class="ring" viewBox="0 0 34 34" width="34" height="34">
-      <circle class="ring-track" cx="17" cy="17" r="14"/>
-      <circle class="ring-fill" id="ring" cx="17" cy="17" r="14"/>
-    </svg>
-  </div>
+  <svg class="ring-svg" width="34" height="34" viewBox="0 0 34 34">
+    <circle class="ring-track" cx="17" cy="17" r="13"/>
+    <circle class="ring-prog" id="ring" cx="17" cy="17" r="13"/>
+  </svg>
 </div>
 
-<div id="root"><div class="loading"><div class="spinner"></div><div>Loading…</div></div></div>
+<div id="root">
+  <div class="loading"><div class="spin"></div>Loading your program…</div>
+</div>
 
 <script>
-// ── Config ────────────────────────────────────────────────────
 var SUPA_URL = 'https://umcdnbnvzwedrlidzaqg.supabase.co';
 var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtY2RuYm52endlZHJsaWR6YXFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjMwNjUsImV4cCI6MjA5MjYzOTA2NX0.g4t2GaT33M03b6-stee9Aiy2We1KdJpw5KVEKwScwJM';
 
-var PROG = null, ENRICH = {}, LOG = {};
-var STATE = { week: 0, day: 0 };
-var PC = {A:'#A78BFA',B:'#34D399',C:'#FCD34D',D:'#F472B6',E:'#60A5FA',F:'#FB923C'};
+var PROG=null, ENRICH={}, LOG={};
+var S={week:0, day:0};
+var PC={A:'#C4B5FD',B:'#5EEAD4',C:'#FDE68A',D:'#F9A8D4',E:'#93C5FD',F:'#FCA5A1'};
 
-// ── Helpers ────────────────────────────────────────────────────
-function ytId(u){ var m=(u||'').match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/); return m?m[1]:''; }
-function lk(wi,di,bi,ei,s){ return [wi,di,bi,ei,s].join('-'); }
-function saveLog(){ try{ localStorage.setItem('log_'+PROG.id, JSON.stringify(LOG)); }catch(e){} }
-function loadLog(){ try{ var s=localStorage.getItem('log_'+PROG.id); if(s) LOG=JSON.parse(s); }catch(e){} }
+function ytId(u){var m=(u||'').match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);return m?m[1]:'';}
+function lk(wi,di,bi,ei,si){return wi+'-'+di+'-'+bi+'-'+ei+'-'+si;}
+function saveLog(){try{localStorage.setItem('clog_'+PROG.id,JSON.stringify(LOG));}catch(e){}}
+function loadLog(){try{var d=localStorage.getItem('clog_'+PROG.id);if(d)LOG=JSON.parse(d);}catch(e){}}
 
 function countDone(wi,di){
-  var day=PROG.weekData[wi].days[di], tot=0, done=0;
+  var day=PROG.weekData[wi].days[di],tot=0,done=0;
   (day.blocks||[]).forEach(function(b,bi){
     (b.exercises||[]).filter(function(e){return e.name;}).forEach(function(ex,ei){
-      var sets=parseInt(ex.sets)||1;
-      for(var s=0;s<sets;s++){ tot++; if((LOG[lk(wi,di,bi,ei,s)]||{}).done) done++; }
+      var s=parseInt(ex.sets)||1;
+      for(var i=0;i<s;i++){tot++;if((LOG[lk(wi,di,bi,ei,i)]||{}).done)done++;}
     });
   });
-  return {tot:tot, done:done};
+  return{tot:tot,done:done};
 }
 
 function updateRing(){
-  var r=countDone(STATE.week, STATE.day);
-  var pct=r.tot ? r.done/r.tot : 0;
-  document.getElementById('ring').style.strokeDashoffset=(88-pct*88).toFixed(1);
+  var r=countDone(S.week,S.day);
+  var pct=r.tot?r.done/r.tot:0;
+  document.getElementById('ring').style.strokeDashoffset=(82-pct*82).toFixed(2);
 }
 
-// ── Prescription ───────────────────────────────────────────────
-function prescStr(ex){
+function presc(ex){
   var p=[];
-  if(ex.sets) p.push(ex.sets+'×');
-  if(ex.reps) p.push(ex.reps);
-  if(ex.load) p.push(ex.load);
-  if(ex.distance) p.push(ex.distance);
-  if(ex.rest) p.push(ex.rest+' rest');
+  if(ex.sets)p.push(ex.sets+'×');
+  if(ex.reps)p.push(ex.reps);
+  if(ex.load)p.push(ex.load);
+  if(ex.distance)p.push(ex.distance);
+  if(ex.rest)p.push(ex.rest+' rest');
   return p.join(' ');
 }
-function prescPills(ex){
+
+function pills(ex){
   var h='';
-  if(ex.sets)     h+='<span class="pill p-sets">'+ex.sets+' sets</span>';
-  if(ex.reps)     h+='<span class="pill p-reps">'+ex.reps+' reps</span>';
-  if(ex.load)     h+='<span class="pill p-load">'+ex.load+'</span>';
-  if(ex.distance) h+='<span class="pill p-load">'+ex.distance+'</span>';
-  if(ex.tempo)    h+='<span class="pill p-tempo">'+ex.tempo+'</span>';
-  if(ex.rest)     h+='<span class="pill p-rest">'+ex.rest+' rest</span>';
+  if(ex.sets)h+='<span class="ep ep-sets">'+ex.sets+' sets</span>';
+  if(ex.reps)h+='<span class="ep ep-reps">'+ex.reps+'</span>';
+  if(ex.load)h+='<span class="ep ep-load">'+ex.load+'</span>';
+  if(ex.distance)h+='<span class="ep ep-load">'+ex.distance+'</span>';
+  if(ex.tempo&&ex.tempo!=='Tempo')h+='<span class="ep ep-tempo">'+ex.tempo+'</span>';
+  if(ex.rest)h+='<span class="ep ep-rest">'+ex.rest+' rest</span>';
   return h;
 }
 
-// ── Block style ────────────────────────────────────────────────
-function bh(bt){ return{speed:'speed-h',mobility:'mob-h',esd:'esd-h',prep:'prep-h'}[bt]||'lift-h'; }
-function bi(bt){ return{speed:'⚡',mobility:'🧘',esd:'❤️',prep:'🔥'}[bt]||'🏋️'; }
+function bhead(bt){return{speed:'speed-h',mobility:'mob-h',esd:'esd-h',prep:'prep-h'}[bt]||'lift-h';}
+function bicon(bt){return{speed:'⚡',mobility:'🧘',esd:'❤️',prep:'🔥'}[bt]||'🏋️';}
 
-// ── Render session ─────────────────────────────────────────────
 function renderSession(){
-  var wi=STATE.week, di=STATE.day;
+  var wi=S.week,di=S.day;
   var day=PROG.weekData[wi].days[di];
   var html='';
 
-  (day.blocks||[]).forEach(function(block,bi_){
+  (day.blocks||[]).forEach(function(block,bi){
     if(block.blockType==='session-header'){
-      html+='<div style="text-align:center;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#4ADE80;padding:10px 0 4px;">— '+block.label+' —</div>';
+      html+='<div class="session-header-divider"><span>'+block.label+'</span></div>';
       return;
     }
     var exs=(block.exercises||[]).filter(function(e){return e.name;});
-    if(!exs.length) return;
+    if(!exs.length)return;
 
-    html+='<div class="block-wrap"><div class="block-head '+bh(block.blockType)+'">'
-      +'<span class="block-icon">'+bi(block.blockType)+'</span>'
-      +'<span class="block-title">'+(block.label||block.blockType||'Block')+'</span>'
-      +'<span class="block-cnt">'+exs.length+'</span>'
-      +'</div>';
+    html+='<div class="block"><div class="block-head '+bhead(block.blockType)+'">'
+      +'<span class="block-icon">'+bicon(block.blockType)+'</span>'
+      +'<span class="block-name">'+(block.label||block.blockType||'Block').toUpperCase()+'</span>'
+      +'<span class="block-cnt">'+exs.length+' MOVEMENTS</span>'
+      +'</div><div class="ex-list">';
 
     exs.forEach(function(ex,ei){
       var enr=ENRICH[(ex.name||'').toLowerCase()]||{};
       var pair=ex.pair||'';
       var vid=ytId(ex.video||enr.video||'');
-      var videoUrl=ex.video||enr.video||'';
+      var vidUrl=ex.video||enr.video||'';
       var sets=parseInt(ex.sets)||1;
-      var id='ex-'+wi+'-'+di+'-'+bi_+'-'+ei;
-      var hasWhy=enr.mechanism_text||(Array.isArray(enr.sport_transfer)&&enr.sport_transfer.find(function(t){return t.sport==='Baseball';}));
+      var id='e'+wi+di+bi+ei;
+      var bt=Array.isArray(enr.sport_transfer)?enr.sport_transfer.find(function(t){return t.sport==='Baseball';}):null;
+      var hasWhy=enr.mechanism_text||bt;
+      var pp=pills(ex);
+      var pr=presc(ex);
 
-      html+='<div class="ex-card" id="'+id+'"'+(pair?' data-pair="'+pair+'"':'')+'>';
+      html+='<div class="ex" id="'+id+'"'+(pair?' data-pair="'+pair+'"':'')+'>';
 
-      // Collapsed row
-      html+='<div class="ex-row" onclick="toggleEx(\''+id+'\')">';
-      if(pair) html+='<div class="pair-dot" style="background:'+PC[pair]+';"></div>';
-      html+='<div class="ex-name">'+ex.name+'</div>';
-      html+='<div class="ex-presc">'+prescStr(ex)+'</div>';
-      html+='<div class="chev">▶</div>';
+      // Summary row
+      html+='<div class="ex-summary" onclick="toggle(\''+id+'\')">';
+      if(pair)html+='<div class="pair-pip" style="background:'+PC[pair]+';"></div>';
+      html+='<div class="ex-title">'+ex.name.toUpperCase()+'</div>';
+      if(pr)html+='<div class="ex-badge">'+pr+'</div>';
+      html+='<div class="ex-arrow">▶</div>';
       html+='</div>';
 
-      // Expanded
-      html+='<div class="ex-detail"><div class="ex-inner">';
-
+      // Expanded panel
+      html+='<div class="ex-panel">';
       if(vid){
-        html+='<div class="vid-wrap" onclick="window.open(\''+videoUrl+'\',\'_blank\')">'
-          +'<img src="https://img.youtube.com/vi/'+vid+'/mqdefault.jpg" loading="lazy">'
-          +'<div class="vid-play"><div>▶</div></div></div>';
-      }
-
-      var pp=prescPills(ex);
-      if(pp) html+='<div class="pills">'+pp+'</div>';
-      if(ex.notes) html+='<div class="ex-note">'+ex.notes+'</div>';
-
-      // Set logger
-      html+='<div class="log-label">Log sets</div><div class="log-sets">';
-      for(var s=0;s<sets;s++){
-        var k=lk(wi,di,bi_,ei,s);
-        var entry=LOG[k]||{};
-        html+='<div class="log-set">'
-          +'<div class="set-n">'+(s+1)+'</div>'
-          +'<div class="log-inputs">'
-          +'<input class="log-inp" type="number" placeholder="lbs" value="'+(entry.weight||'')+'" oninput="logV(\''+k+'\',\'weight\',this.value)" inputmode="decimal">'
-          +'<input class="log-inp" type="number" placeholder="reps" value="'+(entry.actual_reps||'')+'" oninput="logV(\''+k+'\',\'actual_reps\',this.value)" inputmode="numeric">'
-          +'</div>'
-          +'<div class="set-chk'+(entry.done?' done':'')+'" id="chk-'+k+'" onclick="toggleDone(\''+k+'\')">'+(entry.done?'✓':'')+'</div>'
+        html+='<div class="ex-video" onclick="window.open(\''+vidUrl+'\',\'_blank\')">'
+          +'<img src="https://img.youtube.com/vi/'+vid+'/mqdefault.jpg" loading="lazy" alt="'+ex.name+'">'
+          +'<div class="ex-video-play"><div>▶</div></div>'
           +'</div>';
       }
-      html+='</div>';
-      html+='</div>';// end ex-inner
+      html+='<div class="ex-body">';
+      if(pp)html+='<div class="ex-pills">'+pp+'</div>';
+      if(ex.notes&&ex.notes!==ex.name)html+='<div class="ex-note">'+ex.notes+'</div>';
 
-      // Why
+      // Log sets
+      html+='<div class="log-section-label">Log sets</div><div class="log-sets">';
+      for(var s=0;s<sets;s++){
+        var k=lk(wi,di,bi,ei,s);
+        var e=LOG[k]||{};
+        html+='<div class="log-row">'
+          +'<div class="set-num">'+String(s+1).padStart(2,'0')+'</div>'
+          +'<div class="log-fields">'
+          +'<input class="log-field" type="number" inputmode="decimal" placeholder="lbs" value="'+(e.weight||'')+'" oninput="lv(\''+k+'\',\'weight\',this.value)">'
+          +'<input class="log-field" type="number" inputmode="numeric" placeholder="reps" value="'+(e.actual_reps||'')+'" oninput="lv(\''+k+'\',\'actual_reps\',this.value)">'
+          +'</div>'
+          +'<div class="log-check'+(e.done?' done':'')+'" id="c'+k+'" onclick="chk(\''+k+'\')">'+(e.done?'✓':'')+'</div>'
+          +'</div>';
+      }
+      html+='</div></div>';// close log-sets, ex-body
+
       if(hasWhy){
-        var bt=Array.isArray(enr.sport_transfer)?enr.sport_transfer.find(function(t){return t.sport==='Baseball';}):null;
-        var wid='why-'+id;
-        html+='<button class="why-btn" onclick="toggleWhy(\''+wid+'\')">▸ Why this exercise</button>';
-        html+='<div class="why-body" id="'+wid+'">';
-        if(enr.mechanism_text) html+='<div class="why-mech">'+enr.mechanism_text+'</div>';
-        if(bt) html+='<div class="why-xfer">⚾ '+bt.text+'</div>';
+        html+='<button class="why-toggle" id="wt'+id+'" onclick="toggleWhy(\''+id+'\')">'
+          +'<span class="why-icon">▶</span>Why this exercise</button>';
+        html+='<div class="why-body" id="wb'+id+'">';
+        if(enr.mechanism_text){
+          html+='<div class="why-section"><div class="why-lbl">Mechanism</div>'
+            +'<div class="why-mech">'+enr.mechanism_text+'</div></div>';
+        }
+        if(bt){
+          html+='<div class="why-section"><div class="why-lbl">⚾ Baseball transfer</div>'
+            +'<div class="why-bb">'+bt.text+'</div></div>';
+        }
         html+='</div>';
       }
 
-      html+='</div></div>'; // ex-detail, ex-card
+      html+='</div></div>';// close ex-panel, ex
     });
-    html+='</div>'; // block-wrap
+    html+='</div></div>';// close ex-list, block
   });
 
-  document.getElementById('session-area').innerHTML = html||'<div style="text-align:center;padding:40px;color:var(--text3);">Rest day</div>';
+  document.getElementById('session-area').innerHTML=html
+    ||'<div style="text-align:center;padding:60px 20px;color:var(--text3);font-size:14px;">Rest day 🛌</div>';
   updateRing();
 }
 
-function renderDayGrid(){
-  var wi=STATE.week, days=PROG.weekData[wi].days;
-  document.getElementById('day-grid').innerHTML=days.map(function(d,di){
+function renderDays(){
+  var wi=S.week;
+  document.getElementById('day-row').innerHTML=PROG.weekData[wi].days.map(function(d,di){
     var off=d.type==='off';
-    var exCnt=0; (d.blocks||[]).forEach(function(b){exCnt+=(b.exercises||[]).filter(function(e){return e.name;}).length;});
+    var cnt=0;(d.blocks||[]).forEach(function(b){cnt+=(b.exercises||[]).filter(function(e){return e.name;}).length;});
     var r=off?null:countDone(wi,di);
-    return '<div class="day-btn'+(di===STATE.day&&!off?' active':'')+(off?' off':'')+'" onclick="'+(off?'':'selectDay('+di+')')+'">'
-      +'<div class="dn">'+d.day+'</div>'
-      +'<div class="dl">'+d.label+'</div>'
-      +(off?'':exCnt?'<div class="dc">'+(r&&r.tot?r.done+'/'+r.tot:exCnt+' ex')+'</div>':'')
+    var active=!off&&di===S.day;
+    return '<div class="day-card'+(active?' active':'')+(off?' off':'')+'" onclick="'+(off?'':'sd('+di+')')+'">'
+      +'<div class="dc-day">'+d.day+'</div>'
+      +'<div class="dc-label">'+d.label+'</div>'
+      +(off?'':r&&r.done>0?'<div class="dc-done">'+r.done+'/'+r.tot+'</div>':'<div class="dc-prog">'+cnt+' ex</div>')
       +'</div>';
   }).join('');
 }
 
-function renderWeekTabs(){
-  document.getElementById('week-tabs').innerHTML=PROG.weekData.map(function(wk,wi){
-    return '<div class="wtab'+(wi===STATE.week?' active':'')+(wk.isDeload?' deload':'')+'" onclick="selectWeek('+wi+')">'
-      +'Wk '+wk.week+(wk.isDeload?' · D':'')+'</div>';
+function renderWeeks(){
+  document.getElementById('week-row').innerHTML=PROG.weekData.map(function(wk,wi){
+    return '<div class="wtab'+(wi===S.week?' active':'')+(wk.isDeload?' deload':'')+'" onclick="sw('+wi+')">'
+      +'WK '+wk.week+(wk.isDeload?' · D':'')+'</div>';
   }).join('');
 }
 
-function selectWeek(wi){
-  STATE.week=wi;
+function sw(wi){
+  S.week=wi;
   var days=PROG.weekData[wi].days;
-  var first=days.findIndex(function(d){
+  var f=days.findIndex(function(d){
     return d.type!=='off'&&(d.blocks||[]).some(function(b){return(b.exercises||[]).some(function(e){return e.name;});});
   });
-  STATE.day=first>=0?first:0;
-  renderWeekTabs(); renderDayGrid(); renderSession();
+  S.day=f>=0?f:0;
+  renderWeeks();renderDays();renderSession();
 }
 
-function selectDay(di){
-  STATE.day=di;
-  renderDayGrid(); renderSession();
+function sd(di){
+  S.day=di;
+  renderDays();renderSession();
   document.getElementById('session-area').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-function toggleEx(id){
-  var c=document.getElementById(id);
-  if(c) c.classList.toggle('open');
-}
-function toggleWhy(id){
+function toggle(id){
   var el=document.getElementById(id);
-  if(el) el.classList.toggle('open');
+  if(el)el.classList.toggle('open');
 }
-function logV(k,f,v){ if(!LOG[k])LOG[k]={}; LOG[k][f]=v; saveLog(); }
-function toggleDone(k){
-  if(!LOG[k])LOG[k]={}; LOG[k].done=!LOG[k].done;
-  var el=document.getElementById('chk-'+k);
+
+function toggleWhy(id){
+  var btn=document.getElementById('wt'+id);
+  var body=document.getElementById('wb'+id);
+  if(btn&&body){
+    var open=body.classList.toggle('open');
+    btn.classList.toggle('open',open);
+  }
+}
+
+function lv(k,f,v){if(!LOG[k])LOG[k]={};LOG[k][f]=v;saveLog();}
+
+function chk(k){
+  if(!LOG[k])LOG[k]={};
+  LOG[k].done=!LOG[k].done;
+  var el=document.getElementById('c'+k);
   if(el){el.classList.toggle('done',LOG[k].done);el.textContent=LOG[k].done?'✓':'';}
-  saveLog(); updateRing(); renderDayGrid();
+  saveLog();updateRing();renderDays();
 }
+
 function completeDay(){
-  var wi=STATE.week,di=STATE.day;
-  var day=PROG.weekData[wi].days[di];
-  (day.blocks||[]).forEach(function(b,bi_){
+  var wi=S.week,di=S.day;
+  (PROG.weekData[wi].days[di].blocks||[]).forEach(function(b,bi){
     (b.exercises||[]).filter(function(e){return e.name;}).forEach(function(ex,ei){
       var sets=parseInt(ex.sets)||1;
       for(var s=0;s<sets;s++){
-        var k=lk(wi,di,bi_,ei,s);
-        if(!LOG[k])LOG[k]={}; LOG[k].done=true;
-        var el=document.getElementById('chk-'+k);
+        var k=lk(wi,di,bi,ei,s);
+        if(!LOG[k])LOG[k]={};LOG[k].done=true;
+        var el=document.getElementById('c'+k);
         if(el){el.classList.add('done');el.textContent='✓';}
       }
     });
   });
-  saveLog(); updateRing(); renderDayGrid();
-  var btn=document.querySelector('.done-btn');
-  btn.textContent='✓ Day complete!';
-  setTimeout(function(){btn.textContent='Mark day complete';},2000);
+  saveLog();updateRing();renderDays();
+  var btn=document.querySelector('.btn-complete');
+  btn.style.background='rgba(74,222,128,.25)';
+  btn.textContent='✓  Day complete';
+  setTimeout(function(){btn.style.background='';btn.textContent='Mark day complete';},2500);
 }
 
-// ── Main render ────────────────────────────────────────────────
 function render(){
   loadLog();
-  var created=PROG.created_at?new Date(PROG.created_at).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}):'';
+  var d=PROG;
+  var dt=d.created_at?new Date(d.created_at).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}):'';
   document.getElementById('root').innerHTML=
     '<div class="hero">'
-    +'<div class="hero-date">'+(created||'Cubs S&C')+'</div>'
-    +'<div class="hero-name">'+(PROG.athlete||'Athlete')+'</div>'
-    +'<div class="hero-prog">'+(PROG.name||'Training Program')+'</div>'
+    +'<div class="hero-date">'+(dt||'Cubs S&C Training')+'</div>'
+    +'<div class="hero-name">'+(d.athlete||'Athlete')+'</div>'
+    +'<div class="hero-prog">'+(d.name||'Training Program')+'</div>'
     +'</div>'
-    +'<div class="week-tabs" id="week-tabs"></div>'
-    +'<div class="day-grid" id="day-grid"></div>'
+    +'<div class="week-row" id="week-row"></div>'
+    +'<div class="day-row" id="day-row"></div>'
     +'<div class="session" id="session-area"></div>'
-    +'<div class="bottom-bar">'
-    +'<button class="done-btn" onclick="completeDay()">Mark day complete</button>'
-    +'<button class="save-btn" onclick="saveLog();this.textContent=\'Saved!\';setTimeout(function(){this.textContent=\'💾 Save\';}.bind(this),1500)">💾 Save</button>'
-    +'</div>';
-  document.title=(PROG.athlete||'Cubs S&C')+' — '+(PROG.name||'Program');
-  renderWeekTabs(); renderDayGrid(); renderSession();
+    +'<div class="bottom-bar"><div class="bottom-inner">'
+    +'<button class="btn-complete" onclick="completeDay()">Mark day complete</button>'
+    +'<button class="btn-save" onclick="saveLog();this.textContent=\'Saved ✓\';var t=this;setTimeout(function(){t.textContent=\'💾 Save\';},1500)">💾 Save</button>'
+    +'</div></div>';
+  document.title=(d.athlete||'Cubs S&C')+' — '+(d.name||'Program');
+  renderWeeks();renderDays();renderSession();
 }
 
-// ── Load ───────────────────────────────────────────────────────
 async function init(){
-  var params=new URLSearchParams(window.location.search);
-  var id=params.get('id');
-  if(!id){
-    document.getElementById('root').innerHTML='<div class="err">No program ID in link.</div>';
-    return;
-  }
-
+  var id=new URLSearchParams(window.location.search).get('id');
+  if(!id){document.getElementById('root').innerHTML='<div class="err">No program ID in this link.</div>';return;}
   try{
-    var supa=window.supabase.createClient(SUPA_URL, SUPA_KEY);
-
-    // Query
-    var res=await supa.from('athlete_programs').select('*').eq('id',id).single();
-
-    if(res.error){
-      document.getElementById('root').innerHTML='<div class="err">Error loading program:<br>'+res.error.message+'<br><br>Code: '+res.error.code+'</div>';
-      return;
-    }
-    if(!res.data){
-      document.getElementById('root').innerHTML='<div class="err">Program not found (id: '+id+')</div>';
-      return;
-    }
-
-    var prog=res.data;
-
-    // Parse pb_state
+    var supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+    var{data,error}=await supa.from('athlete_programs').select('*').eq('id',id).single();
+    if(error)throw new Error(error.message+' ('+error.code+')');
+    if(!data)throw new Error('Program not found for id: '+id);
     var pbState=null;
-    try{
-      if(prog.pb_state){
-        pbState=typeof prog.pb_state==='string'?JSON.parse(prog.pb_state):prog.pb_state;
-      }
-    }catch(e){ console.error('pb_state parse error:',e); }
-
-    if(!pbState||!pbState.weekData||!pbState.weekData.length){
-      document.getElementById('root').innerHTML='<div class="err">Program has no week data.<br>Ask your coach to rebuild and reshare.</div>';
-      return;
-    }
-
-    PROG={
-      id:id,
-      athlete: prog.athlete||'',
-      name: prog.name||'',
-      phase: prog.phase||'',
-      created_at: prog.created_at||'',
-      weekData: pbState.weekData
-    };
-
-    // Load enrichment (non-blocking)
+    try{if(data.pb_state)pbState=typeof data.pb_state==='string'?JSON.parse(data.pb_state):data.pb_state;}catch(e){}
+    if(!pbState||!pbState.weekData||!pbState.weekData.length)
+      throw new Error('No week data in program. Ask your coach to resave and reshare.');
+    PROG={id:id,athlete:data.athlete,name:data.name,phase:data.phase,created_at:data.created_at,weekData:pbState.weekData};
     try{
       var er=await supa.from('exercises').select('name,muscle_group,muscle_head,bucket,mechanism_text,sport_transfer,video').not('mechanism_text','is',null);
-      (er.data||[]).forEach(function(e){ ENRICH[e.name.toLowerCase()]=e; });
+      (er.data||[]).forEach(function(e){ENRICH[e.name.toLowerCase()]=e;});
     }catch(e){}
-
     render();
-
   }catch(err){
-    document.getElementById('root').innerHTML='<div class="err">Unexpected error:<br>'+err.message+'</div>';
+    document.getElementById('root').innerHTML='<div class="err">'+err.message+'</div>';
     console.error(err);
   }
 }
-
 init();
 </script>
 </body>
