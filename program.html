@@ -553,7 +553,22 @@ async function init(){
     }catch(e){}
 
     if(!pbState||!pbState.weekData||!pbState.weekData.length){
-      document.getElementById('root').innerHTML='<div class="err-card">This program was built with the old system and can\'t be viewed here yet. Ask your coach to rebuild it in the Program Builder and reshare.</div>';
+      // Fall back to raw content HTML if available
+      if(prog.content && prog.content.length > 100){
+        document.getElementById('root').innerHTML=
+          '<div style="padding:16px;">'
+          +'<div style="background:#0E3386;border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
+          +'<div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:4px;">'+new Date(prog.created_at||Date.now()).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})+'</div>'
+          +'<div style="font-family:Bebas Neue,sans-serif;font-size:28px;color:#fff;">'+( prog.athlete||'Athlete')+'</div>'
+          +'<div style="font-size:13px;color:rgba(255,255,255,0.7);">'+(prog.name||'Training Program')+'</div>'
+          +'</div>'
+          +'<div style="background:#0E1220;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;overflow-x:auto;">'
+          +prog.content
+          +'</div></div>';
+        document.title=(prog.athlete||'Cubs S&C')+' — '+(prog.name||'Program');
+      } else {
+        document.getElementById('root').innerHTML='<div class="err-card">Program data not found. Ask your coach to open the program in Program Builder, save it, then assign and share again.</div>';
+      }
       return;
     }
 
