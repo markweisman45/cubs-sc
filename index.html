@@ -1149,7 +1149,10 @@ body {
 
             <!-- Saved Drafts -->
             <div class="card" style="padding:14px;">
-              <div class="card-title" style="margin-bottom:8px;">📂 MY DRAFTS</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <div class="card-title" style="margin:0;">📂 MY DRAFTS</div>
+                <button onclick="loadPhaseTemplates()" style="font-size:10px;padding:4px 10px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;cursor:pointer;font-weight:600;">⚡ Load Phase Templates</button>
+              </div>
               <div id="pb-drafts-list" style="max-height:200px;overflow-y:auto;"></div>
             </div>
           </div>
@@ -13187,6 +13190,380 @@ function pbPromoteToProgram(id) {
   var nameEl = document.getElementById('pb-program-name');
   if (nameEl) nameEl.value = draft.name;
   pbSave();
+}
+
+function loadPhaseTemplates() {
+  if (!confirm('Load Transmutation, Realization, In-Season, and Deload templates into your Saved Drafts? This will add 4 new drafts (existing drafts are not affected).')) return;
+
+  var templates = [
+
+    // ─────────────────────────────────────────────────────────────
+    // TRANSMUTATION
+    // ─────────────────────────────────────────────────────────────
+    {
+      name: '🔄 Transmutation — Position Player',
+      phase: 'transmutation', weeks: 4, progression: 'linear',
+      athlete: '(Sandbox)',
+      weekData: [1,2,3,4].map(function(wk) {
+        var isDeload = wk === 4;
+        var sm = isDeload ? 0.85 : 1;
+        return {
+          week: wk, isDeload: isDeload,
+          label: 'W'+wk+' '+( isDeload?'Deload':'Linear'),
+          progMod: { sets: isDeload?0.85:1, reps: isDeload?0.9:1, load: isDeload?0.9:[1,1.025,1.05,0.9][wk-1], label:'W'+wk },
+          days: [
+            // MON — Power / UB Strength
+            { day:'Mon', type:'lift', label:'Power / UB Strength', blocks: [
+              { blockType:'lift', label:'Rotational Power Block', exercises: [
+                { type:'lift', name:'Power Clean', cat:'Olympic Variations', pair:'A', sets:'5', reps:'3', load:'72%', tempo:'00X0', rest:'2:00', notes:'Full pull — triple extension, high elbows in catch; transfer from posterior chain to upper body rotational expression' },
+                { type:'lift', name:'MB Side Toss', cat:'LB Plyos', pair:'A', sets:'5', reps:'4ea', load:'10 lb', tempo:'00X0', rest:'2:00', notes:'Paired A — alternate throw side; lead with hip, lag the arm; direct rotational power output' },
+                { type:'lift', name:'Push Press', cat:'UB Vertical Push', pair:'B', sets:'4', reps:'5', load:'75%', tempo:'10X0', rest:'1:30', notes:'Hip drive initiates press — same sequencing as rotational throw; lockout overhead, lat tension' },
+                { type:'lift', name:'Chin Up (Weighted)', cat:'UB Vertical Pull', pair:'B', sets:'4', reps:'5', load:'5%', tempo:'31X0', rest:'1:30', notes:'Paired B — dead hang start, drive elbows to hips; scapular pull strengthens deceleration of arm' },
+                { type:'lift', name:'DB Single Arm Row', cat:'UB Horizontal Pull', pair:'C', sets:'3', reps:'8ea', load:'70%', tempo:'31X0', rest:'1:00', notes:'Knee on bench, elbow past hip; reinforce lat to glute cross-body connection critical for rotational athletes' },
+                { type:'lift', name:'Half Kneeling Cable Press', cat:'UB Horizontal Push', pair:'C', sets:'3', reps:'8ea', load:'60%', tempo:'21X1', rest:'1:00', notes:'Paired C — split stance increases rotational demand; press across body, feel oblique integrate' },
+                { type:'lift', name:'Face Pull', cat:'Shoulder Complex', pair:'D', sets:'3', reps:'15', load:'Light', tempo:'31X1', rest:':30', notes:'Cable at eye height, pull to ears, externally rotate at end range; posterior cuff and rear delt — arm care staple' },
+                { type:'lift', name:'Dead Bug', cat:'Core Anti-Extension', pair:'D', sets:'3', reps:'8ea', load:'BW', tempo:'3-1-3-1', rest:':30', notes:'Paired D — opposite arm/leg, press low back into floor throughout; anti-extension pillar for rotational force transfer' },
+              ]},
+            ]},
+            // TUE — Lower Strength
+            { day:'Tue', type:'lift', label:'Lower Strength / Max V', blocks: [
+              { blockType:'speed', label:'Max Velocity Block', exercises: [
+                { type:'speed', name:'Dribbles (Ankle)', cat:'Performance Prep', pair:'A', sets:'2', reps:'1', distance:'10yd', pct:'70%', rest:':30', notes:'Rhythmic stiff ankle contact — activate elastic system' },
+                { type:'speed', name:'Power Skips- Distance', cat:'Performance Prep', pair:'A', sets:'2', reps:'1', distance:'20yd', pct:'85%', rest:':45', notes:'Max horizontal per skip; aggressive trail knee drive' },
+                { type:'speed', name:'Wickets', cat:'Max Velocity Running', pair:'B', sets:'3', reps:'1', distance:'30yd', pct:'85%', rest:'2:00', notes:'Athlete-specific stride length; front-side mechanics, minimize GCT' },
+                { type:'speed', name:'Fly (variation)', cat:'Max Velocity Running', pair:'C', sets:'3', reps:'1', distance:'20yd', pct:'92%', rest:'3:00', notes:'Build into fly zone — hit top speed AT the cone; full recovery, quality > quantity' },
+              ]},
+              { blockType:'lift', label:'Lower Body Strength Block', exercises: [
+                { type:'lift', name:'Trap Bar Deadlift', cat:'Deadlift Variations', pair:'A', sets:'5', reps:'4', load:'78%', tempo:'31X1', rest:'2:30', notes:'Neutral spine, drive floor away; hip-dominant pattern builds posterior chain power base' },
+                { type:'lift', name:'Trap Bar Counter Movement Jump', cat:'Olympic Variations', pair:'A', sets:'5', reps:'3', load:'25%', tempo:'00X0', rest:'2:30', notes:'Paired A — light load, max intent; contrast training elevates motor unit recruitment from heavy deadlift' },
+                { type:'lift', name:'Bulgarian Split Squat (DB)', cat:'Squat Variations', pair:'B', sets:'4', reps:'6ea', load:'70%', tempo:'41X0', rest:'1:30', notes:'Rear foot elevated, load front hip; mimics stride and base-running deceleration demands' },
+                { type:'lift', name:'Hamstring Curl (prone machine)', cat:'Hamstring', pair:'B', sets:'4', reps:'8', load:'70%', tempo:'41X0', rest:'1:30', notes:'Paired B — slow eccentric to mid-range; hamstring at length is highest injury risk zone' },
+                { type:'lift', name:'Goblet Squat', cat:'Squat Variations', pair:'C', sets:'3', reps:'10', load:'50%', tempo:'32X1', rest:'1:00', notes:'Heel on plate if needed; elbows push knees out; ankle and hip mobility integration' },
+                { type:'lift', name:'Nordic Curl', cat:'Hamstring', pair:'C', sets:'3', reps:'5', load:'BW', tempo:'5000', rest:'2:00', notes:'Paired C — 5s eccentric; most effective hamstring injury prevention in sprinting athletes' },
+                { type:'lift', name:'Copenhagen Plank', cat:'Hip ABD_ADD', pair:'D', sets:'3', reps:'8ea', load:'BW', tempo:'25X0', rest:':45', notes:'Adductor ISO under lateral demand; squeeze top knee; lateral hip strength for COD and base running' },
+                { type:'lift', name:'Side Plank', cat:'Core Anti-Lateral Flexion', pair:'D', sets:'3', reps:'8ea', load:'BW', tempo:'25X1', rest:':45', notes:'Paired D — anti-lateral flexion; drive hip to ceiling; lateral stiffness for rotational power transfer' },
+              ]},
+            ]},
+            // WED — Strongman / Mobility
+            { day:'Wed', type:'esd', label:'Strongman / Mobility', blocks: [
+              { blockType:'session-header', label:'A.M. Session' },
+              { blockType:'lift', label:'Strongman Circuit', exercises: [
+                { type:'lift', cat:'Strongman Variations', name:'Sled March', pair:'A', sets:'4', reps:'10', load:'80%', tempo:'00X0', rest:'10' },
+                { type:'lift', cat:'Strongman Variations', name:'Sandbag Over Shoulder', pair:'A', sets:'4', reps:'5ea', load:'80%', tempo:'00X0', rest:'10' },
+                { type:'lift', cat:'Strongman Variations', name:'Farmer Carry', pair:'A', sets:'4', reps:'20', load:'80%', tempo:'00X0', rest:'10' },
+                { type:'lift', cat:'Strongman Variations', name:'Reverse Sled March', pair:'A', sets:'4', reps:'10', load:'80%', tempo:'00X0', rest:'90s' },
+              ]},
+              { blockType:'lift', label:'Mobility Circuit', exercises: [
+                { type:'lift', cat:'Mobility', name:'Hip 90/90 Series', pair:'A', sets:'1', reps:'5ea', load:'BW', tempo:'', rest:':20' },
+                { type:'lift', cat:'Mobility', name:'World\'s Greatest Stretch', pair:'A', sets:'1', reps:'5ea', load:'BW', tempo:'', rest:':20' },
+                { type:'lift', cat:'Mobility', name:'Jefferson Curls', pair:'A', sets:'2', reps:'5', load:'40%', tempo:'4-2-2-0', rest:':30' },
+                { type:'lift', cat:'Mobility', name:'T-Spine Wall Walks', pair:'A', sets:'2', reps:'8', load:'BW', tempo:'2-1-2-0', rest:':20' },
+              ]},
+            ]},
+            // THU — COD / UB
+            { day:'Thu', type:'lift', label:'COD / UB Strength', blocks: [
+              { blockType:'speed', label:'COD & Agility Block', exercises: [
+                { type:'speed', name:'Lateral Shuffle', cat:'Performance Prep', pair:'A', sets:'2', reps:'1', distance:'10yd', pct:'75%', rest:':30', notes:'Low athletic base; drive off outside foot' },
+                { type:'speed', name:'Carioca', cat:'Performance Prep', pair:'A', sets:'2', reps:'1', distance:'20yd', pct:'80%', rest:':30', notes:'Fast hip rotation; arms quiet' },
+                { type:'speed', name:'Heiden W/ Catch', cat:'LB Plyos', pair:'B', sets:'3', reps:'3', distance:'10yd', pct:'85%', rest:':45', notes:'Max lateral displacement, stick and freeze 2s; hip hinge on catch' },
+                { type:'speed', name:'Pro Agility (5-10-5)', cat:'COD/Agility', pair:'C', sets:'4', reps:'1', distance:'20yd', pct:'95%', rest:'2:00', notes:'React to audio cue; sharp cuts, low COM; plant and go pattern' },
+                { type:'speed', name:'Sprint-Cut-Decel', cat:'Deceleration', pair:'D', sets:'3', reps:'2', distance:'20yd', pct:'90%', rest:'1:30', notes:'Accelerate hard, decel in 3 steps; eccentric braking, no ankle collapse' },
+              ]},
+              { blockType:'lift', label:'Upper Body Strength Block', exercises: [
+                { type:'lift', name:'Barbell Row', cat:'UB Horizontal Pull', pair:'A', sets:'5', reps:'5', load:'78%', tempo:'31X0', rest:'2:00', notes:'45° torso, scapula retraction at top; posterior chain pulling — arm deceleration strength' },
+                { type:'lift', name:'Bench Press', cat:'UB Horizontal Push', pair:'A', sets:'5', reps:'5', load:'78%', tempo:'31X1', rest:'2:00', notes:'Paired A — full ROM, retract scapulae, drive through bar; horizontal pushing baseline' },
+                { type:'lift', name:'Cable High to Low Row (SS)', cat:'UB Vertical Pull', pair:'B', sets:'4', reps:'8ea', load:'65%', tempo:'31X0', rest:'1:30', notes:'Split stance, pull elbow to hip; lat engagement critical for deceleration phase of throw' },
+                { type:'lift', name:'Dip (Weighted)', cat:'UB Vertical Push', pair:'B', sets:'4', reps:'8', load:'5%', tempo:'31X0', rest:'1:30', notes:'Paired B — slight forward lean for chest emphasis; control depth, shoulder health priority' },
+                { type:'lift', name:'Cable External Rotation', cat:'Shoulder Complex', pair:'C', sets:'3', reps:'15ea', load:'Light', tempo:'31X1', rest:':30', notes:'Elbow pinned 90° — slow, full ROM; posterior cuff activation for arm care' },
+                { type:'lift', name:'Landmine Rotations', cat:'Core Anti-Rotation', pair:'C', sets:'3', reps:'10ea', load:'35%', tempo:'00X0', rest:':30', notes:'Paired C — arc bar hip-width; pivot rear foot; anti-rotation in rotational context mirrors batting' },
+              ]},
+            ]},
+            // FRI — Acceleration / LB
+            { day:'Fri', type:'lift', label:'Accel + Decel / LB Strength', blocks: [
+              { blockType:'speed', label:'Acceleration & Deceleration Block', exercises: [
+                { type:'speed', name:'2pt Start (LSV)', cat:'Performance Prep', pair:'A', sets:'4', reps:'1', distance:'10yd', pct:'85%', rest:'1:30', notes:'45° lean, first 3 steps shin angle aggressive; base-stealing lean sim' },
+                { type:'speed', name:'Prowler Sprint', cat:'Acceleration', pair:'B', sets:'4', reps:'1', distance:'10yd', pct:'100%', rest:'2:00', notes:'BW×30% load; low handles, drive posture; horizontal force from zero velocity' },
+                { type:'speed', name:'1080 Sprint', cat:'Acceleration', pair:'C', sets:'5', reps:'1', distance:'10yd', pct:'95%', rest:'2:00', notes:'20-25% BW resistance; explode on cue; reactive acceleration sim' },
+                { type:'speed', name:'Sprint (__yd) Decel (__yd)', cat:'Deceleration', pair:'D', sets:'3', reps:'1', distance:'20yd', pct:'95%', rest:'1:30', notes:'Accel 20yd, decel in 10; eccentric quad/glute, low COM brake' },
+              ]},
+              { blockType:'lift', label:'Lower Body Strength Block', exercises: [
+                { type:'lift', name:'Back Squat', cat:'Squat Variations', pair:'A', sets:'5', reps:'4', load:'78%', tempo:'41X0', rest:'2:30', notes:'High bar, depth to parallel+, knees track 3rd toe; primary lower body mass and strength builder' },
+                { type:'lift', name:'Broad Jump W/Catch', cat:'LB Plyos', pair:'A', sets:'5', reps:'3', load:'BW', tempo:'00X0', rest:'2:30', notes:'Paired A — post-squat contrast; hip hinge load, max horizontal, stick landing silent' },
+                { type:'lift', name:'Bb RDL', cat:'Deadlift Variations', pair:'B', sets:'4', reps:'6', load:'72%', tempo:'41X1', rest:'1:30', notes:'Hip hinge mid-shin, proud chest; posterior chain foundation for sprint power' },
+                { type:'lift', name:'Kneeling Hamstring (change angles)', cat:'Hamstring', pair:'B', sets:'4', reps:'6ea', load:'BW', tempo:'41X0', rest:'1:30', notes:'Paired B — slow eccentric, 3-angle; proximal hamstring at varying lengths for resilience' },
+                { type:'lift', name:'Lateral Lunge', cat:'Squat Variations', pair:'C', sets:'3', reps:'8ea', load:'30%', tempo:'31X0', rest:'1:00', notes:'Push hips back and out; adductor eccentric load; mimics fielding lateral lunge and base-running cut' },
+                { type:'lift', name:'Copenhagen Plank', cat:'Hip ABD_ADD', pair:'C', sets:'3', reps:'8ea', load:'BW', tempo:'25X0', rest:'1:00', notes:'Paired C — adductor ISO; squeeze top knee; complement to lateral lunge' },
+                { type:'lift', name:'Ant Tib Wall Raises', cat:'Calf Ankle', pair:'D', sets:'3', reps:'20', load:'BW', tempo:'00X0', rest:':30', notes:'Dorsiflexion strength; shin angle in acceleration; ankle stability' },
+                { type:'lift', name:'Band TKE (toe up)', cat:'Squat Variations', pair:'D', sets:'3', reps:'15ea', load:'', tempo:'00X0', rest:':30', notes:'Paired D — VMO activation, terminal knee extension; knee stability for decel landings' },
+              ]},
+            ]},
+            // SAT — ESD
+            { day:'Sat', type:'esd', label:'ESD Day', blocks: [
+              { blockType:'lift', label:'Mobility Block', exercises: [
+                { type:'lift', name:'World\'s Greatest Stretch', cat:'Mobility', pair:'A', sets:'2', reps:'5ea', load:'', tempo:'3-1-3-0', rest:'15s', notes:'Hip flexor + t-spine + thoracic rotation — swing mechanics foundation' },
+                { type:'lift', name:'Half Kneeling Hip Flexor', cat:'Performance Prep', pair:'B', sets:'2', reps:'30s', load:'', tempo:'', rest:'15s', notes:'Posterior pelvic tilt, squeeze rear glute; hip must be free to stride and rotate' },
+                { type:'lift', name:'T-Spine Wall Walks', cat:'Mobility', pair:'C', sets:'2', reps:'8', load:'', tempo:'2-1-2-0', rest:'20s', notes:'Maintain lumbar flat; thoracic mobility = rotational velocity' },
+                { type:'lift', name:'Supine Hamstring P/R', cat:'Mobility', pair:'D', sets:'2', reps:'30s', load:'', tempo:'', rest:'15s', notes:'PNF contract-relax; hamstring length limits hip extension power' },
+              ]},
+              { blockType:'speed', label:'ESD Block', exercises: [
+                { type:'speed', name:'Tempo Runs', cat:'ESD', pair:'A', sets:'3', reps:'6', distance:'50yd', pct:'65%', rest:'1:00', notes:'Zone 2 — 65-70% max effort; relaxed arm swing, upright posture; aerobic base' },
+                { type:'speed', name:'Assault Bike', cat:'ESD', pair:'B', sets:'2', reps:'8', distance:'10 min', pct:'', rest:'3:00', notes:'20:10 Tabata — 2×8 rounds; 3 min between sets; aerobic capacity' },
+              ]},
+            ]},
+            { day:'Sun', type:'off', label:'OFF', blocks:[] },
+          ]
+        };
+      }),
+    },
+
+    // ─────────────────────────────────────────────────────────────
+    // REALIZATION
+    // ─────────────────────────────────────────────────────────────
+    {
+      name: '⚡ Realization — Position Player',
+      phase: 'realization', weeks: 3, progression: 'linear',
+      athlete: '(Sandbox)',
+      weekData: [1,2,3].map(function(wk) {
+        var isDeload = wk === 3;
+        return {
+          week: wk, isDeload: isDeload,
+          label: 'W'+wk+(isDeload?' Deload':''),
+          progMod: { sets: isDeload?0.8:1, reps: isDeload?0.85:1, load: [1.02,1.05,0.9][wk-1], label:'W'+wk },
+          days: [
+            // MON — Speed + Power Express
+            { day:'Mon', type:'lift', label:'Acceleration / Power Express', blocks: [
+              { blockType:'speed', label:'Acceleration Block', exercises: [
+                { type:'speed', name:'2pt Start (LSV)', cat:'Performance Prep', pair:'A', sets:'5', reps:'1', distance:'10yd', pct:'90%', rest:'2:00', notes:'Max intent — this is expression week; full recovery between reps' },
+                { type:'speed', name:'Prowler Sprint', cat:'Acceleration', pair:'B', sets:'4', reps:'1', distance:'10yd', pct:'100%', rest:'2:30', notes:'Lighter load than transmutation; emphasize velocity not force' },
+                { type:'speed', name:'1080 Sprint', cat:'Acceleration', pair:'C', sets:'4', reps:'1', distance:'10yd', pct:'95%', rest:'2:30', notes:'Reduce resistance vs transmutation; express speed built over prior phases' },
+              ]},
+              { blockType:'lift', label:'Power Expression Block', exercises: [
+                { type:'lift', name:'Power Clean', cat:'Olympic Variations', pair:'A', sets:'5', reps:'2', load:'82%', tempo:'00X0', rest:'3:00', notes:'Lower volume, higher intensity; peak power expression — crisp triple extension' },
+                { type:'lift', name:'MB Side Toss', cat:'LB Plyos', pair:'A', sets:'5', reps:'3ea', load:'10 lb', tempo:'00X0', rest:'3:00', notes:'Paired A — max intent, max velocity; express rotational power' },
+                { type:'lift', name:'Bench Press', cat:'UB Horizontal Push', pair:'B', sets:'4', reps:'3', load:'85%', tempo:'21X1', rest:'2:30', notes:'Strength expression — controlled eccentric, max intent concentric' },
+                { type:'lift', name:'Pull Up (Weighted)', cat:'UB Vertical Pull', pair:'B', sets:'4', reps:'4', load:'8%', tempo:'21X0', rest:'2:30', notes:'Paired B — weighted for strength peak; lat power for deceleration' },
+                { type:'lift', name:'Cable External Rotation', cat:'Shoulder Complex', pair:'C', sets:'3', reps:'15ea', load:'Light', tempo:'31X1', rest:':30', notes:'Maintain arm care — never omit in realization phase' },
+                { type:'lift', name:'Dead Bug', cat:'Core Anti-Extension', pair:'C', sets:'3', reps:'6ea', load:'BW', tempo:'3-1-3-1', rest:':30', notes:'Paired C — anti-extension; maintain pillar strength' },
+              ]},
+            ]},
+            // TUE — Lower Power
+            { day:'Tue', type:'lift', label:'Max V / Lower Power', blocks: [
+              { blockType:'speed', label:'Max Velocity Block', exercises: [
+                { type:'speed', name:'Wickets', cat:'Max Velocity Running', pair:'A', sets:'3', reps:'1', distance:'30yd', pct:'90%', rest:'3:00', notes:'Top speed expression — full recovery mandatory' },
+                { type:'speed', name:'Fly (variation)', cat:'Max Velocity Running', pair:'B', sets:'4', reps:'1', distance:'20yd', pct:'95%', rest:'4:00', notes:'Peak velocity work; quality over everything; abort if mechanics break' },
+              ]},
+              { blockType:'lift', label:'Lower Body Power Block', exercises: [
+                { type:'lift', name:'Back Squat', cat:'Squat Variations', pair:'A', sets:'4', reps:'3', load:'85%', tempo:'31X1', rest:'3:00', notes:'Peak strength expression; lower reps, higher load; intent on every rep' },
+                { type:'lift', name:'Box Jump', cat:'LB Plyos', pair:'A', sets:'4', reps:'3', load:'BW', tempo:'00X0', rest:'3:00', notes:'Paired A — post-squat contrast; max height, quiet landing; peak power output' },
+                { type:'lift', name:'Trap Bar Deadlift', cat:'Deadlift Variations', pair:'B', sets:'4', reps:'3', load:'85%', tempo:'21X1', rest:'2:30', notes:'Heavy hinge — peak posterior chain expression' },
+                { type:'lift', name:'Broad Jump W/Catch', cat:'LB Plyos', pair:'B', sets:'4', reps:'3', load:'BW', tempo:'00X0', rest:'2:30', notes:'Paired B — contrast horizontal power; max distance, stick landing' },
+                { type:'lift', name:'Nordic Curl', cat:'Hamstring', pair:'C', sets:'3', reps:'4', load:'BW', tempo:'5000', rest:'2:00', notes:'Maintain eccentric hamstring capacity through peak phase' },
+                { type:'lift', name:'Copenhagen Plank', cat:'Hip ABD_ADD', pair:'C', sets:'3', reps:'6ea', load:'BW', tempo:'25X0', rest:':45', notes:'Paired C — adductor health; non-negotiable through realization' },
+              ]},
+            ]},
+            // WED — Recovery
+            { day:'Wed', type:'esd', label:'Recovery / Mobility', blocks: [
+              { blockType:'lift', label:'Full Mobility Circuit', exercises: [
+                { type:'lift', cat:'Mobility', name:'Hip 90/90 Series', pair:'A', sets:'2', reps:'5ea', load:'BW', tempo:'', rest:':20' },
+                { type:'lift', cat:'Mobility', name:'World\'s Greatest Stretch', pair:'A', sets:'2', reps:'5ea', load:'BW', tempo:'3-1-3-0', rest:':20' },
+                { type:'lift', cat:'Mobility', name:'Jefferson Curls', pair:'A', sets:'2', reps:'5', load:'30%', tempo:'4-2-2-0', rest:':30' },
+                { type:'lift', cat:'Mobility', name:'T-Spine Wall Walks', pair:'A', sets:'2', reps:'8', load:'BW', tempo:'2-1-2-0', rest:':20' },
+                { type:'lift', cat:'Mobility', name:'Supine Hamstring P/R', pair:'A', sets:'2', reps:'30s', load:'BW', tempo:'', rest:':20' },
+              ]},
+              { blockType:'speed', label:'Tempo Runs', exercises: [
+                { type:'speed', name:'Tempo Runs', cat:'ESD', pair:'A', sets:'2', reps:'6', distance:'50yd', pct:'60%', rest:'1:00', notes:'Zone 1-2 recovery run; relaxed, no sprint intent; flush legs' },
+              ]},
+            ]},
+            // THU — COD / UB
+            { day:'Thu', type:'lift', label:'COD / UB Express', blocks: [
+              { blockType:'speed', label:'COD Block', exercises: [
+                { type:'speed', name:'Pro Agility (5-10-5)', cat:'COD/Agility', pair:'A', sets:'4', reps:'1', distance:'20yd', pct:'100%', rest:'3:00', notes:'Max intent — expression phase; time each rep; full recovery' },
+                { type:'speed', name:'Sprint-Cut-Decel', cat:'Deceleration', pair:'B', sets:'3', reps:'2', distance:'20yd', pct:'95%', rest:'2:00', notes:'Sharp cut, decel in 3 steps; maintain mechanics at high velocity' },
+              ]},
+              { blockType:'lift', label:'Upper Body Express Block', exercises: [
+                { type:'lift', name:'Push Press', cat:'UB Vertical Push', pair:'A', sets:'4', reps:'3', load:'85%', tempo:'10X0', rest:'2:30', notes:'Hip drive to press — peak expression; max intent concentric' },
+                { type:'lift', name:'Barbell Row', cat:'UB Horizontal Pull', pair:'A', sets:'4', reps:'4', load:'80%', tempo:'21X0', rest:'2:30', notes:'Paired A — heavy row; lat and posterior chain peak' },
+                { type:'lift', name:'Landmine Rotations', cat:'Core Anti-Rotation', pair:'B', sets:'3', reps:'8ea', load:'40%', tempo:'00X0', rest:':45', notes:'Rotational power maintenance; pivot and drive' },
+                { type:'lift', name:'Cable External Rotation', cat:'Shoulder Complex', pair:'B', sets:'3', reps:'15ea', load:'Light', tempo:'31X1', rest:':45', notes:'Paired B — arm care every session in realization' },
+              ]},
+            ]},
+            // FRI — Full Speed
+            { day:'Fri', type:'lift', label:'Speed / Lower Express', blocks: [
+              { blockType:'speed', label:'Full Speed Expression Block', exercises: [
+                { type:'speed', name:'2pt Start (LSV)', cat:'Performance Prep', pair:'A', sets:'3', reps:'1', distance:'10yd', pct:'100%', rest:'3:00', notes:'Max intent; neural priming for full speed session' },
+                { type:'speed', name:'1080 Sprint', cat:'Acceleration', pair:'B', sets:'3', reps:'1', distance:'15yd', pct:'100%', rest:'3:00', notes:'Minimal resistance — near unresisted; express full acceleration capacity' },
+                { type:'speed', name:'Fly (variation)', cat:'Max Velocity Running', pair:'C', sets:'3', reps:'1', distance:'20yd', pct:'100%', rest:'4:00', notes:'Peak speed session — max velocity; complete rest; best reps of the week' },
+              ]},
+              { blockType:'lift', label:'Lower Body Express Block', exercises: [
+                { type:'lift', name:'Front Squat', cat:'Squat Variations', pair:'A', sets:'4', reps:'3', load:'82%', tempo:'31X1', rest:'2:30', notes:'Peak quad expression; upright torso, elbows high' },
+                { type:'lift', name:'Trap Bar Counter Movement Jump', cat:'Olympic Variations', pair:'A', sets:'4', reps:'3', load:'30%', tempo:'00X0', rest:'2:30', notes:'Paired A — contrast; max jump height; peak power output' },
+                { type:'lift', name:'Bb RDL', cat:'Deadlift Variations', pair:'B', sets:'3', reps:'5', load:'75%', tempo:'41X1', rest:'1:30', notes:'Maintain posterior chain during peak phase' },
+                { type:'lift', name:'Nordic Curl', cat:'Hamstring', pair:'B', sets:'3', reps:'4', load:'BW', tempo:'5000', rest:'2:00', notes:'Paired B — non-negotiable hamstring protection in sprint-heavy week' },
+              ]},
+            ]},
+            { day:'Sat', type:'off', label:'OFF / Light Movement', blocks:[] },
+            { day:'Sun', type:'off', label:'OFF', blocks:[] },
+          ]
+        };
+      }),
+    },
+
+    // ─────────────────────────────────────────────────────────────
+    // IN-SEASON
+    // ─────────────────────────────────────────────────────────────
+    {
+      name: '🎮 In-Season Maintenance — Position Player',
+      phase: 'inseason', weeks: 4, progression: 'linear',
+      athlete: '(Sandbox)',
+      weekData: [1,2,3,4].map(function(wk) {
+        return {
+          week: wk, isDeload: false,
+          label: 'W'+wk+' In-Season',
+          progMod: { sets:1, reps:1, load:1, label:'W'+wk },
+          days: [
+            // MON — Full Lift (off day or pre-game)
+            { day:'Mon', type:'lift', label:'Strength Maintenance / Power', blocks: [
+              { blockType:'lift', label:'Power & Strength Block', exercises: [
+                { type:'lift', name:'Power Clean', cat:'Olympic Variations', pair:'A', sets:'3', reps:'3', load:'75%', tempo:'00X0', rest:'2:00', notes:'In-season: maintain neural drive — 3×3 not 5×5; quality > volume' },
+                { type:'lift', name:'MB Side Toss', cat:'LB Plyos', pair:'A', sets:'3', reps:'4ea', load:'10 lb', tempo:'00X0', rest:'2:00', notes:'Paired A — maintain rotational power expression; light load, high intent' },
+                { type:'lift', name:'Back Squat', cat:'Squat Variations', pair:'B', sets:'3', reps:'4', load:'75%', tempo:'31X0', rest:'2:00', notes:'Maintain lower body strength — reduce volume from off-season, keep intensity' },
+                { type:'lift', name:'Bb RDL', cat:'Deadlift Variations', pair:'B', sets:'3', reps:'5', load:'70%', tempo:'41X1', rest:'2:00', notes:'Paired B — posterior chain maintenance; hamstring health priority' },
+                { type:'lift', name:'Barbell Row', cat:'UB Horizontal Pull', pair:'C', sets:'3', reps:'6', load:'72%', tempo:'31X0', rest:'1:30', notes:'Lat pulling strength; deceleration phase arm health' },
+                { type:'lift', name:'Bench Press', cat:'UB Horizontal Push', pair:'C', sets:'3', reps:'5', load:'72%', tempo:'31X1', rest:'1:30', notes:'Paired C — maintain horizontal push strength' },
+                { type:'lift', name:'Cable External Rotation', cat:'Shoulder Complex', pair:'D', sets:'3', reps:'15ea', load:'Light', tempo:'31X1', rest:':30', notes:'NON-NEGOTIABLE in-season — posterior cuff after every game and every lift' },
+                { type:'lift', name:'Copenhagen Plank', cat:'Hip ABD_ADD', pair:'D', sets:'3', reps:'6ea', load:'BW', tempo:'25X0', rest:':30', notes:'Paired D — adductor health through long season; groin injury prevention' },
+              ]},
+            ]},
+            // TUE — Game day or Pre-game activation
+            { day:'Tue', type:'lift', label:'Pre-Game Activation', blocks: [
+              { blockType:'speed', label:'Activation & Neural Prep', exercises: [
+                { type:'speed', name:'Dribbles (Ankle)', cat:'Performance Prep', pair:'A', sets:'1', reps:'2', distance:'10yd', pct:'70%', rest:':30', notes:'Activate elastic system — brief, not fatiguing' },
+                { type:'speed', name:'A-Skip', cat:'Performance Prep', pair:'A', sets:'1', reps:'2', distance:'10yd', pct:'75%', rest:':30', notes:'Reinforce sprint mechanics pre-game' },
+                { type:'speed', name:'2pt Start (LSV)', cat:'Performance Prep', pair:'B', sets:'2', reps:'1', distance:'10yd', pct:'85%', rest:'1:30', notes:'Sharp base-stealing simulation — 2 quality reps only' },
+                { type:'speed', name:'Shuffle To Sprint', cat:'Performance Prep', pair:'C', sets:'2', reps:'1', distance:'15yd', pct:'85%', rest:'1:30', notes:'Lateral first-step pattern — fielding activation' },
+              ]},
+              { blockType:'lift', label:'Arm Care & Core', exercises: [
+                { type:'lift', name:'Face Pull', cat:'Shoulder Complex', pair:'A', sets:'2', reps:'15', load:'Light', tempo:'31X1', rest:':30', notes:'Pre-game posterior cuff activation — always' },
+                { type:'lift', name:'Powell Raise', cat:'Shoulder Complex', pair:'A', sets:'2', reps:'12ea', load:'15%', tempo:'3110', rest:':30', notes:'Paired A — lower trap and posterior cuff; arm care protocol' },
+                { type:'lift', name:'Dead Bug', cat:'Core Anti-Extension', pair:'B', sets:'2', reps:'6ea', load:'BW', tempo:'3-1-3-1', rest:':30', notes:'Anti-extension pillar activation — maintain rotational stiffness' },
+                { type:'lift', name:'Pallof Press', cat:'Core Anti-Rotation', pair:'B', sets:'2', reps:'6ea', load:'Light', tempo:'15X0', rest:':30', notes:'Paired B — anti-rotation activation; reinforces lateral force transfer' },
+              ]},
+            ]},
+            { day:'Wed', type:'off', label:'OFF / Recovery', blocks:[] },
+            // THU — Lower emphasis
+            { day:'Thu', type:'lift', label:'Lower Maintenance', blocks: [
+              { blockType:'speed', label:'Speed Maintenance', exercises: [
+                { type:'speed', name:'2pt Start (LSV)', cat:'Performance Prep', pair:'A', sets:'3', reps:'1', distance:'10yd', pct:'90%', rest:'2:00', notes:'Maintain acceleration mechanics mid-season' },
+                { type:'speed', name:'Fly (variation)', cat:'Max Velocity Running', pair:'B', sets:'2', reps:'1', distance:'20yd', pct:'90%', rest:'3:00', notes:'Max V maintenance — 2 quality reps only; full recovery' },
+              ]},
+              { blockType:'lift', label:'Lower Body Maintenance', exercises: [
+                { type:'lift', name:'Front Squat', cat:'Squat Variations', pair:'A', sets:'3', reps:'4', load:'72%', tempo:'31X0', rest:'2:00', notes:'Maintain quad strength — lower volume; upright torso' },
+                { type:'lift', name:'Broad Jump W/Catch', cat:'LB Plyos', pair:'A', sets:'3', reps:'3', load:'BW', tempo:'00X0', rest:'2:00', notes:'Paired A — maintain horizontal power expression' },
+                { type:'lift', name:'Nordic Curl', cat:'Hamstring', pair:'B', sets:'3', reps:'4', load:'BW', tempo:'5000', rest:'2:00', notes:'IN-SEASON NON-NEGOTIABLE — hamstring protection through game schedule' },
+                { type:'lift', name:'Copenhagen Plank', cat:'Hip ABD_ADD', pair:'B', sets:'3', reps:'6ea', load:'BW', tempo:'25X0', rest:':45', notes:'Paired B — groin health priority in-season' },
+                { type:'lift', name:'Cable External Rotation', cat:'Shoulder Complex', pair:'C', sets:'3', reps:'15ea', load:'Light', tempo:'31X1', rest:':30', notes:'Arm care every session — non-negotiable' },
+                { type:'lift', name:'Landmine Rotations', cat:'Core Anti-Rotation', pair:'C', sets:'3', reps:'8ea', load:'30%', tempo:'00X0', rest:':30', notes:'Paired C — rotational core maintenance; mirrors batting pattern' },
+              ]},
+            ]},
+            { day:'Fri', type:'off', label:'OFF / Pre-Series Prep', blocks:[] },
+            { day:'Sat', type:'off', label:'GAME', blocks:[] },
+            { day:'Sun', type:'off', label:'GAME', blocks:[] },
+          ]
+        };
+      }),
+    },
+
+    // ─────────────────────────────────────────────────────────────
+    // DELOAD
+    // ─────────────────────────────────────────────────────────────
+    {
+      name: '🔃 Deload — Full Recovery Week',
+      phase: 'restore', weeks: 1, progression: 'linear',
+      athlete: '(Sandbox)',
+      weekData: [{
+        week: 1, isDeload: true,
+        label: 'Deload Week',
+        progMod: { sets:0.7, reps:0.85, load:0.7, label:'Deload' },
+        days: [
+          { day:'Mon', type:'lift', label:'Light Full Body', blocks: [
+            { blockType:'lift', label:'Movement Quality Block', exercises: [
+              { type:'lift', name:'Goblet Squat', cat:'Squat Variations', pair:'A', sets:'2', reps:'10', load:'40%', tempo:'31X1', rest:'1:00', notes:'Movement quality — feel the pattern, no grind; active recovery' },
+              { type:'lift', name:'Bb RDL', cat:'Deadlift Variations', pair:'A', sets:'2', reps:'8', load:'50%', tempo:'31X1', rest:'1:00', notes:'Paired A — keep posterior chain moving; light enough to feel good' },
+              { type:'lift', name:'DB Bench Press', cat:'UB Horizontal Push', pair:'B', sets:'2', reps:'10', load:'50%', tempo:'31X1', rest:'1:00', notes:'Movement, not stimulus; shoulder health priority' },
+              { type:'lift', name:'DB Single Arm Row', cat:'UB Horizontal Pull', pair:'B', sets:'2', reps:'10ea', load:'50%', tempo:'31X0', rest:'1:00', notes:'Paired B — lat and posterior chain flush' },
+              { type:'lift', name:'Cable External Rotation', cat:'Shoulder Complex', pair:'C', sets:'2', reps:'15ea', load:'Light', tempo:'31X1', rest:':30', notes:'Arm care — never skip even in deload' },
+              { type:'lift', name:'Dead Bug', cat:'Core Anti-Extension', pair:'C', sets:'2', reps:'6ea', load:'BW', tempo:'3-1-3-1', rest:':30', notes:'Paired C — pillar maintenance' },
+            ]},
+          ]},
+          { day:'Tue', type:'lift', label:'Light Speed / Mobility', blocks: [
+            { blockType:'speed', label:'Light Speed Work', exercises: [
+              { type:'speed', name:'A-Skip', cat:'Performance Prep', pair:'A', sets:'2', reps:'2', distance:'10yd', pct:'65%', rest:':45', notes:'70% max — technique focus only; no sprint fatigue' },
+              { type:'speed', name:'Tempo Runs', cat:'ESD', pair:'B', sets:'1', reps:'6', distance:'50yd', pct:'60%', rest:'1:00', notes:'Zone 1 — purely aerobic; flush lactate, move blood' },
+            ]},
+            { blockType:'lift', label:'Mobility', exercises: [
+              { type:'lift', cat:'Mobility', name:'Hip 90/90 Series', pair:'A', sets:'2', reps:'5ea', load:'BW', tempo:'', rest:':20', notes:'No rush — breathe into ranges' },
+              { type:'lift', cat:'Mobility', name:'World\'s Greatest Stretch', pair:'A', sets:'2', reps:'5ea', load:'BW', tempo:'3-1-3-0', rest:':20', notes:'Full range, feel good' },
+              { type:'lift', cat:'Mobility', name:'Jefferson Curls', pair:'A', sets:'2', reps:'5', load:'20%', tempo:'4-2-2-0', rest:':30', notes:'Very light; vertebra by vertebra' },
+            ]},
+          ]},
+          { day:'Wed', type:'off', label:'OFF / Walk / Swim', blocks:[] },
+          { day:'Thu', type:'lift', label:'Light Full Body', blocks: [
+            { blockType:'lift', label:'Movement Quality Block', exercises: [
+              { type:'lift', name:'Front Squat', cat:'Squat Variations', pair:'A', sets:'2', reps:'8', load:'45%', tempo:'31X1', rest:'1:00', notes:'Feel the pattern; elbows high, upright' },
+              { type:'lift', name:'Trap Bar Counter Movement Jump', cat:'Olympic Variations', pair:'A', sets:'2', reps:'3', load:'BW', tempo:'00X0', rest:'1:00', notes:'Paired A — light, reactive; keep nervous system engaged' },
+              { type:'lift', name:'Barbell Row', cat:'UB Horizontal Pull', pair:'B', sets:'2', reps:'10', load:'50%', tempo:'21X0', rest:'1:00', notes:'Posterior chain flush; feel the lat' },
+              { type:'lift', name:'Push Press', cat:'UB Vertical Push', pair:'B', sets:'2', reps:'6', load:'50%', tempo:'10X0', rest:'1:00', notes:'Paired B — maintain movement pattern' },
+              { type:'lift', name:'Nordic Curl', cat:'Hamstring', pair:'C', sets:'2', reps:'3', load:'BW', tempo:'5000', rest:'2:00', notes:'Reduced reps — maintain tissue; no accumulation' },
+              { type:'lift', name:'Copenhagen Plank', cat:'Hip ABD_ADD', pair:'C', sets:'2', reps:'5ea', load:'BW', tempo:'25X0', rest:':30', notes:'Paired C — adductor maintenance' },
+            ]},
+          ]},
+          { day:'Fri', type:'lift', label:'Mobility / Light ESD', blocks: [
+            { blockType:'lift', label:'Full Mobility Session', exercises: [
+              { type:'lift', cat:'Mobility', name:'Hip 90/90 Series', pair:'A', sets:'3', reps:'5ea', load:'BW', tempo:'', rest:':20' },
+              { type:'lift', cat:'Mobility', name:'World\'s Greatest Stretch', pair:'A', sets:'3', reps:'5ea', load:'BW', tempo:'3-1-3-0', rest:':20' },
+              { type:'lift', cat:'Mobility', name:'Half Kneeling Hip Flexor', pair:'B', sets:'2', reps:'30s', load:'', tempo:'', rest:':15' },
+              { type:'lift', cat:'Mobility', name:'T-Spine Wall Walks', pair:'B', sets:'2', reps:'8', load:'', tempo:'2-1-2-0', rest:':20' },
+              { type:'lift', cat:'Mobility', name:'Supine Hamstring P/R', pair:'C', sets:'2', reps:'30s', load:'BW', tempo:'', rest:':15' },
+              { type:'lift', cat:'Mobility', name:'Jefferson Curls', pair:'C', sets:'2', reps:'5', load:'20%', tempo:'4-2-2-0', rest:':30' },
+            ]},
+            { blockType:'speed', label:'Light ESD', exercises: [
+              { type:'speed', name:'Tempo Runs', cat:'ESD', pair:'A', sets:'1', reps:'6', distance:'50yd', pct:'60%', rest:'1:00', notes:'Zone 1 only — feel good, move well' },
+            ]},
+          ]},
+          { day:'Sat', type:'off', label:'OFF', blocks:[] },
+          { day:'Sun', type:'off', label:'OFF', blocks:[] },
+        ]
+      }],
+    },
+
+  ];
+
+  // Inject templates as drafts
+  var injected = 0;
+  templates.forEach(function(t) {
+    // Check if already exists
+    var exists = pbDrafts.find(function(d){ return d.name === t.name; });
+    if (exists) return;
+    pbDrafts.unshift({
+      id: Date.now() + injected,
+      name: t.name,
+      athlete: t.athlete,
+      pbState: {
+        athlete: t.athlete,
+        phase: t.phase,
+        weeks: t.weeks,
+        progression: t.progression,
+        activeWeek: 0,
+        weekData: t.weekData,
+      },
+      updated: Date.now(),
+    });
+    injected++;
+  });
+
+  try { localStorage.setItem(PB_DRAFTS_KEY, JSON.stringify(pbDrafts)); } catch(e) {}
+  renderPBDrafts();
+  showStatus('✅ Loaded ' + injected + ' phase templates into Saved Drafts — click Load & Edit to use');
 }
 
 function renderPBDrafts() {
