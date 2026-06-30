@@ -7765,15 +7765,32 @@ function showPushProgramModal(progId) {
     copy.isAssigned   = true;
     copy.created      = new Date().toISOString();
 
-    // Inject video URLs from EXERCISE_DB into pbState exercises
+    // Inject video URLs and calculate actual weights from 1RM data
     if (copy.pbState && copy.pbState.weekData) {
       copy.pbState.weekData.forEach(function(wk) {
         (wk.days||[]).forEach(function(day) {
           (day.blocks||[]).forEach(function(block) {
             (block.exercises||[]).forEach(function(ex) {
-              if (!ex.video && ex.name) {
-                var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
-                if (dbEx && dbEx.video) ex.video = dbEx.video;
+              if (!ex.name) return;
+              var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
+
+              // Video URL
+              if (!ex.video && dbEx && dbEx.video) ex.video = dbEx.video;
+
+              // Calculate actual lbs from % load using athlete's 1RM
+              if (ex.load && typeof ex.load === 'string' && ex.load.includes('%') && dbEx && dbEx.liftKey) {
+                var pctMatch = ex.load.match(/(\d+(?:\.\d+)?)/);
+                if (pctMatch) {
+                  var pct = parseFloat(pctMatch[1]);
+                  var oneRM = get1RM(player, dbEx.liftKey);
+                  if (oneRM) {
+                    var calcLbs = calcMROUND(pct, oneRM);
+                    if (calcLbs) {
+                      ex.calcWeight = calcLbs;        // numeric lbs for athlete page
+                      ex.calcWeightSource = dbEx.liftKey + ' 1RM: ' + oneRM + ' lbs';
+                    }
+                  }
+                }
               }
             });
           });
@@ -19865,15 +19882,26 @@ async function shareProgram(progId) {
 
   showStatus('⏳ Syncing…');
 
-  // Inject video URLs from EXERCISE_DB into pbState
+  // Inject video URLs and calculate actual weights from 1RM data
   if (prog.pbState && prog.pbState.weekData) {
+    var syncAthlete = prog.assignedTo || prog.athlete || athlete;
     prog.pbState.weekData.forEach(function(wk) {
       (wk.days||[]).forEach(function(day) {
         (day.blocks||[]).forEach(function(block) {
           (block.exercises||[]).forEach(function(ex) {
-            if (!ex.video && ex.name) {
-              var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
-              if (dbEx && dbEx.video) ex.video = dbEx.video;
+            if (!ex.name) return;
+            var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
+            if (!ex.video && dbEx && dbEx.video) ex.video = dbEx.video;
+            if (ex.load && typeof ex.load === 'string' && ex.load.includes('%') && dbEx && dbEx.liftKey) {
+              var pctMatch = ex.load.match(/(\d+(?:\.\d+)?)/);
+              if (pctMatch) {
+                var pct = parseFloat(pctMatch[1]);
+                var oneRM = get1RM(syncAthlete, dbEx.liftKey);
+                if (oneRM) {
+                  var calcLbs = calcMROUND(pct, oneRM);
+                  if (calcLbs) { ex.calcWeight = calcLbs; ex.calcWeightSource = dbEx.liftKey + ' 1RM: ' + oneRM + ' lbs'; }
+                }
+              }
             }
           });
         });
