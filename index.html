@@ -14248,6 +14248,9 @@ function pbOpenDay(weekIdx, dayIdx) {
       + '</div>';
   }
 
+  // ── Time under tension + session duration estimate (coach-only) ──
+  var timeSummary = pbCalcSessionTime(day);
+
   editor.innerHTML = '<div style="padding:14px;">'
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px;">'
     +'<div style="flex:1;min-width:200px;">'
@@ -14263,9 +14266,124 @@ function pbOpenDay(weekIdx, dayIdx) {
     +'<button onclick="pbClearDay()" style="padding:5px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:6px;color:var(--red);font-size:10px;cursor:pointer;" title="Clear all blocks from this day">🗑 Clear</button>'
     +'<button onclick="pbCloseEditor()" style="padding:5px 8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:10px;cursor:pointer;">✕</button>'
     +'</div></div>'
+    + timeSummary
     + blocksHtml
     + coverageSummary
     +'</div>';
+}
+
+// Calculate time-under-tension per set and total session duration — coach-only metric
+// Never surfaced on the athlete-facing program.html page
+function pbCalcSessionTime(day) {
+  var totalTUT = 0;        // seconds, sum of all working-set tension time
+  var totalRestSec = 0;    // seconds, sum of all rest periods
+  var totalSets = 0;
+  var blockBreakdown = [];
+
+  function parseTempo(tempo) {
+    // Tempo formats: "31X1", "3-1-3-0", "5000", "00X0" etc.
+    // X = explosive/fast (~0.3s), numbers = seconds per phase
+    if (!tempo) return null;
+    var clean = String(tempo).replace(/-/g, '');
+    if (clean.length < 3) return null;
+    var phases = clean.split('').map(function(c) {
+      if (c.toUpperCase() === 'X') return 0.3;
+      var n = parseInt(c);
+      return isNaN(n) ? 0 : n;
+    });
+    return phases.reduce(function(a,b){ return a+b; }, 0);
+  }
+
+  function parseRest(rest) {
+    // Formats: ":30", "1:00", "2:30", "90s", "10"
+    if (!rest) return 0;
+    var s = String(rest).trim();
+    if (s.includes(':')) {
+      var parts = s.split(':');
+      return (parseInt(parts[0])||0)*60 + (parseInt(parts[1])||0);
+    }
+    var n = parseInt(s);
+    return isNaN(n) ? 0 : (s.toLowerCase().includes('s') || n < 20 ? n : n);
+  }
+
+  function parseReps(reps) {
+    if (!reps) return 1;
+    var m = String(reps).match(/(\d+)/);
+    return m ? parseInt(m[1]) : 1;
+  }
+
+  function parseSets(sets) {
+    var n = parseInt(sets);
+    return isNaN(n) ? 1 : n;
+  }
+
+  (day.blocks||[]).forEach(function(block) {
+    if (block.blockType === 'session-header') return;
+    var blockTUT = 0, blockRest = 0, blockSets = 0;
+
+    (block.exercises||[]).filter(function(e){ return e.name; }).forEach(function(ex) {
+      var sets = parseSets(ex.sets);
+      var reps = parseReps(ex.reps);
+      var tempoSec = parseTempo(ex.tempo);
+      var restSec = parseRest(ex.rest);
+
+      blockSets += sets;
+
+      if (tempoSec) {
+        // TUT = tempo seconds per rep × reps × sets
+        blockTUT += tempoSec * reps * sets;
+      } else if (block.blockType === 'speed' || block.blockType === 'esd') {
+        // Speed work: estimate ~3-8s per rep based on distance, else skip
+        var distMatch = (ex.distance||'').match(/(\d+)/);
+        var distYds = distMatch ? parseInt(distMatch[1]) : 0;
+        var estSec = distYds ? Math.max(1, distYds * 0.15) : 3; // rough yd/sec estimate
+        blockTUT += estSec * reps * sets;
+      }
+
+      blockRest += restSec * sets;
+    });
+
+    totalTUT += blockTUT;
+    totalRestSec += blockRest;
+    totalSets += blockSets;
+
+    if (blockSets > 0) {
+      blockBreakdown.push({
+        label: block.label || block.blockType,
+        tut: blockTUT,
+        rest: blockRest,
+        sets: blockSets,
+      });
+    }
+  });
+
+  if (!totalSets) return '';
+
+  var totalSeconds = totalTUT + totalRestSec;
+  var totalMin = Math.round(totalSeconds / 60);
+  var tutMin = (totalTUT / 60).toFixed(1);
+
+  function fmtTime(sec) {
+    var m = Math.floor(sec/60), s = Math.round(sec%60);
+    return m > 0 ? m+'m '+s+'s' : s+'s';
+  }
+
+  var breakdownHtml = blockBreakdown.map(function(b) {
+    return '<span style="display:inline-block;margin-right:14px;">'
+      + '<span style="color:var(--text3);">'+b.label+':</span> '
+      + '<span style="color:#FCD34D;">'+fmtTime(b.tut)+' TUT</span>'
+      + '</span>';
+  }).join('');
+
+  return '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
+    + '<div style="display:flex;align-items:center;gap:6px;">'
+    + '<span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">⏱ Coach view only</span>'
+    + '</div>'
+    + '<div style="font-size:12px;color:var(--text2);"><b style="color:#fff;">'+totalMin+' min</b> est. total</div>'
+    + '<div style="font-size:12px;color:var(--text2);"><b style="color:#FCD34D;">'+tutMin+' min</b> time under tension</div>'
+    + '<div style="font-size:12px;color:var(--text2);"><b style="color:var(--blue-light);">'+totalSets+'</b> total sets</div>'
+    + (breakdownHtml ? '<div style="font-size:11px;width:100%;margin-top:4px;">'+breakdownHtml+'</div>' : '')
+    + '</div>';
 }
 
 function pbSetExCat(bi, ei, cat) {
