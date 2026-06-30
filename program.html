@@ -424,11 +424,16 @@ function updateRing(){
   document.getElementById('ring').style.strokeDashoffset=(82-pct*82).toFixed(2);
 }
 
+function loadDisplay(ex){
+  if(ex.calcWeight) return ex.calcWeight+' lbs ('+ex.load+')';
+  return ex.load;
+}
+
 function presc(ex){
   var p=[];
   if(ex.sets)p.push(ex.sets+'×');
   if(ex.reps)p.push(ex.reps);
-  if(ex.load)p.push(ex.load);
+  if(ex.load)p.push(loadDisplay(ex));
   if(ex.distance)p.push(ex.distance);
   if(ex.rest)p.push(ex.rest+' rest');
   return p.join(' ');
@@ -438,7 +443,7 @@ function pills(ex){
   var h='';
   if(ex.sets)h+='<span class="ep ep-sets">'+ex.sets+' sets</span>';
   if(ex.reps)h+='<span class="ep ep-reps">'+ex.reps+'</span>';
-  if(ex.load)h+='<span class="ep ep-load">'+ex.load+'</span>';
+  if(ex.load)h+='<span class="ep ep-load">'+(ex.calcWeight?'<b>'+ex.calcWeight+' lbs</b> · '+ex.load:ex.load)+'</span>';
   if(ex.distance)h+='<span class="ep ep-load">'+ex.distance+'</span>';
   if(ex.tempo&&ex.tempo!=='Tempo')h+='<span class="ep ep-tempo">'+ex.tempo+'</span>';
   if(ex.rest)h+='<span class="ep ep-rest">'+ex.rest+' rest</span>';
