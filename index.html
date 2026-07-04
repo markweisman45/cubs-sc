@@ -19834,10 +19834,28 @@ function rtpRenderDetail() {
 
   // Guard: reset currentPhase if out of bounds
   if (!p.phases || !p.phases.length) {
-    el.innerHTML = '<div style="color:#f87171;padding:20px;">No phases found in protocol. Please recreate it.</div>';
+    el.innerHTML = '<div style="color:#f87171;padding:20px;">No phases found. Please recreate the protocol.</div>';
     return;
   }
   if (p.currentPhase >= p.phases.length || p.currentPhase < 0) p.currentPhase = 0;
+
+  // Migrate old phase data — ensure all required fields exist
+  p.phases.forEach(function(ph) {
+    if (!ph.criteria)        ph.criteria        = [];
+    if (!ph.exercises)       ph.exercises       = [];
+    if (!ph.workloadLog)     ph.workloadLog     = [];
+    if (!ph.plannedWorkload) ph.plannedWorkload = [];
+    if (ph.linkedProgramId  === undefined) ph.linkedProgramId   = null;
+    if (ph.linkedProgramName=== undefined) ph.linkedProgramName = null;
+    if (!ph.workload) ph.workload = { run:[0,1], throw:[0,1], swing:[0,1], lift:[0,1] };
+    if (!ph.color)   ph.color    = '#6BA3F8';
+    if (!ph.name)    ph.name     = 'Phase ' + (ph.index + 1);
+    if (!ph.status)  ph.status   = 'active';
+  });
+  rtpSave();
+
+  // Declare phase BEFORE building any HTML that references it
+  var phase = p.phases[p.currentPhase] || p.phases[0];
 
   var daysIn = Math.floor((Date.now() - new Date(p.created).getTime()) / 86400000);
   var injDate = p.injuryDate ? new Date(p.injuryDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
@@ -19855,6 +19873,7 @@ function rtpRenderDetail() {
     + '<button onclick="rtpPlanWorkload()" style="padding:6px 12px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);border-radius:6px;color:#60a5fa;font-size:11px;font-weight:600;cursor:pointer;">📅 Plan Week</button>'
     + '<button onclick="rtpLinkProgram()" style="padding:6px 12px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:6px;color:#a78bfa;font-size:11px;font-weight:600;cursor:pointer;">🔗 Link Program</button>'
     + (phase.linkedProgramId ? '<button onclick="rtpAssignLinkedProgram()" style="padding:6px 12px;background:rgba(252,211,77,0.15);border:1px solid rgba(252,211,77,0.3);border-radius:6px;color:#fcd34d;font-size:11px;font-weight:600;cursor:pointer;">👤 Assign: '+phase.linkedProgramName+'</button>' : '')
+    + '<button onclick="rtpDeleteProtocol()" style="padding:6px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:6px;color:#f87171;font-size:11px;cursor:pointer;">🗑 Delete</button>'
     + '<button onclick="rtpClearProtocol()" style="padding:6px 12px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:6px;color:#a78bfa;font-size:11px;cursor:pointer;">✓ Clear</button>'
     + '</div>'
     + '</div>';
@@ -19873,8 +19892,6 @@ function rtpRenderDetail() {
   html += '</div></div>';
 
   // Active phase detail
-  var phase = p.phases[p.currentPhase] || p.phases[0];
-  if (!phase) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Phase data missing — try recreating the protocol.</div>'; return; }
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">';
 
   // Criteria checklist
@@ -20042,6 +20059,18 @@ function rtpSelectPhase(idx) {
   if (!p || p.phases[idx].status === 'locked') return;
   p.currentPhase = idx;
   rtpRenderDetail();
+}
+
+function rtpDeleteProtocol() {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  if (!confirm('Delete this protocol for ' + p.athlete + '? This cannot be undone.')) return;
+  RTP_DATA[p.athlete] = (RTP_DATA[p.athlete] || []).filter(function(pr){ return pr.id !== p.id; });
+  RTP_ACTIVE_PROTOCOL = null;
+  rtpSave();
+  rtpRenderLists();
+  document.getElementById('rtp-detail').innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text3);"><div style="font-size:40px;margin-bottom:12px;">🩺</div><div>Protocol deleted</div></div>';
+  showStatus('Protocol deleted');
 }
 
 function rtpClearProtocol() {
