@@ -19676,7 +19676,8 @@ function rtpCreateProtocol(btn) {
 function rtpPlanWorkload() {
   var p = RTP_ACTIVE_PROTOCOL;
   if (!p) return;
-  var phase = p.phases[p.currentPhase];
+  var phase = p.phases[p.currentPhase] || p.phases[0];
+  if (!phase) { showStatus("Phase data missing"); return; }
 
   // Generate next 7 days of planned workload
   var modal = document.createElement('div');
@@ -19829,6 +19830,14 @@ function rtpRenderDetail() {
   var p = RTP_ACTIVE_PROTOCOL;
   if (!p) return;
   var el = document.getElementById('rtp-detail');
+  if (!el) return;
+
+  // Guard: reset currentPhase if out of bounds
+  if (!p.phases || !p.phases.length) {
+    el.innerHTML = '<div style="color:#f87171;padding:20px;">No phases found in protocol. Please recreate it.</div>';
+    return;
+  }
+  if (p.currentPhase >= p.phases.length || p.currentPhase < 0) p.currentPhase = 0;
 
   var daysIn = Math.floor((Date.now() - new Date(p.created).getTime()) / 86400000);
   var injDate = p.injuryDate ? new Date(p.injuryDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
@@ -19864,7 +19873,8 @@ function rtpRenderDetail() {
   html += '</div></div>';
 
   // Active phase detail
-  var phase = p.phases[p.currentPhase];
+  var phase = p.phases[p.currentPhase] || p.phases[0];
+  if (!phase) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Phase data missing — try recreating the protocol.</div>'; return; }
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">';
 
   // Criteria checklist
