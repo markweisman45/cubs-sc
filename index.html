@@ -19476,11 +19476,21 @@ function rtpInit() {
 
 function rtpSelectAthlete(name) {
   RTP_ACTIVE_ATHLETE = name;
+  RTP_ACTIVE_PROTOCOL = null;
   rtpRenderLists();
-  // If athlete has protocols, open the most recent active one
+  if (!name) return;
   var protocols = (RTP_DATA[name] || []).filter(function(p){ return p.status === 'active'; });
-  if (protocols.length) rtpOpenProtocol(name, protocols[0].id);
-  else document.getElementById('rtp-detail').innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text3);"><div style="font-size:36px;margin-bottom:12px;">🩺</div><div>No active protocols for '+name+'</div><div style="font-size:11px;margin-top:8px;"><button onclick="rtpNewProtocol()" style="padding:7px 16px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#f87171;font-size:12px;font-weight:700;cursor:pointer;">＋ Create Protocol</button></div></div>';
+  if (protocols.length) {
+    rtpOpenProtocol(name, protocols[0].id);
+  } else {
+    document.getElementById('rtp-detail').innerHTML =
+      '<div style="text-align:center;padding:60px 20px;color:var(--text3);">'
+      + '<div style="font-size:36px;margin-bottom:12px;">🩺</div>'
+      + '<div style="font-size:14px;color:var(--text2);">No active protocols for '+name+'</div>'
+      + '<div style="font-size:11px;margin-top:12px;">'
+      + '<button onclick="rtpNewProtocol()" style="padding:8px 18px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#f87171;font-size:12px;font-weight:700;cursor:pointer;">＋ Create Protocol</button>'
+      + '</div></div>';
+  }
 }
 
 function rtpRenderLists() {
@@ -19808,8 +19818,8 @@ function rtpAssignLinkedProgram() {
 function rtpOpenProtocol(athlete, id) {
   RTP_ACTIVE_ATHLETE = athlete;
   var protocols = RTP_DATA[athlete] || [];
-  var protocol = protocols.find(function(p){ return p.id === id; });
-  if (!protocol) return;
+  var protocol = protocols.find(function(p){ return String(p.id) === String(id); });
+  if (!protocol) { console.warn('[rtpOpenProtocol] not found:', athlete, id); return; }
   RTP_ACTIVE_PROTOCOL = protocol;
   rtpRenderLists();
   rtpRenderDetail();
