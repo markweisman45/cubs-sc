@@ -19210,6 +19210,223 @@ var RTP_DATA = {}; // { athleteName: [ protocol, ... ] }
 var RTP_ACTIVE_PROTOCOL = null;
 var RTP_ACTIVE_ATHLETE = null;
 
+// ── Injury-specific protocol library ────────────────────────
+var RTP_INJURY_PROTOCOLS = {
+
+  'Hamstring Strain (Grade I)': {
+    structure: 'Biceps femoris / semimembranosus — distal musculotendinous junction',
+    mechanism: 'Sprinting', severity: 'Grade I — Mild',
+    phases: [
+      { name:'Phase 1 — Acute', days:3, color:'#f87171',
+        workload:{ run:[0,0.2], throw:[0,1.0], swing:[0,1.0], lift:[0,0.5] },
+        criteria:['Pain at rest ≤ 1/10','No pain on passive SL raise','No significant bruising or swelling'],
+        exercises:['Hip 90/90 Series','Supine Hamstring P/R','Prone Y Raise','Dead Bug','Sled March (light)'] },
+      { name:'Phase 2 — Restore ROM & Tissue Tolerance', days:7, color:'#fb923c',
+        workload:{ run:[0,0.3], throw:[0,1.0], swing:[0,1.0], lift:[0.3,0.6] },
+        criteria:['Full pain-free passive ROM','SL bridge pain-free','Isometric hamstring ≥ 70% contralateral'],
+        exercises:['Nordic Curl (eccentric only 3s)','SL Bridge','Reverse Nordic','Hamstring Curl (prone machine)','Jefferson Curls'] },
+      { name:'Phase 3 — Strength Re-establishment', days:10, color:'#fcd34d',
+        workload:{ run:[0.3,0.6], throw:[0,1.0], swing:[0,1.0], lift:[0.6,0.9] },
+        criteria:['Nordic Curl ≥ 80% contralateral','SL RDL pain-free to full ROM','Jogging pain-free at 60%'],
+        exercises:['Nordic Curl','SL BB RDL','Hamstring Curl (prone machine)','GHR','Copenhagen Plank'] },
+      { name:'Phase 4 — Speed Re-introduction', days:7, color:'#4ade80',
+        workload:{ run:[0.5,0.8], throw:[0,1.0], swing:[0,1.0], lift:[0.8,1.0] },
+        criteria:['A-Skip and B-Skip pain-free','Running at 75% pain-free','No apprehension at speed'],
+        exercises:['Dribbles (Ankle)','A-Skip','B-Skip','Wickets (75%)','Nordic Curl','SL RDL'] },
+      { name:'Phase 5 — Return to Full Speed', days:5, color:'#60a5fa',
+        workload:{ run:[0.8,1.1], throw:[0,1.0], swing:[0,1.0], lift:[0.9,1.1] },
+        criteria:['Sprint velocity ≥ 95% baseline','Fly runs pain-free','Cleared by physician'],
+        exercises:['Full speed work protocol','Nordic Curl','Full lift program'] },
+    ]
+  },
+
+  'Hamstring Strain (Grade II)': {
+    structure: 'Biceps femoris — proximal musculotendinous junction',
+    mechanism: 'Sprinting', severity: 'Grade II — Moderate',
+    phases: [
+      { name:'Phase 1 — Acute / Protection', days:5, color:'#f87171',
+        workload:{ run:[0,0], throw:[0,1.0], swing:[0,0.8], lift:[0,0.4] },
+        criteria:['Pain at rest ≤ 2/10','Walking pain-free','Physician cleared for loading'],
+        exercises:['Isometric hamstring (submaximal)','Hip 90/90 Series','Dead Bug','Pallof Press','Upper body only lift'] },
+      { name:'Phase 2 — Tissue Remodeling', days:10, color:'#fb923c',
+        workload:{ run:[0,0.2], throw:[0,1.0], swing:[0,0.9], lift:[0.3,0.6] },
+        criteria:['SL bridge pain-free','Prone hamstring curl pain-free','Isometric ≥ 60% contralateral'],
+        exercises:['Nordic Curl (eccentric only)','SL Bridge','Prone Hamstring Curl','Jefferson Curls','Reverse Hyper'] },
+      { name:'Phase 3 — Strength Re-establishment', days:14, color:'#fcd34d',
+        workload:{ run:[0.2,0.5], throw:[0,1.0], swing:[0,1.0], lift:[0.6,0.9] },
+        criteria:['Nordic Curl ≥ 75% contralateral','SL RDL full ROM pain-free','Jogging at 60% pain-free'],
+        exercises:['Nordic Curl','GHR','SL BB RDL','Hamstring Curl (prone machine)','Copenhagen Plank'] },
+      { name:'Phase 4 — Progressive Speed', days:10, color:'#4ade80',
+        workload:{ run:[0.4,0.7], throw:[0,1.0], swing:[0,1.0], lift:[0.8,1.0] },
+        criteria:['Running 75% pain-free 3 sessions','A/B-Skip pain-free','No apprehension'],
+        exercises:['Dribbles (Ankle)','A-Skip','B-Skip','Power Skips- Height','Wickets (75%)'] },
+      { name:'Phase 5 — Sport-Specific Speed', days:7, color:'#a78bfa',
+        workload:{ run:[0.7,1.0], throw:[0,1.0], swing:[0,1.0], lift:[0.9,1.1] },
+        criteria:['Sprint velocity ≥ 90% baseline','Base running cleared','Physician clearance'],
+        exercises:['Full sprint protocol','Sprint-Cut-Decel','Nordic Curl','Full program'] },
+      { name:'Phase 6 — Return to Competition', days:5, color:'#c4b5fd',
+        workload:{ run:[0.9,1.2], throw:[0,1.0], swing:[0,1.0], lift:[0.9,1.2] },
+        criteria:['Game speed achieved','No hesitation or guarding','Medical staff clearance'],
+        exercises:['Full program + game prep'] },
+    ]
+  },
+
+  'UCL Sprain (Non-surgical)': {
+    structure: 'Ulnar collateral ligament — medial elbow',
+    mechanism: 'Throwing', severity: 'Grade II — Moderate',
+    phases: [
+      { name:'Phase 1 — Acute / Rest', days:14, color:'#f87171',
+        workload:{ run:[0,1.0], throw:[0,0], swing:[0,0.5], lift:[0,0.6] },
+        criteria:['Pain at rest ≤ 1/10','No valgus stress pain','Physician cleared for light activity'],
+        exercises:['Full lower body program','No throwing','Tee work if pain-free','Cable External Rotation (light)','Face Pull'] },
+      { name:'Phase 2 — Restore Strength', days:21, color:'#fb923c',
+        workload:{ run:[0,1.0], throw:[0,0], swing:[0,0.8], lift:[0.4,0.8] },
+        criteria:['Full elbow ROM','Grip strength ≥ 85% contralateral','Wrist flexion/extension pain-free'],
+        exercises:['Wrist flexion/extension','Pronation/supination','Grip work','Full lower body program','Light toss (flat ground) if physician clears'] },
+      { name:'Phase 3 — Interval Throwing Phase 1', days:21, color:'#fcd34d',
+        workload:{ run:[0,1.0], throw:[0.2,0.5], swing:[0,0.9], lift:[0.6,1.0] },
+        criteria:['45-ft throws pain-free','60-ft throws pain-free','No medial elbow pain post-session'],
+        exercises:['Interval throwing 45–90 ft','Band External Rotation','Powell Raise','Face Pull','Full program'] },
+      { name:'Phase 4 — Interval Throwing Phase 2', days:21, color:'#4ade80',
+        workload:{ run:[0,1.0], throw:[0.5,0.8], swing:[0,1.0], lift:[0.8,1.0] },
+        criteria:['120-ft throws pain-free','Velocity ≥ 80% baseline','Post-throw soreness ≤ 2/10'],
+        exercises:['Interval throwing 90–120 ft','Weighted ball program (physician guided)','Full lift'] },
+      { name:'Phase 5 — Live BP / Bullpen', days:14, color:'#60a5fa',
+        workload:{ run:[0,1.0], throw:[0.8,1.1], swing:[0,1.0], lift:[0.8,1.0] },
+        criteria:['Full velocity pain-free','Live BP/bullpen cleared','No instability symptoms'],
+        exercises:['Full throwing program','Full lift','Game prep'] },
+      { name:'Phase 6 — Return to Competition', days:7, color:'#a78bfa',
+        workload:{ run:[0,1.0], throw:[0.9,1.2], swing:[0,1.0], lift:[0.9,1.2] },
+        criteria:['Physician clearance','Game velocity achieved','Player confidence ≥ 8/10'],
+        exercises:['Full competition readiness'] },
+    ]
+  },
+
+  'Oblique Strain': {
+    structure: 'Internal / external oblique — throwing side',
+    mechanism: 'Swinging', severity: 'Grade II — Moderate',
+    phases: [
+      { name:'Phase 1 — Acute / Protection', days:7, color:'#f87171',
+        workload:{ run:[0,0.5], throw:[0,0], swing:[0,0], lift:[0,0.4] },
+        criteria:['Pain with cough/sneeze ≤ 2/10','Side bend pain-free','Physician cleared'],
+        exercises:['Walking','Upper body (bilateral only)','No rotation','Dead Bug (modified)'] },
+      { name:'Phase 2 — Restore Rotation Tolerance', days:10, color:'#fb923c',
+        workload:{ run:[0,0.7], throw:[0,0], swing:[0,0.3], lift:[0.3,0.6] },
+        criteria:['Full pain-free rotation ROM','Pallof press pain-free','Jogging pain-free'],
+        exercises:['Pallof Press','Dead Bug','Side Plank (modified)','Half Kneeling Cable Chop'] },
+      { name:'Phase 3 — Progressive Rotation Load', days:10, color:'#fcd34d',
+        workload:{ run:[0.5,0.8], throw:[0,0.3], swing:[0.3,0.6], lift:[0.6,0.9] },
+        criteria:['Tee work pain-free','Landmine rotation pain-free','Running 75% pain-free'],
+        exercises:['Landmine Rotations','MB Side Toss (light)','Tee work','Full lower body'] },
+      { name:'Phase 4 — Sport-Specific Loading', days:10, color:'#4ade80',
+        workload:{ run:[0.8,1.1], throw:[0,0.6], swing:[0.6,0.9], lift:[0.8,1.0] },
+        criteria:['Front toss pain-free','MB side toss at full effort pain-free','Sprint pain-free'],
+        exercises:['MB Side Toss (full)','Front toss','Full sprint protocol','Full lift'] },
+      { name:'Phase 5 — Return to Competition', days:5, color:'#60a5fa',
+        workload:{ run:[0.9,1.2], throw:[0,1.0], swing:[0.9,1.2], lift:[0.9,1.2] },
+        criteria:['Live BP pain-free','Full swing effort pain-free','Physician clearance'],
+        exercises:['Full competition readiness'] },
+    ]
+  },
+
+  'Knee — Patellar Tendinopathy': {
+    structure: 'Patellar tendon — mid-substance',
+    mechanism: 'Overuse', severity: 'Grade II — Moderate',
+    phases: [
+      { name:'Phase 1 — Load Reduction', days:7, color:'#f87171',
+        workload:{ run:[0,0.4], throw:[0,1.0], swing:[0,1.0], lift:[0.2,0.5] },
+        criteria:['Pain after activity ≤ 3/10','Morning stiffness improving','Isometric holds pain ≤ 3/10'],
+        exercises:['Isometric leg press hold (70°)','Spanish squat isometric','Bike (low resistance)','Upper body full'] },
+      { name:'Phase 2 — Isotonic Loading', days:14, color:'#fb923c',
+        workload:{ run:[0,0.5], throw:[0,1.0], swing:[0,1.0], lift:[0.4,0.7] },
+        criteria:['VISA-P ≥ 60','Single leg press pain ≤ 2/10','Daily pain ≤ 2/10'],
+        exercises:['Slow SL leg press (3s ecc)','Step down (slow)','Goblet Squat','Nordic Curl','Full UB'] },
+      { name:'Phase 3 — Heavy Slow Resistance', days:14, color:'#fcd34d',
+        workload:{ run:[0.3,0.6], throw:[0,1.0], swing:[0,1.0], lift:[0.6,0.9] },
+        criteria:['SL squat pain-free','Running 50% pain-free','VISA-P ≥ 70'],
+        exercises:['SL Leg Press','Petersen Step-Up','RFE Split Squat (slow)','Nordic Curl','Jogging protocol'] },
+      { name:'Phase 4 — Plyometric Integration', days:14, color:'#4ade80',
+        workload:{ run:[0.5,0.8], throw:[0,1.0], swing:[0,1.0], lift:[0.8,1.0] },
+        criteria:['SL hop test ≥ 85% contralateral','Running 75% pain-free','CMJ LSI ≥ 85%'],
+        exercises:['Pogo Jumps','Broad Jump','Box Jump (low)','Full sprint progression','Full program'] },
+      { name:'Phase 5 — Return to Full Load', days:10, color:'#60a5fa',
+        workload:{ run:[0.8,1.2], throw:[0,1.0], swing:[0,1.0], lift:[0.9,1.2] },
+        criteria:['Full sprint pain-free','VISA-P ≥ 80','Physician clearance'],
+        exercises:['Full program + game prep'] },
+    ]
+  },
+
+  'Ankle Sprain (Lateral)': {
+    structure: 'ATFL / CFL — lateral ankle complex',
+    mechanism: 'Non-contact deceleration', severity: 'Grade II — Moderate',
+    phases: [
+      { name:'Phase 1 — Acute / PRICE', days:5, color:'#f87171',
+        workload:{ run:[0,0], throw:[0,1.0], swing:[0,0.8], lift:[0,0.4] },
+        criteria:['Swelling reducing','Weight bearing pain-free','ROM improving'],
+        exercises:['Ankle pumps','Alphabet ankle circles','Seated calf raises','Upper body full','Pool walking if available'] },
+      { name:'Phase 2 — Restore ROM & Strength', days:7, color:'#fb923c',
+        workload:{ run:[0,0.2], throw:[0,1.0], swing:[0,0.9], lift:[0.3,0.6] },
+        criteria:['Full ROM','SL balance 30s eyes closed','Calf raise pain-free'],
+        exercises:['SL Calf Raise (slant board)','Ant Tib Wall Raises','Band Hip Abduction','Lower body lift (modified)'] },
+      { name:'Phase 3 — Proprioception & Strength', days:7, color:'#fcd34d',
+        workload:{ run:[0.3,0.6], throw:[0,1.0], swing:[0,1.0], lift:[0.6,0.9] },
+        criteria:['SL hop test pain-free','Lateral shuffle pain-free','Jogging pain-free'],
+        exercises:['SL Lateral Hop','SL Medial Hop','Lateral Shuffle','Carioca','Full lift program'] },
+      { name:'Phase 4 — Speed & Agility', days:5, color:'#4ade80',
+        workload:{ run:[0.7,1.0], throw:[0,1.0], swing:[0,1.0], lift:[0.8,1.0] },
+        criteria:['Sprint pain-free','COD drills pain-free','Physician clearance'],
+        exercises:['Full sprint protocol','8 Vector Cuts','Sprint-Cut-Decel','Full program'] },
+      { name:'Phase 5 — Return to Competition', days:3, color:'#60a5fa',
+        workload:{ run:[0.9,1.2], throw:[0,1.0], swing:[0,1.0], lift:[0.9,1.2] },
+        criteria:['Full game speed','Braced or taped cleared','Medical clearance'],
+        exercises:['Full competition readiness'] },
+    ]
+  },
+
+  'Hip Flexor Strain': {
+    structure: 'Iliopsoas / rectus femoris',
+    mechanism: 'Sprinting', severity: 'Grade I — Mild',
+    phases: [
+      { name:'Phase 1 — Acute', days:4, color:'#f87171',
+        workload:{ run:[0,0.2], throw:[0,1.0], swing:[0,0.9], lift:[0,0.4] },
+        criteria:['Pain with resisted hip flexion ≤ 2/10','Walking pain-free'],
+        exercises:['Isometric hip flexor','Dead Bug','SL Bridge','Upper body full'] },
+      { name:'Phase 2 — Restore Strength', days:7, color:'#fb923c',
+        workload:{ run:[0.2,0.5], throw:[0,1.0], swing:[0,1.0], lift:[0.4,0.7] },
+        criteria:['Resisted hip flexion pain-free','HK hip flexor stretch pain-free','Jogging pain-free'],
+        exercises:['Half Kneeling Hip Flexor','SL March','Hanging Crunch','Nordic Curl','Lower body program'] },
+      { name:'Phase 3 — Progressive Speed', days:7, color:'#4ade80',
+        workload:{ run:[0.5,0.9], throw:[0,1.0], swing:[0,1.0], lift:[0.7,1.0] },
+        criteria:['Sprint at 85% pain-free','A-Skip pain-free','Full sprint pain-free'],
+        exercises:['A-Skip','Power Skips','2pt Start','Sprint protocol','Full program'] },
+    ]
+  },
+
+  'Low Back — Lumbar Strain': {
+    structure: 'Lumbar paraspinals / QL',
+    mechanism: 'Swinging', severity: 'Grade I — Mild',
+    phases: [
+      { name:'Phase 1 — Acute', days:5, color:'#f87171',
+        workload:{ run:[0,0.4], throw:[0,0.8], swing:[0,0], lift:[0,0.3] },
+        criteria:['Pain at rest ≤ 2/10','Walking pain-free','Flexion/extension improving'],
+        exercises:['Dead Bug','Bird Dog','Hip 90/90 Series','Walking','No rotation'] },
+      { name:'Phase 2 — Stability & Mobility', days:10, color:'#fb923c',
+        workload:{ run:[0.3,0.6], throw:[0,0.9], swing:[0,0.4], lift:[0.3,0.6] },
+        criteria:['Full ROM pain-free','Pallof press pain-free','No radicular symptoms'],
+        exercises:['Dead Bug','Pallof Press','Jefferson Curls (light)','Goblet Squat','Nordic Curl'] },
+      { name:'Phase 3 — Progressive Loading', days:10, color:'#fcd34d',
+        workload:{ run:[0.6,0.9], throw:[0,1.0], swing:[0.4,0.7], lift:[0.6,0.9] },
+        criteria:['Tee work pain-free','Deadlift pattern pain-free','Jogging pain-free'],
+        exercises:['Bb RDL','Landmine Rotations','MB Side Toss (light)','Full lower body'] },
+      { name:'Phase 4 — Return to Full Activity', days:7, color:'#4ade80',
+        workload:{ run:[0.8,1.1], throw:[0,1.0], swing:[0.7,1.0], lift:[0.8,1.0] },
+        criteria:['Full swing effort pain-free','Full speed pain-free','Physician clearance'],
+        exercises:['Full program + game prep'] },
+    ]
+  },
+
+};
+
 var RTP_PHASE_TEMPLATES = [
   { name:'Phase 1 — Acute / Protection',       days:5,  color:'#f87171',
     workload:{ run:[0,0.3], throw:[0,0], swing:[0,0.2], lift:[0,0.4] },
@@ -19314,29 +19531,43 @@ function rtpRenderLists() {
 function rtpNewProtocol() {
   if (!RTP_ACTIVE_ATHLETE) { showStatus('Select an athlete first'); return; }
 
+  var injuryOptions = Object.keys(RTP_INJURY_PROTOCOLS).map(function(k) {
+    return '<option value="'+k+'">'+k+'</option>';
+  }).join('');
+
   var modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:460px;max-width:95vw;">'
-    + '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:16px;">🩺 New RTP Protocol — '+RTP_ACTIVE_ATHLETE+'</div>'
-    + '<div style="display:flex;flex-direction:column;gap:12px;">'
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;';
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:480px;max-width:95vw;margin:20px auto;">'
+    + '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:4px;">🩺 New RTP Protocol — '+RTP_ACTIVE_ATHLETE+'</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Select an injury template or build custom</div>'
+
+    + '<div style="margin-bottom:14px;">'
+    + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Injury Template</label>'
+    + '<select id="rtp-template-sel" onchange="rtpFillTemplate(this.value)" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;">'
+    + '<option value="">— Custom (no template) —</option>'
+    + injuryOptions
+    + '</select></div>'
+
+    + '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;margin-bottom:14px;" id="rtp-template-preview" style="display:none;"></div>'
+
+    + '<div style="display:flex;flex-direction:column;gap:10px;">'
     + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Injury / Diagnosis</label>'
     + '<input id="rtp-new-injury" placeholder="e.g. Left hamstring strain Grade II" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;"></div>'
     + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Structure Involved</label>'
-    + '<input id="rtp-new-structure" placeholder="e.g. Biceps femoris, proximal musculotendinous junction" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;"></div>'
+    + '<input id="rtp-new-structure" placeholder="e.g. Biceps femoris, proximal MTJ" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
     + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Mechanism</label>'
-    + '<select id="rtp-new-mechanism" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;">'
+    + '<select id="rtp-new-mechanism" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;">'
     + '<option>Sprinting</option><option>Throwing</option><option>Swinging</option><option>Contact</option><option>Overuse</option><option>Non-contact deceleration</option><option>Other</option>'
     + '</select></div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
     + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Severity</label>'
-    + '<select id="rtp-new-severity" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;">'
+    + '<select id="rtp-new-severity" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;">'
     + '<option>Grade I — Mild</option><option>Grade II — Moderate</option><option>Grade III — Severe</option><option>Post-surgical</option>'
-    + '</select></div>'
+    + '</select></div></div>'
     + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Date of Injury</label>'
     + '<input id="rtp-new-date" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;"></div>'
-    + '</div>'
-    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Notes</label>'
-    + '<textarea id="rtp-new-notes" rows="2" placeholder="Team physician, PT, any restrictions..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;resize:none;"></textarea></div>'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Notes (physician, PT, restrictions)</label>'
+    + '<textarea id="rtp-new-notes" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;resize:none;"></textarea></div>'
     + '</div>'
     + '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">'
     + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:8px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
@@ -19346,7 +19577,35 @@ function rtpNewProtocol() {
   modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
 }
 
+function rtpFillTemplate(key) {
+  var preview = document.getElementById('rtp-template-preview');
+  if (!key || !RTP_INJURY_PROTOCOLS[key]) {
+    if (preview) preview.innerHTML = '';
+    return;
+  }
+  var tmpl = RTP_INJURY_PROTOCOLS[key];
+  // Fill fields
+  document.getElementById('rtp-new-injury').value    = key;
+  document.getElementById('rtp-new-structure').value = tmpl.structure || '';
+  document.getElementById('rtp-new-mechanism').value = tmpl.mechanism || 'Sprinting';
+  document.getElementById('rtp-new-severity').value  = tmpl.severity  || 'Grade II — Moderate';
+
+  // Preview phases
+  if (preview) {
+    preview.innerHTML = '<div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:8px;">'+tmpl.phases.length+'-phase protocol preview:</div>'
+      + tmpl.phases.map(function(ph, i) {
+          return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">'
+            + '<div style="width:8px;height:8px;border-radius:50%;background:'+ph.color+';flex-shrink:0;"></div>'
+            + '<div style="font-size:11px;color:var(--text);flex:1;">'+ph.name+'</div>'
+            + '<div style="font-size:10px;color:var(--text3);">~'+ph.days+' days</div>'
+            + '</div>';
+        }).join('');
+    preview.style.display = '';
+  }
+}
+
 function rtpCreateProtocol(btn) {
+  var templateKey = document.getElementById('rtp-template-sel').value;
   var injury    = document.getElementById('rtp-new-injury').value.trim();
   var structure = document.getElementById('rtp-new-structure').value.trim();
   var mechanism = document.getElementById('rtp-new-mechanism').value;
@@ -19355,6 +19614,11 @@ function rtpCreateProtocol(btn) {
   var notes     = document.getElementById('rtp-new-notes').value.trim();
 
   if (!injury) { showStatus('Enter injury/diagnosis'); return; }
+
+  // Use injury-specific template phases if selected, else generic
+  var phaseDefs = templateKey && RTP_INJURY_PROTOCOLS[templateKey]
+    ? RTP_INJURY_PROTOCOLS[templateKey].phases
+    : RTP_PHASE_TEMPLATES;
 
   var protocol = {
     id:           Date.now().toString(),
@@ -19365,21 +19629,25 @@ function rtpCreateProtocol(btn) {
     severity:     severity,
     injuryDate:   date,
     notes:        notes,
+    templateKey:  templateKey || null,
     created:      new Date().toISOString(),
     status:       'active',
     currentPhase: 0,
-    phases: RTP_PHASE_TEMPLATES.map(function(t, i) {
+    phases: phaseDefs.map(function(t, i) {
       return {
-        index:    i,
-        name:     t.name,
-        color:    t.color,
-        days:     t.days,
-        workload: JSON.parse(JSON.stringify(t.workload)),
-        criteria: t.criteria.map(function(c){ return { text:c, met:false, metAt:null, notes:'' }; }),
-        status:   i === 0 ? 'active' : 'locked',
-        startedAt: i === 0 ? new Date().toISOString() : null,
+        index:       i,
+        name:        t.name,
+        color:       t.color,
+        days:        t.days,
+        workload:    JSON.parse(JSON.stringify(t.workload)),
+        criteria:    (t.criteria||[]).map(function(c){ return { text:c, met:false, metAt:null, notes:'' }; }),
+        exercises:   t.exercises || [],
+        status:      i === 0 ? 'active' : 'locked',
+        startedAt:   i === 0 ? new Date().toISOString() : null,
         completedAt: null,
-        workloadLog: [], // [{date, run, throw, swing, lift, rpe, notes}]
+        workloadLog: [],
+        linkedProgramId: null,
+        plannedWorkload: [], // [{date, run, throw, swing, lift, notes}]
       };
     }),
   };
@@ -19391,7 +19659,150 @@ function rtpCreateProtocol(btn) {
   btn.closest('div[style*="fixed"]').remove();
   rtpRenderLists();
   rtpOpenProtocol(RTP_ACTIVE_ATHLETE, protocol.id);
-  showStatus('✅ RTP protocol created for ' + RTP_ACTIVE_ATHLETE);
+  showStatus('✅ RTP protocol created for ' + RTP_ACTIVE_ATHLETE + (templateKey ? ' — ' + templateKey : ''));
+}
+
+// ── Workload Planning ────────────────────────────────────────
+function rtpPlanWorkload() {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  var phase = p.phases[p.currentPhase];
+
+  // Generate next 7 days of planned workload
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;';
+
+  var days = [];
+  for (var d = 0; d < 7; d++) {
+    var dt = new Date(); dt.setDate(dt.getDate() + d);
+    days.push(dt.toISOString().slice(0,10));
+  }
+
+  var tableRows = days.map(function(date, di) {
+    var dayName = new Date(date).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    return '<tr>'
+      + '<td style="padding:8px 6px;color:var(--text2);font-size:11px;white-space:nowrap;">'+dayName+'</td>'
+      + '<td style="padding:4px;"><input type="number" min="0" placeholder="0" id="plan-run-'+di+'" style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;text-align:center;"></td>'
+      + '<td style="padding:4px;"><input type="number" min="0" placeholder="0" id="plan-throw-'+di+'" style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;text-align:center;"></td>'
+      + '<td style="padding:4px;"><input type="number" min="0" placeholder="0" id="plan-swing-'+di+'" style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;text-align:center;"></td>'
+      + '<td style="padding:4px;"><input type="number" min="0" placeholder="0" id="plan-lift-'+di+'" style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;text-align:center;"></td>'
+      + '<td style="padding:4px;"><input type="text" placeholder="Notes" id="plan-notes-'+di+'" style="width:120px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--text);font-size:11px;"></td>'
+      + '</tr>';
+  }).join('');
+
+  // Show ACWR targets for this phase
+  var targetSummary = RTP_STREAMS.map(function(s) {
+    var t = phase.workload[s];
+    return RTP_STREAM_ICONS[s]+' '+RTP_STREAM_LABELS[s]+': '+t[0]+'–'+t[1];
+  }).join(' · ');
+
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:640px;max-width:95vw;">'
+    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">📅 Workload Planning — '+p.athlete+'</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;">'+phase.name+'</div>'
+    + '<div style="font-size:10px;color:#fcd34d;background:rgba(252,211,77,0.08);border:1px solid rgba(252,211,77,0.2);border-radius:6px;padding:8px 10px;margin-bottom:14px;">ACWR Targets: '+targetSummary+'</div>'
+    + '<table style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">'
+    + '<th style="text-align:left;padding:6px;">Day</th>'
+    + '<th style="padding:6px;">🏃 Run (yd)</th>'
+    + '<th style="padding:6px;">⚾ Throws</th>'
+    + '<th style="padding:6px;">🏏 Swings</th>'
+    + '<th style="padding:6px;">🏋️ Lift (lbs)</th>'
+    + '<th style="padding:6px;">Notes</th>'
+    + '</tr></thead>'
+    + '<tbody>'+tableRows+'</tbody>'
+    + '</table>'
+    + '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">'
+    + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button onclick="rtpSavePlan('+days.length+','+JSON.stringify(days)+')" style="padding:8px 18px;background:#60a5fa;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">💾 Save Plan</button>'
+    + '</div></div>';
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+}
+
+function rtpSavePlan(count, dates) {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  var plan = [];
+  for (var i = 0; i < count; i++) {
+    plan.push({
+      date:  dates[i],
+      run:   parseFloat(document.getElementById('plan-run-'+i).value)||0,
+      throw: parseFloat(document.getElementById('plan-throw-'+i).value)||0,
+      swing: parseFloat(document.getElementById('plan-swing-'+i).value)||0,
+      lift:  parseFloat(document.getElementById('plan-lift-'+i).value)||0,
+      notes: document.getElementById('plan-notes-'+i).value,
+    });
+  }
+  p.phases[p.currentPhase].plannedWorkload = plan;
+  rtpSave();
+  document.querySelector('div[style*="fixed"]').remove();
+  rtpRenderDetail();
+  showStatus('✅ Workload plan saved for '+p.athlete+' — '+count+' days');
+}
+
+// ── Link Program Builder program to RTP phase ────────────────
+function rtpLinkProgram() {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+
+  // Get saved programs for this athlete
+  var athleteProgs = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : [])
+    .filter(function(pr){ return !pr.isTemplate; });
+
+  if (!athleteProgs.length) {
+    showStatus('No saved programs. Build one in Program Builder first.');
+    return;
+  }
+
+  var options = athleteProgs.map(function(pr, i) {
+    return '<option value="'+pr.id+'">'+pr.name+' ('+( pr.athlete||'Sandbox')+')</option>';
+  }).join('');
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:420px;max-width:95vw;">'
+    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">🔗 Link Program to Phase</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">'+p.phases[p.currentPhase].name+'</div>'
+    + '<div style="margin-bottom:14px;">'
+    + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Select Program</label>'
+    + '<select id="rtp-link-prog-sel" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;">'
+    + options + '</select></div>'
+    + '<div style="font-size:11px;color:var(--text2);background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:6px;padding:10px;margin-bottom:14px;">'
+    + 'Linking a program to this phase will let you assign it directly to the athlete from here, with phase-appropriate load restrictions applied automatically.</div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button onclick="rtpConfirmLinkProgram(this)" style="padding:8px 18px;background:#60a5fa;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">Link Program</button>'
+    + '</div></div>';
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+}
+
+function rtpConfirmLinkProgram(btn) {
+  var p     = RTP_ACTIVE_PROTOCOL;
+  var progId = document.getElementById('rtp-link-prog-sel').value;
+  var prog  = (SAVED_PROGRAMS||[]).find(function(pr){ return String(pr.id) === String(progId); });
+  if (!prog || !p) return;
+
+  p.phases[p.currentPhase].linkedProgramId   = String(progId);
+  p.phases[p.currentPhase].linkedProgramName = prog.name;
+  rtpSave();
+
+  btn.closest('div[style*="fixed"]').remove();
+  rtpRenderDetail();
+  showStatus('✅ "'+prog.name+'" linked to '+p.phases[p.currentPhase].name);
+}
+
+function rtpAssignLinkedProgram() {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  var phase = p.phases[p.currentPhase];
+  if (!phase.linkedProgramId) { showStatus('Link a program to this phase first'); return; }
+
+  // Set athlete and trigger the push modal
+  RTP_ACTIVE_ATHLETE = p.athlete;
+  showPushProgramModal(phase.linkedProgramId);
 }
 
 function rtpOpenProtocol(athlete, id) {
@@ -19420,8 +19831,11 @@ function rtpRenderDetail() {
     + '<div style="font-size:14px;color:#f87171;font-weight:600;margin-bottom:4px;">'+p.injury+'</div>'
     + '<div style="font-size:11px;color:var(--text3);">'+p.mechanism+' · '+p.severity+' · Injured: '+injDate+' · Day '+daysIn+' of RTP</div>'
     + '</div>'
-    + '<div style="display:flex;gap:6px;">'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
     + '<button onclick="rtpLogWorkload()" style="padding:6px 12px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:6px;color:#4ade80;font-size:11px;font-weight:600;cursor:pointer;">📊 Log Workload</button>'
+    + '<button onclick="rtpPlanWorkload()" style="padding:6px 12px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);border-radius:6px;color:#60a5fa;font-size:11px;font-weight:600;cursor:pointer;">📅 Plan Week</button>'
+    + '<button onclick="rtpLinkProgram()" style="padding:6px 12px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:6px;color:#a78bfa;font-size:11px;font-weight:600;cursor:pointer;">🔗 Link Program</button>'
+    + (phase.linkedProgramId ? '<button onclick="rtpAssignLinkedProgram()" style="padding:6px 12px;background:rgba(252,211,77,0.15);border:1px solid rgba(252,211,77,0.3);border-radius:6px;color:#fcd34d;font-size:11px;font-weight:600;cursor:pointer;">👤 Assign: '+phase.linkedProgramName+'</button>' : '')
     + '<button onclick="rtpClearProtocol()" style="padding:6px 12px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:6px;color:#a78bfa;font-size:11px;cursor:pointer;">✓ Clear</button>'
     + '</div>'
     + '</div>';
@@ -19460,6 +19874,14 @@ function rtpRenderDetail() {
 
   var metCount = phase.criteria.filter(function(c){ return c.met; }).length;
   var allMet   = metCount === phase.criteria.length;
+
+  // Recommended exercises for this phase
+  if (phase.exercises && phase.exercises.length) {
+    html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">'
+      + '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Recommended Exercises</div>'
+      + phase.exercises.map(function(ex){ return '<div style="font-size:10px;color:var(--text2);padding:2px 0;">· '+ex+'</div>'; }).join('')
+      + '</div>';
+  }
 
   html += '<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">'
     + '<div style="font-size:10px;color:var(--text3);">'+metCount+' / '+phase.criteria.length+' criteria met</div>'
