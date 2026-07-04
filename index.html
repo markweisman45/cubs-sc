@@ -1010,6 +1010,7 @@ body {
         <button class="tab-btn"        id="ptab-annual"   onclick="switchProgTab('annual',this)" style="color:#f59e0b;">📅 Annual Plan</button>
         <button class="tab-btn"        id="ptab-1rm"      onclick="switchProgTab('1rm',this)">🏋️ 1RM</button>
         <button class="tab-btn"        id="ptab-library"  onclick="switchProgTab('library',this)">📚 Exercise Library</button>
+        <button class="tab-btn"        id="ptab-rtp"      onclick="switchProgTab('rtp',this)" style="color:#f87171;">🩺 RTP</button>
       </div>
 
       <!-- ── PROGRAM BUILDER ── -->
@@ -1954,6 +1955,47 @@ body {
       </div>
 
     </div><!-- /page-program -->
+
+      <!-- ── RETURN TO PERFORMANCE TAB ── -->
+      <div id="prog-tab-rtp" class="prog-tab" style="display:none;">
+
+        <!-- Header row -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-size:18px;font-weight:800;color:#fff;">🩺 Return to Performance</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">Injury management · Phase-gated progression · Workload tracking</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="rtp-athlete-sel" onchange="rtpSelectAthlete(this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;">
+              <option value="">— Select Athlete —</option>
+            </select>
+            <button onclick="rtpNewProtocol()" style="padding:7px 14px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#f87171;font-size:12px;font-weight:700;cursor:pointer;">＋ New Protocol</button>
+          </div>
+        </div>
+
+        <!-- Main layout: protocol list left, detail right -->
+        <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;min-height:600px;">
+
+          <!-- LEFT: Protocol list -->
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:2px;">Active Protocols</div>
+            <div id="rtp-protocol-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-top:10px;margin-bottom:2px;">Cleared / Archived</div>
+            <div id="rtp-cleared-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+
+          <!-- RIGHT: Protocol detail -->
+          <div id="rtp-detail" style="background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:20px;">
+            <div style="text-align:center;padding:60px 20px;color:var(--text3);">
+              <div style="font-size:40px;margin-bottom:12px;">🩺</div>
+              <div style="font-size:14px;">Select an athlete and protocol to view details</div>
+              <div style="font-size:11px;margin-top:6px;">or create a new protocol to get started</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div><!-- /prog-tab-rtp -->
 
     <!-- ── AI PROGRAM DESIGN MODAL ── -->
     <div id="pbAIModal" class="modal-overlay" style="display:none;">
@@ -19158,6 +19200,496 @@ function importAllData() {
   input.click();
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// RETURN TO PERFORMANCE (RTP) SYSTEM
+// ══════════════════════════════════════════════════════════════
+
+var RTP_KEY = 'cubs_sc_rtp_v1';
+var RTP_DATA = {}; // { athleteName: [ protocol, ... ] }
+var RTP_ACTIVE_PROTOCOL = null;
+var RTP_ACTIVE_ATHLETE = null;
+
+var RTP_PHASE_TEMPLATES = [
+  { name:'Phase 1 — Acute / Protection',       days:5,  color:'#f87171',
+    workload:{ run:[0,0.3], throw:[0,0], swing:[0,0.2], lift:[0,0.4] },
+    criteria:['Pain at rest ≤ 2/10','Full ROM restored','No significant swelling'] },
+  { name:'Phase 2 — Subacute / Restore',        days:7,  color:'#fb923c',
+    workload:{ run:[0.3,0.6], throw:[0,0.3], swing:[0.2,0.5], lift:[0.4,0.7] },
+    criteria:['Pain-free ROM','SL balance within 10% contralateral','Cleared by physician for loading'] },
+  { name:'Phase 3 — Strength Re-establishment', days:14, color:'#fcd34d',
+    workload:{ run:[0.5,0.8], throw:[0.2,0.5], swing:[0.4,0.7], lift:[0.7,1.0] },
+    criteria:['SL RDL ≥ 80% contralateral','CMJ LSI ≥ 85%','No pain under load'] },
+  { name:'Phase 4 — Sport-Specific Loading',    days:10, color:'#4ade80',
+    workload:{ run:[0.7,1.0], throw:[0.5,0.8], swing:[0.7,1.0], lift:[0.9,1.1] },
+    criteria:['Sprint velocity ≥ 90% baseline','Throwing velocity ≥ 85% baseline','CMJ LSI ≥ 90%'] },
+  { name:'Phase 5 — Return to Practice',        days:7,  color:'#60a5fa',
+    workload:{ run:[0.9,1.2], throw:[0.8,1.1], swing:[0.9,1.1], lift:[0.9,1.2] },
+    criteria:['Full practice participation','No pain or compensation','Cleared by physician'] },
+  { name:'Phase 6 — Return to Competition',     days:5,  color:'#a78bfa',
+    workload:{ run:[0.9,1.3], throw:[0.9,1.2], swing:[0.9,1.2], lift:[0.9,1.2] },
+    criteria:['Game speed/intensity achieved','Medical staff clearance','Player confidence ≥ 8/10'] },
+];
+
+var RTP_STREAMS = ['run','throw','swing','lift'];
+var RTP_STREAM_LABELS = { run:'Running', throw:'Throwing', swing:'Swings', lift:'Lifting' };
+var RTP_STREAM_UNITS  = { run:'yards',   throw:'throws',   swing:'swings', lift:'lbs' };
+var RTP_STREAM_ICONS  = { run:'🏃',      throw:'⚾',        swing:'🏏',     lift:'🏋️' };
+
+function rtpLoad() {
+  try { var s = localStorage.getItem(RTP_KEY); if (s) RTP_DATA = JSON.parse(s); } catch(e) {}
+}
+function rtpSave() {
+  try { localStorage.setItem(RTP_KEY, JSON.stringify(RTP_DATA)); } catch(e) {}
+}
+
+function rtpInit() {
+  rtpLoad();
+  // Populate athlete dropdown
+  var sel = document.getElementById('rtp-athlete-sel');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Select Athlete —</option>';
+  Object.keys(PLAYERS).forEach(function(name) {
+    var opt = document.createElement('option');
+    opt.value = name; opt.textContent = name + ' (' + PLAYERS[name].pos + ')';
+    sel.appendChild(opt);
+  });
+  rtpRenderLists();
+}
+
+function rtpSelectAthlete(name) {
+  RTP_ACTIVE_ATHLETE = name;
+  rtpRenderLists();
+  // If athlete has protocols, open the most recent active one
+  var protocols = (RTP_DATA[name] || []).filter(function(p){ return p.status === 'active'; });
+  if (protocols.length) rtpOpenProtocol(name, protocols[0].id);
+  else document.getElementById('rtp-detail').innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text3);"><div style="font-size:36px;margin-bottom:12px;">🩺</div><div>No active protocols for '+name+'</div><div style="font-size:11px;margin-top:8px;"><button onclick="rtpNewProtocol()" style="padding:7px 16px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#f87171;font-size:12px;font-weight:700;cursor:pointer;">＋ Create Protocol</button></div></div>';
+}
+
+function rtpRenderLists() {
+  var activeEl   = document.getElementById('rtp-protocol-list');
+  var clearedEl  = document.getElementById('rtp-cleared-list');
+  if (!activeEl) return;
+
+  var allProtocols = [];
+  Object.keys(RTP_DATA).forEach(function(athlete) {
+    (RTP_DATA[athlete]||[]).forEach(function(p) {
+      allProtocols.push({ athlete:athlete, protocol:p });
+    });
+  });
+
+  // Filter if athlete selected
+  if (RTP_ACTIVE_ATHLETE) {
+    allProtocols = allProtocols.filter(function(x){ return x.athlete === RTP_ACTIVE_ATHLETE; });
+  }
+
+  function renderCard(x) {
+    var p = x.protocol, athlete = x.athlete;
+    var phase = p.phases[p.currentPhase] || p.phases[0];
+    var daysIn = Math.floor((Date.now() - new Date(p.created).getTime()) / 86400000);
+    var isActive = RTP_ACTIVE_PROTOCOL && RTP_ACTIVE_PROTOCOL.id === p.id;
+    return '<div onclick="rtpOpenProtocol(\''+athlete+'\',\''+p.id+'\')" style="'
+      + 'background:' + (isActive ? 'rgba(248,113,113,0.1)' : 'var(--bg3)') + ';'
+      + 'border:1px solid ' + (isActive ? 'rgba(248,113,113,0.4)' : 'var(--border)') + ';'
+      + 'border-radius:8px;padding:10px 12px;cursor:pointer;transition:all .15s;">'
+      + '<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:2px;">'+athlete+'</div>'
+      + '<div style="font-size:11px;color:#f87171;margin-bottom:4px;">'+p.injury+'</div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+      + '<div style="font-size:10px;color:var(--text3);">Phase '+(p.currentPhase+1)+'/'+p.phases.length+' · Day '+daysIn+'</div>'
+      + '<div style="font-size:9px;padding:2px 6px;border-radius:4px;background:rgba(248,113,113,0.15);color:#f87171;">'+p.status.toUpperCase()+'</div>'
+      + '</div>'
+      + '<div style="margin-top:6px;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;">'
+      + '<div style="height:100%;border-radius:2px;background:#f87171;width:'+Math.round((p.currentPhase/p.phases.length)*100)+'%"></div>'
+      + '</div>'
+      + '</div>';
+  }
+
+  var active  = allProtocols.filter(function(x){ return x.protocol.status === 'active'; });
+  var cleared = allProtocols.filter(function(x){ return x.protocol.status !== 'active'; });
+
+  activeEl.innerHTML  = active.length  ? active.map(renderCard).join('')  : '<div style="font-size:11px;color:var(--text3);padding:8px;">No active protocols</div>';
+  clearedEl.innerHTML = cleared.length ? cleared.map(renderCard).join('') : '<div style="font-size:11px;color:var(--text3);padding:8px;">None</div>';
+}
+
+function rtpNewProtocol() {
+  if (!RTP_ACTIVE_ATHLETE) { showStatus('Select an athlete first'); return; }
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:460px;max-width:95vw;">'
+    + '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:16px;">🩺 New RTP Protocol — '+RTP_ACTIVE_ATHLETE+'</div>'
+    + '<div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Injury / Diagnosis</label>'
+    + '<input id="rtp-new-injury" placeholder="e.g. Left hamstring strain Grade II" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;"></div>'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Structure Involved</label>'
+    + '<input id="rtp-new-structure" placeholder="e.g. Biceps femoris, proximal musculotendinous junction" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;"></div>'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Mechanism</label>'
+    + '<select id="rtp-new-mechanism" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;">'
+    + '<option>Sprinting</option><option>Throwing</option><option>Swinging</option><option>Contact</option><option>Overuse</option><option>Non-contact deceleration</option><option>Other</option>'
+    + '</select></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Severity</label>'
+    + '<select id="rtp-new-severity" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;">'
+    + '<option>Grade I — Mild</option><option>Grade II — Moderate</option><option>Grade III — Severe</option><option>Post-surgical</option>'
+    + '</select></div>'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Date of Injury</label>'
+    + '<input id="rtp-new-date" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;"></div>'
+    + '</div>'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Notes</label>'
+    + '<textarea id="rtp-new-notes" rows="2" placeholder="Team physician, PT, any restrictions..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;resize:none;"></textarea></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">'
+    + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:8px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button onclick="rtpCreateProtocol(this)" style="padding:8px 20px;background:#f87171;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Create Protocol</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+}
+
+function rtpCreateProtocol(btn) {
+  var injury    = document.getElementById('rtp-new-injury').value.trim();
+  var structure = document.getElementById('rtp-new-structure').value.trim();
+  var mechanism = document.getElementById('rtp-new-mechanism').value;
+  var severity  = document.getElementById('rtp-new-severity').value;
+  var date      = document.getElementById('rtp-new-date').value;
+  var notes     = document.getElementById('rtp-new-notes').value.trim();
+
+  if (!injury) { showStatus('Enter injury/diagnosis'); return; }
+
+  var protocol = {
+    id:           Date.now().toString(),
+    athlete:      RTP_ACTIVE_ATHLETE,
+    injury:       injury,
+    structure:    structure,
+    mechanism:    mechanism,
+    severity:     severity,
+    injuryDate:   date,
+    notes:        notes,
+    created:      new Date().toISOString(),
+    status:       'active',
+    currentPhase: 0,
+    phases: RTP_PHASE_TEMPLATES.map(function(t, i) {
+      return {
+        index:    i,
+        name:     t.name,
+        color:    t.color,
+        days:     t.days,
+        workload: JSON.parse(JSON.stringify(t.workload)),
+        criteria: t.criteria.map(function(c){ return { text:c, met:false, metAt:null, notes:'' }; }),
+        status:   i === 0 ? 'active' : 'locked',
+        startedAt: i === 0 ? new Date().toISOString() : null,
+        completedAt: null,
+        workloadLog: [], // [{date, run, throw, swing, lift, rpe, notes}]
+      };
+    }),
+  };
+
+  if (!RTP_DATA[RTP_ACTIVE_ATHLETE]) RTP_DATA[RTP_ACTIVE_ATHLETE] = [];
+  RTP_DATA[RTP_ACTIVE_ATHLETE].unshift(protocol);
+  rtpSave();
+
+  btn.closest('div[style*="fixed"]').remove();
+  rtpRenderLists();
+  rtpOpenProtocol(RTP_ACTIVE_ATHLETE, protocol.id);
+  showStatus('✅ RTP protocol created for ' + RTP_ACTIVE_ATHLETE);
+}
+
+function rtpOpenProtocol(athlete, id) {
+  RTP_ACTIVE_ATHLETE = athlete;
+  var protocols = RTP_DATA[athlete] || [];
+  var protocol = protocols.find(function(p){ return p.id === id; });
+  if (!protocol) return;
+  RTP_ACTIVE_PROTOCOL = protocol;
+  rtpRenderLists();
+  rtpRenderDetail();
+}
+
+function rtpRenderDetail() {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  var el = document.getElementById('rtp-detail');
+
+  var daysIn = Math.floor((Date.now() - new Date(p.created).getTime()) / 86400000);
+  var injDate = p.injuryDate ? new Date(p.injuryDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+
+  // Header
+  var html = '<div style="margin-bottom:20px;">'
+    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
+    + '<div>'
+    + '<div style="font-size:18px;font-weight:800;color:#fff;margin-bottom:2px;">'+p.athlete+'</div>'
+    + '<div style="font-size:14px;color:#f87171;font-weight:600;margin-bottom:4px;">'+p.injury+'</div>'
+    + '<div style="font-size:11px;color:var(--text3);">'+p.mechanism+' · '+p.severity+' · Injured: '+injDate+' · Day '+daysIn+' of RTP</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:6px;">'
+    + '<button onclick="rtpLogWorkload()" style="padding:6px 12px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:6px;color:#4ade80;font-size:11px;font-weight:600;cursor:pointer;">📊 Log Workload</button>'
+    + '<button onclick="rtpClearProtocol()" style="padding:6px 12px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:6px;color:#a78bfa;font-size:11px;cursor:pointer;">✓ Clear</button>'
+    + '</div>'
+    + '</div>';
+
+  // Phase progress bar
+  html += '<div style="display:flex;gap:4px;margin-bottom:16px;">';
+  p.phases.forEach(function(phase, i) {
+    var active = i === p.currentPhase;
+    var done   = phase.status === 'complete';
+    var locked = phase.status === 'locked';
+    html += '<div onclick="rtpSelectPhase('+i+')" style="flex:1;cursor:'+(locked?'default':'pointer')+';">'
+      + '<div style="height:6px;border-radius:3px;background:'+(done?phase.color:active?phase.color:'rgba(255,255,255,0.08)')+';opacity:'+(locked?0.3:1)+';"></div>'
+      + '<div style="font-size:8px;color:'+(active?phase.color:'var(--text3)')+';margin-top:3px;text-align:center;font-weight:'+(active?700:400)+';">P'+(i+1)+'</div>'
+      + '</div>';
+  });
+  html += '</div></div>';
+
+  // Active phase detail
+  var phase = p.phases[p.currentPhase];
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">';
+
+  // Criteria checklist
+  html += '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;">'
+    + '<div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:10px;">'+phase.name+'</div>'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px;">Phase Criteria</div>';
+
+  phase.criteria.forEach(function(c, ci) {
+    html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);">'
+      + '<div onclick="rtpToggleCriteria('+p.currentPhase+','+ci+')" style="width:18px;height:18px;border-radius:4px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;'
+      + (c.met ? 'background:rgba(74,222,128,0.2);border:1px solid rgba(74,222,128,0.4);color:#4ade80;' : 'background:rgba(255,255,255,0.05);border:1px solid var(--border2);color:transparent;')+'">✓</div>'
+      + '<div style="flex:1;">'
+      + '<div style="font-size:11px;color:'+(c.met?'#4ade80':'var(--text)')+';text-decoration:'+(c.met?'line-through':'none')+';">'+c.text+'</div>'
+      + (c.metAt ? '<div style="font-size:9px;color:var(--text3);margin-top:1px;">Met '+new Date(c.metAt).toLocaleDateString()+'</div>' : '')
+      + '</div></div>';
+  });
+
+  var metCount = phase.criteria.filter(function(c){ return c.met; }).length;
+  var allMet   = metCount === phase.criteria.length;
+
+  html += '<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">'
+    + '<div style="font-size:10px;color:var(--text3);">'+metCount+' / '+phase.criteria.length+' criteria met</div>'
+    + (p.currentPhase < p.phases.length - 1
+      ? '<button onclick="rtpAdvancePhase()" '+(allMet?'':'disabled title="Meet all criteria first"')+' style="padding:5px 12px;background:'+(allMet?'rgba(74,222,128,0.2)':'rgba(255,255,255,0.05)')+';border:1px solid '+(allMet?'rgba(74,222,128,0.4)':'var(--border)')+';border-radius:6px;color:'+(allMet?'#4ade80':'var(--text3)')+';font-size:10px;font-weight:600;cursor:'+(allMet?'pointer':'not-allowed')+';">Advance Phase →</button>'
+      : (allMet ? '<button onclick="rtpClearProtocol()" style="padding:5px 12px;background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;">✓ Mark Cleared</button>' : ''))
+    + '</div>'
+    + '</div>';
+
+  // Workload targets + ACWR
+  html += '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;">'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:10px;">Workload Targets & ACWR</div>';
+
+  RTP_STREAMS.forEach(function(stream) {
+    var target  = phase.workload[stream];
+    var acwr    = rtpCalcACWR(p, stream);
+    var inRange = acwr >= target[0] && acwr <= target[1];
+    var pct     = target[1] > 0 ? Math.min(100, (acwr / target[1]) * 100) : 0;
+    var color   = acwr === 0 && target[0] === 0 ? '#4ade80' :
+                  acwr < target[0] ? '#fcd34d' :
+                  inRange ? '#4ade80' : '#f87171';
+
+    html += '<div style="margin-bottom:10px;">'
+      + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+      + '<div style="font-size:11px;color:var(--text2);">'+RTP_STREAM_ICONS[stream]+' '+RTP_STREAM_LABELS[stream]+'</div>'
+      + '<div style="font-size:11px;font-weight:700;color:'+color+';">ACWR '+acwr.toFixed(2)+'</div>'
+      + '</div>'
+      + '<div style="height:5px;background:rgba(255,255,255,0.06);border-radius:3px;position:relative;">'
+      + '<div style="position:absolute;top:0;bottom:0;left:'+Math.round(target[0]*100)+'%;right:'+(100-Math.round(target[1]*100))+'%;background:rgba(74,222,128,0.2);border-radius:3px;"></div>'
+      + '<div style="height:100%;border-radius:3px;background:'+color+';width:'+pct.toFixed(0)+'%;transition:width .3s;"></div>'
+      + '</div>'
+      + '<div style="font-size:9px;color:var(--text3);margin-top:2px;">Target: '+target[0]+' – '+target[1]+'</div>'
+      + '</div>';
+  });
+  html += '</div>';
+
+  html += '</div>'; // close grid
+
+  // Recent workload log
+  var allLogs = [];
+  p.phases.forEach(function(ph){ (ph.workloadLog||[]).forEach(function(l){ allLogs.push(l); }); });
+  allLogs.sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  var recentLogs = allLogs.slice(0,7);
+
+  html += '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);">Recent Workload Log</div>'
+    + '<button onclick="rtpLogWorkload()" style="font-size:10px;padding:3px 10px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);border-radius:4px;color:#4ade80;cursor:pointer;">＋ Log today</button>'
+    + '</div>';
+
+  if (!recentLogs.length) {
+    html += '<div style="font-size:11px;color:var(--text3);text-align:center;padding:12px;">No workload logged yet</div>';
+  } else {
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+      + '<tr style="color:var(--text3);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">'
+      + '<th style="text-align:left;padding:4px 0;">Date</th>'
+      + '<th style="text-align:center;padding:4px;">🏃 Run</th>'
+      + '<th style="text-align:center;padding:4px;">⚾ Throw</th>'
+      + '<th style="text-align:center;padding:4px;">🏏 Swing</th>'
+      + '<th style="text-align:center;padding:4px;">🏋️ Lift</th>'
+      + '<th style="text-align:center;padding:4px;">RPE</th>'
+      + '</tr>';
+    recentLogs.forEach(function(log) {
+      html += '<tr style="border-top:1px solid rgba(255,255,255,0.04);">'
+        + '<td style="padding:5px 0;color:var(--text2);">'+new Date(log.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td>'
+        + '<td style="text-align:center;color:var(--text);">'+(log.run||'—')+'</td>'
+        + '<td style="text-align:center;color:var(--text);">'+(log.throw||'—')+'</td>'
+        + '<td style="text-align:center;color:var(--text);">'+(log.swing||'—')+'</td>'
+        + '<td style="text-align:center;color:var(--text);">'+(log.lift||'—')+'</td>'
+        + '<td style="text-align:center;color:#fcd34d;">'+(log.rpe||'—')+'</td>'
+        + '</tr>';
+    });
+    html += '</table>';
+  }
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+function rtpCalcACWR(protocol, stream) {
+  // Collect all workload log entries across all phases
+  var allLogs = [];
+  (protocol.phases||[]).forEach(function(ph){
+    (ph.workloadLog||[]).forEach(function(l){ allLogs.push(l); });
+  });
+  if (!allLogs.length) return 0;
+
+  var now = Date.now();
+  var day7  = now - 7  * 86400000;
+  var day28 = now - 28 * 86400000;
+
+  // Session load = volume × RPE (Foster method)
+  function sessionLoad(log) {
+    var vol = parseFloat(log[stream]) || 0;
+    var rpe = parseFloat(log.rpe) || 5;
+    return vol * rpe;
+  }
+
+  var acute   = allLogs.filter(function(l){ return new Date(l.date).getTime() >= day7; })
+                       .reduce(function(s,l){ return s + sessionLoad(l); }, 0);
+  var chronic = allLogs.filter(function(l){ return new Date(l.date).getTime() >= day28; })
+                       .reduce(function(s,l){ return s + sessionLoad(l); }, 0) / 4;
+
+  if (!chronic) return 0;
+  return parseFloat((acute / chronic).toFixed(2));
+}
+
+function rtpToggleCriteria(phaseIdx, criteriaIdx) {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  var c = p.phases[phaseIdx].criteria[criteriaIdx];
+  c.met   = !c.met;
+  c.metAt = c.met ? new Date().toISOString() : null;
+  rtpSave();
+  rtpRenderDetail();
+}
+
+function rtpAdvancePhase() {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p || p.currentPhase >= p.phases.length - 1) return;
+  var allMet = p.phases[p.currentPhase].criteria.every(function(c){ return c.met; });
+  if (!allMet) { showStatus('All criteria must be met before advancing'); return; }
+
+  p.phases[p.currentPhase].status      = 'complete';
+  p.phases[p.currentPhase].completedAt = new Date().toISOString();
+  p.currentPhase++;
+  p.phases[p.currentPhase].status    = 'active';
+  p.phases[p.currentPhase].startedAt = new Date().toISOString();
+
+  rtpSave();
+  rtpRenderLists();
+  rtpRenderDetail();
+  showStatus('✅ Advanced to ' + p.phases[p.currentPhase].name);
+}
+
+function rtpSelectPhase(idx) {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p || p.phases[idx].status === 'locked') return;
+  p.currentPhase = idx;
+  rtpRenderDetail();
+}
+
+function rtpClearProtocol() {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  if (!confirm('Mark ' + p.athlete + ' as cleared and archive this protocol?')) return;
+  p.status    = 'cleared';
+  p.clearedAt = new Date().toISOString();
+  rtpSave();
+  rtpRenderLists();
+  rtpRenderDetail();
+  showStatus('✅ ' + p.athlete + ' marked as cleared');
+}
+
+function rtpLogWorkload() {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+  var today = new Date().toISOString().slice(0,10);
+
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:420px;max-width:95vw;">'
+    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">📊 Log Workload — '+p.athlete+'</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Phase '+(p.currentPhase+1)+' · '+p.phases[p.currentPhase].name+'</div>'
+    + '<div style="display:flex;flex-direction:column;gap:10px;">'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Date</label>'
+    + '<input id="rtp-log-date" type="date" value="'+today+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + rtpLogField('run',   '🏃 Running (yards)',  'Sprint + tempo yards')
+    + rtpLogField('throw', '⚾ Throwing (throws)', 'Total throws all sources')
+    + rtpLogField('swing', '🏏 Swings',            'Tee + front toss + BP + game')
+    + rtpLogField('lift',  '🏋️ Lifting (lbs)',     'Total tonnage (sets×reps×load)')
+    + '</div>'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Session RPE (1-10)</label>'
+    + '<input id="rtp-log-rpe" type="number" min="1" max="10" placeholder="6" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;"></div>'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Notes</label>'
+    + '<input id="rtp-log-notes" placeholder="Any soreness, movement observations..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;"></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">'
+    + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button onclick="rtpSaveWorkloadLog(this)" style="padding:8px 18px;background:#4ade80;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">Save Log</button>'
+    + '</div></div>';
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+}
+
+function rtpLogField(id, label, hint) {
+  return '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px;">'+label+'</label>'
+    + '<input id="rtp-log-'+id+'" type="number" min="0" placeholder="0" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;">'
+    + '<div style="font-size:9px;color:var(--text3);margin-top:2px;">'+hint+'</div></div>';
+}
+
+function rtpSaveWorkloadLog(btn) {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  var entry = {
+    date:  document.getElementById('rtp-log-date').value,
+    run:   parseFloat(document.getElementById('rtp-log-run').value)   || 0,
+    throw: parseFloat(document.getElementById('rtp-log-throw').value) || 0,
+    swing: parseFloat(document.getElementById('rtp-log-swing').value) || 0,
+    lift:  parseFloat(document.getElementById('rtp-log-lift').value)  || 0,
+    rpe:   parseFloat(document.getElementById('rtp-log-rpe').value)   || 5,
+    notes: document.getElementById('rtp-log-notes').value,
+  };
+  if (!p.phases[p.currentPhase].workloadLog) p.phases[p.currentPhase].workloadLog = [];
+  p.phases[p.currentPhase].workloadLog.push(entry);
+  rtpSave();
+  btn.closest('div[style*="fixed"]').remove();
+  rtpRenderDetail();
+  showStatus('✅ Workload logged for ' + new Date(entry.date).toLocaleDateString());
+}
+
+// Initialize RTP when tab is opened
+var _rtpInited = false;
+function switchProgTab(tab, btn) {
+  document.querySelectorAll('.prog-tab').forEach(t => { t.style.display='none'; t.classList.remove('active'); });
+  document.querySelectorAll('#page-program .tab-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('prog-tab-'+tab);
+  if (el) { el.style.display = (tab==='grid') ? 'flex' : 'block'; el.classList.add('active'); }
+  if (btn && btn.classList) btn.classList.add('active');
+  if (tab === 'library') renderLibrary();
+  if (tab === '1rm') render1RMTable();
+  if (tab === 'session') { calcLoad(); initTemplateContextDropdown(); }
+  if (tab === 'grid' || tab === 'perio') initTemplateContextDropdown();
+  if (tab === 'grid') initGridBuilder();
+  if (tab === 'rtp') { if (!_rtpInited) { rtpInit(); _rtpInited = true; } else { rtpRenderLists(); } }
+}
 
 try {
   init();
