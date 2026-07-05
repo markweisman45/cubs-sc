@@ -19574,8 +19574,12 @@ function rtpNewProtocol() {
     + '<select id="rtp-new-severity" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;">'
     + '<option>Grade I — Mild</option><option>Grade II — Moderate</option><option>Grade III — Severe</option><option>Post-surgical</option>'
     + '</select></div></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
     + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Date of Injury</label>'
     + '<input id="rtp-new-date" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;"></div>'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Total Weeks (blank = template default)</label>'
+    + '<input id="rtp-new-weeks" type="number" min="1" max="52" placeholder="auto" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;"></div>'
+    + '</div>'
     + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Notes (physician, PT, restrictions)</label>'
     + '<textarea id="rtp-new-notes" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;resize:none;"></textarea></div>'
     + '</div>'
@@ -19629,6 +19633,18 @@ function rtpCreateProtocol(btn) {
   var phaseDefs = templateKey && RTP_INJURY_PROTOCOLS[templateKey]
     ? RTP_INJURY_PROTOCOLS[templateKey].phases
     : RTP_PHASE_TEMPLATES;
+
+  // Scale phase durations to the requested total weeks
+  var reqWeeks = parseInt((document.getElementById('rtp-new-weeks')||{}).value) || 0;
+  if (reqWeeks > 0) {
+    var tmplTotal = phaseDefs.reduce(function(s,t){ return s + (t.days||7); }, 0);
+    var scale = (reqWeeks * 7) / tmplTotal;
+    phaseDefs = phaseDefs.map(function(t) {
+      var copy = JSON.parse(JSON.stringify(t));
+      copy.days = Math.max(1, Math.round((t.days||7) * scale));
+      return copy;
+    });
+  }
 
   var protocol = {
     id:           Date.now().toString(),
@@ -19864,6 +19880,271 @@ function rtpSavePlan2(count, dates) {
   showStatus('Workload plan saved - '+count+' days');
 }
 
+// ── ACWR Build-Up Planner ─────────────────────────────────────
+// Set the workload you want to FINISH at; generator works backwards
+// producing a week-by-week ramp keeping ACWR between 0.8-1.3.
+
+function rtpGetWeeklyChronic(protocol, stream) {
+  // Current weekly chronic load (28-day avg of weekly session loads)
+  var allLogs = [];
+  (protocol.phases||[]).forEach(function(ph){ (ph.workloadLog||[]).forEach(function(l){ allLogs.push(l); }); });
+  var day28 = Date.now() - 28 * 86400000;
+  var recent = allLogs.filter(function(l){ return new Date(l.date).getTime() >= day28; });
+  if (!recent.length) return 0;
+  return recent.reduce(function(s,l){ return s + (parseFloat(l[stream])||0); }, 0) / 4; // raw volume per week
+}
+
+function rtpSimulateRamp(startWeekly, targetWeekly, weeklyAcwr) {
+  // Simulate week-by-week: chronic = avg of last 4 weeks, next week load = min(target, chronic × acwr)
+  // Returns array of {week, load, acwr} until load reaches target (cap 52 weeks)
+  var hist = [startWeekly, startWeekly, startWeekly, startWeekly];
+  var out = [];
+  var goingUp = targetWeekly >= startWeekly;
+  for (var w = 1; w <= 52; w++) {
+    var chronic = (hist[hist.length-1]+hist[hist.length-2]+hist[hist.length-3]+hist[hist.length-4]) / 4;
+    var load;
+    if (chronic <= 0) {
+      // No baseline: seed with 25% of target on week 1 to establish chronic
+      load = Math.max(1, targetWeekly * 0.25);
+    } else if (goingUp) {
+      load = Math.min(targetWeekly, chronic * weeklyAcwr);
+    } else {
+      load = Math.max(targetWeekly, chronic * 0.8); // ramp down floor at 0.8
+    }
+    var acwr = chronic > 0 ? load / chronic : 0;
+    out.push({ week: w, load: Math.round(load), acwr: chronic > 0 ? parseFloat(acwr.toFixed(2)) : null });
+    hist.push(load);
+    if (goingUp ? load >= targetWeekly - 0.5 : load <= targetWeekly + 0.5) break;
+  }
+  return out;
+}
+
+function rtpMinWeeks(startWeekly, targetWeekly) {
+  return rtpSimulateRamp(startWeekly, targetWeekly, 1.3).length;
+}
+
+function rtpSolveRampForWeeks(startWeekly, targetWeekly, weeks) {
+  // Binary search the weekly ACWR in [1.01, 1.3] that hits target in exactly `weeks`
+  // Returns { acwr, plan } or null if impossible within 1.3
+  if (startWeekly <= 0) {
+    // No baseline: linear seed ramp, ACWR undefined for wk1
+    var plan = [];
+    for (var w = 1; w <= weeks; w++) {
+      plan.push({ week: w, load: Math.round(targetWeekly * w / weeks), acwr: null });
+    }
+    return { acwr: null, plan: plan };
+  }
+  if (Math.abs(targetWeekly - startWeekly) < 0.5) {
+    var flat = [];
+    for (var w2 = 1; w2 <= weeks; w2++) flat.push({ week: w2, load: Math.round(targetWeekly), acwr: 1.0 });
+    return { acwr: 1.0, plan: flat };
+  }
+  if (targetWeekly < startWeekly) {
+    // Deload ramp at 0.8 floor
+    var down = rtpSimulateRamp(startWeekly, targetWeekly, 0.8);
+    if (down.length > weeks) return null;
+    while (down.length < weeks) down.push({ week: down.length+1, load: Math.round(targetWeekly), acwr: 1.0 });
+    return { acwr: 0.8, plan: down };
+  }
+  var lo = 1.01, hi = 1.3, best = null;
+  for (var iter = 0; iter < 24; iter++) {
+    var mid = (lo + hi) / 2;
+    var sim = rtpSimulateRamp(startWeekly, targetWeekly, mid);
+    if (sim.length <= weeks) { best = { acwr: parseFloat(mid.toFixed(3)), plan: sim }; hi = mid; }
+    else lo = mid;
+  }
+  if (!best) return null;
+  // Pad with maintenance weeks at target if ramp finished early
+  while (best.plan.length < weeks) best.plan.push({ week: best.plan.length+1, load: Math.round(targetWeekly), acwr: 1.0 });
+  return best;
+}
+
+function rtpBuildUpPlan() {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+
+  var saved = p.buildPlan || {};
+  var savedTargets = saved.targetWeekly || {};
+  var defaultWeeks = saved.weeks || Math.max(2, Math.round((p.phases||[]).reduce(function(s,ph){ return s + (ph.days||7); }, 0) / 7));
+
+  var rows = RTP_STREAMS.map(function(s) {
+    var chronic = Math.round(rtpGetWeeklyChronic(p, s));
+    return '<tr style="border-top:1px solid rgba(255,255,255,0.05);">'
+      + '<td style="padding:9px 8px;font-size:13px;white-space:nowrap;">'+RTP_STREAM_ICONS[s]+' '+RTP_STREAM_LABELS[s]+'</td>'
+      + '<td style="padding:6px;"><input id="bu-start-'+s+'" type="number" min="0" value="'+(chronic||'')+'" placeholder="0" style="width:90px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px 7px;color:var(--text);font-size:12px;text-align:center;"><div style="font-size:8px;color:var(--text3);margin-top:2px;text-align:center;">'+(chronic>0?'auto from logs':'enter current')+'</div></td>'
+      + '<td style="padding:6px;"><input id="bu-target-'+s+'" type="number" min="0" value="'+(savedTargets[s]||'')+'" placeholder="finish at" style="width:90px;background:var(--bg3);border:1px solid rgba(252,211,77,0.45);border-radius:5px;padding:5px 7px;color:#fcd34d;font-size:12px;text-align:center;font-weight:700;"></td>'
+      + '<td id="bu-min-'+s+'" style="padding:9px 8px;text-align:center;font-size:11px;color:var(--text3);">—</td>'
+      + '</tr>';
+  }).join('');
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;';
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:760px;max-width:98vw;">'
+    + '<div style="font-size:16px;font-weight:700;color:#fff;">📈 ACWR Build-Up Planner — '+p.athlete+'</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin:4px 0 16px;">Set the weekly workload to finish at — the ramp is generated backwards keeping every week between 0.8–1.3 ACWR</div>'
+
+    + '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;">'
+    + '<table style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">'
+    + '<th style="text-align:left;padding:4px 8px;">Stream</th>'
+    + '<th style="text-align:center;padding:4px;">Current weekly</th>'
+    + '<th style="text-align:center;padding:4px;">Finish at (weekly) ✏</th>'
+    + '<th style="text-align:center;padding:4px;">Min weeks @1.3</th>'
+    + '</tr></thead><tbody>'+rows+'</tbody></table></div>'
+
+    + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">'
+    + '<label style="font-size:11px;color:var(--text2);">Build over</label>'
+    + '<input id="bu-weeks" type="number" min="1" max="52" value="'+defaultWeeks+'" style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:6px 8px;color:var(--text);font-size:13px;text-align:center;font-weight:700;">'
+    + '<label style="font-size:11px;color:var(--text2);">weeks</label>'
+    + '<button onclick="rtpGenerateBuildPlan()" style="margin-left:auto;padding:8px 16px;background:rgba(252,211,77,0.18);border:1px solid rgba(252,211,77,0.4);border-radius:6px;color:#fcd34d;font-size:12px;font-weight:700;cursor:pointer;">⚡ Generate Ramp</button>'
+    + '</div>'
+
+    + '<div id="bu-result"></div>'
+
+    + '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">'
+    + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button id="bu-save-btn" onclick="rtpSaveBuildPlan(this)" disabled style="padding:8px 20px;background:rgba(96,165,250,0.4);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:not-allowed;">💾 Save Build Plan</button>'
+    + '</div></div>';
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+
+  // Prime min-weeks hints
+  RTP_STREAMS.forEach(function(s){ rtpUpdateMinWeeks(s); });
+  RTP_STREAMS.forEach(function(s){
+    document.getElementById('bu-start-'+s).addEventListener('input', function(){ rtpUpdateMinWeeks(s); });
+    document.getElementById('bu-target-'+s).addEventListener('input', function(){ rtpUpdateMinWeeks(s); });
+  });
+}
+
+function rtpUpdateMinWeeks(s) {
+  var start  = parseFloat((document.getElementById('bu-start-'+s)||{}).value)  || 0;
+  var target = parseFloat((document.getElementById('bu-target-'+s)||{}).value) || 0;
+  var el = document.getElementById('bu-min-'+s);
+  if (!el) return;
+  if (!target) { el.textContent = '—'; return; }
+  if (start <= 0) { el.textContent = 'no baseline'; return; }
+  el.textContent = rtpMinWeeks(start, target) + ' wk';
+}
+
+var RTP_PENDING_BUILD = null;
+
+function rtpGenerateBuildPlan() {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  var weeks = parseInt(document.getElementById('bu-weeks').value) || 4;
+  var result = { weeks: weeks, streams: {}, warnings: [] };
+
+  RTP_STREAMS.forEach(function(s) {
+    var start  = parseFloat((document.getElementById('bu-start-'+s)||{}).value)  || 0;
+    var target = parseFloat((document.getElementById('bu-target-'+s)||{}).value) || 0;
+    if (!target) return; // stream not planned
+    var solved = rtpSolveRampForWeeks(start, target, weeks);
+    if (!solved) {
+      var minW = rtpMinWeeks(start, target);
+      result.warnings.push(RTP_STREAM_LABELS[s]+': impossible in '+weeks+' wk without ACWR > 1.3 — needs at least '+minW+' wk');
+      solved = { acwr: 1.3, plan: rtpSimulateRamp(start, target, 1.3) };
+    }
+    result.streams[s] = { start: start, target: target, weeklyAcwr: solved.acwr, plan: solved.plan };
+  });
+
+  RTP_PENDING_BUILD = result;
+
+  var el = document.getElementById('bu-result');
+  var streamsPlanned = Object.keys(result.streams);
+  if (!streamsPlanned.length) { el.innerHTML = '<div style="color:#f87171;font-size:12px;padding:10px;">Enter a finish target for at least one stream</div>'; return; }
+
+  var html = '';
+  if (result.warnings.length) {
+    html += '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;">'
+      + result.warnings.map(function(w){ return '<div style="font-size:11px;color:#f87171;">⚠ '+w+'</div>'; }).join('')
+      + '<div style="font-size:10px;color:var(--text3);margin-top:4px;">Showing the ramp at max 1.3 ACWR — extend the weeks to make it fit</div></div>';
+  }
+
+  var maxLen = Math.max.apply(null, streamsPlanned.map(function(s){ return result.streams[s].plan.length; }));
+  var head = '<th style="text-align:left;padding:5px 8px;">Week</th>' + streamsPlanned.map(function(s){
+    return '<th style="padding:5px;text-align:center;">'+RTP_STREAM_ICONS[s]+' '+RTP_STREAM_LABELS[s]+'<div style="font-size:8px;color:var(--text3);font-weight:400;">volume · ACWR</div></th>';
+  }).join('');
+
+  var body = '';
+  for (var w = 0; w < maxLen; w++) {
+    body += '<tr style="border-top:1px solid rgba(255,255,255,0.04);">'
+      + '<td style="padding:6px 8px;font-size:11px;color:var(--text2);">Wk '+(w+1)+'</td>'
+      + streamsPlanned.map(function(s) {
+          var e = result.streams[s].plan[w];
+          if (!e) return '<td style="padding:6px;text-align:center;color:var(--text3);font-size:11px;">hold '+result.streams[s].target+'</td>';
+          var a = e.acwr;
+          var col = a === null ? 'var(--text3)' : (a >= 0.8 && a <= 1.3) ? '#4ade80' : '#f87171';
+          return '<td style="padding:6px;text-align:center;font-size:12px;"><b style="color:#fff;">'+e.load+'</b> <span style="color:'+col+';font-size:10px;">'+(a===null?'—':a.toFixed(2))+'</span></td>';
+        }).join('')
+      + '</tr>';
+  }
+
+  html += '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:320px;overflow-y:auto;">'
+    + '<table style="width:100%;border-collapse:collapse;"><thead><tr style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">'+head+'</tr></thead><tbody>'+body+'</tbody></table></div>'
+    + '<div style="font-size:10px;color:var(--text3);margin-top:8px;">Per-day suggestion: divide each weekly volume across your training days (typically 4-5). Log actual workload daily — regenerate any time and the ramp re-anchors to reality.</div>';
+
+  el.innerHTML = html;
+  var btn = document.getElementById('bu-save-btn');
+  btn.disabled = false;
+  btn.style.cursor = 'pointer';
+  btn.style.background = '#60a5fa';
+  btn.style.color = '#000';
+}
+
+function rtpSaveBuildPlan(btn) {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p || !RTP_PENDING_BUILD) return;
+  var targetWeekly = {};
+  Object.keys(RTP_PENDING_BUILD.streams).forEach(function(s){ targetWeekly[s] = RTP_PENDING_BUILD.streams[s].target; });
+  p.buildPlan = {
+    weeks:        RTP_PENDING_BUILD.weeks,
+    targetWeekly: targetWeekly,
+    streams:      RTP_PENDING_BUILD.streams,
+    warnings:     RTP_PENDING_BUILD.warnings,
+    created:      new Date().toISOString(),
+  };
+  rtpSave();
+  btn.closest('div[style*="fixed"]').remove();
+  rtpRenderDetail();
+  showStatus('✅ Build-up plan saved — '+RTP_PENDING_BUILD.weeks+' weeks');
+}
+
+function rtpRenderBuildPlanSection(p) {
+  if (!p.buildPlan || !p.buildPlan.streams) return '';
+  var bp = p.buildPlan;
+  var weekNum = Math.min(bp.weeks, Math.floor((Date.now() - new Date(bp.created).getTime()) / (7*86400000)) + 1);
+  var streams = Object.keys(bp.streams);
+  if (!streams.length) return '';
+
+  var head = '<th style="text-align:left;padding:4px 6px;">Wk</th>' + streams.map(function(s){
+    return '<th style="padding:4px;text-align:center;">'+RTP_STREAM_ICONS[s]+'</th>';
+  }).join('');
+
+  var maxLen = Math.max.apply(null, streams.map(function(s){ return bp.streams[s].plan.length; }));
+  var body = '';
+  for (var w = 0; w < maxLen; w++) {
+    var isCurrent = (w+1) === weekNum;
+    body += '<tr style="border-top:1px solid rgba(255,255,255,0.04);'+(isCurrent?'background:rgba(96,165,250,0.08);':'')+'">'
+      + '<td style="padding:4px 6px;font-size:10px;color:'+(isCurrent?'#60a5fa':'var(--text3)')+';font-weight:'+(isCurrent?'700':'400')+';">'+(w+1)+(isCurrent?' ◀':'')+'</td>'
+      + streams.map(function(s) {
+          var e = bp.streams[s].plan[w];
+          if (!e) return '<td style="padding:4px;text-align:center;font-size:10px;color:var(--text3);">'+bp.streams[s].target+'</td>';
+          var col = e.acwr === null ? 'var(--text3)' : (e.acwr >= 0.8 && e.acwr <= 1.3) ? '#4ade80' : '#f87171';
+          return '<td style="padding:4px;text-align:center;font-size:11px;color:#fff;">'+e.load+' <span style="font-size:9px;color:'+col+';">'+(e.acwr===null?'':e.acwr.toFixed(2))+'</span></td>';
+        }).join('')
+      + '</tr>';
+  }
+
+  return '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);">📈 Build-Up Plan · Week '+weekNum+' of '+bp.weeks+'</div>'
+    + '<button onclick="rtpBuildUpPlan()" style="font-size:10px;padding:3px 10px;background:rgba(252,211,77,0.1);border:1px solid rgba(252,211,77,0.3);border-radius:4px;color:#fcd34d;cursor:pointer;">✎ Edit</button>'
+    + '</div>'
+    + '<div style="max-height:180px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="font-size:8px;color:var(--text3);text-transform:uppercase;">'+head+'</tr></thead><tbody>'+body+'</tbody></table></div>'
+    + '</div>';
+}
+
 // ── Link Program Builder program to RTP phase ────────────────
 function rtpLinkProgram() {
   var p = RTP_ACTIVE_PROTOCOL;
@@ -19983,6 +20264,7 @@ function rtpRenderDetail() {
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
     + '<button onclick="rtpLogWorkload()" style="padding:6px 12px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:6px;color:#4ade80;font-size:11px;font-weight:600;cursor:pointer;">📊 Log Workload</button>'
     + '<button onclick="rtpPlanWorkload()" style="padding:6px 12px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);border-radius:6px;color:#60a5fa;font-size:11px;font-weight:600;cursor:pointer;">📅 Plan Week</button>'
+    + '<button onclick="rtpBuildUpPlan()" style="padding:6px 12px;background:rgba(252,211,77,0.15);border:1px solid rgba(252,211,77,0.3);border-radius:6px;color:#fcd34d;font-size:11px;font-weight:600;cursor:pointer;">📈 Build-Up</button>'
     + '<button onclick="rtpLinkProgram()" style="padding:6px 12px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:6px;color:#a78bfa;font-size:11px;font-weight:600;cursor:pointer;">🔗 Link Program</button>'
     + (phase.linkedProgramId ? '<button onclick="rtpAssignLinkedProgram()" style="padding:6px 12px;background:rgba(252,211,77,0.15);border:1px solid rgba(252,211,77,0.3);border-radius:6px;color:#fcd34d;font-size:11px;font-weight:600;cursor:pointer;">👤 Assign: '+phase.linkedProgramName+'</button>' : '')
     + '<button onclick="rtpDeleteProtocol()" style="padding:6px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:6px;color:#f87171;font-size:11px;cursor:pointer;">🗑 Delete</button>'
@@ -20002,6 +20284,9 @@ function rtpRenderDetail() {
       + '</div>';
   });
   html += '</div></div>';
+
+  // Build-up plan (if one exists)
+  html += rtpRenderBuildPlanSection(p);
 
   // Active phase detail
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">';
