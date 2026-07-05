@@ -19673,83 +19673,195 @@ function rtpCreateProtocol(btn) {
 }
 
 // ── Workload Planning ────────────────────────────────────────
+
 function rtpPlanWorkload() {
   var p = RTP_ACTIVE_PROTOCOL;
   if (!p) return;
   var phase = p.phases[p.currentPhase] || p.phases[0];
-  if (!phase) { showStatus("Phase data missing"); return; }
+  if (!phase) { showStatus('Phase data missing'); return; }
 
-  // Generate next 7 days of planned workload
-  var modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;';
+  var phaseTarget = phase.workload || {run:[0,1],throw:[0,1],swing:[0,1],lift:[0,1]};
+  var savedTargets = phase.targetAcwr || {};
 
-  var days = [];
-  for (var d = 0; d < 7; d++) {
-    var dt = new Date(); dt.setDate(dt.getDate() + d);
-    days.push(dt.toISOString().slice(0,10));
+  // Get chronic baseline per stream
+  function getBaseline(s) {
+    var logs = [];
+    p.phases.forEach(function(ph){ (ph.workloadLog||[]).forEach(function(l){ logs.push(l); }); });
+    var cutoff = Date.now() - 28*86400000;
+    var recent = logs.filter(function(l){ return new Date(l.date).getTime() >= cutoff; });
+    if (!recent.length) return 0;
+    return recent.reduce(function(sum,l){ return sum+(parseFloat(l[s])||0)*(parseFloat(l.rpe)||5); },0)/4;
   }
 
-  var tableRows = days.map(function(date, di) {
-    var dayName = new Date(date).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-    return '<tr>'
-      + '<td style="padding:8px 6px;color:var(--text2);font-size:11px;white-space:nowrap;">'+dayName+'</td>'
-      + '<td style="padding:4px;"><input type="number" min="0" placeholder="0" id="plan-run-'+di+'" style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;text-align:center;"></td>'
-      + '<td style="padding:4px;"><input type="number" min="0" placeholder="0" id="plan-throw-'+di+'" style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;text-align:center;"></td>'
-      + '<td style="padding:4px;"><input type="number" min="0" placeholder="0" id="plan-swing-'+di+'" style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;text-align:center;"></td>'
-      + '<td style="padding:4px;"><input type="number" min="0" placeholder="0" id="plan-lift-'+di+'" style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--text);font-size:12px;text-align:center;"></td>'
-      + '<td style="padding:4px;"><input type="text" placeholder="Notes" id="plan-notes-'+di+'" style="width:120px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--text);font-size:11px;"></td>'
-      + '</tr>';
-  }).join('');
+  var phaseDays = phase.days || 14;
+  var days = [];
+  for (var d=0; d<phaseDays; d++) {
+    var dt = new Date(); dt.setDate(dt.getDate()+d);
+    days.push(dt.toISOString().slice(0,10));
+  }
+  var existing = {};
+  (phase.plannedWorkload||[]).forEach(function(e){ existing[e.date]=e; });
 
-  // Show ACWR targets for this phase
-  var targetSummary = RTP_STREAMS.map(function(s) {
-    var t = phase.workload[s];
-    return RTP_STREAM_ICONS[s]+' '+RTP_STREAM_LABELS[s]+': '+t[0]+'–'+t[1];
-  }).join(' · ');
+  var box = document.createElement('div');
+  box.id = 'rtp-plan-modal';
+  box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;';
 
-  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:640px;max-width:95vw;">'
-    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">📅 Workload Planning — '+p.athlete+'</div>'
-    + '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;">'+phase.name+'</div>'
-    + '<div style="font-size:10px;color:#fcd34d;background:rgba(252,211,77,0.08);border:1px solid rgba(252,211,77,0.2);border-radius:6px;padding:8px 10px;margin-bottom:14px;">ACWR Targets: '+targetSummary+'</div>'
-    + '<table style="width:100%;border-collapse:collapse;">'
-    + '<thead><tr style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">'
-    + '<th style="text-align:left;padding:6px;">Day</th>'
-    + '<th style="padding:6px;">🏃 Run (yd)</th>'
-    + '<th style="padding:6px;">⚾ Throws</th>'
-    + '<th style="padding:6px;">🏏 Swings</th>'
-    + '<th style="padding:6px;">🏋️ Lift (lbs)</th>'
-    + '<th style="padding:6px;">Notes</th>'
-    + '</tr></thead>'
-    + '<tbody>'+tableRows+'</tbody>'
-    + '</table>'
-    + '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">'
-    + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
-    + '<button onclick="rtpSavePlan('+days.length+','+JSON.stringify(days)+')" style="padding:8px 18px;background:#60a5fa;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">💾 Save Plan</button>'
-    + '</div></div>';
+  // Build target rows
+  var trows = '';
+  RTP_STREAMS.forEach(function(s) {
+    var lo = phaseTarget[s][0], hi = phaseTarget[s][1];
+    var mid = savedTargets[s] || (((lo+hi)/2).toFixed(2));
+    var base = getBaseline(s);
+    var cur = rtpCalcACWR(p, s);
+    var needed = base>0 ? Math.round(mid*base) : 0;
+    trows += '<tr style="border-top:1px solid rgba(255,255,255,0.06);">'
+      +'<td style="padding:9px 8px;font-size:12px;">'+RTP_STREAM_ICONS[s]+' '+RTP_STREAM_LABELS[s]+'</td>'
+      +'<td style="padding:9px 8px;text-align:center;font-size:11px;color:var(--text3);">'+cur.toFixed(2)+'</td>'
+      +'<td style="padding:9px 4px;text-align:center;">'
+      +'<input id="tacwr-'+s+'" type="number" min="0" max="2" step="0.05" value="'+mid+'"'
+      +' onchange="rtpRecalcNeeded(\''+s+'\')"'
+      +' style="width:58px;background:rgba(252,211,77,0.08);border:1px solid rgba(252,211,77,0.4);border-radius:5px;padding:4px 6px;color:#fcd34d;font-size:12px;text-align:center;"></td>'
+      +'<td style="padding:9px 8px;text-align:center;font-size:10px;color:var(--text3);">'+lo+' - '+hi+'</td>'
+      +'<td id="needed-'+s+'" style="padding:9px 8px;text-align:center;font-size:11px;color:#60a5fa;">'+(base>0 ? needed+' load' : 'Log workload first')+'</td>'
+      +'</tr>';
+  });
 
-  document.body.appendChild(modal);
-  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  // Build day rows
+  var drows = '';
+  var dtypes = ['Training','Game','Travel/Rest','Active Recovery','Practice Only'];
+  days.forEach(function(date, di) {
+    var dn = new Date(date).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    var ex = existing[date]||{};
+    var opts = dtypes.map(function(t){ return '<option'+(ex.dayType===t?' selected':'')+'>'+t+'</option>'; }).join('');
+    drows += '<tr style="border-top:1px solid rgba(255,255,255,0.04);">'
+      +'<td style="padding:5px 4px;font-size:10px;color:var(--text2);white-space:nowrap;">'+dn+'</td>'
+      +'<td style="padding:3px;"><select id="ptype-'+di+'" style="width:105px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px;color:var(--text);font-size:10px;">'+opts+'</select></td>'
+      +'<td style="padding:3px;"><input type="number" min="0" placeholder="0" id="prun-'+di+'" value="'+(ex.run||'')+'" style="width:56px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px;color:var(--text);font-size:11px;text-align:center;"></td>'
+      +'<td style="padding:3px;"><input type="number" min="0" placeholder="0" id="pthrow-'+di+'" value="'+(ex.throw||'')+'" style="width:56px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px;color:var(--text);font-size:11px;text-align:center;"></td>'
+      +'<td style="padding:3px;"><input type="number" min="0" placeholder="0" id="pswing-'+di+'" value="'+(ex.swing||'')+'" style="width:56px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px;color:var(--text);font-size:11px;text-align:center;"></td>'
+      +'<td style="padding:3px;"><input type="number" min="0" placeholder="0" id="plift-'+di+'" value="'+(ex.lift||'')+'" style="width:62px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px;color:var(--text);font-size:11px;text-align:center;"></td>'
+      +'<td style="padding:3px;"><input type="number" min="1" max="10" placeholder="6" id="prpe-'+di+'" value="'+(ex.rpe||'')+'" style="width:38px;background:var(--bg3);border:1px solid rgba(252,211,77,0.3);border-radius:4px;padding:4px;color:#fcd34d;font-size:11px;text-align:center;"></td>'
+      +'<td style="padding:3px;"><input type="text" placeholder="Notes" id="pnotes-'+di+'" value="'+(ex.notes||'')+'" style="width:110px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;"></td>'
+      +'</tr>';
+  });
+
+  var daysJson = JSON.stringify(days);
+  box.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:920px;max-width:98vw;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:12px;flex-wrap:wrap;">'
+    +'<div><div style="font-size:16px;font-weight:700;color:#fff;">Workload Plan Builder</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:2px;">'+p.athlete+' - '+phase.name+'</div></div>'
+    +'<button onclick="rtpAutoFill('+days.length+','+daysJson+')" style="padding:8px 14px;background:rgba(252,211,77,0.15);border:1px solid rgba(252,211,77,0.3);border-radius:6px;color:#fcd34d;font-size:11px;font-weight:700;cursor:pointer;">Auto-distribute to targets</button>'
+    +'</div>'
+
+    +'<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;">'
+    +'<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Step 1 - Set your ACWR target per stream</div>'
+    +'<table style="width:100%;border-collapse:collapse;">'
+    +'<thead><tr style="font-size:9px;color:var(--text3);text-transform:uppercase;">'
+    +'<th style="text-align:left;padding:4px 8px;">Stream</th>'
+    +'<th style="padding:4px;text-align:center;">Current ACWR</th>'
+    +'<th style="padding:4px;text-align:center;">Target ACWR (edit)</th>'
+    +'<th style="padding:4px;text-align:center;">Phase Range</th>'
+    +'<th style="padding:4px;text-align:center;">7-day Load Needed</th>'
+    +'</tr></thead><tbody>'+trows+'</tbody></table>'
+    +'<div style="font-size:10px;color:var(--text3);margin-top:8px;padding:6px 8px;background:rgba(255,255,255,0.02);border-radius:4px;">'
+    +'7-day load needed = Target ACWR x Chronic baseline (28-day avg). Session load = volume x RPE.'
+    +'</div></div>'
+
+    +'<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">'
+    +'Step 2 - Fill in daily plan ('+phaseDays+' days) - adjust freely</div>'
+    +'<div style="overflow-x:auto;">'
+    +'<table style="width:100%;border-collapse:collapse;min-width:700px;">'
+    +'<thead><tr style="font-size:9px;color:var(--text3);text-transform:uppercase;">'
+    +'<th style="text-align:left;padding:5px 4px;">Date</th>'
+    +'<th style="padding:5px 4px;">Day Type</th>'
+    +'<th style="padding:5px 4px;">Run (yd)</th>'
+    +'<th style="padding:5px 4px;">Throws</th>'
+    +'<th style="padding:5px 4px;">Swings</th>'
+    +'<th style="padding:5px 4px;">Lift (lbs)</th>'
+    +'<th style="padding:5px 4px;">RPE</th>'
+    +'<th style="padding:5px 4px;">Notes</th>'
+    +'</tr></thead>'
+    +'<tbody>'+drows+'</tbody></table></div>'
+
+    +'<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">'
+    +'<button onclick="document.getElementById(\'rtp-plan-modal\').remove()" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    +'<button onclick="rtpSavePlan2('+days.length+','+daysJson+')" style="padding:8px 20px;background:#60a5fa;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">Save Plan</button>'
+    +'</div></div>';
+
+  document.body.appendChild(box);
+  box.addEventListener('click', function(e){ if(e.target===box) box.remove(); });
 }
 
-function rtpSavePlan(count, dates) {
-  var p = RTP_ACTIVE_PROTOCOL;
-  if (!p) return;
+function rtpRecalcNeeded(s) {
+  var p = RTP_ACTIVE_PROTOCOL; if (!p) return;
+  var el = document.getElementById('tacwr-'+s); if (!el) return;
+  var target = parseFloat(el.value)||1;
+  var logs = [];
+  p.phases.forEach(function(ph){ (ph.workloadLog||[]).forEach(function(l){ logs.push(l); }); });
+  var cutoff = Date.now()-28*86400000;
+  var recent = logs.filter(function(l){ return new Date(l.date).getTime()>=cutoff; });
+  var base = recent.reduce(function(sum,l){ return sum+(parseFloat(l[s])||0)*(parseFloat(l.rpe)||5); },0)/4;
+  var out = document.getElementById('needed-'+s);
+  if (out) out.textContent = base>0 ? Math.round(target*base)+' load' : 'Log workload first';
+}
+
+function rtpAutoFill(count, dates) {
+  var p = RTP_ACTIVE_PROTOCOL; if (!p) return;
+  var logs = [];
+  p.phases.forEach(function(ph){ (ph.workloadLog||[]).forEach(function(l){ logs.push(l); }); });
+  var cutoff = Date.now()-28*86400000;
+  var recent = logs.filter(function(l){ return new Date(l.date).getTime()>=cutoff; });
+  // Progressive ramp: builds from 60% to peak at day 3-4 then tapers
+  var ramp = [0.6,0.75,0.9,1.0,1.0,0.9,0.8,0.75,0.7,0.65,0.6,0.55,0.5,0.5];
+  RTP_STREAMS.forEach(function(s) {
+    var tel = document.getElementById('tacwr-'+s); if (!tel) return;
+    var target = parseFloat(tel.value)||1;
+    var base = recent.reduce(function(sum,l){ return sum+(parseFloat(l[s])||0)*(parseFloat(l.rpe)||5); },0)/4;
+    if (!base) return;
+    var acuteNeeded = base*target; // 7-day total session load
+    // Find training days
+    var tdays = [];
+    for (var i=0; i<count; i++) {
+      var t = (document.getElementById('ptype-'+i)||{}).value||'Training';
+      if (t!=='Game'&&t!=='Travel/Rest') tdays.push(i);
+    }
+    if (!tdays.length) return;
+    var totalW = tdays.reduce(function(sum,_,i){ return sum+(ramp[i]||0.5); },0);
+    tdays.forEach(function(di,idx) {
+      var w = ramp[idx]||0.5;
+      var vol = Math.round((acuteNeeded*w/totalW)/6); // assume RPE 6 for planning
+      var inp = document.getElementById('p'+s+'-'+di);
+      if (inp&&vol>0) inp.value=vol;
+    });
+  });
+  showStatus('Loads distributed across training days - adjust as needed');
+}
+
+function rtpSavePlan2(count, dates) {
+  var p = RTP_ACTIVE_PROTOCOL; if (!p) return;
   var plan = [];
-  for (var i = 0; i < count; i++) {
+  for (var i=0; i<count; i++) {
     plan.push({
-      date:  dates[i],
-      run:   parseFloat(document.getElementById('plan-run-'+i).value)||0,
-      throw: parseFloat(document.getElementById('plan-throw-'+i).value)||0,
-      swing: parseFloat(document.getElementById('plan-swing-'+i).value)||0,
-      lift:  parseFloat(document.getElementById('plan-lift-'+i).value)||0,
-      notes: document.getElementById('plan-notes-'+i).value,
+      date:    dates[i],
+      dayType: (document.getElementById('ptype-'+i)||{}).value||'Training',
+      run:     parseFloat((document.getElementById('prun-'+i)||{}).value)||0,
+      throw:   parseFloat((document.getElementById('pthrow-'+i)||{}).value)||0,
+      swing:   parseFloat((document.getElementById('pswing-'+i)||{}).value)||0,
+      lift:    parseFloat((document.getElementById('plift-'+i)||{}).value)||0,
+      rpe:     parseFloat((document.getElementById('prpe-'+i)||{}).value)||6,
+      notes:   (document.getElementById('pnotes-'+i)||{}).value||'',
     });
   }
   p.phases[p.currentPhase].plannedWorkload = plan;
+  p.phases[p.currentPhase].targetAcwr = {};
+  RTP_STREAMS.forEach(function(s) {
+    var el=document.getElementById('tacwr-'+s);
+    if (el) p.phases[p.currentPhase].targetAcwr[s]=parseFloat(el.value)||1;
+  });
   rtpSave();
-  document.querySelector('div[style*="fixed"]').remove();
+  var m=document.getElementById('rtp-plan-modal'); if(m) m.remove();
   rtpRenderDetail();
-  showStatus('✅ Workload plan saved for '+p.athlete+' — '+count+' days');
+  showStatus('Workload plan saved - '+count+' days');
 }
 
 // ── Link Program Builder program to RTP phase ────────────────
