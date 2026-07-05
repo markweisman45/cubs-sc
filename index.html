@@ -20145,6 +20145,108 @@ function rtpRenderBuildPlanSection(p) {
     + '</div>';
 }
 
+// ── Phase Editor ──────────────────────────────────────────────
+function rtpEditPhase() {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  var phase = p.phases[p.currentPhase];
+  if (!phase) return;
+
+  var critRows = (phase.criteria||[]).map(function(c, i) {
+    return '<div style="display:flex;gap:6px;margin-bottom:6px;" id="crit-row-'+i+'">'
+      + '<input id="crit-text-'+i+'" value="'+String(c.text).replace(/"/g,'&quot;')+'" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:6px 8px;color:var(--text);font-size:12px;">'
+      + '<button onclick="document.getElementById(\'crit-row-'+i+'\').remove()" style="padding:4px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:5px;color:#f87171;font-size:11px;cursor:pointer;">✕</button>'
+      + '</div>';
+  }).join('');
+
+  var wlRows = RTP_STREAMS.map(function(s) {
+    var t = (phase.workload||{})[s] || [0,1];
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+      + '<div style="width:90px;font-size:11px;color:var(--text2);">'+RTP_STREAM_ICONS[s]+' '+RTP_STREAM_LABELS[s]+'</div>'
+      + '<input id="wl-min-'+s+'" type="number" min="0" max="2" step="0.05" value="'+t[0]+'" style="width:60px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px;color:var(--text);font-size:12px;text-align:center;">'
+      + '<span style="color:var(--text3);font-size:11px;">to</span>'
+      + '<input id="wl-max-'+s+'" type="number" min="0" max="2" step="0.05" value="'+t[1]+'" style="width:60px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px;color:var(--text);font-size:12px;text-align:center;">'
+      + '<span style="color:var(--text3);font-size:10px;">ACWR</span>'
+      + '</div>';
+  }).join('');
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;';
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:520px;max-width:95vw;">'
+    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:14px;">✎ Edit Phase '+(p.currentPhase+1)+'</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 90px;gap:10px;margin-bottom:12px;">'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Phase Name</label>'
+    + '<input id="ep-name" value="'+String(phase.name).replace(/"/g,'&quot;')+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;"></div>'
+    + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Days</label>'
+    + '<input id="ep-days" type="number" min="1" max="90" value="'+(phase.days||7)+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;text-align:center;"></div>'
+    + '</div>'
+    + '<div style="margin-bottom:12px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+    + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Criteria</label>'
+    + '<button onclick="rtpAddCriteriaRow()" style="font-size:10px;padding:3px 10px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);border-radius:4px;color:#4ade80;cursor:pointer;">＋ Add</button>'
+    + '</div>'
+    + '<div id="ep-crit-list">'+critRows+'</div>'
+    + '</div>'
+    + '<div style="margin-bottom:12px;">'
+    + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">ACWR Workload Targets</label>'
+    + wlRows
+    + '</div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button onclick="rtpSavePhaseEdit(this)" style="padding:8px 20px;background:#60a5fa;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">💾 Save Phase</button>'
+    + '</div></div>';
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+}
+
+function rtpAddCriteriaRow() {
+  var list = document.getElementById('ep-crit-list');
+  if (!list) return;
+  var i = 'new' + Date.now();
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;';
+  div.id = 'crit-row-'+i;
+  div.innerHTML = '<input id="crit-text-'+i+'" placeholder="New criterion..." style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:6px 8px;color:var(--text);font-size:12px;">'
+    + '<button onclick="document.getElementById(\'crit-row-'+i+'\').remove()" style="padding:4px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:5px;color:#f87171;font-size:11px;cursor:pointer;">✕</button>';
+  list.appendChild(div);
+}
+
+function rtpSavePhaseEdit(btn) {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  var phase = p.phases[p.currentPhase];
+  if (!phase) return;
+
+  phase.name = document.getElementById('ep-name').value.trim() || phase.name;
+  phase.days = parseInt(document.getElementById('ep-days').value) || phase.days;
+
+  // Rebuild criteria, preserving met status by matching text
+  var oldByText = {};
+  (phase.criteria||[]).forEach(function(c){ oldByText[c.text] = c; });
+  var newCriteria = [];
+  document.querySelectorAll('#ep-crit-list input[id^="crit-text-"]').forEach(function(inp) {
+    var txt = inp.value.trim();
+    if (!txt) return;
+    var prev = oldByText[txt];
+    newCriteria.push(prev ? prev : { text: txt, met: false, metAt: null, notes: '' });
+  });
+  phase.criteria = newCriteria;
+
+  // Workload targets
+  if (!phase.workload) phase.workload = {};
+  RTP_STREAMS.forEach(function(s) {
+    var mn = parseFloat((document.getElementById('wl-min-'+s)||{}).value);
+    var mx = parseFloat((document.getElementById('wl-max-'+s)||{}).value);
+    if (!isNaN(mn) && !isNaN(mx)) phase.workload[s] = [mn, mx];
+  });
+
+  rtpSave();
+  btn.closest('div[style*="fixed"]').remove();
+  rtpRenderDetail();
+  showStatus('✅ Phase updated');
+}
+
 // ── Link Program Builder program to RTP phase ────────────────
 function rtpLinkProgram() {
   var p = RTP_ACTIVE_PROTOCOL;
@@ -20293,7 +20395,10 @@ function rtpRenderDetail() {
 
   // Criteria checklist
   html += '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;">'
-    + '<div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:10px;">'+phase.name+'</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+    + '<div style="font-size:11px;font-weight:700;color:#fff;">'+phase.name+'</div>'
+    + '<button onclick="rtpEditPhase()" style="font-size:10px;padding:3px 10px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.3);border-radius:4px;color:#60a5fa;cursor:pointer;">✎ Edit Phase</button>'
+    + '</div>'
     + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px;">Phase Criteria</div>';
 
   phase.criteria.forEach(function(c, ci) {
