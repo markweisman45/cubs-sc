@@ -766,6 +766,7 @@ body {
                   </div>
                 </div>
               </div>
+              <div id="acwrRecs" style="margin-top:10px;"></div>
             </div>
             <div class="card">
               <div class="card-title">Strain — Last 14 Days</div>
@@ -7056,6 +7057,53 @@ function computeLiveACWR(playerName) {
   return calcACWR(rows, lastDate);
 }
 
+// ── Today's safe distance range (inverts the EWMA ACWR formula) ──
+// Iterates EWMA state through YESTERDAY (off days decay the state, which
+// correctly increases how much load he can absorb today), then solves:
+//   ACWR(L) = (λa·L + (1-λa)·a) / (λc·L + (1-λc)·c) = t
+//   → L(t) = [t(1-λc)c − (1-λa)a] / (λa − t·λc)
+function calcSafeDistToday(playerName) {
+  var rows = [];
+  try {
+    var statcast = (typeof importedData !== 'undefined' && importedData.statcast) ? importedData.statcast : {};
+    var key = Object.keys(statcast).find(k=>k===playerName)||Object.keys(statcast).find(k=>k.toLowerCase()===playerName.toLowerCase());
+    if (key) rows = (statcast[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
+  } catch(e) {}
+  if (!rows.length) return null;
+
+  const la = 2/(7+1), lc = 2/(28+1);
+  const lookup = {};
+  var todayLogged = { he: 0, td: 0, has: false };
+  var today = new Date(); today.setHours(0,0,0,0);
+  rows.forEach(function(r) {
+    var d = new Date(safeParseDate(r.date)); d.setHours(0,0,0,0);
+    if (d.getTime() === today.getTime()) { todayLogged.he += (+r.heDist||0); todayLogged.td += (+r.dist||0); todayLogged.has = true; return; }
+    var k = d.getTime();
+    if (!lookup[k]) lookup[k] = {he:0, td:0};
+    lookup[k].he += (+r.heDist||0);
+    lookup[k].td += (+r.dist||0);
+  });
+
+  var first = new Date(safeParseDate(rows[0].date)); first.setHours(0,0,0,0);
+  var yesterday = new Date(today.getTime() - 86400000);
+  var he_a=0, he_c=0, td_a=0, td_c=0;
+  var d = new Date(first);
+  while (d <= yesterday) {
+    var load = lookup[d.getTime()] || {he:0, td:0};
+    he_a = la*load.he + (1-la)*he_a;  he_c = lc*load.he + (1-lc)*he_c;
+    td_a = la*load.td + (1-la)*td_a;  td_c = lc*load.td + (1-lc)*td_c;
+    d.setDate(d.getDate()+1);
+  }
+  if (he_c <= 0 && td_c <= 0) return null;
+
+  function solve(a, c, t) { var den = la - t*lc; if (den <= 0 || c <= 0) return null; return Math.max(0, (t*(1-lc)*c - (1-la)*a) / den); }
+  function band(a, c) {
+    if (c <= 0) return null;
+    return { min: Math.round(solve(a,c,0.8)||0), max: Math.round(solve(a,c,1.3)||0), restAcwr: parseFloat((((1-la)*a)/((1-lc)*c)).toFixed(2)) };
+  }
+  return { he: band(he_a, he_c), td: band(td_a, td_c), todayLogged: todayLogged };
+}
+
 function renderACWR(p) {
   // Always compute live so off days are accounted for
   const live = computeLiveACWR(p._name || currentPlayer);
@@ -7076,6 +7124,35 @@ function renderACWR(p) {
   zoneEl.className = 'acwr-zone ' + (az === 'red' ? 'danger' : az === 'yellow' ? 'caution' : 'optimal');
   zoneEl.textContent = acwrLabel(acwr);
   numEl.className    = 'acwr-num '  + (az === 'red' ? 'danger' : az === 'yellow' ? 'caution' : 'optimal');
+
+  // Today's recommended distance ranges to stay in the 0.8–1.3 band
+  var recsEl = document.getElementById('acwrRecs');
+  if (recsEl) {
+    var safe = calcSafeDistToday(p._name || currentPlayer);
+    if (!safe) {
+      recsEl.innerHTML = '';
+    } else {
+      function fmtFt(n){ return n >= 5280 ? (n/5280).toFixed(2)+' mi' : n.toLocaleString()+' ft'; }
+      function row(label, b, logged) {
+        if (!b) return '';
+        var status = '';
+        if (logged > 0) {
+          var col = logged > b.max ? '#f87171' : logged < b.min ? '#fcd34d' : '#4ade80';
+          status = ' <span style="color:'+col+';">· logged today: '+fmtFt(logged)+(logged > b.max ? ' ⚠ OVER' : logged < b.min ? ' (under)' : ' ✓')+'</span>';
+        }
+        var restNote = b.restAcwr < 0.8 ? ' <span style="color:#fcd34d;">(rest day drops ACWR to '+b.restAcwr.toFixed(2)+')</span>' : '';
+        return '<div style="font-size:11px;padding:3px 0;color:var(--text2);">'
+          + '<b style="color:#fff;">'+label+':</b> '
+          + '<span style="color:#60a5fa;font-family:\'DM Mono\',monospace;">'+fmtFt(b.min)+' – '+fmtFt(b.max)+'</span>'
+          + status + restNote + '</div>';
+      }
+      recsEl.innerHTML = '<div style="background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.18);border-radius:8px;padding:9px 12px;">'
+        + '<div style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#60a5fa;margin-bottom:4px;">⚖️ Today\'s safe range (ACWR 0.8–1.3)</div>'
+        + row('Total Dist', safe.td, safe.todayLogged.td)
+        + row('HE Dist', safe.he, safe.todayLogged.he)
+        + '</div>';
+    }
+  }
 }
 
 // ══════════════════════════════════════════════
