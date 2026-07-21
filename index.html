@@ -13841,41 +13841,45 @@ function annualPlanKey() {
   return athlete + '_' + year;
 }
 
-// ── AUTO-CALCULATE Volume/Intensity/TUT from PB_STATE if available ──────────
-function calcBlockMetrics(block) {
-  // Try to find matching PB sessions
-  var totalSets=0, totalReps=0, loadSum=0, loadCount=0, tutSum=0, tutCount=0;
+// ── Pull REAL per-week sets/reps/load/TUT from a block's linked saved program ──
+// Replaces the old calcBlockMetrics(), which read whatever program happened to be
+// open in PB_STATE — no date or athlete check, so it silently showed unrelated data.
+// This looks up the specific program linked to THIS block, then reads the specific
+// week within that program's own weekData that corresponds to the calendar week
+// being rendered (wkInBlock = 1-indexed week number within the block).
+function annualGetLinkedWeekMetrics(block, wkInBlock) {
+  if (!block || !block.linkedProgramId) return null;
+  var prog = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : [])
+    .find(function(p){ return String(p.id) === String(block.linkedProgramId); });
+  if (!prog || !prog.pbState || !prog.pbState.weekData) return null;
+  var wk = prog.pbState.weekData[wkInBlock - 1];
+  if (!wk || !wk.days) return null;
 
-  // Check if PB_STATE has data for this block's date range
-  if (typeof PB_STATE !== 'undefined' && PB_STATE.weekData && PB_STATE.weekData.length) {
-    PB_STATE.weekData.forEach(function(wk) {
-      wk.days.forEach(function(day) {
-        if (day.type !== 'lift') return;
-        day.blocks.forEach(function(blk) {
-          blk.exercises.forEach(function(ex) {
-            var sets = parseInt(ex.sets)||0;
-            var reps = parseInt(ex.reps)||0;
-            if (sets && reps) {
-              totalSets += sets;
-              totalReps += reps * sets;
-              tutCount++;
-              // TUT = reps * first digit of tempo
-              var tempoFirst = parseInt((ex.tempo||'3').split('-')[0])||3;
-              tutSum += reps * tempoFirst * sets;
-            }
-            // Load %
-            var loadMatch = String(ex.load||'').match(/(\d+)\s*%/);
-            if (loadMatch) { loadSum += parseInt(loadMatch[1]); loadCount++; }
-          });
-        });
+  var setsSum=0, repsSum=0, exCount=0, loadSum=0, loadCount=0, tutSum=0, tutCount=0;
+  wk.days.forEach(function(day) {
+    if (day.type !== 'lift') return;
+    (day.blocks||[]).forEach(function(blk) {
+      (blk.exercises||[]).forEach(function(ex) {
+        var sets = parseInt(ex.sets)||0;
+        var reps = parseInt(ex.reps)||0;
+        if (sets && reps) {
+          setsSum += sets; repsSum += reps; exCount++;
+          var tempoFirst = parseInt((ex.tempo||'3').split('-')[0])||3;
+          tutSum += reps * tempoFirst; tutCount++;
+        }
+        var loadMatch = String(ex.load||'').match(/(\d+)\s*%/);
+        if (loadMatch) { loadSum += parseInt(loadMatch[1]); loadCount++; }
       });
     });
-  }
+  });
 
+  if (!exCount) return null;
   return {
-    volume:    totalSets > 0 ? totalReps : null,
-    intensity: loadCount > 0 ? Math.round(loadSum/loadCount) : null,
-    tut:       tutCount  > 0 ? Math.round(tutSum/tutCount)   : null,
+    sets: Math.round(setsSum/exCount),
+    reps: Math.round(repsSum/exCount),
+    load: loadCount ? Math.round(loadSum/loadCount) : null,
+    tut:  tutCount  ? Math.round(tutSum/tutCount)   : null,
+    programName: prog.name,
   };
 }
 
@@ -13975,6 +13979,15 @@ function renderAnnualPlan() {
     return '<td onclick="'+click+'" style="border:'+border+';min-width:28px;max-width:28px;padding:2px 1px;text-align:center;cursor:pointer;background:'+bg+';font-size:8px;font-weight:700;color:'+(cfg?cfg.color:'#444')+';font-family:\'DM Mono\',monospace;">'+txt+'</td>';
   }).join('');
 
+  // Row 3b: Linked Program (real program tied to this block, if any)
+  var linkCells = weeks.map(function(w) {
+    var b = getBlockForWeek(w);
+    if (!b) return '<td style="border:1px solid rgba(255,255,255,0.03);min-width:28px;max-width:28px;padding:2px;"></td>';
+    var linked = !!b.linkedProgramId;
+    return '<td onclick="annualLinkProgramModal(\''+b.id+'\')" style="border:1px solid rgba(255,255,255,0.06);min-width:28px;max-width:28px;padding:2px;text-align:center;cursor:pointer;font-size:9px;" title="'+(linked?('Linked: '+(b.linkedProgramName||'')+' — click to change'):'No program linked — click to link one')+'">'
+      +(linked?'🔗':'<span style="color:#333;">＋</span>')+'</td>';
+  }).join('');
+
   // Row 4: Training Method
   var methodCells = weeks.map(function(w) {
     var b = getBlockForWeek(w);
@@ -13988,25 +14001,41 @@ function renderAnnualPlan() {
   var repCells = weeks.map(function(w, wi) {
     var b = getBlockForWeek(w);
     if (!b) return '<td '+CELL+' style="color:#333;min-width:28px;max-width:28px;border:1px solid rgba(255,255,255,0.03);">—</td>';
-    var def = PHASE_DEFAULTS[b.type] || PHASE_DEFAULTS.inseason;
     var wkInBlock = Math.floor((w - new Date(b.startDate))/(7*86400000))+1;
-    var m = (typeof pbGetProgression==='function') ? pbGetProgression(b.progression||'linear', wkInBlock, b.weeks||4, false) : {sets:1,reps:1,load:1};
-    var sets = Math.round((def.sets?def.sets[0]:3) * m.sets);
-    var reps = Math.round((def.repsLo||8) * m.reps);
-    var load = Math.round((def.loadStart||70) * m.load);
-    return '<td '+CELL+' style="color:var(--text2);font-size:8px;min-width:28px;max-width:28px;" title="'+sets+'×'+reps+' @'+load+'%">'+sets+'×'+reps+'</td>';
+    var real = annualGetLinkedWeekMetrics(b, wkInBlock);
+    var sets, reps, isReal = false;
+    if (real) {
+      sets = real.sets; reps = real.reps; isReal = true;
+    } else {
+      var def = PHASE_DEFAULTS[b.type] || PHASE_DEFAULTS.inseason;
+      var m = (typeof pbGetProgression==='function') ? pbGetProgression(b.progression||'linear', wkInBlock, b.weeks||4, false) : {sets:1,reps:1,load:1};
+      sets = Math.round((def.sets?def.sets[0]:3) * m.sets);
+      reps = Math.round((def.repsLo||8) * m.reps);
+    }
+    var style = isReal
+      ? 'color:#fff;font-weight:700;min-width:28px;max-width:28px;background:rgba(34,197,94,0.14);'
+      : 'color:var(--text2);font-size:8px;min-width:28px;max-width:28px;';
+    var title = isReal ? ('From "'+real.programName+'" — '+sets+'×'+reps) : ('Projected (no program linked) — '+sets+'×'+reps);
+    return '<td '+CELL+' style="'+style+'" title="'+title+'">'+sets+'×'+reps+'</td>';
   }).join('');
 
   // Row 6: Intensity %
   var intCells = weeks.map(function(w) {
     var b = getBlockForWeek(w);
     if (!b) return '<td '+CELL+' style="color:#333;min-width:28px;max-width:28px;border:1px solid rgba(255,255,255,0.03);">—</td>';
-    var def = PHASE_DEFAULTS[b.type] || PHASE_DEFAULTS.inseason;
     var wkInBlock = Math.floor((w - new Date(b.startDate))/(7*86400000))+1;
-    var m = (typeof pbGetProgression==='function') ? pbGetProgression(b.progression||'linear', wkInBlock, b.weeks||4, false) : {sets:1,reps:1,load:1};
-    var load = Math.round((def.loadStart||70) * m.load);
+    var real = annualGetLinkedWeekMetrics(b, wkInBlock);
+    var load, isReal = false;
+    if (real && real.load !== null) {
+      load = real.load; isReal = true;
+    } else {
+      var def = PHASE_DEFAULTS[b.type] || PHASE_DEFAULTS.inseason;
+      var m = (typeof pbGetProgression==='function') ? pbGetProgression(b.progression||'linear', wkInBlock, b.weeks||4, false) : {sets:1,reps:1,load:1};
+      load = Math.round((def.loadStart||70) * m.load);
+    }
     var col = load>=90?'#ef4444':load>=80?'#f59e0b':load>=70?'#22c55e':'#60a5fa';
-    return '<td '+CELL+' style="color:'+col+';font-weight:600;min-width:28px;max-width:28px;">'+load+'%</td>';
+    var title = isReal ? ('From "'+real.programName+'" — '+load+'%') : ('Projected (no program linked) — '+load+'%');
+    return '<td '+CELL+' style="color:'+col+';font-weight:'+(isReal?'800':'600')+';min-width:28px;max-width:28px;'+(isReal?'text-decoration:underline;text-decoration-style:dotted;':'')+'" title="'+title+'">'+load+'%</td>';
   }).join('');
 
   // Rows 7-11: Strength quality bands (Hypertrophy, F.Hyp, Rel.Str, Power, ESD)
@@ -14064,6 +14093,8 @@ function renderAnnualPlan() {
     +'<tr><td '+CELL_WIDE+'>Season Phase</td>'+phaseCells+'</tr>'
     // Block
     +'<tr><td '+CELL_WIDE+'>Block Phase</td>'+blockCells+'</tr>'
+    // Linked Program
+    +'<tr><td '+CELL_WIDE+'>Linked Program</td>'+linkCells+'</tr>'
     // Training method
     +'<tr><td '+CELL_WIDE+'>Method</td>'+methodCells+'</tr>'
     // Rep scheme
@@ -14146,6 +14177,12 @@ function annualShowBlockModal(existing, startDateStr) {
     +'<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Duration</label>'
     +'<select id="ab-weeks" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:6px 8px;color:#fff;font-size:12px;">'+weekOpts+'</select></div>'
     +'</div>'
+    +(isEdit ? (
+      '<div style="margin-bottom:12px;padding:10px;border-radius:6px;background:'+(existing.linkedProgramId?'rgba(34,197,94,0.08)':'rgba(255,255,255,0.03)')+';border:1px solid '+(existing.linkedProgramId?'rgba(34,197,94,0.25)':'rgba(255,255,255,0.08)')+';display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+      +'<div style="font-size:11px;color:'+(existing.linkedProgramId?'#4ade80':'var(--text3)')+';">'+(existing.linkedProgramId?('🔗 Linked: '+existing.linkedProgramName):'No program linked — this block shows a generic projection')+'</div>'
+      +'<button onclick="annualLinkProgramModal(\''+existing.id+'\')" style="padding:5px 10px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);border-radius:5px;color:#60a5fa;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">'+(existing.linkedProgramId?'Change':'Link Program')+'</button>'
+      +'</div>'
+    ) : '')
     // Speed sliders
     +'<div style="margin-bottom:12px;">'
     +'<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Speed Emphasis <span id="spd-total" style="color:#f59e0b;">'+spd.reduce(function(a,b){return a+b;},0)+'%</span></div>'
@@ -14181,7 +14218,8 @@ function annualShowBlockModal(existing, startDateStr) {
     ANNUAL_PLANS[planKey] = ANNUAL_PLANS[planKey]||{blocks:[]};
     var b = { id:existing.id||'blk_'+Date.now(), type:type, progression:prog,
               startDate:start, endDate:endD.toISOString().slice(0,10),
-              weeks:weeks, notes:notes, speed:spdVals, esd:esdVals };
+              weeks:weeks, notes:notes, speed:spdVals, esd:esdVals,
+              linkedProgramId: existing.linkedProgramId, linkedProgramName: existing.linkedProgramName };
     if (isEdit) {
       var idx = ANNUAL_PLANS[planKey].blocks.findIndex(function(x){return x.id===existing.id;});
       if (idx>=0) ANNUAL_PLANS[planKey].blocks[idx]=b;
@@ -14202,6 +14240,78 @@ function annualShowBlockModal(existing, startDateStr) {
   }
   modal.querySelector('#ab-cancel').onclick = function(){modal.remove();};
   modal.addEventListener('click', function(e){if(e.target===modal)modal.remove();});
+}
+
+// ── Link a saved Program Builder program to an Annual Plan block ────────────
+// This is what makes the calendar's Sets×Reps / Intensity rows real instead of
+// a generic phase projection: once linked, each week of the block reads straight
+// from that specific program's own weekData for the matching week number.
+function annualLinkProgramModal(blockId) {
+  var key  = annualPlanKey();
+  var plan = ANNUAL_PLANS[key];
+  var b    = plan && plan.blocks.find(function(x){ return x.id === blockId; });
+  if (!b) return;
+
+  var athlete = (document.getElementById('annual-athlete')||{}).value || '';
+  var athletePrograms = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : [])
+    .filter(function(p){ return p && p.id && !p.isTemplate && p.athlete === athlete; });
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+  if (!athletePrograms.length) {
+    modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:22px;width:380px;max-width:95vw;">'
+      + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px;">🔗 Link Program</div>'
+      + '<div style="font-size:12px;color:var(--text3);margin-bottom:16px;">No saved programs for '+athlete+' yet. Build and save one in Program Builder first, then come back and link it here.</div>'
+      + '<div style="display:flex;justify-content:flex-end;"><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:7px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Close</button></div>'
+      + '</div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+    return;
+  }
+
+  var options = '<option value="">— Unlink —</option>' + athletePrograms.map(function(p) {
+    return '<option value="'+p.id+'"'+(String(b.linkedProgramId)===String(p.id)?' selected':'')+'>'+p.name+'</option>';
+  }).join('');
+
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:22px;width:420px;max-width:95vw;">'
+    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">🔗 Link Program to Block</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">'+((BLOCK_TYPES[b.type]||{}).label||b.type)+' · '+b.startDate+' → '+b.endDate+'</div>'
+    + '<div style="margin-bottom:14px;">'
+    + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Program (for '+athlete+')</label>'
+    + '<select id="ap-link-sel" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;">'+options+'</select></div>'
+    + '<div style="font-size:11px;color:var(--text2);background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:6px;padding:10px;margin-bottom:14px;">Once linked, this block\'s Sets×Reps and Intensity rows will pull the program\'s actual per-week prescription (matched by week number) instead of the generic phase projection.</div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button onclick="annualConfirmLinkProgram(\''+blockId+'\', this)" style="padding:8px 18px;background:#22c55e;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">Save</button>'
+    + '</div></div>';
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+}
+
+function annualConfirmLinkProgram(blockId, btn) {
+  var key  = annualPlanKey();
+  var plan = ANNUAL_PLANS[key];
+  var b    = plan && plan.blocks.find(function(x){ return x.id === blockId; });
+  if (!b) return;
+
+  var sel    = document.getElementById('ap-link-sel');
+  var progId = sel ? sel.value : '';
+
+  if (progId) {
+    var prog = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : [])
+      .find(function(p){ return String(p.id) === String(progId); });
+    b.linkedProgramId   = progId;
+    b.linkedProgramName = prog ? prog.name : '';
+  } else {
+    delete b.linkedProgramId;
+    delete b.linkedProgramName;
+  }
+  saveAnnualData();
+  btn.closest('div[style*="fixed"]').remove();
+  renderAnnualPlan();
+  showStatus(progId ? ('✅ Linked "'+b.linkedProgramName+'" to block') : '🔓 Block unlinked');
 }
 
 // Normalize sliders so they sum to 100%
