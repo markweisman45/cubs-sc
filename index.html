@@ -785,9 +785,16 @@ body {
         <div class="card section-mb">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
             <div class="card-title" style="margin:0;">⚖️ Body Weight Trend (lbs)</div>
-            <div id="bwTrendStats" style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
+            <div id="bwTrendStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);display:flex;gap:12px;"></div>
           </div>
           <div class="chart-wrap xl"><canvas id="bwTrendChart"></canvas></div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+            <input type="date" id="bwDateInput" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+            <input type="number" id="bwWeightInput" placeholder="Weight (lbs)" step="0.1" min="100" max="400" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;width:120px;">
+            <button onclick="logManualBW()" style="padding:6px 14px;border-radius:6px;border:1px solid var(--yellow);background:rgba(245,158,11,0.15);color:var(--yellow);font-size:12px;font-weight:600;cursor:pointer;">⚖️ Log Weight</button>
+            <span id="bwLogMsg" style="font-size:11px;color:var(--green);"></span>
+            <span style="font-size:10px;color:var(--text3);">Fills gaps only — a CMJ test on the same date always takes priority.</span>
+          </div>
         </div>
 
         <!-- PITCHER PANEL -->
@@ -6280,6 +6287,42 @@ function persistWellness() {
   try { localStorage.setItem(WELLNESS_KEY, JSON.stringify(wellnessLog)); } catch(e) {}
 }
 
+function logManualBW() {
+  var msg = document.getElementById('bwLogMsg');
+  var weightInput = document.getElementById('bwWeightInput');
+  var dateInput = document.getElementById('bwDateInput');
+  var val = weightInput ? parseFloat(weightInput.value) : NaN;
+
+  if (!val || isNaN(val) || val < 100 || val > 400) {
+    if (msg) { msg.style.color = 'var(--red)'; msg.textContent = '⚠️ Enter a weight between 100–400 lbs'; setTimeout(function(){ msg.textContent=''; }, 3000); }
+    return;
+  }
+
+  var dateStr = (dateInput && dateInput.value)
+    ? new Date(dateInput.value + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})
+    : new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
+
+  if (!wellnessLog[currentPlayer]) wellnessLog[currentPlayer] = [];
+  var existing = wellnessLog[currentPlayer].find(function(w){ return w.date === dateStr; });
+  if (existing) {
+    existing.bw = val;
+    delete existing._cmjOnly;
+  } else {
+    wellnessLog[currentPlayer].push({ date: dateStr, bw: val });
+  }
+  persistWellness();
+
+  if (msg) {
+    msg.style.color = 'var(--green)';
+    msg.textContent = '✓ Logged ' + val.toFixed(1) + ' lbs for ' + dateStr + ' (used only if no CMJ test that day)';
+    setTimeout(function(){ msg.textContent = ''; }, 4000);
+  }
+  if (weightInput) weightInput.value = '';
+
+  // Re-render the body weight trend (and everything else) with the new entry
+  renderAllCharts(PLAYERS[currentPlayer]);
+}
+
 function loadWellness() {
   try {
     const saved = localStorage.getItem(WELLNESS_KEY);
@@ -7367,18 +7410,17 @@ function renderAllCharts(p) {
   // ── Body Weight trend chart (overview) — last 30 days, oldest left → newest right
   const bwEl = document.getElementById('bwTrendChart');
   if (bwEl) {
-    // BW source: importedData.cmj (CMJ type only) + manual wellness entries
+    // BW source: manual wellness entries fill gaps first, CMJ (VALD) always wins for a shared date
     const bwByDate = {};
-    // Sort CMJ oldest→newest so later dates overwrite earlier on same date
-    const cmjSorted = [...(importedData.cmj[currentPlayer]||[])]
-      .filter(c => c.bw > 0 && (!c.type || c.type === 'CMJ'))
-      .sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
-    cmjSorted.forEach(c => { bwByDate[fmtDate(c.date)] = c.bw; });
-    // BW sources: CMJ import (primary) + manual wellness entries (user-typed only)
     // Manual entries must have bw > 50 (valid lbs) and not be _cmjOnly stubs
     const manualBW = (wellnessLog[currentPlayer]||[])
       .filter(w => w.bw && w.bw > 50 && !w._cmjOnly);
     manualBW.forEach(w => { bwByDate[w.date] = w.bw; });
+    // Sort CMJ oldest→newest, then write last — CMJ always overwrites a manual entry on the same date
+    const cmjSorted = [...(importedData.cmj[currentPlayer]||[])]
+      .filter(c => c.bw > 0 && (!c.type || c.type === 'CMJ'))
+      .sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
+    cmjSorted.forEach(c => { bwByDate[fmtDate(c.date)] = c.bw; });
 
     // Build a daily label grid for the last 30 days, sorted oldest→newest (left→right)
     const today30 = new Date();
@@ -15229,7 +15271,19 @@ function handleCMJUpload(input) {
       // Use native lbs column if present, otherwise convert from kg
       const bwLbsRaw = parseFloat(getField(row, 'Bodyweight in Pounds [lbs] ', 'Bodyweight in Pounds [lbs]', 'BW [LBS]', 'BW [lbs]') || 0);
       const bwKgRaw  = parseFloat(getField(row, 'BW [KG]', 'Body Weight [KG]', 'Bodyweight [kg]') || 0);
-      const bw       = bwLbsRaw > 0 ? bwLbsRaw : bwKgRaw * 2.20462;
+      let bw = bwLbsRaw > 0 ? bwLbsRaw : bwKgRaw * 2.20462;
+      // Sanity guard: catch unit mix-ups (device exports lbs into the kg column, or vice versa)
+      // and other junk exports. Pro/minor league playing weight realistically falls 140-320 lbs.
+      const BW_MIN = 140, BW_MAX = 320;
+      if (bw > 0 && (bw < BW_MIN || bw > BW_MAX)) {
+        if (bwKgRaw >= BW_MIN && bwKgRaw <= BW_MAX) {
+          bw = bwKgRaw; // the "kg" column was actually already lbs — mislabeled export
+        } else if (bwLbsRaw >= BW_MIN && bwLbsRaw <= BW_MAX) {
+          bw = bwLbsRaw;
+        } else {
+          bw = 0; // implausible either way — drop it rather than plot a bad point
+        }
+      }
 
       const match = findRosterMatch(name);
       const matchedName = match || name;
