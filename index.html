@@ -1198,17 +1198,11 @@ body {
         <option value="2027">2027-28</option>
       </select>
       <button onclick="annualAddBlock()" style="padding:6px 12px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;font-size:12px;font-weight:600;cursor:pointer;">＋ Add Block</button>
+      <button onclick="annualOpenSettingsModal()" style="padding:6px 12px;background:rgba(148,163,184,0.15);border:1px solid rgba(148,163,184,0.4);border-radius:6px;color:#cbd5e1;font-size:12px;font-weight:600;cursor:pointer;">⚙ Customize</button>
       <button onclick="annualSave()" style="padding:6px 12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">💾 Save</button>
     </div>
-    <!-- Legend -->
-    <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--text3);">
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#6366f1;margin-right:3px;vertical-align:middle;"></span>Accumulation</span>
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#a78bfa;margin-right:3px;vertical-align:middle;"></span>Transmutation</span>
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#c084fc;margin-right:3px;vertical-align:middle;"></span>Realization</span>
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#22c55e;margin-right:3px;vertical-align:middle;"></span>In-Season</span>
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f59e0b;margin-right:3px;vertical-align:middle;"></span>Spring Training</span>
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#94a3b8;margin-right:3px;vertical-align:middle;"></span>Deload</span>
-    </div>
+    <!-- Legend — populated from BLOCK_TYPES (built-in + custom) by renderAnnualPlan() -->
+    <div id="annual-legend" style="display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--text3);"></div>
   </div>
 
   <!-- Main annual grid — scrolls horizontally only -->
@@ -1889,6 +1883,7 @@ body {
             <div class="card-title" style="margin:0;">📚 Exercise Library</div>
             <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
               <button class="generate-btn" style="padding:7px 12px;" onclick="openAddExerciseModal()">+ Add</button>
+              <button onclick="syncVideosAcrossPrograms(true)" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:6px;color:#ff6b6b;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;" title="Push every exercise's current video link out to every saved program">▶ Sync Videos to Programs</button>
               <button onclick="openEnrichModal()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">✨ Enrich</button>
               <button onclick="libToggleSelect()" id="lib-select-btn" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">☑ Select</button>
               <button onclick="libDeleteSelected()" id="lib-delete-btn" style="display:none;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">🗑 Delete (<span id="lib-sel-count">0</span>)</button>
@@ -4917,6 +4912,14 @@ const PHASE_DEFAULTS = {
   offseason: { sets:[3,4],  repsLo:6,  repsHi:10, loadStart:72, loadEnd:80,  rpeStart:7.0, rpeEnd:8.0,
     label:'Off-Season', zone:'Z2-Z3', restSec:'120-180', tempo:'3-1-1-0',
     description:'General strength development. Balanced volume and intensity.' },
+  // ── SPRING TRAINING ──────────────────────────────────────────────────────
+  spring: { sets:[3,4], repsLo:5, repsHi:8, loadStart:75, loadEnd:85, rpeStart:7.0, rpeEnd:8.0,
+    label:'Spring Training', zone:'Z3-Z4', restSec:'150-240', tempo:'3-1-1-0',
+    description:'Ramp into competition readiness. Rising intensity, controlled volume.' },
+  // ── DELOAD / RESTORATION ─────────────────────────────────────────────────
+  restore: { sets:[2,3], repsLo:6, repsHi:10, loadStart:55, loadEnd:65, rpeStart:5.0, rpeEnd:6.0,
+    label:'Deload', zone:'Z1-Z2', restSec:'60-120', tempo:'3-1-1-0',
+    description:'Planned fatigue dissipation. Low volume and intensity to restore readiness.' },
   // ── SPECIFIC ZONES ────────────────────────────────────────────────────────
   z1_endurance: { sets:[3,5],  repsLo:13, repsHi:20, loadStart:60, loadEnd:68,  rpeStart:6.0, rpeEnd:7.0,
     label:'Z1 Strength Endurance', zone:'Z1', restSec:'0-90', tempo:'2-1-1-0',
@@ -7958,8 +7961,9 @@ function showPushProgramModal(progId) {
               if (!ex.name) return;
               var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
 
-              // Video URL
-              if (!ex.video && dbEx && dbEx.video) ex.video = dbEx.video;
+              // Video URL — always prefer the current Library link over whatever
+              // was snapshotted when this exercise was added to the program
+              if (dbEx && dbEx.video) ex.video = dbEx.video;
 
               // Calculate actual lbs from % load using athlete's 1RM
               if (ex.load && typeof ex.load === 'string' && ex.load.includes('%') && dbEx && dbEx.liftKey) {
@@ -11172,6 +11176,17 @@ function saveExercise() {
   persistExerciseDB();
   closeAddExerciseModal();
   renderLibrary();
+
+  // If this exercise has a video, push it out to any saved programs that
+  // already contain this exercise — new or updated, either way it should
+  // show up everywhere this exercise is programmed, not just in new programs.
+  if (video) {
+    var syncResult = syncVideosAcrossPrograms(false);
+    if (syncResult.exercisesUpdated > 0 && typeof showStatus === 'function') {
+      showStatus('✅ Exercise saved — video synced to ' + syncResult.exercisesUpdated + ' spot' + (syncResult.exercisesUpdated===1?'':'s') + ' across ' + syncResult.programsTouched + ' program' + (syncResult.programsTouched===1?'':'s'));
+    }
+  }
+
   // Also add new cat to modal options if needed
   if (cat && !document.querySelector(`#modal-cat option[value="${cat}"]`)) {
     const o = document.createElement('option');
@@ -11232,6 +11247,59 @@ function resolveLoad(exName, athlete, pct, fallback) {
 function resolveVideo(exName) {
   const ex = getExerciseByName(exName);
   return (ex && ex.video) ? ex.video : null;
+}
+
+// ── Sync video links from the live Exercise Library out to every saved program ──
+// Programs snapshot each exercise's video URL at the moment it's added to a day,
+// so adding or updating a video in the Library later doesn't retroactively reach
+// programs that were already built (or already pushed/shared with an athlete).
+// This walks every saved program and overwrites each exercise's video with
+// whatever the Library currently has for that exercise name — so brand-new
+// videos AND corrected/replaced links both propagate everywhere in one click.
+function syncVideosAcrossPrograms(showUI) {
+  var programsTouched = 0;
+  var exercisesUpdated = 0;
+
+  (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : []).forEach(function(prog) {
+    if (!prog || !prog.pbState || !prog.pbState.weekData) return;
+    var progChanged = false;
+
+    prog.pbState.weekData.forEach(function(wk) {
+      (wk.days||[]).forEach(function(day) {
+        (day.blocks||[]).forEach(function(block) {
+          (block.exercises||[]).forEach(function(ex) {
+            if (!ex || !ex.name) return;
+            var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
+            // Only touch it if the Library has a video for this exercise AND it's
+            // actually different — leaves exercises with no Library entry (renamed/
+            // deleted) alone rather than blanking out a link that still works.
+            if (dbEx && dbEx.video && ex.video !== dbEx.video) {
+              ex.video = dbEx.video;
+              exercisesUpdated++;
+              progChanged = true;
+            }
+          });
+        });
+      });
+    });
+
+    if (progChanged) programsTouched++;
+  });
+
+  if (programsTouched > 0) {
+    if (typeof persistPrograms === 'function') persistPrograms();
+    if (typeof syncProgramsToSupabase === 'function') syncProgramsToSupabase();
+  }
+
+  if (showUI) {
+    var msg = exercisesUpdated > 0
+      ? ('✅ Synced ' + exercisesUpdated + ' video link' + (exercisesUpdated===1?'':'s') + ' across ' + programsTouched + ' program' + (programsTouched===1?'':'s'))
+      : '✓ All programs already have the latest video links';
+    if (typeof showStatus === 'function') showStatus(msg);
+    else alert(msg);
+  }
+
+  return { programsTouched: programsTouched, exercisesUpdated: exercisesUpdated };
 }
 
 // ══════════════════════════════════════════════
@@ -13813,14 +13881,53 @@ function saveAnnualData() {
 }
 
 var BLOCK_TYPES = {
-  accumulation:  { label:'Accumulation',    color:'#6366f1', short:'Acc' },
-  transmutation: { label:'Transmutation',   color:'#a78bfa', short:'Trn' },
-  realization:   { label:'Realization',     color:'#c084fc', short:'Rlz' },
-  inseason:      { label:'In-Season',       color:'#22c55e', short:'In-S' },
-  spring:        { label:'Spring Training', color:'#f59e0b', short:'Spr' },
-  restore:       { label:'Deload',          color:'#94a3b8', short:'DL'  },
-  offseason:     { label:'Off-Season',      color:'#60a5fa', short:'Off' },
+  accumulation:  { label:'Accumulation',    color:'#6366f1', short:'Acc',  qualityBand:'hypertrophy', builtin:true },
+  transmutation: { label:'Transmutation',   color:'#a78bfa', short:'Trn',  qualityBand:'fhyp',        builtin:true },
+  realization:   { label:'Realization',     color:'#c084fc', short:'Rlz',  qualityBand:'relstr',      builtin:true },
+  inseason:      { label:'In-Season',       color:'#22c55e', short:'In-S', qualityBand:'relstr',      builtin:true },
+  spring:        { label:'Spring Training', color:'#f59e0b', short:'Spr',  qualityBand:'',            builtin:true },
+  restore:       { label:'Deload',          color:'#94a3b8', short:'DL',   qualityBand:'',            builtin:true },
+  offseason:     { label:'Off-Season',      color:'#60a5fa', short:'Off',  qualityBand:'',            builtin:true },
 };
+
+// Quality bands used by the Strength Quality section of the calendar —
+// any block type (built-in or custom) can be assigned to one of these,
+// or left unassigned ('') to not appear in that section at all.
+var QUALITY_BANDS = {
+  hypertrophy: { label:'Hypertrophy',    color:'#60a5fa' },
+  fhyp:        { label:'F. Hypertrophy', color:'#818cf8' },
+  relstr:      { label:'Rel. Strength',  color:'#a78bfa' },
+  power:       { label:'Power / SSC',    color:'#f59e0b' },
+};
+
+// ── Custom phase types (coach-defined, added on top of the built-ins above) ──
+var ANNUAL_CUSTOM_TYPES_KEY = 'cubs_sc_annual_custom_types_v1';
+(function loadCustomBlockTypes() {
+  try {
+    var saved = JSON.parse(localStorage.getItem(ANNUAL_CUSTOM_TYPES_KEY) || '{}');
+    Object.keys(saved).forEach(function(key) {
+      BLOCK_TYPES[key] = saved[key].meta;
+      if (saved[key].phaseDefaults) PHASE_DEFAULTS[key] = saved[key].phaseDefaults;
+    });
+  } catch(e) {}
+})();
+function persistCustomBlockTypes() {
+  var out = {};
+  Object.keys(BLOCK_TYPES).forEach(function(key) {
+    if (!BLOCK_TYPES[key].builtin) {
+      out[key] = { meta: BLOCK_TYPES[key], phaseDefaults: PHASE_DEFAULTS[key] || null };
+    }
+  });
+  try { localStorage.setItem(ANNUAL_CUSTOM_TYPES_KEY, JSON.stringify(out)); } catch(e) {}
+}
+
+// ── Annual Plan display settings (visible rows + density) ───────────────────
+var ANNUAL_SETTINGS_KEY = 'cubs_sc_annual_settings_v1';
+var ANNUAL_SETTINGS = Object.assign({
+  visibleRows: { seasonPhase:true, linkedProgram:true, method:true, repsIntensity:true, strengthQuality:true, speedEmphasis:true, esdEmphasis:true },
+  density: 'compact',
+}, (function(){ try { return JSON.parse(localStorage.getItem(ANNUAL_SETTINGS_KEY)||'{}'); } catch(e){ return {}; } })());
+function persistAnnualSettings() { try { localStorage.setItem(ANNUAL_SETTINGS_KEY, JSON.stringify(ANNUAL_SETTINGS)); } catch(e) {} }
 
 // Speed qualities for sliders
 var SPEED_QUALS = ['Acceleration','Max Velocity','COD','Deceleration','Curvilinear'];
@@ -13920,6 +14027,14 @@ function initAnnualPlan() {
 function renderAnnualPlan() {
   var grid   = document.getElementById('annual-grid');
   if (!grid) return;
+
+  var legendEl = document.getElementById('annual-legend');
+  if (legendEl) {
+    legendEl.innerHTML = Object.keys(BLOCK_TYPES).map(function(key) {
+      var t = BLOCK_TYPES[key];
+      return '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+t.color+';margin-right:3px;vertical-align:middle;"></span>'+t.label+'</span>';
+    }).join('');
+  }
   var key    = annualPlanKey();
   var year   = parseInt((document.getElementById('annual-year')||{}).value||'2026');
   var plan   = ANNUAL_PLANS[key] || { blocks:[] };
@@ -13943,9 +14058,12 @@ function renderAnnualPlan() {
     return phases.find(function(p) { return w >= p.start && w <= p.end; });
   }
 
-  // Row builder helpers
-  var CELL = 'style="border:1px solid rgba(255,255,255,0.06);padding:3px 2px;text-align:center;white-space:nowrap;font-size:9px;min-width:28px;max-width:28px;"';
-  var CELL_WIDE = 'style="border:1px solid rgba(255,255,255,0.08);padding:4px 8px;font-size:10px;font-weight:600;color:var(--text3);text-align:right;white-space:nowrap;min-width:110px;background:var(--bg3);"';
+  // Row builder helpers — sizing responds to the Density setting
+  var isComfy = ANNUAL_SETTINGS.density === 'comfortable';
+  var cellW = isComfy ? 40 : 28;
+  var cellFont = isComfy ? 10 : 9;
+  var CELL = 'style="border:1px solid rgba(255,255,255,0.06);padding:'+(isComfy?'5px 3px':'3px 2px')+';text-align:center;white-space:nowrap;font-size:'+cellFont+'px;min-width:'+cellW+'px;max-width:'+cellW+'px;"';
+  var CELL_WIDE = 'style="border:1px solid rgba(255,255,255,0.08);padding:'+(isComfy?'6px 10px':'4px 8px')+';font-size:'+(isComfy?11:10)+'px;font-weight:600;color:var(--text3);text-align:right;white-space:nowrap;min-width:'+(isComfy?130:110)+'px;background:var(--bg3);"';
 
   function rowLabel(txt) { return '<td '+CELL_WIDE+'>'+txt+'</td>'; }
 
@@ -13962,13 +14080,13 @@ function renderAnnualPlan() {
 
   // Row 1: Week numbers
   var weekNums = weeks.map(function(w,i) {
-    return '<td '+CELL+' style="border:1px solid rgba(255,255,255,0.06);padding:2px;text-align:center;font-size:8px;font-family:\'DM Mono\',monospace;color:var(--text3);min-width:28px;max-width:28px;">'+(i+1)+'</td>';
+    return '<td '+CELL+' style="border:1px solid rgba(255,255,255,0.06);padding:2px;text-align:center;font-size:8px;font-family:\'DM Mono\',monospace;color:var(--text3);min-width:'+cellW+'px;max-width:'+cellW+'px;">'+(i+1)+'</td>';
   }).join('');
 
   // Row 2: Season phase bar
   var phaseCells = weeks.map(function(w) {
     var ph = getPhaseForWeek(w);
-    return '<td style="border:1px solid rgba(255,255,255,0.04);min-width:28px;max-width:28px;height:6px;background:'+(ph?ph.color:'transparent')+';padding:0;"></td>';
+    return '<td style="border:1px solid rgba(255,255,255,0.04);min-width:'+cellW+'px;max-width:'+cellW+'px;height:6px;background:'+(ph?ph.color:'transparent')+';padding:0;"></td>';
   }).join('');
 
   // Row 3: Block phase
@@ -13982,31 +14100,31 @@ function renderAnnualPlan() {
     var border = cfg ? '1px solid '+cfg.color+(isDeload?'88':'44') : '1px solid rgba(255,255,255,0.04)';
     var txt = cfg ? (isDeload?'DL':cfg.short) : '+';
     var click = b ? 'annualEditBlock(\''+b.id+'\')' : 'annualAddBlockAt(\''+w.toISOString().slice(0,10)+'\')';
-    return '<td onclick="'+click+'" style="border:'+border+';min-width:28px;max-width:28px;padding:2px 1px;text-align:center;cursor:pointer;background:'+bg+';font-size:8px;font-weight:700;color:'+(cfg?cfg.color:'#444')+';font-family:\'DM Mono\',monospace;">'+txt+'</td>';
+    return '<td onclick="'+click+'" style="border:'+border+';min-width:'+cellW+'px;max-width:'+cellW+'px;padding:2px 1px;text-align:center;cursor:pointer;background:'+bg+';font-size:8px;font-weight:700;color:'+(cfg?cfg.color:'#444')+';font-family:\'DM Mono\',monospace;">'+txt+'</td>';
   }).join('');
 
   // Row 3b: Linked Program (real program tied to this block, if any)
   var linkCells = weeks.map(function(w) {
     var b = getBlockForWeek(w);
-    if (!b) return '<td style="border:1px solid rgba(255,255,255,0.03);min-width:28px;max-width:28px;padding:2px;"></td>';
+    if (!b) return '<td style="border:1px solid rgba(255,255,255,0.03);min-width:'+cellW+'px;max-width:'+cellW+'px;padding:2px;"></td>';
     var linked = !!b.linkedProgramId;
-    return '<td onclick="annualLinkProgramModal(\''+b.id+'\')" style="border:1px solid rgba(255,255,255,0.06);min-width:28px;max-width:28px;padding:2px;text-align:center;cursor:pointer;font-size:9px;" title="'+(linked?('Linked: '+(b.linkedProgramName||'')+' — click to change'):'No program linked — click to link one')+'">'
+    return '<td onclick="annualLinkProgramModal(\''+b.id+'\')" style="border:1px solid rgba(255,255,255,0.06);min-width:'+cellW+'px;max-width:'+cellW+'px;padding:2px;text-align:center;cursor:pointer;font-size:9px;" title="'+(linked?('Linked: '+(b.linkedProgramName||'')+' — click to change'):'No program linked — click to link one')+'">'
       +(linked?'🔗':'<span style="color:#333;">＋</span>')+'</td>';
   }).join('');
 
   // Row 4: Training Method
   var methodCells = weeks.map(function(w) {
     var b = getBlockForWeek(w);
-    if (!b) return '<td '+CELL+' style="color:#333;min-width:28px;max-width:28px;border:1px solid rgba(255,255,255,0.03);">—</td>';
+    if (!b) return '<td '+CELL+' style="color:#333;min-width:'+cellW+'px;max-width:'+cellW+'px;border:1px solid rgba(255,255,255,0.03);">—</td>';
     var prog = b.progression||'linear';
     var abbr = {linear:'Lin',wave:'Wave',dup:'DUP',block:'Blk'}[prog]||prog;
-    return '<td '+CELL+' style="color:var(--text3);min-width:28px;max-width:28px;">'+abbr+'</td>';
+    return '<td '+CELL+' style="color:var(--text3);min-width:'+cellW+'px;max-width:'+cellW+'px;">'+abbr+'</td>';
   }).join('');
 
   // Row 5: Rep Scheme
   var repCells = weeks.map(function(w, wi) {
     var b = getBlockForWeek(w);
-    if (!b) return '<td '+CELL+' style="color:#333;min-width:28px;max-width:28px;border:1px solid rgba(255,255,255,0.03);">—</td>';
+    if (!b) return '<td '+CELL+' style="color:#333;min-width:'+cellW+'px;max-width:'+cellW+'px;border:1px solid rgba(255,255,255,0.03);">—</td>';
     var wkInBlock = Math.floor((w - new Date(b.startDate))/(7*86400000))+1;
     var real = annualGetLinkedWeekMetrics(b, wkInBlock);
     var sets, reps, isReal = false;
@@ -14019,8 +14137,8 @@ function renderAnnualPlan() {
       reps = Math.round((def.repsLo||8) * m.reps);
     }
     var style = isReal
-      ? 'color:#fff;font-weight:700;min-width:28px;max-width:28px;background:rgba(34,197,94,0.14);'
-      : 'color:var(--text2);font-size:8px;min-width:28px;max-width:28px;';
+      ? 'color:#fff;font-weight:700;min-width:'+cellW+'px;max-width:'+cellW+'px;background:rgba(34,197,94,0.14);'
+      : 'color:var(--text2);font-size:8px;min-width:'+cellW+'px;max-width:'+cellW+'px;';
     var title = isReal ? ('From "'+real.programName+'" — '+sets+'×'+reps) : ('Projected (no program linked) — '+sets+'×'+reps);
     return '<td '+CELL+' style="'+style+'" title="'+title+'">'+sets+'×'+reps+'</td>';
   }).join('');
@@ -14028,7 +14146,7 @@ function renderAnnualPlan() {
   // Row 6: Intensity %
   var intCells = weeks.map(function(w) {
     var b = getBlockForWeek(w);
-    if (!b) return '<td '+CELL+' style="color:#333;min-width:28px;max-width:28px;border:1px solid rgba(255,255,255,0.03);">—</td>';
+    if (!b) return '<td '+CELL+' style="color:#333;min-width:'+cellW+'px;max-width:'+cellW+'px;border:1px solid rgba(255,255,255,0.03);">—</td>';
     var wkInBlock = Math.floor((w - new Date(b.startDate))/(7*86400000))+1;
     var real = annualGetLinkedWeekMetrics(b, wkInBlock);
     var load, isReal = false;
@@ -14041,32 +14159,30 @@ function renderAnnualPlan() {
     }
     var col = load>=90?'#ef4444':load>=80?'#f59e0b':load>=70?'#22c55e':'#60a5fa';
     var title = isReal ? ('From "'+real.programName+'" — '+load+'%') : ('Projected (no program linked) — '+load+'%');
-    return '<td '+CELL+' style="color:'+col+';font-weight:'+(isReal?'800':'600')+';min-width:28px;max-width:28px;'+(isReal?'text-decoration:underline;text-decoration-style:dotted;':'')+'" title="'+title+'">'+load+'%</td>';
+    return '<td '+CELL+' style="color:'+col+';font-weight:'+(isReal?'800':'600')+';min-width:'+cellW+'px;max-width:'+cellW+'px;'+(isReal?'text-decoration:underline;text-decoration-style:dotted;':'')+'" title="'+title+'">'+load+'%</td>';
   }).join('');
 
-  // Rows 7-11: Strength quality bands (Hypertrophy, F.Hyp, Rel.Str, Power, ESD)
-  var strengthRows = [
-    {label:'Hypertrophy',     types:['accumulation','z1_endurance','z2_hypertrophy'],        color:'#60a5fa'},
-    {label:'F. Hypertrophy',  types:['transmutation','z3_funct_hyp'],                        color:'#818cf8'},
-    {label:'Rel. Strength',   types:['realization','z4_relative','inseason'],                color:'#a78bfa'},
-    {label:'Power / SSC',     types:['power_ssc'],                                           color:'#f59e0b'},
-  ].map(function(sq) {
+  // Rows 7-11: Strength quality bands — driven by each block type's qualityBand
+  // assignment (set in Annual Plan Settings), so custom phase types automatically
+  // show up here if the coach assigns them to a band, with no code changes needed.
+  var strengthRows = Object.keys(QUALITY_BANDS).map(function(bandKey) {
+    var band = QUALITY_BANDS[bandKey];
     var cells = weeks.map(function(w) {
       var b = getBlockForWeek(w);
-      var active = b && sq.types.indexOf(b.type) >= 0;
-      return '<td style="min-width:28px;max-width:28px;padding:1px;border:1px solid rgba(255,255,255,0.03);">'
-        +(active?'<div style="height:8px;border-radius:2px;background:'+sq.color+';opacity:0.85;"></div>':'')+'</td>';
+      var active = b && BLOCK_TYPES[b.type] && BLOCK_TYPES[b.type].qualityBand === bandKey;
+      return '<td style="min-width:'+cellW+'px;max-width:'+cellW+'px;padding:1px;border:1px solid rgba(255,255,255,0.03);">'
+        +(active?'<div style="height:8px;border-radius:2px;background:'+band.color+';opacity:0.85;"></div>':'')+'</td>';
     }).join('');
-    return '<tr><td '+CELL_WIDE+'>'+sq.label+'</td>'+cells+'</tr>';
+    return '<tr><td '+CELL_WIDE+'>'+band.label+'</td>'+cells+'</tr>';
   }).join('');
 
   // Speed quality sliders (5 qualities, sum to 100%)
   var speedRows = SPEED_QUALS.map(function(qual, qi) {
     var cells = weeks.map(function(w) {
       var b = getBlockForWeek(w);
-      if (!b || !b.speed) return '<td style="min-width:28px;max-width:28px;padding:1px;border:1px solid rgba(255,255,255,0.03);"></td>';
+      if (!b || !b.speed) return '<td style="min-width:'+cellW+'px;max-width:'+cellW+'px;padding:1px;border:1px solid rgba(255,255,255,0.03);"></td>';
       var pct = b.speed[qi]||0;
-      return '<td style="min-width:28px;max-width:28px;padding:1px;border:1px solid rgba(255,255,255,0.03);" title="'+pct+'%">'
+      return '<td style="min-width:'+cellW+'px;max-width:'+cellW+'px;padding:1px;border:1px solid rgba(255,255,255,0.03);" title="'+pct+'%">'
         +(pct>0?'<div style="height:8px;border-radius:2px;background:'+SPEED_COLORS[qi]+';opacity:'+(0.3+pct/100*0.7).toFixed(2)+';width:'+pct+'%;margin:auto;"></div>':'')+'</td>';
     }).join('');
     return '<tr><td '+CELL_WIDE+'>'+qual+'</td>'+cells+'</tr>';
@@ -14076,9 +14192,9 @@ function renderAnnualPlan() {
   var esdRows = ESD_QUALS.map(function(qual, qi) {
     var cells = weeks.map(function(w) {
       var b = getBlockForWeek(w);
-      if (!b || !b.esd) return '<td style="min-width:28px;max-width:28px;padding:1px;border:1px solid rgba(255,255,255,0.03);"></td>';
+      if (!b || !b.esd) return '<td style="min-width:'+cellW+'px;max-width:'+cellW+'px;padding:1px;border:1px solid rgba(255,255,255,0.03);"></td>';
       var pct = b.esd[qi]||0;
-      return '<td style="min-width:28px;max-width:28px;padding:1px;border:1px solid rgba(255,255,255,0.03);" title="'+pct+'%">'
+      return '<td style="min-width:'+cellW+'px;max-width:'+cellW+'px;padding:1px;border:1px solid rgba(255,255,255,0.03);" title="'+pct+'%">'
         +(pct>0?'<div style="height:8px;border-radius:2px;background:'+ESD_COLORS[qi]+';opacity:'+(0.3+pct/100*0.7).toFixed(2)+';width:'+pct+'%;margin:auto;"></div>':'')+'</td>';
     }).join('');
     return '<tr><td '+CELL_WIDE+'>'+qual+'</td>'+cells+'</tr>';
@@ -14089,6 +14205,7 @@ function renderAnnualPlan() {
     return '<tr><td colspan="'+(weeks.length+1)+'" style="padding:3px 8px;background:rgba(255,255,255,0.04);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">'+label+'</td></tr>';
   }
 
+  var vr = ANNUAL_SETTINGS.visibleRows || {};
   grid.innerHTML = '<table style="border-collapse:collapse;font-family:\'DM Mono\',monospace;">'
     // Month header
     +'<thead><tr><td '+CELL_WIDE+'></td>'+monthHdrs+'</tr></thead>'
@@ -14096,26 +14213,22 @@ function renderAnnualPlan() {
     // Weeks
     +'<tr><td '+CELL_WIDE+'>Week</td>'+weekNums+'</tr>'
     // Season phase
-    +'<tr><td '+CELL_WIDE+'>Season Phase</td>'+phaseCells+'</tr>'
+    +(vr.seasonPhase !== false ? '<tr><td '+CELL_WIDE+'>Season Phase</td>'+phaseCells+'</tr>' : '')
     // Block
     +'<tr><td '+CELL_WIDE+'>Block Phase</td>'+blockCells+'</tr>'
     // Linked Program
-    +'<tr><td '+CELL_WIDE+'>Linked Program</td>'+linkCells+'</tr>'
+    +(vr.linkedProgram !== false ? '<tr><td '+CELL_WIDE+'>Linked Program</td>'+linkCells+'</tr>' : '')
     // Training method
-    +'<tr><td '+CELL_WIDE+'>Method</td>'+methodCells+'</tr>'
-    // Rep scheme
-    +'<tr><td '+CELL_WIDE+'>Sets × Reps</td>'+repCells+'</tr>'
-    // Intensity
-    +'<tr><td '+CELL_WIDE+'>Intensity %</td>'+intCells+'</tr>'
+    +(vr.method !== false ? '<tr><td '+CELL_WIDE+'>Method</td>'+methodCells+'</tr>' : '')
+    // Rep scheme + Intensity
+    +(vr.repsIntensity !== false ? '<tr><td '+CELL_WIDE+'>Sets × Reps</td>'+repCells+'</tr>' : '')
+    +(vr.repsIntensity !== false ? '<tr><td '+CELL_WIDE+'>Intensity %</td>'+intCells+'</tr>' : '')
     // Strength qualities
-    +sectionHeader('Strength Quality')
-    +strengthRows
+    +(vr.strengthQuality !== false ? sectionHeader('Strength Quality')+strengthRows : '')
     // Speed emphasis
-    +sectionHeader('Speed Emphasis')
-    +speedRows
+    +(vr.speedEmphasis !== false ? sectionHeader('Speed Emphasis')+speedRows : '')
     // ESD
-    +sectionHeader('ESD Emphasis')
-    +esdRows
+    +(vr.esdEmphasis !== false ? sectionHeader('ESD Emphasis')+esdRows : '')
     +'</tbody></table>';
 }
 
@@ -14318,6 +14431,205 @@ function annualConfirmLinkProgram(blockId, btn) {
   btn.closest('div[style*="fixed"]').remove();
   renderAnnualPlan();
   showStatus(progId ? ('✅ Linked "'+b.linkedProgramName+'" to block') : '🔓 Block unlinked');
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ANNUAL PLAN CUSTOMIZATION — phase types, visible rows, layout density
+// ══════════════════════════════════════════════════════════════════════════
+
+function annualOpenSettingsModal() {
+  var modal = document.createElement('div');
+  modal.id = 'annual-settings-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:22px;width:640px;max-width:95vw;max-height:85vh;overflow-y:auto;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'
+    + '<div style="font-size:16px;font-weight:700;color:#fff;">⚙ Customize Annual Plan</div>'
+    + '<button onclick="document.getElementById(\'annual-settings-modal\').remove()" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.1);">'
+    + '<button class="as-tab as-tab-active" id="as-tab-types" onclick="annualSettingsSwitchTab(\'types\')" style="padding:8px 14px;background:none;border:none;border-bottom:2px solid #f59e0b;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Phase Types</button>'
+    + '<button class="as-tab" id="as-tab-rows" onclick="annualSettingsSwitchTab(\'rows\')" style="padding:8px 14px;background:none;border:none;border-bottom:2px solid transparent;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;">Visible Rows</button>'
+    + '<button class="as-tab" id="as-tab-layout" onclick="annualSettingsSwitchTab(\'layout\')" style="padding:8px 14px;background:none;border:none;border-bottom:2px solid transparent;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;">Layout</button>'
+    + '</div>'
+    + '<div id="as-panel-types"></div>'
+    + '<div id="as-panel-rows" style="display:none;"></div>'
+    + '<div id="as-panel-layout" style="display:none;"></div>'
+    + '</div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  annualRenderTypesPanel();
+  annualRenderRowsPanel();
+  annualRenderLayoutPanel();
+}
+
+function annualSettingsSwitchTab(tab) {
+  ['types','rows','layout'].forEach(function(t) {
+    var btn = document.getElementById('as-tab-'+t);
+    var panel = document.getElementById('as-panel-'+t);
+    if (btn) { btn.style.borderBottomColor = (t===tab) ? '#f59e0b' : 'transparent'; btn.style.color = (t===tab) ? '#fff' : '#94a3b8'; }
+    if (panel) panel.style.display = (t===tab) ? 'block' : 'none';
+  });
+}
+
+// ── Phase Types panel ────────────────────────────────────────────────────────
+function annualRenderTypesPanel() {
+  var panel = document.getElementById('as-panel-types');
+  if (!panel) return;
+  var rows = Object.keys(BLOCK_TYPES).map(function(key) {
+    var t = BLOCK_TYPES[key];
+    var band = QUALITY_BANDS[t.qualityBand];
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(255,255,255,0.08);border-radius:6px;margin-bottom:6px;">'
+      + '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:'+t.color+';flex-shrink:0;"></span>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:12px;font-weight:600;color:#fff;">'+t.label+' <span style="color:#64748b;font-weight:400;">('+t.short+')</span></div>'
+      + '<div style="font-size:10px;color:#64748b;">'+(band?('Quality band: '+band.label):'No quality band')+(t.builtin?' · built-in':' · custom')+'</div>'
+      + '</div>'
+      + '<button onclick="annualOpenTypeEditor(\''+key+'\')" style="padding:4px 10px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);border-radius:5px;color:#60a5fa;font-size:11px;font-weight:600;cursor:pointer;">Edit</button>'
+      + (t.builtin ? '' : '<button onclick="annualDeleteType(\''+key+'\')" style="padding:4px 10px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:5px;color:#f87171;font-size:11px;font-weight:600;cursor:pointer;">Delete</button>')
+      + '</div>';
+  }).join('');
+
+  panel.innerHTML = '<div style="max-height:340px;overflow-y:auto;margin-bottom:12px;">'+rows+'</div>'
+    + '<button onclick="annualOpenTypeEditor(null)" style="width:100%;padding:9px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:#4ade80;font-size:12px;font-weight:700;cursor:pointer;">＋ Add Custom Phase Type</button>'
+    + '<div id="as-type-editor" style="margin-top:14px;"></div>';
+}
+
+function annualOpenTypeEditor(key) {
+  var editing = key ? BLOCK_TYPES[key] : null;
+  var defaults = key ? (PHASE_DEFAULTS[key]||{}) : {};
+  var host = document.getElementById('as-type-editor');
+  if (!host) return;
+
+  var bandOptions = '<option value="">— None —</option>' + Object.keys(QUALITY_BANDS).map(function(bk) {
+    return '<option value="'+bk+'"'+((editing&&editing.qualityBand===bk)?' selected':'')+'>'+QUALITY_BANDS[bk].label+'</option>';
+  }).join('');
+
+  host.innerHTML = '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:14px;">'
+    + '<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">'+(editing?('Edit "'+editing.label+'"'):'New Phase Type')+'</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:3px;">Label</label>'
+    + '<input id="at-label" value="'+(editing?editing.label:'')+'" placeholder="e.g. Pre-Hab Block" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:6px 8px;color:#fff;font-size:12px;"></div>'
+    + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:3px;">Short label (calendar cell)</label>'
+    + '<input id="at-short" maxlength="5" value="'+(editing?editing.short:'')+'" placeholder="e.g. PreH" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:6px 8px;color:#fff;font-size:12px;"></div>'
+    + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:3px;">Color</label>'
+    + '<input id="at-color" type="color" value="'+(editing?editing.color:'#f59e0b')+'" style="width:100%;height:32px;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;cursor:pointer;"></div>'
+    + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:3px;">Quality band</label>'
+    + '<select id="at-band" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:6px 8px;color:#fff;font-size:12px;">'+bandOptions+'</select></div>'
+    + '</div>'
+    + '<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;margin-bottom:6px;">Default projection (used when no program is linked to a block)</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">'
+    + '<div><label style="font-size:9px;color:#64748b;display:block;margin-bottom:2px;">Sets (low)</label><input id="at-sets" type="number" value="'+(defaults.sets?defaults.sets[0]:3)+'" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:5px 7px;color:#fff;font-size:12px;"></div>'
+    + '<div><label style="font-size:9px;color:#64748b;display:block;margin-bottom:2px;">Reps (low)</label><input id="at-repslo" type="number" value="'+(defaults.repsLo||8)+'" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:5px 7px;color:#fff;font-size:12px;"></div>'
+    + '<div><label style="font-size:9px;color:#64748b;display:block;margin-bottom:2px;">Load start %</label><input id="at-loadstart" type="number" value="'+(defaults.loadStart||70)+'" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:5px 7px;color:#fff;font-size:12px;"></div>'
+    + '<div><label style="font-size:9px;color:#64748b;display:block;margin-bottom:2px;">Load end %</label><input id="at-loadend" type="number" value="'+(defaults.loadEnd||80)+'" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:5px 7px;color:#fff;font-size:12px;"></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    + '<button onclick="document.getElementById(\'as-type-editor\').innerHTML=\'\'" style="padding:7px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button onclick="annualSaveTypeForm('+(key?("'"+key+"'"):'null')+')" style="padding:7px 16px;background:#22c55e;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">Save</button>'
+    + '</div></div>';
+}
+
+function annualSaveTypeForm(existingKey) {
+  var label = (document.getElementById('at-label').value||'').trim();
+  var short = (document.getElementById('at-short').value||'').trim();
+  var color = document.getElementById('at-color').value;
+  var band  = document.getElementById('at-band').value;
+  var sets  = parseInt(document.getElementById('at-sets').value)||3;
+  var repsLo= parseInt(document.getElementById('at-repslo').value)||8;
+  var loadStart = parseInt(document.getElementById('at-loadstart').value)||70;
+  var loadEnd   = parseInt(document.getElementById('at-loadend').value)||80;
+
+  if (!label || !short) { alert('Label and short label are required.'); return; }
+
+  var key = existingKey || ('custom_' + label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') + '_' + Date.now().toString(36));
+  var wasBuiltin = existingKey && BLOCK_TYPES[existingKey] && BLOCK_TYPES[existingKey].builtin;
+
+  BLOCK_TYPES[key] = {
+    label: label, short: short, color: color, qualityBand: band,
+    builtin: wasBuiltin || false,
+  };
+  PHASE_DEFAULTS[key] = Object.assign({}, PHASE_DEFAULTS[key]||{}, {
+    sets: [sets, sets+2], repsLo: repsLo, repsHi: repsLo+4,
+    loadStart: loadStart, loadEnd: loadEnd,
+    rpeStart: PHASE_DEFAULTS[key]?PHASE_DEFAULTS[key].rpeStart:7.0,
+    rpeEnd: PHASE_DEFAULTS[key]?PHASE_DEFAULTS[key].rpeEnd:8.0,
+    label: label,
+  });
+
+  if (!wasBuiltin) persistCustomBlockTypes();
+  document.getElementById('as-type-editor').innerHTML = '';
+  annualRenderTypesPanel();
+  renderAnnualPlan();
+  showStatus('✅ Saved phase type "'+label+'"');
+}
+
+function annualDeleteType(key) {
+  var t = BLOCK_TYPES[key];
+  if (!t || t.builtin) return;
+
+  // Count how many blocks across all athletes/years currently use this type
+  var usageCount = 0;
+  Object.keys(ANNUAL_PLANS).forEach(function(pk) {
+    (ANNUAL_PLANS[pk].blocks||[]).forEach(function(b) { if (b.type === key) usageCount++; });
+  });
+
+  var msg = usageCount > 0
+    ? ('Delete "'+t.label+'"? '+usageCount+' existing block'+(usageCount===1?'':'s')+' currently use this type and will keep showing it (still saved on those blocks), but it will disappear from the dropdown and legend for new blocks.')
+    : ('Delete "'+t.label+'"? This can\'t be undone.');
+  if (!confirm(msg)) return;
+
+  delete BLOCK_TYPES[key];
+  delete PHASE_DEFAULTS[key];
+  persistCustomBlockTypes();
+  annualRenderTypesPanel();
+  renderAnnualPlan();
+  showStatus('🗑 Deleted phase type "'+t.label+'"');
+}
+
+// ── Visible Rows panel ───────────────────────────────────────────────────────
+function annualRenderRowsPanel() {
+  var panel = document.getElementById('as-panel-rows');
+  if (!panel) return;
+  var options = [
+    {key:'seasonPhase',     label:'Season Phase bar'},
+    {key:'linkedProgram',   label:'Linked Program row'},
+    {key:'method',          label:'Training Method row'},
+    {key:'repsIntensity',   label:'Sets × Reps / Intensity % rows'},
+    {key:'strengthQuality', label:'Strength Quality section'},
+    {key:'speedEmphasis',   label:'Speed Emphasis section'},
+    {key:'esdEmphasis',     label:'ESD Emphasis section'},
+  ];
+  panel.innerHTML = '<div style="font-size:11px;color:#94a3b8;margin-bottom:10px;">Week and Block Phase rows are always shown. Toggle everything else on or off.</div>'
+    + options.map(function(o) {
+      var checked = ANNUAL_SETTINGS.visibleRows[o.key] !== false;
+      return '<label style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;font-size:12px;color:#fff;">'
+        + '<input type="checkbox" '+(checked?'checked':'')+' onchange="annualToggleRowSetting(\''+o.key+'\', this.checked)">'
+        + o.label + '</label>';
+    }).join('');
+}
+
+function annualToggleRowSetting(key, checked) {
+  ANNUAL_SETTINGS.visibleRows[key] = checked;
+  persistAnnualSettings();
+  renderAnnualPlan();
+}
+
+// ── Layout panel ─────────────────────────────────────────────────────────────
+function annualRenderLayoutPanel() {
+  var panel = document.getElementById('as-panel-layout');
+  if (!panel) return;
+  panel.innerHTML = '<div style="font-size:11px;color:#94a3b8;margin-bottom:10px;">Density controls cell width and text size across the whole calendar.</div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="annualSetDensity(\'compact\')" style="flex:1;padding:12px;border-radius:8px;border:1px solid '+(ANNUAL_SETTINGS.density==='compact'?'#f59e0b':'rgba(255,255,255,0.1)')+';background:'+(ANNUAL_SETTINGS.density==='compact'?'rgba(245,158,11,0.12)':'rgba(255,255,255,0.03)')+';color:'+(ANNUAL_SETTINGS.density==='compact'?'#f59e0b':'#94a3b8')+';font-size:12px;font-weight:600;cursor:pointer;">Compact<div style="font-size:10px;font-weight:400;margin-top:3px;">More weeks visible at once</div></button>'
+    + '<button onclick="annualSetDensity(\'comfortable\')" style="flex:1;padding:12px;border-radius:8px;border:1px solid '+(ANNUAL_SETTINGS.density==='comfortable'?'#f59e0b':'rgba(255,255,255,0.1)')+';background:'+(ANNUAL_SETTINGS.density==='comfortable'?'rgba(245,158,11,0.12)':'rgba(255,255,255,0.03)')+';color:'+(ANNUAL_SETTINGS.density==='comfortable'?'#f59e0b':'#94a3b8')+';font-size:12px;font-weight:600;cursor:pointer;">Comfortable<div style="font-size:10px;font-weight:400;margin-top:3px;">Larger cells, easier to read</div></button>'
+    + '</div>';
+}
+
+function annualSetDensity(val) {
+  ANNUAL_SETTINGS.density = val;
+  persistAnnualSettings();
+  annualRenderLayoutPanel();
+  renderAnnualPlan();
 }
 
 // Normalize sliders so they sum to 100%
@@ -19206,7 +19518,9 @@ async function shareProgram(progId) {
           (block.exercises||[]).forEach(function(ex) {
             if (!ex.name) return;
             var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
-            if (!ex.video && dbEx && dbEx.video) ex.video = dbEx.video;
+            // Always prefer the current Library link over whatever was
+            // snapshotted when this exercise was added to the program
+            if (dbEx && dbEx.video) ex.video = dbEx.video;
             if (ex.load && typeof ex.load === 'string' && ex.load.includes('%') && dbEx && dbEx.liftKey) {
               var pctMatch = ex.load.match(/(\d+(?:\.\d+)?)/);
               if (pctMatch) {
