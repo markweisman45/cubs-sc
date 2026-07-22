@@ -643,8 +643,8 @@ body {
     <div class="logo-badge">
       <div class="logo-icon">⚾</div>
       <div class="logo-text">
-        <div class="org">Chicago Cubs</div>
-        <div class="dept">S&C · Sports Science</div>
+        <div class="org">Mark Weisman</div>
+        <div class="dept">Strength &amp; Conditioning</div>
       </div>
     </div>
   </div>
@@ -5909,7 +5909,7 @@ function switchTab(page, btn) {
 
 function switchDashTab(tab, btn) {
   currentDashTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#dashTabs .tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   ['overview','performance','cmj','wellness','workload','heruns','maxstrength','programs'].forEach(t => {
     const el = document.getElementById('dash-'+t);
@@ -5917,20 +5917,26 @@ function switchDashTab(tab, btn) {
   });
   const active = document.getElementById('dash-'+tab);
   if(active) { active.classList.add('active'); active.classList.remove('page'); active.style.display = 'block'; }
-  if (tab === 'heruns') {
-    if (typeof renderHERuns === 'function') renderHERuns();
-  } else if (tab === 'maxstrength') {
-    loadORM(); renderORMDashboard();
-  } else if (tab === 'programs') {
-    renderAthletePrograms();
-  } else if (tab === 'performance') {
-    renderPerfTable(PLAYERS[currentPlayer]);
-    setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
-  } else if (tab === 'wellness') {
-    renderCoachNotes(PLAYERS[currentPlayer]);
+  try {
+    if (tab === 'heruns') {
+      if (typeof renderHERuns === 'function') renderHERuns();
+    } else if (tab === 'maxstrength') {
+      loadORM(); renderORMDashboard();
+    } else if (tab === 'programs') {
+      renderAthletePrograms();
+    } else if (tab === 'performance') {
+      renderPerfTable(PLAYERS[currentPlayer]);
       setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
-  } else {
-    setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
+    } else if (tab === 'wellness') {
+      renderCoachNotes(PLAYERS[currentPlayer]);
+        setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
+    } else {
+      setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
+    }
+  } catch (err) {
+    // A rendering error in this tab's content should never block switching
+    // to a different tab afterward — log it and move on.
+    console.error('switchDashTab render error for tab "'+tab+'":', err);
   }
 }
 
@@ -9758,9 +9764,9 @@ function renderHERuns() {
 
   var filtered = runs.filter(function(r) {
     if (cutoff && safeParseDate(r.date) < cutoff) return false;
-    if (posFlt!=='all' && !r.pos.toLowerCase().includes(posFlt.toLowerCase())) return false;
-    if (search && !r.context.toLowerCase().includes(search.toLowerCase()) &&
-        !r.base.toLowerCase().includes(search.toLowerCase())) return false;
+    if (posFlt!=='all' && !(r.pos||'').toLowerCase().includes(posFlt.toLowerCase())) return false;
+    if (search && !(r.context||'').toLowerCase().includes(search.toLowerCase()) &&
+        !(r.base||'').toLowerCase().includes(search.toLowerCase())) return false;
     if (heTopOnly && r.speed < p90speed) return false;
     return true;
   });
@@ -9846,7 +9852,7 @@ function renderHERuns() {
     var isTop = r.speed >= p90speed;
     var speedColor = r.speed >= p90speed ? '#ef4444' : r.speed >= p90speed*0.95 ? '#f59e0b' : 'var(--text)';
     var rowBg = isTop ? 'rgba(245,158,11,0.05)' : 'transparent';
-    var posIcon = r.pos.includes('Batter')?'🏏':r.pos.includes('Runner')?'🏃':r.pos.includes('Field')?'🧤':'⚡';
+    var posIcon = (r.pos||'').includes('Batter')?'🏏':(r.pos||'').includes('Runner')?'🏃':(r.pos||'').includes('Field')?'🧤':'⚡';
     return '<tr style="border-bottom:1px solid var(--border);background:'+rowBg+';transition:background 0.1s;" '
       +'onmouseover="this.style.background=\'rgba(255,255,255,0.03)\'" onmouseout="this.style.background=\''+rowBg+'\'">'
       +'<td style="padding:7px 8px;white-space:nowrap;">'+fmtDate(r.date)+'</td>'
