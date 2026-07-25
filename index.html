@@ -11202,19 +11202,10 @@ document.addEventListener('change', e => {
 });
 
 // ── Sub-tab navigation
-function switchProgTab(tab, btn) {
-  document.querySelectorAll('.prog-tab').forEach(t => { t.style.display='none'; t.classList.remove('active'); });
-  document.querySelectorAll('#page-program .tab-btn').forEach(b => b.classList.remove('active'));
-  const el = document.getElementById('prog-tab-'+tab);
-  if (el) { el.style.display = (tab==='grid') ? 'flex' : 'block'; el.classList.add('active'); }
-  if (btn && btn.classList) btn.classList.add('active');
-  if (tab === 'library') renderLibrary();
-  if (tab === '1rm') render1RMTable();
-  if (tab === 'session') { calcLoad(); initTemplateContextDropdown(); }
-  if (tab === 'grid' || tab === 'perio') initTemplateContextDropdown();
-  if (tab === 'grid') initGridBuilder();
-  if (tab === 'perio') initPeriodization();
-}
+// switchProgTab() is defined further below, alongside the RTP/Workload tab
+// init logic — having it declared twice in this file previously meant the
+// second definition silently won and the first was dead code (which is how
+// the Periodization tab's initPeriodization() call went missing for a while).
 
 // ══════════════════════════════════════════════
 // LOAD CALCULATION HELPER (used in generateProgram)
@@ -18583,20 +18574,33 @@ function exportAllData(){
   var a=document.createElement('a');
   a.href=url;a.download='cubs_sc_backup_'+new Date().toISOString().slice(0,10)+'.json';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
-  URL.revokeObjectURL(url);alert('Backup saved');
+  URL.revokeObjectURL(url);
+  if (typeof showStatus === 'function') showStatus('✅ Backup downloaded — ' + keys.length + ' data keys'); else alert('Backup saved');
 }
+// Handles both call patterns used in the UI: passed a file input that already
+// has a file selected (restoreInput's onchange), or called with no arguments
+// (the Import Data button, which needs to open its own file picker first).
 function importAllData(input){
-  var file=input.files[0];if(!file)return;input.value='';
+  var file = (input && input.files && input.files[0]) ? input.files[0] : null;
+  if (!file) {
+    var picker = document.createElement('input');
+    picker.type = 'file';
+    picker.accept = '.json';
+    picker.onchange = function(e){ importAllData(e.target); };
+    picker.click();
+    return;
+  }
+  if (input.value !== undefined) input.value = '';
   var reader=new FileReader();
   reader.onload=function(e){
     try{
       var backup=JSON.parse(e.target.result);
-      var data=(backup.version==='cubs_sc_backup_v1')?backup.keys:backup;
+      var data=(backup && backup.version==='cubs_sc_backup_v1')?backup.keys:backup;
       var count=0;
       Object.keys(data).forEach(function(k){if(k.startsWith('cubs_sc')){localStorage.setItem(k,data[k]);count++;}});
-      if(!count){alert('No Cubs data found');return;}
-      alert('Restored '+count+' keys - reloading');location.reload();
-    }catch(err){alert('Error: '+err.message);}
+      if(!count){alert('No Cubs S&C data found in that file.');return;}
+      alert('Restored '+count+' data keys — reloading…');location.reload();
+    }catch(err){alert('Import failed: '+err.message);}
   };
   reader.readAsText(file);
 }
@@ -18669,15 +18673,42 @@ async function initWithSupabase() {
   showStatus('☁️ Loading from cloud...');
   try {
     let loaded = 0;
-    for (const k of SUPA_KEYS) {
-      const v = await supaGet(k);
-      if (v) { localStorage.setItem(k, v); loaded++; }
+    // Bulk-fetch every row in one request instead of looping a hardcoded key
+    // list — the old SUPA_KEYS list only covered 10 keys and had silently
+    // fallen out of sync with newer features (Saved Programs, the Exercise
+    // Library's videos, Annual Plan, RTP protocols, mesocycles, workload,
+    // and Program Builder presets were never being pulled down on a new
+    // device/browser even though they were being pushed up fine).
+    const { data: rows } = await db.from('cubs_sc_data').select('key,value');
+    if (rows && rows.length) {
+      rows.forEach(function(row) {
+        if (row && row.key && row.value) { localStorage.setItem(row.key, row.value); loaded++; }
+      });
+    } else {
+      // Fall back to the old per-key path in case the bulk select is ever blocked
+      for (const k of SUPA_KEYS) {
+        const v = await supaGet(k);
+        if (v) { localStorage.setItem(k, v); loaded++; }
+      }
     }
     if (loaded > 0) {
       showStatus('✅ Loaded ' + loaded + ' keys from cloud');
       loadAllData();
       if (typeof loadHERuns === 'function') loadHERuns();
       rebuildCMJTrends();
+
+      // Refresh every in-memory store that's backed by localStorage but was
+      // already initialized (from possibly-empty local data) before this
+      // cloud pull finished — otherwise the freshly-pulled data just sits in
+      // localStorage unused until a manual page refresh.
+      try { SAVED_PROGRAMS = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) {}
+      try { if (typeof loadExerciseDB === 'function') loadExerciseDB(); } catch(e) {}
+      try { ANNUAL_PLANS = JSON.parse(localStorage.getItem(ANNUAL_KEY) || '{}'); } catch(e) {}
+      try { MESO_PLANS   = JSON.parse(localStorage.getItem(MESO_KEY)   || '{}'); } catch(e) {}
+      try { if (typeof rtpLoad === 'function') rtpLoad(); } catch(e) {}
+      try { if (typeof wlLoad === 'function') wlLoad(); } catch(e) {}
+      try { if (typeof loadPBPresets === 'function') loadPBPresets(); } catch(e) {}
+
       // Restore recentGames/latestStats from Supabase statcast data
       if (Object.keys(importedData.statcast||{}).length) {
         parsedStatcastRows = [];
@@ -18695,6 +18726,8 @@ async function initWithSupabase() {
       buildPlayerList();
       renderDashboard();
       buildTeamList(); // Rebuild team list after cloud data loads
+      if (typeof renderLibrary === 'function') renderLibrary();
+      if (document.getElementById('annual-grid')) renderAnnualPlan();
       // Load phase priorities for exercise library system
       if (typeof loadPhasePriorities === 'function') loadPhasePriorities();
       // Merge any enrichment from Supabase that isn't in localStorage
@@ -19526,6 +19559,10 @@ async function shareProgram(progId) {
     });
   }
 
+  // Save the backfilled video/weight data locally too — otherwise My Programs
+  // keeps showing the pre-sync values even though the shared copy has them.
+  if (typeof persistPrograms === 'function') persistPrograms();
+
   // Build the row — keep it minimal to avoid column errors
   var row = {
     id:         String(prog.id),
@@ -19714,57 +19751,9 @@ function pbClearDay() {
 // ══════════════════════════════════════════════════════════════
 // DATA EXPORT / IMPORT
 // ══════════════════════════════════════════════════════════════
-
-function exportAllData() {
-  var keys = [
-    'cubs_sc_programs_v1','cubs_sc_exercise_db_v1','cubs_sc_pb_drafts_v1',
-    'cubs_sc_statcast_v1','cubs_sc_hitting_v1','cubs_sc_cmj_v1',
-    'cubs_sc_abcmj_v1','cubs_sc_players_state_v1','cubs_sc_wellness_v1',
-    'cubs_sc_coach_notes_v1','cubs_sc_he_runs_v1','cubs_sc_orm_v1',
-  ];
-  var exportData = {};
-  keys.forEach(function(k) {
-    var v = localStorage.getItem(k);
-    if (v) exportData[k] = v;
-  });
-
-  var json = JSON.stringify(exportData);
-  var blob = new Blob([json], { type: 'application/json' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'cubs-sc-data-' + new Date().toISOString().slice(0,10) + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  showStatus('✅ Exported ' + Object.keys(exportData).length + ' data keys — import this file on any browser');
-}
-
-function importAllData() {
-  var input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
-  input.onchange = function(e) {
-    var file = e.target.files[0];
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function(evt) {
-      try {
-        var data = JSON.parse(evt.target.result);
-        var count = 0;
-        Object.entries(data).forEach(function(entry) {
-          localStorage.setItem(entry[0], entry[1]);
-          count++;
-        });
-        showStatus('✅ Imported ' + count + ' data keys — reloading…');
-        setTimeout(function() { location.reload(); }, 1000);
-      } catch(err) {
-        showStatus('❌ Import failed: ' + err.message);
-      }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-}
+// exportAllData() / importAllData() are defined earlier (near hardReset) —
+// that version dynamically covers every cubs_sc_* key instead of a hand-
+// maintained list, so it can't silently go stale again.
 
 
 // ══════════════════════════════════════════════════════════════
@@ -21550,6 +21539,7 @@ function switchProgTab(tab, btn) {
   if (tab === 'session') { calcLoad(); initTemplateContextDropdown(); }
   if (tab === 'grid' || tab === 'perio') initTemplateContextDropdown();
   if (tab === 'grid') initGridBuilder();
+  if (tab === 'perio') initPeriodization();
   if (tab === 'rtp') { if (!_rtpInited) { rtpInit(); _rtpInited = true; } else { rtpRenderLists(); } }
   if (tab === 'workload') { wlInit(); }
 }
