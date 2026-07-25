@@ -6412,11 +6412,8 @@ function buildPlayerList() {
 
   el.innerHTML = posPlayers.map(([name, p]) => {
     const init = name.split(' ').map(n=>n[0]).join('');
-    // Compute live ACWR for this player and derive their current status
-    const live  = computeLiveACWR(name);
-    const acwr  = live ? live.acwr : p.acwr;
-    const status = readinessToStatus(p.readiness, acwr);
-    const sc    = status === 'GREEN' ? 'green' : status === 'RED' ? 'red' : 'yellow';
+    // Single source of truth for status — matches Team Summary, Dashboard, Daily Brief
+    const sc = athleteStatusClass(getAthleteStatus(name).status);
     return `<button class="player-btn" id="pbtn-${nameToId(name)}" onclick="selectPlayer('${name.replace(/'/g,"\\'")}')">
       <div class="player-avatar">${init}</div>
       <div class="player-info">
@@ -6793,54 +6790,16 @@ function renderReadinessHero(p) {
       heroImg.style.opacity = '0.3'; // show placeholder opacity if image fails
     };
   }
-  // Compute strain from statcast data using importedData directly
-  // Build strain rows from recentGames (always most up to date) + fill heDist from statcast
-  var _strainRows = [];
-  try {
-    // Primary: use recentGames which has all data including most recent uploads
-    var _p = PLAYERS[currentPlayer];
-    if (_p && _p.recentGames && _p.recentGames.length) {
-      // recentGames has formatted dates ("May 23") — convert back via a lookup
-      var _sc = (typeof importedData!=='undefined'&&importedData.statcast)?importedData.statcast:{};
-      var _sk = Object.keys(_sc).find(function(k){return k===currentPlayer||k.toLowerCase()===currentPlayer.toLowerCase();});
-      var _scRows = _sk ? (_sc[_sk]||[]) : [];
-      // Build lookup: formatted date → heDist from statcast
-      var _scMap = {};
-      _scRows.forEach(function(r){ _scMap[fmtDate(r.date)] = {heDist:r.heDist||0, rawDate:r.date}; });
-      // Build strain rows from recentGames
-      _p.recentGames.forEach(function(g) {
-        var sc = _scMap[g.date];
-        _strainRows.push({
-          date: sc ? sc.rawDate : g.date,  // prefer raw date for parsing
-          heDist: g.he || (sc ? sc.heDist : 0),
-          formattedDate: g.date
-        });
-      });
-      _strainRows.sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
-    }
-  } catch(e){ console.error('strain build error:', e); }
-
-  const ms = _strainRows.length ? (function(){
-    var ref = safeParseDate(_strainRows[_strainRows.length-1].date); ref.setHours(0,0,0,0);
-    var daily = [];
-    for (var i=6;i>=0;i--) {
-      var day=new Date(ref);day.setDate(day.getDate()-i);day.setHours(0,0,0,0);
-      var row=_strainRows.find(function(r){var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===day.getTime();});
-      daily.push(row?(row.heDist||0):0);
-    }
-    var wkHE=daily.reduce(function(s,v){return s+v;},0);
-    var avg=wkHE/7;
-    var sd=Math.sqrt(daily.reduce(function(s,v){return s+Math.pow(v-avg,2);},0)/7);
-    var mono=sd>0?parseFloat((avg/sd).toFixed(2)):0;
-    return {strain:parseFloat((wkHE*mono).toFixed(0)),weeklyHE:wkHE,monotony:mono};
-  })() : {strain:0,weeklyHE:0,monotony:0};
+  // Strain — canonical calc (same one Team Summary and Daily Brief use)
+  const ms = computeMonotonyStrain(currentPlayer);
   const strain = ms.strain;
   const weeklyHE = ms.weeklyHE;
   const monotony = ms.monotony;
 
-  // Strain thresholds → status
-  const sc = strain > 3000 ? 'red' : strain > 1500 ? 'yellow' : 'green';
-  const statusText = strain > 3000 ? '● HIGH STRAIN' : strain > 1500 ? '● MONITOR' : '● OPTIMAL';
+  // Overall status — same readiness + ACWR + strain composite used everywhere else
+  const as = getAthleteStatus(currentPlayer);
+  const sc = athleteStatusClass(as.status);
+  const statusText = as.status === 'RED' ? '● HIGH CONCERN' : as.status === 'YELLOW' ? '● MONITOR' : '● OPTIMAL';
 
   const hero = document.getElementById('readinessHero');
   hero.className = 'readiness-hero ' + sc + '-status';
@@ -6852,8 +6811,8 @@ function renderReadinessHero(p) {
 
   const acwrEl = document.getElementById('acwrHero');
   if (acwrEl) {
-    acwrEl.textContent = p.acwr.toFixed(3);
-    acwrEl.style.color = acwrColor(p.acwr);
+    acwrEl.textContent = as.acwr.toFixed(3);
+    acwrEl.style.color = acwrColor(as.acwr);
   }
   const games = [...(p.recentGames||[])].sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
   if (games.length) document.getElementById('lastGame').textContent = fmtDate(games[games.length-1].date);
@@ -6862,14 +6821,14 @@ function renderReadinessHero(p) {
   const lbl = document.querySelector('.readiness-label');
   if (lbl) lbl.textContent = 'Weekly HE: ' + weeklyHE.toLocaleString() + ' ft · Monotony: ' + monotony.toFixed(2);
 
-  // Trend: compare this week strain vs last week
+  // Trend: reflects the same composite status, not strain in isolation
   const trendEl = document.getElementById('readinessTrend');
   if (trendEl) {
-    if (strain === 0) {
+    if (strain === 0 && as.status === 'GREEN') {
       trendEl.innerHTML = '<span style="color:var(--text3);">No data</span>';
-    } else if (strain > 3000) {
-      trendEl.innerHTML = '<span style="color:var(--red);">↑ High load — consider reducing</span>';
-    } else if (strain > 1500) {
+    } else if (as.status === 'RED') {
+      trendEl.innerHTML = '<span style="color:var(--red);">↑ High concern — consider reducing load</span>';
+    } else if (as.status === 'YELLOW') {
       trendEl.innerHTML = '<span style="color:var(--yellow);">→ Moderate — monitor</span>';
     } else {
       trendEl.innerHTML = '<span style="color:var(--green);">✓ Within optimal range</span>';
@@ -7868,6 +7827,31 @@ function readinessToStatus(readiness, acwr) {
   return 'GREEN';
 }
 
+// ── SINGLE SOURCE OF TRUTH for the green/yellow/red light everywhere it appears ──
+// The ribbon, Team Summary, Dashboard hero, and Daily Brief used to each compute
+// their own version of this (readiness+ACWR only / strain only / ACWR+strain
+// only), with different thresholds AND different underlying data sources for
+// strain — so the same player at the same moment could show a different color
+// on each page. This is the one function all four now call.
+function getAthleteStatus(playerName) {
+  var p = PLAYERS[playerName];
+  if (!p) return { status: 'YELLOW', acwr: 1.0, readiness: 1.0, strain: 0, monotony: 0, weeklyHE: 0 };
+
+  var live = computeLiveACWR(playerName);
+  var acwr = live ? live.acwr : (p.acwr != null ? p.acwr : 1.0);
+  var readiness = p.readiness != null ? p.readiness : 1.0;
+  var ms = computeMonotonyStrain(playerName);
+  var strain = ms.strain || 0;
+
+  var isRed    = readiness < 0.88 || acwr > 1.25 || acwr < 0.75 || strain > 3000;
+  var isYellow = !isRed && (acwr > 1.15 || acwr < 0.85 || readiness < 1.00 || strain > 1500);
+  var status = isRed ? 'RED' : isYellow ? 'YELLOW' : 'GREEN';
+
+  return { status: status, acwr: acwr, readiness: readiness, strain: strain, monotony: ms.monotony, weeklyHE: ms.weeklyHE };
+}
+function athleteStatusClass(status) { return status === 'GREEN' ? 'green' : status === 'RED' ? 'red' : 'yellow'; }
+function athleteStatusColorVar(status) { return status === 'GREEN' ? 'var(--green)' : status === 'RED' ? 'var(--red)' : 'var(--yellow)'; }
+
 
 // ── SWING WORKLOAD TRACKING ───────────────────────────────────
 const SWING_VALS = { 1:'low', 2:'normal', 3:'high', 4:'extreme' };
@@ -8093,11 +8077,12 @@ function renderBrief() {
   if (teamGrid) {
     teamGrid.innerHTML = players.map(function(entry) {
       var name = entry[0], p = entry[1];
-      var ms = computeMonotonyStrain(name);
-      var acwr = p.acwr || 0;
-      var strain = ms.strain || 0;
+      var as = getAthleteStatus(name); // single source of truth — matches ribbon, Team Summary, Dashboard
+      var ms = { strain: as.strain, weeklyHE: as.weeklyHE, monotony: as.monotony };
+      var acwr = as.acwr;
+      var strain = as.strain;
       var strainColor = strain>3000?'var(--red)':strain>1500?'var(--yellow)':'var(--green)';
-      var acwrColor2 = acwr>1.25||acwr<0.75?'var(--red)':acwr>1.15||acwr<0.85?'var(--yellow)':'var(--green)';
+      var acwrColor2 = acwrColor(acwr);
 
       // CMJ check
       var cmjTrends = (p.cmjTrends||[]).filter(function(c){return !c.type||c.type==='CMJ';});
@@ -8106,9 +8091,9 @@ function renderBrief() {
       var cmjDrop = cmjAvg>0&&cmjLast>0 ? ((cmjLast-cmjAvg)/cmjAvg*100) : null;
       var hasCmjAlert = cmjDrop!==null && cmjDrop<-5;
 
-      // Categorize
-      if (strain>3000 || acwr>1.25 || acwr<0.75) concern.push({name,p,ms,acwr,cmjDrop});
-      else if (strain<=1500 && acwr>=0.85 && acwr<=1.15) optimal.push({name,p,ms,acwr,cmjDrop});
+      // Categorize by the same composite status shown everywhere else
+      if (as.status === 'RED') concern.push({name,p,ms,acwr,cmjDrop,readiness:as.readiness});
+      else if (as.status === 'GREEN') optimal.push({name,p,ms,acwr,cmjDrop});
       if (hasCmjAlert) cmjAlerts.push({name,p,cmjDrop,cmjLast,cmjAvg});
 
       var photo = typeof PLAYER_PHOTOS !== 'undefined' ? PLAYER_PHOTOS[name] : '';
@@ -8135,9 +8120,10 @@ function renderBrief() {
     } else {
       concernEl.innerHTML = concern.map(function(c) {
         var reasons = [];
-        if (c.ms.strain>2500) reasons.push('Strain: '+c.ms.strain.toLocaleString());
+        if (c.ms.strain>3000) reasons.push('Strain: '+c.ms.strain.toLocaleString());
         if (c.acwr>1.25) reasons.push('ACWR high: '+c.acwr.toFixed(2));
         if (c.acwr<0.75) reasons.push('ACWR low: '+c.acwr.toFixed(2));
+        if (c.readiness!=null && c.readiness<0.88) reasons.push('Readiness low: '+c.readiness.toFixed(2));
         if (c.cmjDrop!==null&&c.cmjDrop<-5) reasons.push('CMJ ▼'+Math.abs(c.cmjDrop).toFixed(0)+'%');
         return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'
           +'<div style="font-weight:600;color:#fff;margin-bottom:2px;">'+c.name+'</div>'
@@ -8185,11 +8171,12 @@ function renderBrief() {
   if (loadTable) {
     var rows = players.map(function(entry) {
       var name = entry[0], p = entry[1];
-      var ms = computeMonotonyStrain(name);
-      var acwr = p.acwr||0;
+      var as = getAthleteStatus(name); // single source of truth
+      var ms = { strain: as.strain, weeklyHE: as.weeklyHE, monotony: as.monotony };
+      var acwr = as.acwr;
       var strainColor = ms.strain>3000?'var(--red)':ms.strain>1500?'var(--yellow)':'var(--green)';
-      var acwrColor2 = acwr>1.25||acwr<0.75?'var(--red)':acwr>1.15||acwr<0.85?'var(--yellow)':'var(--green)';
-      var statusDot = ms.strain>3000||acwr>1.25||acwr<0.75 ? '🔴' : ms.strain>1500||acwr>1.15||acwr<0.85 ? '🟡' : '🟢';
+      var acwrColor2 = acwrColor(acwr);
+      var statusDot = as.status==='RED' ? '🔴' : as.status==='YELLOW' ? '🟡' : '🟢';
       return {name, ms, acwr, strainColor, acwrColor2, statusDot, strain:ms.strain};
     }).sort(function(a,b){return b.strain-a.strain;});
 
@@ -9903,14 +9890,15 @@ function buildTeamList() {
   // Position players only — exclude pitchers
   const posPairs = Object.entries(PLAYERS).filter(([,p]) => !['SP','RP'].includes(p.pos));
 
-  // Compute live ACWR for each, then sort RED→YELLOW→GREEN, then by ACWR desc
+  // Compute live status for each, then sort RED→YELLOW→GREEN, then by ACWR desc
   const withLive = posPairs.map(([name, p]) => {
     const live   = computeLiveACWR(name);
-    const acwr   = live ? live.acwr   : p.acwr;
     const heAcwr = live ? live.heAcwr : p.heAcwr;
     const tdAcwr = live ? live.tdAcwr : p.tdAcwr;
-    const status = readinessToStatus(p.readiness, acwr);
-    return { name, p, acwr, heAcwr, tdAcwr, status };
+    const as     = getAthleteStatus(name); // single source of truth — matches ribbon, Dashboard, Daily Brief
+    const acwr   = as.acwr;
+    const status = as.status;
+    return { name, p, acwr, heAcwr, tdAcwr, status, strain: as.strain };
   });
 
   const ORDER = {RED:0, YELLOW:1, GREEN:2};
@@ -15069,7 +15057,7 @@ function getReadiness(override) {
   if (override !== 'auto') return override;
   const p = PLAYERS[currentPlayer];
   if (!p) return 'yellow';
-  return p.status === 'GREEN' ? 'green' : p.status === 'RED' ? 'red' : 'yellow';
+  return athleteStatusClass(getAthleteStatus(currentPlayer).status);
 }
 
 function generateProgram() {
