@@ -7843,8 +7843,8 @@ function getAthleteStatus(playerName) {
   var ms = computeMonotonyStrain(playerName);
   var strain = ms.strain || 0;
 
-  var isRed    = readiness < 0.88 || acwr > 1.25 || acwr < 0.75 || strain > 3000;
-  var isYellow = !isRed && (acwr > 1.15 || acwr < 0.85 || readiness < 1.00 || strain > 1500);
+  var isRed    = readiness < 0.88 || acwr > 1.25 || acwr < 0.75 || strain > 3500;
+  var isYellow = !isRed && (acwr > 1.15 || acwr < 0.85 || readiness < 1.00 || strain > 2000);
   var status = isRed ? 'RED' : isYellow ? 'YELLOW' : 'GREEN';
 
   return { status: status, acwr: acwr, readiness: readiness, strain: strain, monotony: ms.monotony, weeklyHE: ms.weeklyHE };
@@ -8081,7 +8081,7 @@ function renderBrief() {
       var ms = { strain: as.strain, weeklyHE: as.weeklyHE, monotony: as.monotony };
       var acwr = as.acwr;
       var strain = as.strain;
-      var strainColor = strain>3000?'var(--red)':strain>1500?'var(--yellow)':'var(--green)';
+      var strainColor = strain>3500?'var(--red)':strain>2000?'var(--yellow)':'var(--green)';
       var acwrColor2 = acwrColor(acwr);
 
       // CMJ check
@@ -8120,7 +8120,7 @@ function renderBrief() {
     } else {
       concernEl.innerHTML = concern.map(function(c) {
         var reasons = [];
-        if (c.ms.strain>3000) reasons.push('Strain: '+c.ms.strain.toLocaleString());
+        if (c.ms.strain>3500) reasons.push('Strain: '+c.ms.strain.toLocaleString());
         if (c.acwr>1.25) reasons.push('ACWR high: '+c.acwr.toFixed(2));
         if (c.acwr<0.75) reasons.push('ACWR low: '+c.acwr.toFixed(2));
         if (c.readiness!=null && c.readiness<0.88) reasons.push('Readiness low: '+c.readiness.toFixed(2));
@@ -8174,7 +8174,7 @@ function renderBrief() {
       var as = getAthleteStatus(name); // single source of truth
       var ms = { strain: as.strain, weeklyHE: as.weeklyHE, monotony: as.monotony };
       var acwr = as.acwr;
-      var strainColor = ms.strain>3000?'var(--red)':ms.strain>1500?'var(--yellow)':'var(--green)';
+      var strainColor = ms.strain>3500?'var(--red)':ms.strain>2000?'var(--yellow)':'var(--green)';
       var acwrColor2 = acwrColor(acwr);
       var statusDot = as.status==='RED' ? '🔴' : as.status==='YELLOW' ? '🟡' : '🟢';
       return {name, ms, acwr, strainColor, acwrColor2, statusDot, strain:ms.strain};
@@ -9080,8 +9080,8 @@ function exportPlayerPDF(){
   var orms=ormData[currentPlayer]||[];
   var prs={};orms.forEach(function(e){if(!prs[e.exercise]||e.est1rm>prs[e.exercise])prs[e.exercise]=e.est1rm;});
   var date=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  var strainStatus=ms.strain>3000?'HIGH STRAIN':ms.strain>1500?'MONITOR':'OPTIMAL';
-  var strainColor=ms.strain>3000?'#dc2626':ms.strain>1500?'#d97706':'#16a34a';
+  var strainStatus=ms.strain>3500?'HIGH STRAIN':ms.strain>2000?'MONITOR':'OPTIMAL';
+  var strainColor=ms.strain>3500?'#dc2626':ms.strain>2000?'#d97706':'#16a34a';
   var acwrStatus=p.acwr>1.25||p.acwr<0.75?'HIGH RISK':p.acwr>1.15||p.acwr<0.85?'MONITOR':'OPTIMAL';
   var acwrColor=p.acwr>1.25||p.acwr<0.75?'#dc2626':p.acwr>1.15||p.acwr<0.85?'#d97706':'#16a34a';
 
@@ -10035,7 +10035,7 @@ function buildTeamList() {
 
       \x3C!-- Strain -->
       <div style="text-align:right;min-width:56px;">
-        <div style="font-family:\'DM Mono\',monospace;font-size:13px;color:${ms.strain>3000?'var(--red)':ms.strain>1500?'var(--yellow)':'var(--text)'};">${ms.strain > 0 ? ms.strain.toLocaleString() : '—'}</div>
+        <div style="font-family:\'DM Mono\',monospace;font-size:13px;color:${ms.strain>3500?'var(--red)':ms.strain>2000?'var(--yellow)':'var(--text)'};">${ms.strain > 0 ? ms.strain.toLocaleString() : '—'}</div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">Strain</div>
       </div>
 
