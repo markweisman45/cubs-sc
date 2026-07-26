@@ -21267,6 +21267,26 @@ function rtpOpenProtocol(athlete, id) {
   rtpRenderDetail();
 }
 
+// Toggle the "⋯ More" overflow menu in the RTP protocol header (Build-Up,
+// Link Program, Clear, Delete) — closes on an outside click.
+function rtpToggleMoreMenu() {
+  var menu = document.getElementById('rtp-more-menu');
+  if (!menu) return;
+  var show = menu.style.display === 'none';
+  menu.style.display = show ? 'block' : 'none';
+  if (show) {
+    setTimeout(function() {
+      document.addEventListener('click', function closeMenu(e) {
+        var btn = document.getElementById('rtp-more-btn');
+        if (menu && !menu.contains(e.target) && e.target !== btn) {
+          menu.style.display = 'none';
+          document.removeEventListener('click', closeMenu);
+        }
+      });
+    }, 0);
+  }
+}
+
 function rtpRenderDetail() {
   var p = RTP_ACTIVE_PROTOCOL;
   if (!p) return;
@@ -21309,14 +21329,18 @@ function rtpRenderDetail() {
     + '<div style="font-size:14px;color:#f87171;font-weight:600;margin-bottom:4px;">'+p.injury+'</div>'
     + '<div style="font-size:11px;color:var(--text3);">'+p.mechanism+' · '+p.severity+' · Injured: '+injDate+' · Day '+daysIn+' of RTP</div>'
     + '</div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;position:relative;">'
     + '<button onclick="rtpLogWorkload()" style="padding:6px 12px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:6px;color:#4ade80;font-size:11px;font-weight:600;cursor:pointer;">📊 Log Workload</button>'
     + '<button onclick="rtpPlanWorkload()" style="padding:6px 12px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);border-radius:6px;color:#60a5fa;font-size:11px;font-weight:600;cursor:pointer;">📅 Plan Week</button>'
-    + '<button onclick="rtpBuildUpPlan()" style="padding:6px 12px;background:rgba(252,211,77,0.15);border:1px solid rgba(252,211,77,0.3);border-radius:6px;color:#fcd34d;font-size:11px;font-weight:600;cursor:pointer;">📈 Build-Up</button>'
-    + '<button onclick="rtpLinkProgram()" style="padding:6px 12px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:6px;color:#a78bfa;font-size:11px;font-weight:600;cursor:pointer;">🔗 Link Program</button>'
     + (phase.linkedProgramId ? '<button onclick="rtpAssignLinkedProgram()" style="padding:6px 12px;background:rgba(252,211,77,0.15);border:1px solid rgba(252,211,77,0.3);border-radius:6px;color:#fcd34d;font-size:11px;font-weight:600;cursor:pointer;">👤 Assign: '+phase.linkedProgramName+'</button>' : '')
-    + '<button onclick="rtpDeleteProtocol()" style="padding:6px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:6px;color:#f87171;font-size:11px;cursor:pointer;">🗑 Delete</button>'
-    + '<button onclick="rtpClearProtocol()" style="padding:6px 12px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);border-radius:6px;color:#a78bfa;font-size:11px;cursor:pointer;">✓ Clear</button>'
+    + '<button onclick="rtpToggleMoreMenu()" id="rtp-more-btn" title="More actions" style="padding:6px 11px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:14px;font-weight:700;cursor:pointer;line-height:1;">⋯</button>'
+    + '<div id="rtp-more-menu" style="display:none;position:absolute;top:100%;right:0;margin-top:6px;background:#1a1f2e;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px;min-width:180px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.45);">'
+    +   '<button onclick="rtpToggleMoreMenu();rtpBuildUpPlan()" style="display:block;width:100%;text-align:left;padding:8px 10px;background:none;border:none;border-radius:5px;color:#fcd34d;font-size:12px;cursor:pointer;">📈 Build-Up Plan</button>'
+    +   '<button onclick="rtpToggleMoreMenu();rtpLinkProgram()" style="display:block;width:100%;text-align:left;padding:8px 10px;background:none;border:none;border-radius:5px;color:#a78bfa;font-size:12px;cursor:pointer;">🔗 Link Program</button>'
+    +   '<div style="height:1px;background:rgba(255,255,255,0.08);margin:5px 2px;"></div>'
+    +   '<button onclick="rtpToggleMoreMenu();rtpClearProtocol()" style="display:block;width:100%;text-align:left;padding:8px 10px;background:none;border:none;border-radius:5px;color:#a78bfa;font-size:12px;cursor:pointer;">✓ Mark Cleared</button>'
+    +   '<button onclick="rtpToggleMoreMenu();rtpDeleteProtocol()" style="display:block;width:100%;text-align:left;padding:8px 10px;background:none;border:none;border-radius:5px;color:#f87171;font-size:12px;cursor:pointer;">🗑 Delete Protocol</button>'
+    + '</div>'
     + '</div>'
     + '</div>';
 
@@ -21326,9 +21350,11 @@ function rtpRenderDetail() {
     var active = i === p.currentPhase;
     var done   = phase.status === 'complete';
     var locked = phase.status === 'locked';
-    html += '<div onclick="rtpSelectPhase('+i+')" style="flex:1;cursor:'+(locked?'default':'pointer')+';">'
+    var label  = done ? '✓' : locked ? '🔒' : ('P'+(i+1));
+    var hint   = (phase.name || 'Phase '+(i+1)) + (done ? ' — complete' : locked ? ' — locked until earlier phases clear' : active ? ' — current phase' : '');
+    html += '<div onclick="rtpSelectPhase('+i+')" title="'+hint+'" style="flex:1;cursor:'+(locked?'default':'pointer')+';">'
       + '<div style="height:6px;border-radius:3px;background:'+(done?phase.color:active?phase.color:'rgba(255,255,255,0.08)')+';opacity:'+(locked?0.3:1)+';"></div>'
-      + '<div style="font-size:8px;color:'+(active?phase.color:'var(--text3)')+';margin-top:3px;text-align:center;font-weight:'+(active?700:400)+';">P'+(i+1)+'</div>'
+      + '<div style="font-size:9px;color:'+(active?phase.color:done?'#4ade80':'var(--text3)')+';margin-top:3px;text-align:center;font-weight:'+(active?700:400)+';">'+label+'</div>'
       + '</div>';
   });
   html += '</div></div>';
@@ -21345,7 +21371,7 @@ function rtpRenderDetail() {
     + '<div style="font-size:11px;font-weight:700;color:#fff;">'+phase.name+'</div>'
     + '<button onclick="rtpEditPhase()" style="font-size:10px;padding:3px 10px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.3);border-radius:4px;color:#60a5fa;cursor:pointer;">✎ Edit Phase</button>'
     + '</div>'
-    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px;">Phase Criteria</div>';
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:8px;">✅ Phase Criteria</div>';
 
   phase.criteria.forEach(function(c, ci) {
     html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);">'
@@ -21378,7 +21404,7 @@ function rtpRenderDetail() {
 
   // Workload targets + ACWR
   html += '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;">'
-    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:10px;">Workload Targets & ACWR</div>';
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:10px;">📈 Workload Targets & ACWR</div>';
 
   RTP_STREAMS.forEach(function(stream) {
     var target  = phase.workload[stream];
