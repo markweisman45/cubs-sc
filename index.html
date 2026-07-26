@@ -5903,6 +5903,13 @@ function switchTab(page, btn) {
     el.classList.toggle('active', p === page);
   });
   document.getElementById('dashTabs').style.display = page === 'dashboard' ? 'flex' : 'none';
+  // Only show the athlete's name/meta banner on the Dashboard — it was
+  // showing on every tab (Team Summary, Calendar, Daily Brief, etc.) even
+  // though those pages aren't about one specific athlete.
+  var topbarPlayerEl = document.getElementById('topbarPlayer');
+  var topbarMetaEl   = document.getElementById('topbarMeta');
+  if (topbarPlayerEl) topbarPlayerEl.style.display = page === 'dashboard' ? '' : 'none';
+  if (topbarMetaEl)   topbarMetaEl.style.display   = page === 'dashboard' ? '' : 'none';
   if (page === 'brief') { renderBrief(); }
   if (page === 'program') { if (typeof pbInit==='function') pbInit(); }
   if (page === 'programs') renderProgramLibrary();
@@ -13382,6 +13389,7 @@ function pbOpenDay(weekIdx, dayIdx) {
           + pbFieldSelect(bi,ei,'rest',ex.rest||'','Rest')
           +'<input value="'+(ex.notes||'')+'" placeholder="Notes / times" onchange="pbSetExField('+bi+','+ei+',\'notes\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'
           +'<div style="display:flex;gap:2px;flex-shrink:0;">'
+          +'<button onclick="pbGenerateExerciseNote('+bi+','+ei+')" title="Generate a coaching note with AI" style="background:none;border:none;color:var(--yellow);cursor:pointer;font-size:12px;padding:1px 3px;">✨</button>'
           +(ei > 0 ? '<button onclick="pbMoveEx('+bi+','+ei+',-1)" title="Move up" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↑</button>' : '<span style="width:20px;"></span>')
           +(ei < (block.exercises||[]).length-1 ? '<button onclick="pbMoveEx('+bi+','+ei+',1)" title="Move down" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↓</button>' : '<span style="width:20px;"></span>')
           +'<button onclick="pbDupEx('+bi+','+ei+')" title="Duplicate row" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">⧉</button>'
@@ -13418,6 +13426,7 @@ function pbOpenDay(weekIdx, dayIdx) {
         + pbFieldSelect(bi,ei,'rest',ex.rest||'','Rest')
         +'<input value="'+(ex.notes||'')+'" placeholder="Notes" onchange="pbSetExField('+bi+','+ei+',\'notes\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;width:100%;">'
         +'<div style="display:flex;gap:2px;flex-shrink:0;">'
+        +'<button onclick="pbGenerateExerciseNote('+bi+','+ei+')" title="Generate a coaching note with AI" style="background:none;border:none;color:var(--yellow);cursor:pointer;font-size:12px;padding:1px 3px;">✨</button>'
         +(ei > 0 ? '<button onclick="pbMoveEx('+bi+','+ei+',-1)" title="Move up" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↑</button>' : '<span style="width:20px;"></span>')
         +(ei < (block.exercises||[]).length-1 ? '<button onclick="pbMoveEx('+bi+','+ei+',1)" title="Move down" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↓</button>' : '<span style="width:20px;"></span>')
         +'<button onclick="pbDupEx('+bi+','+ei+')" title="Duplicate row" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">⧉</button>'
@@ -13657,7 +13666,66 @@ function pbSetExField(bi, ei, field, val) {
   if ((field === 'sets' || field === 'reps') && /^\d+$/.test(String(val).trim())) {
     val = String(parseInt(val));
   }
-  day.blocks[bi].exercises[ei][field] = val;
+  var ex = day.blocks[bi].exercises[ei];
+  var nameChanged = field === 'name' && ex.name !== val && val;
+  ex[field] = val;
+  pbRenderDayGrid();
+  // Swapping the exercise leaves the OLD exercise's notes sitting there —
+  // they almost never apply to the new one, so clear them and generate a
+  // fresh, relevant coaching cue automatically.
+  if (nameChanged) {
+    ex.notes = '';
+    pbGenerateExerciseNote(bi, ei);
+  }
+}
+
+// ── AI-generated coaching note for a single exercise ─────────────────────────
+// Triggered automatically when an exercise is swapped (see pbSetExField above),
+// and also available on-demand via the ✨ button next to every notes field.
+async function pbGenerateExerciseNote(bi, ei) {
+  if (!PB_ACTIVE_DAY) return;
+  var wk  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx];
+  var day = wk.days[PB_ACTIVE_DAY.dayIdx];
+  var ex  = day.blocks[bi] && day.blocks[bi].exercises[ei];
+  if (!ex || !ex.name) return;
+
+  var prevNotes = ex.notes;
+  ex.notes = '⏳ …';
+  pbRenderDayGrid();
+
+  try {
+    var athLabel = (typeof PB_STATE !== 'undefined' && PB_STATE.athlete !== '(Sandbox)') ? PB_STATE.athlete : 'a baseball player';
+    var dbEx = (typeof getExerciseByName === 'function') ? getExerciseByName(ex.name) : null;
+    var presc = [];
+    if (ex.sets) presc.push(ex.sets + ' sets');
+    if (ex.reps) presc.push(ex.reps + ' reps');
+    if (ex.load) presc.push('@ ' + ex.load);
+    if (ex.distance) presc.push(ex.distance);
+    if (ex.tempo) presc.push('tempo ' + ex.tempo);
+
+    var prompt = 'You are an expert strength and conditioning coach (MLB level).\n'
+      + 'Give ONE short coaching cue for this exercise as programmed — 4 to 10 words, plain text.\n'
+      + 'Exercise: ' + ex.name + (dbEx && dbEx.cat ? ' (' + dbEx.cat + ')' : '') + '\n'
+      + (presc.length ? 'Prescription: ' + presc.join(', ') + '\n' : '')
+      + 'Context: ' + (day.label || day.type || 'training day') + ', ' + (PB_STATE.phase || '') + ' phase, for ' + athLabel + '\n'
+      + 'Return ONLY the cue text — no quotes, no labels, no extra commentary, no period at the end.';
+
+    var res = await fetch(SUPA_URL + '/functions/v1/enrich-exercise', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SUPA_KEY, 'apikey':SUPA_KEY },
+      body: JSON.stringify({ mode:'program_design', prompt:prompt }),
+    });
+    if (!res.ok) throw new Error('Function error ' + res.status);
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    var text = (data.result || data.text || '').replace(/```[a-z]*|```/g,'').trim();
+    text = text.replace(/^["']+|["']+$/g, '').trim();
+    ex.notes = text || '';
+  } catch(err) {
+    console.error('[pbGenerateExerciseNote]', err);
+    ex.notes = prevNotes === '⏳ …' ? '' : prevNotes;
+    if (typeof showStatus === 'function') showStatus('⚠️ Could not generate a note — ' + err.message);
+  }
   pbRenderDayGrid();
 }
 function pbUpdateDayLabel(val) {
