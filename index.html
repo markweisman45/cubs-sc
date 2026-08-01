@@ -19040,50 +19040,55 @@ async function initWithSupabase() {
         if (v) { localStorage.setItem(k, v); loaded++; }
       }
     }
-    if (loaded > 0) {
-      showStatus('✅ Loaded ' + loaded + ' keys from cloud');
-      loadAllData();
-      if (typeof loadHERuns === 'function') loadHERuns();
-      rebuildCMJTrends();
+    if (loaded > 0) showStatus('✅ Filled in ' + loaded + ' key(s) new to this browser from the cloud');
 
-      // Refresh every in-memory store that's backed by localStorage but was
-      // already initialized (from possibly-empty local data) before this
-      // cloud pull finished — otherwise the freshly-pulled data just sits in
-      // localStorage unused until a manual page refresh.
-      try { SAVED_PROGRAMS = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) {}
-      try { if (typeof loadExerciseDB === 'function') loadExerciseDB(); } catch(e) {}
-      try { ANNUAL_PLANS = JSON.parse(localStorage.getItem(ANNUAL_KEY) || '{}'); } catch(e) {}
-      try { MESO_PLANS   = JSON.parse(localStorage.getItem(MESO_KEY)   || '{}'); } catch(e) {}
-      try { if (typeof rtpLoad === 'function') rtpLoad(); } catch(e) {}
-      try { if (typeof wlLoad === 'function') wlLoad(); } catch(e) {}
-      try { if (typeof loadPBPresets === 'function') loadPBPresets(); } catch(e) {}
+    // Everything below runs regardless of whether any NEW keys were filled in
+    // above — this browser usually already has a value for every key (the
+    // common case), but the exercise-enrichment merge in particular is safe,
+    // additive-only, and needs to run every time to pull in anything the
+    // Exercise Library's separate always-current cloud table has that this
+    // browser is missing. Gating this behind "loaded > 0" was the bug that
+    // made the last recovery attempt silently do nothing.
+    loadAllData();
+    if (typeof loadHERuns === 'function') loadHERuns();
+    rebuildCMJTrends();
 
-      // Restore recentGames/latestStats from Supabase statcast data
-      if (Object.keys(importedData.statcast||{}).length) {
-        parsedStatcastRows = [];
-        Object.entries(importedData.statcast).forEach(([name,rows]) => {
-          rows.forEach(r => parsedStatcastRows.push({name,rawName:name,date:r.date,
-            dist:r.dist||0,midEff:r.midEff||0,highEff:r.highEff||0,heDist:r.heDist||0,speed:r.speed||0}));
-        });
-        try { applyStatcastData(); } catch(e) { console.warn('ACWR recalc failed:',e); }
-      }
-      // Override p.acwr with computeLiveACWR (last game date reference)
-      Object.entries(PLAYERS).forEach(([name, p]) => {
-        const live = computeLiveACWR(name);
-        if (live) { p.acwr = live.acwr; p.heAcwr = live.heAcwr; p.tdAcwr = live.tdAcwr; }
+    // Refresh every in-memory store that's backed by localStorage but was
+    // already initialized (from possibly-empty local data) before this
+    // cloud pull finished — otherwise the freshly-pulled data just sits in
+    // localStorage unused until a manual page refresh.
+    try { SAVED_PROGRAMS = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) {}
+    try { if (typeof loadExerciseDB === 'function') loadExerciseDB(); } catch(e) {}
+    try { ANNUAL_PLANS = JSON.parse(localStorage.getItem(ANNUAL_KEY) || '{}'); } catch(e) {}
+    try { MESO_PLANS   = JSON.parse(localStorage.getItem(MESO_KEY)   || '{}'); } catch(e) {}
+    try { if (typeof rtpLoad === 'function') rtpLoad(); } catch(e) {}
+    try { if (typeof wlLoad === 'function') wlLoad(); } catch(e) {}
+    try { if (typeof loadPBPresets === 'function') loadPBPresets(); } catch(e) {}
+
+    // Restore recentGames/latestStats from Supabase statcast data
+    if (Object.keys(importedData.statcast||{}).length) {
+      parsedStatcastRows = [];
+      Object.entries(importedData.statcast).forEach(([name,rows]) => {
+        rows.forEach(r => parsedStatcastRows.push({name,rawName:name,date:r.date,
+          dist:r.dist||0,midEff:r.midEff||0,highEff:r.highEff||0,heDist:r.heDist||0,speed:r.speed||0}));
       });
-      buildPlayerList();
-      renderDashboard();
-      buildTeamList(); // Rebuild team list after cloud data loads
-      if (typeof renderLibrary === 'function') renderLibrary();
-      if (document.getElementById('annual-grid')) renderAnnualPlan();
-      // Load phase priorities for exercise library system
-      if (typeof loadPhasePriorities === 'function') loadPhasePriorities();
-      // Merge any enrichment from Supabase that isn't in localStorage
-      if (typeof loadEnrichedFromSupabase === 'function') loadEnrichedFromSupabase();
-    } else {
-      showStatus('⚠️ No cloud data yet — using local');
+      try { applyStatcastData(); } catch(e) { console.warn('ACWR recalc failed:',e); }
     }
+    // Override p.acwr with computeLiveACWR (last game date reference)
+    Object.entries(PLAYERS).forEach(([name, p]) => {
+      const live = computeLiveACWR(name);
+      if (live) { p.acwr = live.acwr; p.heAcwr = live.heAcwr; p.tdAcwr = live.tdAcwr; }
+    });
+    buildPlayerList();
+    renderDashboard();
+    buildTeamList(); // Rebuild team list after cloud data loads
+    if (typeof renderLibrary === 'function') renderLibrary();
+    if (document.getElementById('annual-grid')) renderAnnualPlan();
+    // Load phase priorities for exercise library system
+    if (typeof loadPhasePriorities === 'function') loadPhasePriorities();
+    // Merge any enrichment/video from Supabase that isn't in localStorage —
+    // this is the actual recovery path and must run unconditionally.
+    if (typeof loadEnrichedFromSupabase === 'function') await loadEnrichedFromSupabase();
   } catch(e) {
     console.warn('initWithSupabase failed:', e);
     showStatus('⚠️ Cloud load failed — using local data');
