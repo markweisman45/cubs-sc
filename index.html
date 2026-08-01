@@ -10939,39 +10939,44 @@ function loadExerciseDB() {
 async function loadEnrichedFromSupabase() {
   try {
     if (!_supaClient) return;
-    // Only fetch exercises that have enrichment data
+    // Fetch every exercise row Supabase has — not just ones with mechanism_text,
+    // since an exercise can be enriched with just a video and nothing else.
     const { data, error } = await _supaClient
       .from('exercises')
-      .select('name, muscle_group, muscle_head, fiber_type, bucket, sport_bucket, mechanism_text, program_gap, sport_transfer')
-      .not('mechanism_text', 'is', null);
+      .select('name, video, notes, muscle_group, muscle_head, fiber_type, bucket, sport_bucket, mechanism_text, program_gap, sport_transfer');
     if (error || !data || !data.length) return;
 
     let merged = 0;
     data.forEach(function(row) {
       const ex = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === row.name.toLowerCase(); });
       if (!ex) return;
-      // Only merge if local doesn't already have enrichment (Supabase is fallback)
-      if (!ex.mechanism_text) {
+      var changed = false;
+      // Video link — this was previously never restored from Supabase at all
+      if (!ex.video && row.video) { ex.video = row.video; changed = true; }
+      // Enrichment fields — only fill if local doesn't already have them (Supabase is fallback)
+      if (!ex.mechanism_text && row.mechanism_text) {
         ex.muscle_group   = row.muscle_group   || ex.muscle_group;
         ex.muscle_head    = row.muscle_head    || ex.muscle_head;
         ex.fiber_type     = row.fiber_type     || ex.fiber_type;
         ex.bucket         = row.bucket         || ex.bucket;
         ex.sport_bucket   = row.sport_bucket   || ex.sport_bucket;
-        ex.mechanism_text = row.mechanism_text || ex.mechanism_text;
+        ex.mechanism_text = row.mechanism_text;
         ex.program_gap    = row.program_gap    || ex.program_gap;
         ex.sport_transfer = row.sport_transfer || ex.sport_transfer;
-        merged++;
+        changed = true;
       }
+      if (changed) merged++;
     });
 
     if (merged > 0) {
       // Save back to localStorage so next load is instant
       persistExerciseDB();
-      console.log('[loadEnrichedFromSupabase] merged', merged, 'enriched exercises from Supabase');
+      console.log('[loadEnrichedFromSupabase] merged', merged, 'exercises from Supabase (enrichment and/or video)');
       // Re-render library if it's currently visible
       if (document.getElementById('page-library') && document.getElementById('page-library').classList.contains('active')) {
         renderLibrary();
       }
+      if (typeof showStatus === 'function') showStatus('✅ Restored ' + merged + ' exercise' + (merged===1?'':'s') + ' from cloud backup');
     } else {
       console.log('[loadEnrichedFromSupabase] all', data.length, 'Supabase enrichments already in localStorage');
     }
@@ -19015,7 +19020,18 @@ async function initWithSupabase() {
     const { data: rows } = await db.from('cubs_sc_data').select('key,value');
     if (rows && rows.length) {
       rows.forEach(function(row) {
-        if (row && row.key && row.value) { localStorage.setItem(row.key, row.value); loaded++; }
+        // Only fill in keys this browser doesn't already have — this pull is
+        // for a fresh device with nothing local yet, never a substitute for
+        // real conflict resolution. Overwriting existing local data with a
+        // (possibly stale, since this table only updates on a manual "Sync
+        // to Cloud" click) cloud snapshot previously caused active local
+        // work — like Exercise Library enrichment and video links, which
+        // update far more often than that manual sync gets clicked — to get
+        // silently rolled back on every page load.
+        if (row && row.key && row.value && localStorage.getItem(row.key) === null) {
+          localStorage.setItem(row.key, row.value);
+          loaded++;
+        }
       });
     } else {
       // Fall back to the old per-key path in case the bulk select is ever blocked
