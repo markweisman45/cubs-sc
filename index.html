@@ -10948,7 +10948,7 @@ async function loadEnrichedFromSupabase() {
     // since an exercise can be enriched with just a video and nothing else.
     const { data, error } = await _supaClient
       .from('exercises')
-      .select('name, video, notes, muscle_group, muscle_head, fiber_type, bucket, sport_bucket, mechanism_text, program_gap, sport_transfer');
+      .select('*');
 
     if (error) {
       var errText = 'code=' + (error.code||'?') + ' message=' + (error.message||'?') + ' details=' + (error.details||'?') + ' hint=' + (error.hint||'?');
