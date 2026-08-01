@@ -10715,7 +10715,11 @@ async function persistExerciseDBToSupabase() {
     const { error } = await _supaClient
       .from('exercises')
       .upsert(rows, { onConflict: 'name' });
-    if (error) console.error('[persistExerciseDB] Supabase sync error:', error);
+    if (error) {
+      var errText = 'code=' + (error.code||'?') + ' message=' + (error.message||'?') + ' details=' + (error.details||'?') + ' hint=' + (error.hint||'?');
+      console.error('[persistExerciseDB] Supabase sync error: ' + errText);
+      if (typeof showStatus === 'function') showStatus('⚠️ Cloud backup of exercise library failed: ' + errText);
+    }
     else console.log('[persistExerciseDB] synced', rows.length, 'enriched exercises to Supabase');
   } catch(err) {
     console.error('[persistExerciseDB] Supabase error:', err);
@@ -10947,8 +10951,9 @@ async function loadEnrichedFromSupabase() {
       .select('name, video, notes, muscle_group, muscle_head, fiber_type, bucket, sport_bucket, mechanism_text, program_gap, sport_transfer');
 
     if (error) {
-      console.error('[loadEnrichedFromSupabase] query error:', error);
-      if (typeof showStatus === 'function') showStatus('❌ Cloud lookup failed: ' + (error.message || JSON.stringify(error)));
+      var errText = 'code=' + (error.code||'?') + ' message=' + (error.message||'?') + ' details=' + (error.details||'?') + ' hint=' + (error.hint||'?');
+      console.error('[loadEnrichedFromSupabase] query error: ' + errText);
+      if (typeof showStatus === 'function') showStatus('❌ Cloud lookup failed: ' + errText);
       return;
     }
     if (!data || !data.length) {
