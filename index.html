@@ -1884,6 +1884,7 @@ body {
             <div class="card-title" style="margin:0;">📚 Exercise Library</div>
             <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
               <button class="generate-btn" style="padding:7px 12px;" onclick="openAddExerciseModal()">+ Add</button>
+              <button onclick="loadEnrichedFromSupabase()" style="background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.35);border-radius:6px;color:#60a5fa;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;" title="Pull enrichment and video links from the cloud backup for anything missing locally">☁️ Restore from Cloud</button>
               <button onclick="syncVideosAcrossPrograms(true)" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:6px;color:#ff6b6b;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;" title="Push every exercise's current video link out to every saved program">▶ Sync Videos to Programs</button>
               <button onclick="openEnrichModal()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">✨ Enrich</button>
               <button onclick="libToggleSelect()" id="lib-select-btn" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">☑ Select</button>
@@ -10938,18 +10939,30 @@ function loadExerciseDB() {
 // Called after initWithSupabase so _supaClient is ready
 async function loadEnrichedFromSupabase() {
   try {
-    if (!_supaClient) return;
+    if (!_supaClient) { console.warn('[loadEnrichedFromSupabase] no Supabase client'); if (typeof showStatus === 'function') showStatus('⚠️ Recovery skipped — Supabase client not ready'); return; }
     // Fetch every exercise row Supabase has — not just ones with mechanism_text,
     // since an exercise can be enriched with just a video and nothing else.
     const { data, error } = await _supaClient
       .from('exercises')
       .select('name, video, notes, muscle_group, muscle_head, fiber_type, bucket, sport_bucket, mechanism_text, program_gap, sport_transfer');
-    if (error || !data || !data.length) return;
+
+    if (error) {
+      console.error('[loadEnrichedFromSupabase] query error:', error);
+      if (typeof showStatus === 'function') showStatus('❌ Cloud lookup failed: ' + (error.message || JSON.stringify(error)));
+      return;
+    }
+    if (!data || !data.length) {
+      console.warn('[loadEnrichedFromSupabase] exercises table returned 0 rows');
+      if (typeof showStatus === 'function') showStatus('⚠️ No exercise data found in the cloud table — nothing to restore from');
+      return;
+    }
 
     let merged = 0;
+    let matchedButNoNewData = 0;
+    let unmatchedNames = [];
     data.forEach(function(row) {
       const ex = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === row.name.toLowerCase(); });
-      if (!ex) return;
+      if (!ex) { unmatchedNames.push(row.name); return; }
       var changed = false;
       // Video link — this was previously never restored from Supabase at all
       if (!ex.video && row.video) { ex.video = row.video; changed = true; }
@@ -10965,20 +10978,22 @@ async function loadEnrichedFromSupabase() {
         ex.sport_transfer = row.sport_transfer || ex.sport_transfer;
         changed = true;
       }
-      if (changed) merged++;
+      if (changed) merged++; else matchedButNoNewData++;
     });
 
+    console.log('[loadEnrichedFromSupabase] cloud rows:', data.length, '| merged:', merged, '| matched-but-already-current:', matchedButNoNewData, '| unmatched names:', unmatchedNames);
+
     if (merged > 0) {
-      // Save back to localStorage so next load is instant
       persistExerciseDB();
-      console.log('[loadEnrichedFromSupabase] merged', merged, 'exercises from Supabase (enrichment and/or video)');
-      // Re-render library if it's currently visible
       if (document.getElementById('page-library') && document.getElementById('page-library').classList.contains('active')) {
         renderLibrary();
       }
       if (typeof showStatus === 'function') showStatus('✅ Restored ' + merged + ' exercise' + (merged===1?'':'s') + ' from cloud backup');
+    } else if (unmatchedNames.length === data.length) {
+      // Every cloud row failed to match anything in the local library by name
+      if (typeof showStatus === 'function') showStatus('⚠️ Found ' + data.length + ' exercises in the cloud, but none matched your local library by name — check console for details');
     } else {
-      console.log('[loadEnrichedFromSupabase] all', data.length, 'Supabase enrichments already in localStorage');
+      if (typeof showStatus === 'function') showStatus('ℹ️ Checked ' + data.length + ' cloud exercises — your local library already matches (nothing to restore)');
     }
   } catch(err) {
     console.error('[loadEnrichedFromSupabase]', err);
