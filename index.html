@@ -3176,8 +3176,17 @@ body {
             📂 Choose Statcast File
             <input type="file" id="statcastFileInput" accept=".csv" style="display:none;" onchange="handleStatcastUpload(this)">
           </label>
+          <label style="
+            display:flex;align-items:center;gap:8px;padding:10px 18px;
+            background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.4);
+            border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:600;color:#4ade80;">
+            📅 Batch Import Multiple Days
+            <input type="file" id="statcastBatchInput" accept=".csv" multiple style="display:none;" onchange="handleStatcastUploadBatch(this)">
+          </label>
           <div id="statcastFileName" style="font-size:12px;color:var(--text2);">No file selected</div>
         </div>
+
+        <div style="display:none;" id="statcastBatchProgress"></div>
 
         <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:8px;">Expected Statcast columns</div>
@@ -16257,6 +16266,75 @@ function clearCMJPreview() {
 // ════════════════════════════════
 let parsedStatcastRows = [];
 
+// ── Batch statcast import — process many daily CSVs sequentially ───────────
+// Each file merges into storage the same safe way a single upload does
+// (by exact date, so re-importing a day you already have just updates it,
+// never duplicates). Built for recovering a long run of daily files at once
+// rather than clicking through them one by one.
+async function handleStatcastUploadBatch(input) {
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+  input.value = '';
+
+  const progressEl = document.getElementById('statcastBatchProgress');
+  progressEl.style.display = 'block';
+  progressEl.style.cssText += 'background:var(--bg3);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-family:\'DM Mono\',monospace;font-size:12px;color:var(--text);';
+
+  function readFileText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = () => reject(new Error('Could not read ' + file.name));
+      reader.readAsText(file);
+    });
+  }
+
+  let totalRecords = 0;
+  let failedFiles = [];
+  const allPlayers = new Set();
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    progressEl.textContent = '⏳ Processing ' + (i+1) + ' / ' + files.length + ': ' + file.name;
+    try {
+      const text = await readFileText(file);
+      const rows = parseCSV(text);
+      parsedStatcastRows = [];
+      rows.forEach(row => {
+        const name = (row['Player'] || '').trim();
+        if (!name) return;
+        const match = findRosterMatch(name);
+        if (!match) return;
+        const date = getField(row, 'Game Date').trim();
+        if (!date) return;
+        const dist    = parseFloat(getField(row, 'Total Distance Covered (ft)')) || 0;
+        const midEff  = parseInt(getField(row, 'Mid-Effort Runs'))  || 0;
+        const highEff = parseInt(getField(row, 'High-Effort Runs')) || 0;
+        const heDist  = parseFloat(getField(row, 'High-Effort Distance Covered (ft)')) || 0;
+        const speed   = parseFloat(getField(row, 'Top Speed (ft/s)')) || 0;
+        parsedStatcastRows.push({ name: match, rawName: name, date, dist, midEff, highEff, heDist, speed });
+        allPlayers.add(match);
+      });
+      if (parsedStatcastRows.length) {
+        applyStatcastData();
+        totalRecords += parsedStatcastRows.length;
+      }
+    } catch(err) {
+      console.error('[Batch statcast]', file.name, err);
+      failedFiles.push(file.name);
+    }
+  }
+
+  progressEl.textContent = '✅ Done — ' + files.length + ' file(s) processed, ' + totalRecords + ' record(s) merged across ' + allPlayers.size + ' player(s)'
+    + (failedFiles.length ? (' — ⚠️ ' + failedFiles.length + ' file(s) failed: ' + failedFiles.join(', ')) : '');
+
+  // Refresh anything currently on screen that depends on this data
+  buildPlayerList();
+  renderDashboard();
+  if (typeof buildTeamList === 'function') buildTeamList();
+  if (typeof showStatus === 'function') showStatus('✅ Batch import complete — ' + totalRecords + ' records merged');
+}
+
 function handleStatcastUpload(input) {
   const file = input.files[0];
   if (!file) return;
@@ -19099,18 +19177,31 @@ async function syncToSupabase() {
   if (!db) { showStatus('⚠️ Supabase not loaded yet'); return; }
   showStatus('☁️ Syncing to cloud...');
   let count = 0;
+  const skipped = [];
   // Sync all cubs_sc keys except large program/schedule data (baked into code)
   const skip = ['cubs_sc_programs_v1','cubs_sc_templates_seeded_v1','cubs_sc_my_programs_seeded_v1',
                 'cubs_sc_my_programs_seeded_v2','cubs_sc_my_programs_seeded_v3','cubs_sc_sched_ver'];
   const allKeys = Object.keys(localStorage).filter(k => k.startsWith('cubs_sc') && !skip.includes(k));
   for (const k of allKeys) {
     const v = localStorage.getItem(k);
-    if (v && v.length < 500000) { // skip anything over 500KB
-      try { await supaSet(k, v); count++; } catch(e) { console.warn('Failed to sync', k, e); }
+    if (!v) continue;
+    // Raised from the old 500KB limit, which was silently dropping large,
+    // frequently-updated keys like months of accumulated statcast data —
+    // meaning that data was NEVER actually reaching the cloud, and nobody
+    // was ever told. Postgres text columns handle multi-MB values fine;
+    // anything still over this new ceiling is reported instead of hidden.
+    if (v.length < 8000000) {
+      try { await supaSet(k, v); count++; } catch(e) { console.warn('Failed to sync', k, e); skipped.push(k + ' (error)'); }
+    } else {
+      skipped.push(k + ' (' + Math.round(v.length/1000) + 'KB, over the limit)');
     }
   }
-  showStatus('✅ Synced ' + count + ' keys to cloud');
-  alert('✅ Synced ' + count + ' data keys to cloud!');
+  showStatus('✅ Synced ' + count + ' keys to cloud' + (skipped.length ? (' — ' + skipped.length + ' SKIPPED') : ''));
+  if (skipped.length) {
+    alert('⚠️ Synced ' + count + ' keys, but ' + skipped.length + ' key(s) were too large and were NOT backed up:\n\n' + skipped.join('\n') + '\n\nThis data is not safely backed up to the cloud — let your developer know if this keeps happening.');
+  } else {
+    alert('✅ Synced ' + count + ' data keys to cloud!');
+  }
 }
 
 async function initWithSupabase() {
