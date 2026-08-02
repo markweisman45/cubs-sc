@@ -1885,6 +1885,9 @@ body {
             <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
               <button class="generate-btn" style="padding:7px 12px;" onclick="openAddExerciseModal()">+ Add</button>
               <button onclick="loadEnrichedFromSupabase()" style="background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.35);border-radius:6px;color:#60a5fa;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;" title="Pull enrichment and video links from the cloud backup for anything missing locally">☁️ Restore from Cloud</button>
+              <input type="file" id="lib-restore-file-input" accept=".json" style="display:none;" onchange="libRestoreFromBackupFile(this)">
+              <button onclick="document.getElementById('lib-restore-file-input').click()" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.35);border-radius:6px;color:#4ade80;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;" title="Restore ONLY the exercise library from an old backup JSON file — nothing else in the app is touched">📂 Restore Library from Backup File</button>
+              <button onclick="libRemoveDuplicates()" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:6px;color:#f59e0b;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;" title="Merge exercises that share the same name, keeping whichever copy has more filled-in data">🧹 Remove Duplicates</button>
               <button onclick="syncVideosAcrossPrograms(true)" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:6px;color:#ff6b6b;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;" title="Push every exercise's current video link out to every saved program">▶ Sync Videos to Programs</button>
               <button onclick="openEnrichModal()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">✨ Enrich</button>
               <button onclick="libToggleSelect()" id="lib-select-btn" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">☑ Select</button>
@@ -10926,6 +10929,113 @@ function loadExerciseDB() {
 
 // Pull enrichment data from Supabase and merge into EXERCISE_DB
 // Called after initWithSupabase so _supaClient is ready
+// ── Restore ONLY the Exercise Library from an old backup JSON file ──────────
+// Unlike a full "Import Data" restore, this touches nothing else in the app —
+// no programs, no annual plans, no RTP protocols. It reads the backup file,
+// pulls out just the exercise_db entry, and fills in any video/enrichment
+// fields your CURRENT library is missing — it never overwrites a field that
+// already has something in it, so it can't clobber newer work by mistake.
+// ── Merge duplicate exercises (same name, different entries) ────────────────
+// For each set of duplicates, keeps ONE entry and fills it in with whichever
+// field values are present across all the copies — so if one copy has the
+// video and another has the AI enrichment, the merged result keeps both
+// instead of picking one copy and losing the other's data.
+function libRemoveDuplicates() {
+  var groups = {};
+  var order = [];
+  EXERCISE_DB.forEach(function(ex) {
+    if (!ex || !ex.name) return;
+    var key = ex.name.trim().toLowerCase();
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(ex);
+  });
+
+  var dupGroups = order.filter(function(k){ return groups[k].length > 1; });
+  if (!dupGroups.length) { alert('No duplicate exercises found — your library already has one entry per name.'); return; }
+
+  var dupCount = dupGroups.reduce(function(s,k){ return s + groups[k].length - 1; }, 0);
+  if (!confirm('Found ' + dupGroups.length + ' exercise name(s) with duplicates (' + dupCount + ' extra entries total). Merge them into one copy each, keeping whichever data each duplicate has? This can\'t be undone.')) return;
+
+  var fieldsToMerge = ['video','notes','cat','liftKey','muscle_group','muscle_head','fiber_type','bucket','sport_bucket','mechanism_text','program_gap','sport_transfer'];
+  var merged = order.map(function(key) {
+    var copies = groups[key];
+    var base = Object.assign({}, copies[0]);
+    fieldsToMerge.forEach(function(f) {
+      if (!base[f]) {
+        var found = copies.find(function(c){ return c[f]; });
+        if (found) base[f] = found[f];
+      }
+    });
+    return base;
+  });
+
+  var before = EXERCISE_DB.length;
+  EXERCISE_DB.length = 0;
+  merged.forEach(function(ex){ EXERCISE_DB.push(ex); });
+  persistExerciseDB();
+  renderLibrary();
+  showStatus('✅ Merged ' + dupCount + ' duplicate(s) — library went from ' + before + ' to ' + EXERCISE_DB.length + ' exercises');
+}
+
+function libRestoreFromBackupFile(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var backup = JSON.parse(e.target.result);
+      var keys = (backup && backup.version === 'cubs_sc_backup_v1') ? backup.keys : backup;
+      if (!keys || !keys['cubs_sc_exercise_db_v1']) {
+        alert('That file doesn\'t contain an exercise library — nothing to restore from it.');
+        return;
+      }
+
+      var backupDB = JSON.parse(keys['cubs_sc_exercise_db_v1']);
+      if (!Array.isArray(backupDB) || !backupDB.length) {
+        alert('The exercise library in that backup file is empty — nothing to restore.');
+        return;
+      }
+
+      var merged = 0, videoRestored = 0, enrichRestored = 0, notFoundLocally = 0;
+      backupDB.forEach(function(bEx) {
+        if (!bEx || !bEx.name) return;
+        var ex = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === bEx.name.toLowerCase(); });
+        if (!ex) { notFoundLocally++; return; }
+        var changed = false;
+        if (!ex.video && bEx.video) { ex.video = bEx.video; videoRestored++; changed = true; }
+        if (!ex.mechanism_text && bEx.mechanism_text) {
+          ex.muscle_group   = bEx.muscle_group   || ex.muscle_group;
+          ex.muscle_head    = bEx.muscle_head    || ex.muscle_head;
+          ex.fiber_type     = bEx.fiber_type     || ex.fiber_type;
+          ex.bucket         = bEx.bucket         || ex.bucket;
+          ex.sport_bucket   = bEx.sport_bucket   || ex.sport_bucket;
+          ex.mechanism_text = bEx.mechanism_text;
+          ex.program_gap    = bEx.program_gap    || ex.program_gap;
+          ex.sport_transfer = bEx.sport_transfer || ex.sport_transfer;
+          enrichRestored++; changed = true;
+        }
+        if (!ex.notes && bEx.notes) { ex.notes = bEx.notes; changed = true; }
+        if (changed) merged++;
+      });
+
+      if (merged > 0) {
+        persistExerciseDB();
+        renderLibrary();
+        showStatus('✅ Restored ' + merged + ' exercise(s) from backup — ' + videoRestored + ' video link(s), ' + enrichRestored + ' enrichment record(s)');
+      } else if (notFoundLocally === backupDB.length) {
+        alert('None of the ' + backupDB.length + ' exercises in that backup matched your current library by name.');
+      } else {
+        alert('Checked ' + backupDB.length + ' exercises from the backup — your current library already has everything it had. Nothing needed restoring.');
+      }
+    } catch(err) {
+      alert('Could not read that backup file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
 async function loadEnrichedFromSupabase() {
   try {
     if (!_supaClient) { console.warn('[loadEnrichedFromSupabase] no Supabase client'); if (typeof showStatus === 'function') showStatus('⚠️ Recovery skipped — Supabase client not ready'); return; }
