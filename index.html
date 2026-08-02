@@ -7367,7 +7367,7 @@ function renderAllCharts(p) {
         x: { grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10}} },
         y: { type:'linear',
           min: 0,
-          suggestedMax: Math.ceil(Math.max(3000, Math.max.apply(null, strainData.concat([0]))) / 500) * 500,
+          suggestedMax: Math.ceil(Math.max(3500, Math.max.apply(null, strainData.concat([0]))) / 500) * 500,
           grid:{color:C.border}, ticks:{color:C.text2,font:{family:'DM Mono',size:10},
             callback: function(v){ return v >= 1000 ? (v/1000).toFixed(1)+'k' : v; }
           }
@@ -7377,8 +7377,8 @@ function renderAllCharts(p) {
         ...cloneOpts().plugins,
         legend: { display: false },
         annotation: { annotations: {
-          monitor: { type:'line', yMin:1500, yMax:1500, borderColor:C.yellow, borderDash:[4,4], borderWidth:1 },
-          high:    { type:'line', yMin:3000, yMax:3000, borderColor:C.red,    borderDash:[4,4], borderWidth:1 },
+          monitor: { type:'line', yMin:2000, yMax:2000, borderColor:C.yellow, borderDash:[4,4], borderWidth:1 },
+          high:    { type:'line', yMin:3500, yMax:3500, borderColor:C.red,    borderDash:[4,4], borderWidth:1 },
         }}
       }
     }
