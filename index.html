@@ -7318,44 +7318,29 @@ function renderAllCharts(p) {
   const games = p.recentGames;
   const labels = games.map(g => g.date);
 
-  // Strain mini chart — rolling 7-day strain per game date
-  const allStatcastRows = (() => {
-    try {
-      const statcast = (typeof importedData !== 'undefined' && importedData.statcast) ? importedData.statcast : {};
-      const key = Object.keys(statcast).find(k=>k===currentPlayer) || Object.keys(statcast).find(k=>k.toLowerCase()===currentPlayer.toLowerCase());
-      return key ? (statcast[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date)) : [];
-    } catch(e) { return []; }
-  })();
-  // For strain chart: find raw date from importedData matching each game
-  const rawStatcast = (() => {
-    try {
-      var s = (typeof importedData!=='undefined'&&importedData.statcast)?importedData.statcast:{};
-      var k = Object.keys(s).find(function(k){return k===currentPlayer||k.toLowerCase()===currentPlayer.toLowerCase();});
-      return k ? (s[k]||[]).sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);}) : [];
-    } catch(e){return [];}
-  })();
-  const strainData = games.map(function(g) {
-    // Find matching raw statcast row by formatted date
-    var match = rawStatcast.find(function(r){ return fmtDate(r.date)===g.date; });
-    if (!match) return 0;
-    // Build 7-day window ending on this game date
-    var ref = safeParseDate(match.date); ref.setHours(0,0,0,0);
-    var daily = [];
-    for (var i=6;i>=0;i--) {
-      var day = new Date(ref); day.setDate(day.getDate()-i); day.setHours(0,0,0,0);
-      var row = rawStatcast.find(function(r){ var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===day.getTime(); });
-      daily.push(row?(row.heDist||0):0);
-    }
-    var wkHE = daily.reduce(function(s,v){return s+v;},0);
-    var avg  = wkHE/7;
-    var sd   = Math.sqrt(daily.reduce(function(s,v){return s+Math.pow(v-avg,2);},0)/7);
-    var mono = sd>0?avg/sd:0;
-    return Math.round(wkHE*mono);
-  });
+  // Strain mini chart — rolling 7-day strain for each of the last 14 days.
+  // Uses the SAME canonical calc as "Today's Strain" (computeMonotonyStrain,
+  // which reads g.he directly from recentGames) instead of the old approach
+  // here, which required an exact-date join against a separate statcast
+  // array — any day that array didn't happen to cover silently came back as
+  // 0, which is why the chart flatlined for anything beyond however far that
+  // statcast dataset extended, even though real data existed on the game log.
+  var strainAnchor = (p.recentGames && p.recentGames.length)
+    ? safeParseDate(p.recentGames[p.recentGames.length-1].date)
+    : new Date();
+  strainAnchor.setHours(0,0,0,0);
+  var strainLabels = [];
+  var strainData = [];
+  for (var _di = 13; _di >= 0; _di--) {
+    var _d = new Date(strainAnchor); _d.setDate(_d.getDate() - _di);
+    strainLabels.push(fmtDate(_d));
+    var _ms = computeMonotonyStrain(currentPlayer, _d);
+    strainData.push(_ms.strain || 0);
+  }
   // Strain chart — render manually so y-axis starts at 0
   mkChart('readinessMiniChart', {
     type: 'line',
-    data: { labels: labels, datasets: [{
+    data: { labels: strainLabels, datasets: [{
       label: 'Strain', data: strainData,
       borderColor: C.yellow, backgroundColor: 'rgba(245,158,11,0.08)',
       fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6,
