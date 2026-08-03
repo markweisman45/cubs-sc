@@ -373,6 +373,12 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;
   color:#FCA5A5;font-size:13px;line-height:1.7;
 }
 </style>
+<link rel="manifest" id="pwa-manifest">
+<meta name="theme-color" content="#0E2355">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cubs S&C">
 </head>
 <body>
 
@@ -397,6 +403,99 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;
 <script>
 var SUPA_URL = 'https://umcdnbnvzwedrlidzaqg.supabase.co';
 var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtY2RuYm52endlZHJsaWR6YXFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjMwNjUsImV4cCI6MjA5MjYzOTA2NX0.g4t2GaT33M03b6-stee9Aiy2We1KdJpw5KVEKwScwJM';
+
+// ══════════════════════════════════════════════════════════════════════════
+// PWA SETUP — manifest, service worker, "Add to Home Screen" prompt
+// ══════════════════════════════════════════════════════════════════════════
+(function(){
+  // The manifest's start_url must include THIS athlete's ?id= — otherwise
+  // installing the app would always relaunch to a blank/generic program page
+  // instead of back to their own program. Built dynamically per-visit rather
+  // than as a static file for exactly this reason.
+  var params = new URLSearchParams(window.location.search);
+  var pid = params.get('id') || '';
+  var startUrl = './program.html' + (pid ? ('?id=' + encodeURIComponent(pid)) : '');
+
+  var manifest = {
+    name: 'Cubs S&C Training Program',
+    short_name: 'Cubs S&C',
+    description: 'Your strength & conditioning training program',
+    start_url: startUrl,
+    scope: './',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#060810',
+    theme_color: '#0E2355',
+    icons: [
+      { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: 'icon-192-maskable.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: 'icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+    ]
+  };
+  var manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+  var manifestUrl = URL.createObjectURL(manifestBlob);
+  var manifestLink = document.getElementById('pwa-manifest');
+  if (manifestLink) manifestLink.setAttribute('href', manifestUrl);
+
+  // Service worker — best effort, never blocks the page if it fails
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(e){ console.warn('[PWA] SW registration failed:', e); });
+    });
+  }
+
+  // ── Install prompt ──
+  var deferredPrompt = null;
+  var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+
+  function showInstallBanner(mode) {
+    if (isStandalone) return;
+    if (localStorage.getItem('cubs_sc_install_dismissed')) return;
+    if (document.getElementById('installBanner')) return;
+
+    var banner = document.createElement('div');
+    banner.id = 'installBanner';
+    banner.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:500;'
+      + 'background:var(--surface2);border:1px solid var(--border2);border-radius:14px;'
+      + 'padding:14px 16px;display:flex;align-items:center;gap:12px;'
+      + 'box-shadow:0 8px 30px rgba(0,0,0,0.5);font-family:Inter,sans-serif;';
+
+    var msg = mode === 'ios'
+      ? '<div style="font-size:13px;color:var(--text);line-height:1.5;"><b>Add to Home Screen</b><br><span style="color:var(--text2);">Tap <b>Share</b> then <b>"Add to Home Screen"</b></span></div>'
+      : '<div style="font-size:13px;color:var(--text);line-height:1.5;"><b>Install this app</b><br><span style="color:var(--text2);">Quick access from your home screen</span></div>';
+
+    banner.innerHTML = msg
+      + '<div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;">'
+      + (mode==='ios' ? '' : '<button id="installBtn" style="padding:8px 14px;border-radius:8px;border:none;background:var(--blue-l);color:#fff;font-weight:600;font-size:12px;cursor:pointer;">Install</button>')
+      + '<button id="installDismiss" style="padding:8px 10px;border-radius:8px;border:none;background:transparent;color:var(--text3);font-size:18px;cursor:pointer;line-height:1;">✕</button>'
+      + '</div>';
+    document.body.appendChild(banner);
+
+    document.getElementById('installDismiss').onclick = function(){
+      banner.remove();
+      localStorage.setItem('cubs_sc_install_dismissed', '1');
+    };
+    if (mode !== 'ios') {
+      document.getElementById('installBtn').onclick = function(){
+        banner.remove();
+        if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
+      };
+    }
+  }
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstallBanner('android');
+  });
+
+  // iOS Safari has no beforeinstallprompt event — show manual instructions instead
+  if (isIOS && !isStandalone) {
+    setTimeout(function(){ showInstallBanner('ios'); }, 2500);
+  }
+})();
 
 var PROG=null, ENRICH={}, LOG={};
 var S={week:0, day:0};
