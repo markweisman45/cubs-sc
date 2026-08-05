@@ -1191,7 +1191,7 @@ body {
       <div id="prog-tab-annual" class="prog-tab" style="display:none;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <select id="annual-athlete" onchange="renderAnnualPlan()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;min-width:150px;"><option value="Mark Weisman">Mark Weisman</option><option value="Nico Hoerner">Nico Hoerner</option><option value="Dansby Swanson">Dansby Swanson</option><option value="Ian Happ">Ian Happ</option><option value="Pete Crow-Armstrong">Pete Crow-Armstrong</option><option value="Matt Shaw">Matt Shaw</option><option value="Carson Kelly">Carson Kelly</option><option value="Miguel Amaya">Miguel Amaya</option><option value="Michael Busch">Michael Busch</option><option value="Alex Bregman">Alex Bregman</option><option value="Moises Ballesteros">Moises Ballesteros</option><option value="Seiya Suzuki">Seiya Suzuki</option><option value="Michael Conforto">Michael Conforto</option><option value="Pedro Ramirez">Pedro Ramirez</option></select>
+      <select id="annual-athlete" onchange="renderAnnualPlan()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;min-width:150px;"><option value="Mark Weisman">Mark Weisman</option><option value="Nico Hoerner">Nico Hoerner</option><option value="Dansby Swanson">Dansby Swanson</option><option value="Ian Happ">Ian Happ</option><option value="Pete Crow-Armstrong">Pete Crow-Armstrong</option><option value="Matt Shaw">Matt Shaw</option><option value="Carson Kelly">Carson Kelly</option><option value="Miguel Amaya">Miguel Amaya</option><option value="Michael Busch">Michael Busch</option><option value="Alex Bregman">Alex Bregman</option><option value="Tyrone Taylor">Tyrone Taylor</option><option value="Seiya Suzuki">Seiya Suzuki</option><option value="Michael Conforto">Michael Conforto</option><option value="Pedro Ramirez">Pedro Ramirez</option></select>
       <select id="annual-year" onchange="renderAnnualPlan()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;">
         <option value="2025">2025-26</option>
         <option value="2026" selected>2026-27</option>
@@ -1326,7 +1326,7 @@ body {
                 <option>Dansby Swanson</option><option>Matt Shaw</option>
                 <option>Carson Kelly</option><option>Miguel Amaya</option>
                 <option>Michael Busch</option><option>Alex Bregman</option>
-                <option>Moises Ballesteros</option><option>Ian Happ</option>
+                <option>Tyrone Taylor</option><option>Ian Happ</option>
                 <option>Colin Rea</option><option>Matt Boyd</option>
                 <option>Jameson Taillon</option><option>Shota Imanaga</option>
                 <option>Justin Steele</option><option>Daniel Palencia</option>
@@ -1827,7 +1827,7 @@ body {
               <option>Dansby Swanson</option><option>Matt Shaw</option>
               <option>Carson Kelly</option><option>Miguel Amaya</option>
               <option>Michael Busch</option><option>Alex Bregman</option>
-              <option>Moises Ballesteros</option><option>Ian Happ</option>
+              <option>Tyrone Taylor</option><option>Ian Happ</option>
               <option>Colin Rea</option><option>Matt Boyd</option>
               <option>Jameson Taillon</option><option>Shota Imanaga</option>
               <option>Justin Steele</option><option>Daniel Palencia</option>
@@ -1851,7 +1851,7 @@ body {
                 <option>Dansby Swanson</option><option>Matt Shaw</option>
                 <option>Carson Kelly</option><option>Miguel Amaya</option>
                 <option>Michael Busch</option><option>Alex Bregman</option>
-                <option>Moises Ballesteros</option><option>Ian Happ</option>
+                <option>Tyrone Taylor</option><option>Ian Happ</option>
                 <option>Colin Rea</option><option>Matt Boyd</option>
                 <option>Jameson Taillon</option><option>Shota Imanaga</option>
                 <option>Justin Steele</option><option>Daniel Palencia</option>
@@ -2663,7 +2663,7 @@ body {
           <option>Dansby Swanson</option><option>Matt Shaw</option>
           <option>Carson Kelly</option><option>Miguel Amaya</option>
           <option>Michael Busch</option><option>Alex Bregman</option>
-          <option>Moises Ballesteros</option><option>Ian Happ</option>
+          <option>Tyrone Taylor</option><option>Ian Happ</option>
           <option>Colin Rea</option><option>Matt Boyd</option>
           <option>Jameson Taillon</option><option>Shota Imanaga</option>
           <option>Justin Steele</option><option>Daniel Palencia</option>
@@ -2715,7 +2715,7 @@ body {
           <option>Dansby Swanson</option><option>Matt Shaw</option>
           <option>Carson Kelly</option><option>Miguel Amaya</option>
           <option>Michael Busch</option><option>Alex Bregman</option>
-          <option>Moises Ballesteros</option><option>Ian Happ</option>
+          <option>Tyrone Taylor</option><option>Ian Happ</option>
           <option>Colin Rea</option><option>Matt Boyd</option>
           <option>Jameson Taillon</option><option>Shota Imanaga</option>
           <option>Justin Steele</option><option>Daniel Palencia</option>
@@ -2787,7 +2787,7 @@ body {
               <option>Dansby Swanson</option><option>Matt Shaw</option>
               <option>Carson Kelly</option><option>Miguel Amaya</option>
               <option>Michael Busch</option><option>Alex Bregman</option>
-              <option>Moises Ballesteros</option><option>Ian Happ</option>
+              <option>Tyrone Taylor</option><option>Ian Happ</option>
               <option>Colin Rea</option><option>Matt Boyd</option>
               <option>Jameson Taillon</option><option>Shota Imanaga</option>
               <option>Justin Steele</option><option>Daniel Palencia</option>
@@ -6269,26 +6269,18 @@ const PLAYERS = {
   },
 
   // ── MOISES BALLESTEROS ──
-  "Moises Ballesteros": {
-    pos:"C", number:"25",
-    readiness:1.012, status:"YELLOW",
-    daysSinceCMJ:4, acwr:1.08, heAcwr:1.05, tdAcwr:1.11,
-    latestJump:49.8, latestPPBM:63.0, latestSpeed:23.5,
-    latestBat:67.5, latestExit:95.0, latestThrow:73.5,
-    latestHE:160, latestDist:780,
-    bests:{jump:52.5,ppbm:66.0,speed:25.5,bat:72.0,exit:101.5,throwV:79.0},
-    recentGames:[
-      {date:"Apr 10",jump:49.8,ppbm:63.0,speed:23.5,he:160,bat:67.5,exit:95.0,throwV:73.5,readiness:1.012,acwr:1.08,status:"YELLOW"},
-      {date:"Apr 12",jump:50.0,ppbm:63.2,speed:23.8,he:175,bat:68.0,exit:96.2,throwV:74.0,readiness:1.015,acwr:1.07,status:"YELLOW"},
-    ],
+  "Tyrone Taylor": {
+    pos:"OF", number:"15",
+    readiness:1.000, status:"GREEN",
+    daysSinceCMJ:0, acwr:1.00, heAcwr:1.00, tdAcwr:1.00,
+    latestJump:0, latestPPBM:0, latestSpeed:0,
+    latestBat:0, latestExit:0, latestThrow:0,
+    latestHE:0, latestDist:0,
+    bests:{jump:0,ppbm:0,speed:0,bat:0,exit:0,throwV:0},
+    recentGames:[],
     cmjTrends: [],
-    acwrHistory:[
-      {date:"Apr 10",he:1.04,td:1.10,comb:1.07},{date:"Apr 12",he:1.05,td:1.11,comb:1.08},
-    ],
-    wellness:[
-      {date:"Apr 10",soreness:4,energy:7,sleep:7,readiness:1.012},
-      {date:"Apr 12",soreness:4,energy:7,sleep:7,readiness:1.015},
-    ]
+    acwrHistory:[],
+    wellness:[]
   },
 
   // ── COLIN REA (SP) ──
@@ -14103,7 +14095,7 @@ var PLAYER_PHOTOS = {
   'Miguel Amaya':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/665804/headshot/67/current',
   'Michael Busch':       'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/683737/headshot/67/current',
   'Alex Bregman':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/608324/headshot/67/current',
-  'Moises Ballesteros':  'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/694208/headshot/67/current',
+  'Tyrone Taylor':       'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/621438/headshot/67/current',
   'Seiya Suzuki':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/673548/headshot/67/current',
   'Michael Conforto':    'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/605275/headshot/67/current',
   'Pedro Ramirez':       'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/699393/headshot/67/current',
@@ -14247,7 +14239,7 @@ function initAnnualPlan() {
   sel.innerHTML = '';
   var roster = ['Nico Hoerner','Dansby Swanson','Ian Happ','Pete Crow-Armstrong',
                 'Matt Shaw','Carson Kelly','Miguel Amaya','Michael Busch',
-                'Alex Bregman','Moises Ballesteros','Seiya Suzuki','Michael Conforto','Pedro Ramirez'];
+                'Alex Bregman','Tyrone Taylor','Seiya Suzuki','Michael Conforto','Pedro Ramirez'];
   // Use PLAYERS if available, fallback to hardcoded roster
   var names = (typeof PLAYERS !== 'undefined' && Object.keys(PLAYERS).length)
     ? Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); })
@@ -18930,7 +18922,7 @@ var HITTING_NAME_MAP = {
   'Crow-Armstrong, P':'Pete Crow-Armstrong','Hoerner, N':'Nico Hoerner',
   'Swanson, D':'Dansby Swanson','Shaw, M':'Matt Shaw','Kelly, C':'Carson Kelly',
   'Amaya, M':'Miguel Amaya','Busch, M':'Michael Busch','Bregman, A':'Alex Bregman',
-  'Ballesteros, M':'Moises Ballesteros','Happ, I':'Ian Happ','Suzuki, S':'Seiya Suzuki'
+  'Taylor, T':'Tyrone Taylor','Happ, I':'Ian Happ','Suzuki, S':'Seiya Suzuki'
 };
 // Resolve a raw name from any CSV format to a roster name.
 // Supports: full names, "Last, F" legacy format, and fuzzy matching via findRosterMatch.
