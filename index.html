@@ -7892,36 +7892,6 @@ function populateBWInput() {
 
 
 
-// ══════════════════════════════════════════════
-// READINESS CALCULATION
-// Combines wellness (60%) + ACWR (40%)
-// ══════════════════════════════════════════════
-function calcReadiness(soreness, energy, sleep, acwr) {
-  // Wellness component: ((10-soreness) + energy + sleep) / 3  →  0–10
-  const wellness = ((10 - soreness) + energy + sleep) / 3;
-  // Normalize wellness: 5 = neutral (1.0), 10 = peak (+0.10), 0 = poor (-0.10)
-  const wellnessMod = (wellness - 5) / 5 * 0.10;
-
-  // ACWR component
-  let acwrMod = 0;
-  if      (acwr > 1.25 || acwr < 0.75) acwrMod = -0.06; // red zone
-  else if (acwr > 1.15 || acwr < 0.85) acwrMod = -0.02; // yellow zone
-  else if (acwr >= 0.95 && acwr <= 1.05) acwrMod = 0.01; // sweet spot bonus
-
-  const raw = 1.0 + wellnessMod + acwrMod;
-  // Clamp to realistic range
-  return Math.min(1.20, Math.max(0.75, parseFloat(raw.toFixed(3))));
-}
-
-function readinessToStatus(readiness, acwr) {
-  // RED: very low readiness OR overtraining (high ACWR > 1.25)
-  if (readiness < 0.88 || acwr > 1.25) return 'RED';
-  // YELLOW: monitor zones (high or low ACWR, or moderate readiness)
-  if (acwr > 1.15 || acwr < 0.85 || readiness < 1.00) return 'YELLOW';
-  // GREEN: good readiness AND optimal ACWR zone
-  return 'GREEN';
-}
-
 // ── SINGLE SOURCE OF TRUTH for the green/yellow/red light everywhere it appears ──
 // The ribbon, Team Summary, Dashboard hero, and Daily Brief used to each compute
 // their own version of this (readiness+ACWR only / strain only / ACWR+strain
@@ -7930,19 +7900,18 @@ function readinessToStatus(readiness, acwr) {
 // on each page. This is the one function all four now call.
 function getAthleteStatus(playerName) {
   var p = PLAYERS[playerName];
-  if (!p) return { status: 'YELLOW', acwr: 1.0, readiness: 1.0, strain: 0, monotony: 0, weeklyHE: 0, reasons: [] };
+  if (!p) return { status: 'YELLOW', acwr: 1.0, strain: 0, monotony: 0, weeklyHE: 0, reasons: [] };
 
   var live = computeLiveACWR(playerName);
   var acwr = live ? live.acwr : (p.acwr != null ? p.acwr : 1.0);
-  var readiness = p.readiness != null ? p.readiness : 1.0;
   var ms = computeMonotonyStrain(playerName);
   var strain = ms.strain || 0;
 
-  // Track exactly which factor(s) are driving the color, at both the red
-  // and yellow thresholds — so "why is this player yellow" always has a
-  // concrete answer instead of just a color with no explanation.
+  // Readiness (wellness check-in based) intentionally excluded — the
+  // Wellness screen that fed it was removed, so it had become frozen/stale
+  // data silently influencing every status light. Status is now ACWR +
+  // strain only, both of which come from live, continuously-imported data.
   var redReasons = [];
-  if (readiness < 0.88) redReasons.push('readiness low (' + readiness.toFixed(2) + ')');
   if (acwr > 1.25) redReasons.push('ACWR high (' + acwr.toFixed(2) + ')');
   if (acwr < 0.75) redReasons.push('ACWR low (' + acwr.toFixed(2) + ')');
   if (strain > 3500) redReasons.push('strain high (' + strain.toLocaleString() + ')');
@@ -7950,7 +7919,6 @@ function getAthleteStatus(playerName) {
   var yellowReasons = [];
   if (acwr > 1.15) yellowReasons.push('ACWR elevated (' + acwr.toFixed(2) + ')');
   if (acwr < 0.85) yellowReasons.push('ACWR low (' + acwr.toFixed(2) + ')');
-  if (readiness < 1.00) yellowReasons.push('readiness below baseline (' + readiness.toFixed(2) + ')');
   if (strain > 2000) yellowReasons.push('strain elevated (' + strain.toLocaleString() + ')');
 
   var isRed    = redReasons.length > 0;
@@ -7958,7 +7926,7 @@ function getAthleteStatus(playerName) {
   var status = isRed ? 'RED' : isYellow ? 'YELLOW' : 'GREEN';
   var reasons = isRed ? redReasons : isYellow ? yellowReasons : [];
 
-  return { status: status, acwr: acwr, readiness: readiness, strain: strain, monotony: ms.monotony, weeklyHE: ms.weeklyHE, reasons: reasons };
+  return { status: status, acwr: acwr, strain: strain, monotony: ms.monotony, weeklyHE: ms.weeklyHE, reasons: reasons };
 }
 function athleteStatusClass(status) { return status === 'GREEN' ? 'green' : status === 'RED' ? 'red' : 'yellow'; }
 function athleteStatusColorVar(status) { return status === 'GREEN' ? 'var(--green)' : status === 'RED' ? 'var(--red)' : 'var(--yellow)'; }
@@ -8203,7 +8171,7 @@ function renderBrief() {
       var hasCmjAlert = cmjDrop!==null && cmjDrop<-5;
 
       // Categorize by the same composite status shown everywhere else
-      if (as.status === 'RED') concern.push({name,p,ms,acwr,cmjDrop,readiness:as.readiness});
+      if (as.status === 'RED') concern.push({name,p,ms,acwr,cmjDrop});
       else if (as.status === 'GREEN') optimal.push({name,p,ms,acwr,cmjDrop});
       if (hasCmjAlert) cmjAlerts.push({name,p,cmjDrop,cmjLast,cmjAvg});
 
@@ -8234,7 +8202,6 @@ function renderBrief() {
         if (c.ms.strain>3500) reasons.push('Strain: '+c.ms.strain.toLocaleString());
         if (c.acwr>1.25) reasons.push('ACWR high: '+c.acwr.toFixed(2));
         if (c.acwr<0.75) reasons.push('ACWR low: '+c.acwr.toFixed(2));
-        if (c.readiness!=null && c.readiness<0.88) reasons.push('Readiness low: '+c.readiness.toFixed(2));
         if (c.cmjDrop!==null&&c.cmjDrop<-5) reasons.push('CMJ ▼'+Math.abs(c.cmjDrop).toFixed(0)+'%');
         return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'
           +'<div style="font-weight:600;color:#fff;margin-bottom:2px;">'+c.name+'</div>'
@@ -16575,18 +16542,9 @@ function applyStatcastData() {
         };
       });
 
-      // Update status based on ACWR and readiness
-      // Recalculate readiness using latest wellness entry + new ACWR
-      const lastWell = (wellnessLog[name] || []).slice(-1)[0];
-      if (lastWell) {
-        p.readiness = calcReadiness(lastWell.soreness, lastWell.energy, lastWell.sleep, p.acwr);
-        p.status    = readinessToStatus(p.readiness, p.acwr);
-      } else {
-        const az = acwrZone(p.acwr);
-        if      (az === 'red')    p.status = 'RED';
-        else if (az === 'yellow') p.status = 'YELLOW';
-        else                      p.status = 'GREEN';
-      }
+      // Keep p.status in sync with the canonical ACWR+strain status for any
+      // legacy code that still reads it directly (e.g. PDF export).
+      p.status = getAthleteStatus(name).status;
     }
 
     applied++;
