@@ -6492,14 +6492,16 @@ function buildPlayerList() {
   el.innerHTML = posPlayers.map(([name, p]) => {
     const init = name.split(' ').map(n=>n[0]).join('');
     // Single source of truth for status — matches Team Summary, Dashboard, Daily Brief
-    const sc = athleteStatusClass(getAthleteStatus(name).status);
+    const as = getAthleteStatus(name);
+    const sc = athleteStatusClass(as.status);
+    const reasonTitle = as.reasons && as.reasons.length ? as.reasons.join(', ') : 'Within normal range';
     return `<button class="player-btn" id="pbtn-${nameToId(name)}" onclick="selectPlayer('${name.replace(/'/g,"\\'")}')">
       <div class="player-avatar">${init}</div>
       <div class="player-info">
         <div class="player-name">${name}</div>
         <div class="player-pos">${p.pos} · #${p.number}</div>
       </div>
-      <div class="status-dot ${sc}"></div>
+      <div class="status-dot ${sc}" title="${reasonTitle}"></div>
     </button>`;
   }).join('');
 }
@@ -6879,6 +6881,7 @@ function renderReadinessHero(p) {
   const as = getAthleteStatus(currentPlayer);
   const sc = athleteStatusClass(as.status);
   const statusText = as.status === 'RED' ? '● HIGH CONCERN' : as.status === 'YELLOW' ? '● MONITOR' : '● OPTIMAL';
+  const reasonText = as.reasons && as.reasons.length ? as.reasons.join(', ') : '';
 
   const hero = document.getElementById('readinessHero');
   hero.className = 'readiness-hero ' + sc + '-status';
@@ -6886,6 +6889,7 @@ function renderReadinessHero(p) {
   document.getElementById('readinessScore').textContent = strain > 0 ? strain.toLocaleString() : '—';
   document.getElementById('statusBadge').className = 'status-badge ' + sc;
   document.getElementById('statusBadge').textContent = statusText;
+  document.getElementById('statusBadge').title = reasonText;
   document.getElementById('daysSinceCMJ').textContent = p.daysSinceCMJ;
 
   const acwrEl = document.getElementById('acwrHero');
@@ -6906,9 +6910,9 @@ function renderReadinessHero(p) {
     if (strain === 0 && as.status === 'GREEN') {
       trendEl.innerHTML = '<span style="color:var(--text3);">No data</span>';
     } else if (as.status === 'RED') {
-      trendEl.innerHTML = '<span style="color:var(--red);">↑ High concern — consider reducing load</span>';
+      trendEl.innerHTML = '<span style="color:var(--red);">↑ High concern' + (reasonText ? ' — ' + reasonText : ' — consider reducing load') + '</span>';
     } else if (as.status === 'YELLOW') {
-      trendEl.innerHTML = '<span style="color:var(--yellow);">→ Moderate — monitor</span>';
+      trendEl.innerHTML = '<span style="color:var(--yellow);">→ Monitor' + (reasonText ? ' — ' + reasonText : '') + '</span>';
     } else {
       trendEl.innerHTML = '<span style="color:var(--green);">✓ Within optimal range</span>';
     }
@@ -7247,13 +7251,21 @@ function renderACWR(p) {
         var status = '';
         if (logged > 0) {
           var col = logged > b.max ? '#f87171' : logged < b.min ? '#fcd34d' : '#4ade80';
-          status = ' <span style="color:'+col+';">· logged today: '+fmtFt(logged)+(logged > b.max ? ' ⚠ OVER' : logged < b.min ? ' (under)' : ' ✓')+'</span>';
+          status = ' <span style="color:'+col+';">· logged so far: '+fmtFt(logged)+(logged > b.max ? ' ⚠ OVER' : logged < b.min ? ' (under)' : ' ✓')+'</span>';
         }
-        var restNote = b.restAcwr < 0.8 ? ' <span style="color:#fcd34d;">(rest day drops ACWR to '+b.restAcwr.toFixed(2)+')</span>' : '';
-        return '<div style="font-size:11px;padding:3px 0;color:var(--text2);">'
+        // Always show both boundary consequences, not just a bare range —
+        // this is the actual answer to "what would knock ACWR out of range
+        // either way", not something the coach has to infer from two numbers.
+        return '<div style="font-size:11px;padding:6px 0;color:var(--text2);border-bottom:1px solid rgba(255,255,255,0.06);">'
           + '<b style="color:#fff;">'+label+':</b> '
-          + '<span style="color:#60a5fa;font-family:\'DM Mono\',monospace;">'+fmtFt(b.min)+' – '+fmtFt(b.max)+'</span>'
-          + status + restNote + '</div>';
+          + '<span style="color:#60a5fa;font-family:\'DM Mono\',monospace;font-weight:700;">'+fmtFt(b.min)+' – '+fmtFt(b.max)+'</span>'
+          + ' <span style="color:var(--text3);">to stay in range</span>'
+          + status
+          + '<div style="font-size:10px;color:var(--text3);margin-top:3px;line-height:1.6;">'
+          + '<span style="color:#fcd34d;">↓ Below '+fmtFt(b.min)+'</span> → ACWR falls under 0.8 (a full rest day lands at <b>'+b.restAcwr.toFixed(2)+'</b>)<br>'
+          + '<span style="color:#f87171;">↑ Above '+fmtFt(b.max)+'</span> → ACWR climbs past 1.3 (overreaching risk)'
+          + '</div>'
+          + '</div>';
       }
       recsEl.innerHTML = '<div style="background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.18);border-radius:8px;padding:9px 12px;">'
         + '<div style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#60a5fa;margin-bottom:4px;">⚖️ Today\'s safe range (ACWR 0.8–1.3)</div>'
@@ -7918,7 +7930,7 @@ function readinessToStatus(readiness, acwr) {
 // on each page. This is the one function all four now call.
 function getAthleteStatus(playerName) {
   var p = PLAYERS[playerName];
-  if (!p) return { status: 'YELLOW', acwr: 1.0, readiness: 1.0, strain: 0, monotony: 0, weeklyHE: 0 };
+  if (!p) return { status: 'YELLOW', acwr: 1.0, readiness: 1.0, strain: 0, monotony: 0, weeklyHE: 0, reasons: [] };
 
   var live = computeLiveACWR(playerName);
   var acwr = live ? live.acwr : (p.acwr != null ? p.acwr : 1.0);
@@ -7926,11 +7938,27 @@ function getAthleteStatus(playerName) {
   var ms = computeMonotonyStrain(playerName);
   var strain = ms.strain || 0;
 
-  var isRed    = readiness < 0.88 || acwr > 1.25 || acwr < 0.75 || strain > 3500;
-  var isYellow = !isRed && (acwr > 1.15 || acwr < 0.85 || readiness < 1.00 || strain > 2000);
-  var status = isRed ? 'RED' : isYellow ? 'YELLOW' : 'GREEN';
+  // Track exactly which factor(s) are driving the color, at both the red
+  // and yellow thresholds — so "why is this player yellow" always has a
+  // concrete answer instead of just a color with no explanation.
+  var redReasons = [];
+  if (readiness < 0.88) redReasons.push('readiness low (' + readiness.toFixed(2) + ')');
+  if (acwr > 1.25) redReasons.push('ACWR high (' + acwr.toFixed(2) + ')');
+  if (acwr < 0.75) redReasons.push('ACWR low (' + acwr.toFixed(2) + ')');
+  if (strain > 3500) redReasons.push('strain high (' + strain.toLocaleString() + ')');
 
-  return { status: status, acwr: acwr, readiness: readiness, strain: strain, monotony: ms.monotony, weeklyHE: ms.weeklyHE };
+  var yellowReasons = [];
+  if (acwr > 1.15) yellowReasons.push('ACWR elevated (' + acwr.toFixed(2) + ')');
+  if (acwr < 0.85) yellowReasons.push('ACWR low (' + acwr.toFixed(2) + ')');
+  if (readiness < 1.00) yellowReasons.push('readiness below baseline (' + readiness.toFixed(2) + ')');
+  if (strain > 2000) yellowReasons.push('strain elevated (' + strain.toLocaleString() + ')');
+
+  var isRed    = redReasons.length > 0;
+  var isYellow = !isRed && yellowReasons.length > 0;
+  var status = isRed ? 'RED' : isYellow ? 'YELLOW' : 'GREEN';
+  var reasons = isRed ? redReasons : isYellow ? yellowReasons : [];
+
+  return { status: status, acwr: acwr, readiness: readiness, strain: strain, monotony: ms.monotony, weeklyHE: ms.weeklyHE, reasons: reasons };
 }
 function athleteStatusClass(status) { return status === 'GREEN' ? 'green' : status === 'RED' ? 'red' : 'yellow'; }
 function athleteStatusColorVar(status) { return status === 'GREEN' ? 'var(--green)' : status === 'RED' ? 'var(--red)' : 'var(--yellow)'; }
@@ -9981,7 +10009,7 @@ function buildTeamList() {
     const as     = getAthleteStatus(name); // single source of truth — matches ribbon, Dashboard, Daily Brief
     const acwr   = as.acwr;
     const status = as.status;
-    return { name, p, acwr, heAcwr, tdAcwr, status, strain: as.strain };
+    return { name, p, acwr, heAcwr, tdAcwr, status, strain: as.strain, monotony: as.monotony, reasons: as.reasons };
   });
 
   const ORDER = {RED:0, YELLOW:1, GREEN:2};
@@ -10011,7 +10039,7 @@ function buildTeamList() {
     return `<div style="font-size:9px;color:${color};font-family:\'DM Mono\',monospace;line-height:1.2;">${sign}${pct}%</div>`;
   };
 
-  el.innerHTML = sorted.map(({name, p, acwr, status}) => {
+  el.innerHTML = sorted.map(({name, p, acwr, status, strain: liveStrain, monotony: liveMonotony, reasons}) => {
     const sc         = status === 'GREEN' ? 'green' : status === 'RED' ? 'red' : 'yellow';
     const init       = name.split(' ').map(n=>n[0]).join('');
     const lastGame   = p.recentGames?.length ? p.recentGames[p.recentGames.length-1] : null;
@@ -10029,20 +10057,10 @@ function buildTeamList() {
     const batSpeed   = lastGame?.bat    || p.latestBat   || 0;
     const exitVelo   = lastGame?.exit   || p.latestExit  || 0;
     const jumpHt     = p.latestJump || 0;
-    var _tsRows = [];
-    try {
-      var _ts = (typeof importedData!=='undefined'&&importedData.statcast)?importedData.statcast:{};
-      var _tk = Object.keys(_ts).find(function(k){return k===name||k.toLowerCase()===name.toLowerCase();});
-      if (_tk) _tsRows = (_ts[_tk]||[]).sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);});
-    } catch(e){}
-    var ms = {strain:0,weeklyHE:0,monotony:0};
-    if (_tsRows.length) {
-      var _ref=safeParseDate(_tsRows[_tsRows.length-1].date);_ref.setHours(0,0,0,0);
-      var _daily=[];
-      for(var _i=6;_i>=0;_i--){var _d=new Date(_ref);_d.setDate(_d.getDate()-_i);_d.setHours(0,0,0,0);var _r=_tsRows.find(function(r){var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===_d.getTime();});_daily.push(_r?(_r.heDist||0):0);}
-      var _wkHE=_daily.reduce(function(s,v){return s+v;},0),_avg=_wkHE/7,_sd=Math.sqrt(_daily.reduce(function(s,v){return s+Math.pow(v-_avg,2);},0)/7),_mono=_sd>0?_avg/_sd:0;
-      ms={strain:Math.round(_wkHE*_mono),weeklyHE:_wkHE,monotony:parseFloat(_mono.toFixed(2))};
-    }
+    // Strain — use the same canonical values computeMonotonyStrain already
+    // produced via getAthleteStatus above, instead of a second, independent
+    // recalculation here (which used to drift from the "official" number).
+    var ms = { strain: liveStrain || 0, monotony: liveMonotony || 0 };
     const coachNote  = getCoachNote(name, new Date().toISOString().slice(0,10));
     const acwrZoneColor = acwrColor(acwr);
     const acwrLbl    = acwrLabel(acwr);
@@ -10128,7 +10146,7 @@ function buildTeamList() {
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">CMJ</div>
       </div>
 
-      <span class="pill ${sc}" style="min-width:72px;text-align:center;">${acwrLbl === 'OPTIMAL RANGE' ? status : acwrLbl}</span>
+      <span class="pill ${sc}" title="${reasons && reasons.length ? reasons.join(', ') : 'Within normal range'}" style="min-width:72px;text-align:center;">${acwrLbl === 'OPTIMAL RANGE' ? status : acwrLbl}</span>
     </div>`;
   }).join('');
 
