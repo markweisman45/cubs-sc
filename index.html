@@ -16183,7 +16183,7 @@ function handleCMJUpload(input) {
         }
       }
 
-      const match = findRosterMatch(name);
+      const match = resolveRosterName(name);
       const matchedName = match || name;
 
       // Tag each row with its test type — CMJ or ABCMJ treated separately
@@ -16321,6 +16321,7 @@ async function handleStatcastUploadBatch(input) {
   let totalRecords = 0;
   let failedFiles = [];
   const allPlayers = new Set();
+  const skippedNames = new Set();
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
@@ -16332,8 +16333,8 @@ async function handleStatcastUploadBatch(input) {
       rows.forEach(row => {
         const name = (row['Player'] || '').trim();
         if (!name) return;
-        const match = findRosterMatch(name);
-        if (!match) return;
+        const match = resolveRosterName(name);
+        if (!match) { skippedNames.add(name); return; }
         const date = getField(row, 'Game Date').trim();
         if (!date) return;
         const dist    = parseFloat(getField(row, 'Total Distance Covered (ft)')) || 0;
@@ -16355,7 +16356,8 @@ async function handleStatcastUploadBatch(input) {
   }
 
   progressEl.textContent = '✅ Done — ' + files.length + ' file(s) processed, ' + totalRecords + ' record(s) merged across ' + allPlayers.size + ' player(s)'
-    + (failedFiles.length ? (' — ⚠️ ' + failedFiles.length + ' file(s) failed: ' + failedFiles.join(', ')) : '');
+    + (failedFiles.length ? (' — ⚠️ ' + failedFiles.length + ' file(s) failed: ' + failedFiles.join(', ')) : '')
+    + (skippedNames.size ? (' — ⚠️ unmatched names (not on roster or no alias): ' + Array.from(skippedNames).join(', ')) : '');
 
   // Refresh anything currently on screen that depends on this data
   buildPlayerList();
@@ -16390,7 +16392,7 @@ function handleStatcastUpload(input) {
       rows.forEach(row => {
         const name = (row['Player'] || '').trim();
         if (!name) return;
-        const match = findRosterMatch(name);
+        const match = resolveRosterName(name);
         if (!match) { skipped.push(name); return; }
         const date   = getField(row, 'Game Date').trim();
         if (!date) return;
@@ -18959,7 +18961,8 @@ var HITTING_NAME_MAP = {
   'Crow-Armstrong, P':'Pete Crow-Armstrong','Hoerner, N':'Nico Hoerner',
   'Swanson, D':'Dansby Swanson','Shaw, M':'Matt Shaw','Kelly, C':'Carson Kelly',
   'Amaya, M':'Miguel Amaya','Busch, M':'Michael Busch','Bregman, A':'Alex Bregman',
-  'Taylor, T':'Tyrone Taylor','Happ, I':'Ian Happ','Suzuki, S':'Seiya Suzuki'
+  'Taylor, T':'Tyrone Taylor','Happ, I':'Ian Happ','Suzuki, S':'Seiya Suzuki',
+  'Conforto, M':'Michael Conforto','Ramirez, P':'Pedro Ramirez'
 };
 // Resolve a raw name from any CSV format to a roster name.
 // Supports: full names, "Last, F" legacy format, and fuzzy matching via findRosterMatch.
