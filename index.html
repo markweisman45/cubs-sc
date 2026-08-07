@@ -7148,8 +7148,15 @@ function computeLiveACWR(playerName) {
 }
 
 // ── Today's safe distance range (inverts the EWMA ACWR formula) ──
-// Iterates EWMA state through YESTERDAY (off days decay the state, which
-// correctly increases how much load he can absorb today), then solves:
+// Anchored to the SAME reference date computeLiveACWR uses (the last date
+// with real logged data), not literal calendar-today. Previously this rolled
+// the EWMA state forward through every real calendar day up to yesterday,
+// which meant any gap between the last logged session and today silently
+// added extra "rest day" decay here that the displayed ACWR number (anchored
+// to the last logged date) never applied — so the two could disagree, with
+// the safe range looking artificially small relative to the ACWR shown next
+// to it. Both now use the same state, so the range always corresponds to the
+// ACWR actually on screen.
 //   ACWR(L) = (λa·L + (1-λa)·a) / (λc·L + (1-λc)·c) = t
 //   → L(t) = [t(1-λc)c − (1-λa)a] / (λa − t·λc)
 function calcSafeDistToday(playerName) {
@@ -7163,22 +7170,34 @@ function calcSafeDistToday(playerName) {
 
   const la = 2/(7+1), lc = 2/(28+1);
   const lookup = {};
-  var todayLogged = { he: 0, td: 0, has: false };
-  var today = new Date(); today.setHours(0,0,0,0);
   rows.forEach(function(r) {
     var d = new Date(safeParseDate(r.date)); d.setHours(0,0,0,0);
-    if (d.getTime() === today.getTime()) { todayLogged.he += (+r.heDist||0); todayLogged.td += (+r.dist||0); todayLogged.has = true; return; }
     var k = d.getTime();
     if (!lookup[k]) lookup[k] = {he:0, td:0};
     lookup[k].he += (+r.heDist||0);
     lookup[k].td += (+r.dist||0);
   });
 
+  // Same anchor as computeLiveACWR: roll the EWMA through the LAST LOGGED
+  // date (inclusive) — this reproduces the exact acute/chronic state behind
+  // the ACWR number on screen, whether or not that date is literal today.
+  // The band below then solves for the NEXT session's target load. If the
+  // last logged date IS today, todayLogged shows what's already gone in
+  // (informational — once today's data is in, the EWMA framework operates
+  // on daily totals, so the meaningful next question is tomorrow's target,
+  // same as it would be for any other day).
+  var lastDate = new Date(safeParseDate(rows[rows.length-1].date)); lastDate.setHours(0,0,0,0);
+  var today = new Date(); today.setHours(0,0,0,0);
+  var todayLogged = { he: 0, td: 0, has: lastDate.getTime() === today.getTime() };
+  if (todayLogged.has) {
+    var td = lookup[lastDate.getTime()] || {he:0, td:0};
+    todayLogged.he = td.he; todayLogged.td = td.td;
+  }
+
   var first = new Date(safeParseDate(rows[0].date)); first.setHours(0,0,0,0);
-  var yesterday = new Date(today.getTime() - 86400000);
   var he_a=0, he_c=0, td_a=0, td_c=0;
   var d = new Date(first);
-  while (d <= yesterday) {
+  while (d <= lastDate) {
     var load = lookup[d.getTime()] || {he:0, td:0};
     he_a = la*load.he + (1-la)*he_a;  he_c = lc*load.he + (1-lc)*he_c;
     td_a = la*load.td + (1-la)*td_a;  td_c = lc*load.td + (1-lc)*td_c;
