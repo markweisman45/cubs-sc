@@ -852,6 +852,33 @@ body {
           </div>
         </div>
 
+        <!-- Team Velo Leaderboard -->
+        <div class="card section-mb">
+          <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <span>🏆 Velo Leaderboard — Season</span>
+            <div style="display:flex;gap:4px;" id="velo-lb-tabs">
+              <button onclick="veloSwitchMetric('bat')"   id="velo-lb-tab-bat"   style="padding:5px 10px;border-radius:5px;border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.15);color:#f59e0b;font-weight:700;font-size:10px;cursor:pointer;">🪄 Bat Speed</button>
+              <button onclick="veloSwitchMetric('exit')"  id="velo-lb-tab-exit"  style="padding:5px 10px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:10px;cursor:pointer;">💥 Exit Velo</button>
+              <button onclick="veloSwitchMetric('throwV')" id="velo-lb-tab-throwV" style="padding:5px 10px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:10px;cursor:pointer;">🎯 Throw Velo</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table" style="width:100%;">
+              <thead>
+                <tr>
+                  <th style="width:36px;"></th>
+                  <th>Player</th>
+                  <th onclick="veloLbSort('max')" style="cursor:pointer;text-align:right;">Max ▾</th>
+                  <th onclick="veloLbSort('p90')" style="cursor:pointer;text-align:right;">90th %ile</th>
+                  <th onclick="veloLbSort('avg')" style="cursor:pointer;text-align:right;">Avg</th>
+                  <th style="text-align:right;"># Events</th>
+                </tr>
+              </thead>
+              <tbody id="velo-leaderboard-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="grid-2">
           <div class="card">
             <div class="card-title">Total Distance · HE Distance</div>
@@ -6002,6 +6029,7 @@ function switchDashTab(tab, btn) {
       renderAthletePrograms();
     } else if (tab === 'performance') {
       renderPerfTable(PLAYERS[currentPlayer]);
+      renderVeloLeaderboard();
       setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
     } else if (tab === 'wellness') {
       renderCoachNotes(PLAYERS[currentPlayer]);
@@ -6518,6 +6546,10 @@ function selectPlayer(name) {
   document.getElementById('prog-athlete').value = name;
   renderDashboard();
   if (typeof renderHERuns === 'function' && document.getElementById('dash-heruns') && document.getElementById('dash-heruns').classList.contains('active')) renderHERuns();
+  if (document.getElementById('dash-performance') && document.getElementById('dash-performance').classList.contains('active')) {
+    renderPerfTable(p);
+    renderVeloLeaderboard();
+  }
 
   // Sync program builder controls from dashboard data
   const playerData = PLAYERS[name];
@@ -7406,13 +7438,28 @@ function renderAllCharts(p) {
 
   // Individual hitting/arm charts with personal best reference line
   const pbBat = p.bests.bat, pbExit = p.bests.exit, pbThrow = p.bests.throwV;
-  const avgBat = (games.reduce((s,g)=>s+g.bat,0)/games.length).toFixed(1);
-  const avgExit = (games.reduce((s,g)=>s+g.exit,0)/games.length).toFixed(1);
-  const avgThrow = (games.reduce((s,g)=>s+g.throwV,0)/games.length).toFixed(1);
+  // Filter out zero/missing values before computing stats — a game with no
+  // recorded bat speed shouldn't drag the season average down to look worse
+  // than it really is.
+  function veloStats(vals) {
+    var v = vals.filter(function(x){ return x > 0; });
+    if (!v.length) return { avg: 0, p90: 0, max: 0 };
+    var sorted = v.slice().sort(function(a,b){return a-b;});
+    return {
+      avg: v.reduce(function(s,x){return s+x;},0) / v.length,
+      p90: sorted[Math.floor(sorted.length*0.9)] || sorted[sorted.length-1],
+      max: sorted[sorted.length-1],
+    };
+  }
+  const batStats   = veloStats(games.map(g=>g.bat));
+  const exitStats  = veloStats(games.map(g=>g.exit));
+  const throwStats = veloStats(games.map(g=>g.throwV));
+  const avgBat = batStats.avg.toFixed(1), avgExit = exitStats.avg.toFixed(1), avgThrow = throwStats.avg.toFixed(1);
   const el = id => document.getElementById(id);
-  if(el('batSpeedAvg')) el('batSpeedAvg').textContent = `avg ${avgBat} mph`;
-  if(el('exitVeloAvg')) el('exitVeloAvg').textContent = `avg ${avgExit} mph`;
-  if(el('throwVeloAvg')) el('throwVeloAvg').textContent = `avg ${avgThrow} mph`;
+  function statLine(s) { return s.avg>0 ? `avg ${s.avg.toFixed(1)} · 90th ${s.p90.toFixed(1)} · max ${s.max.toFixed(1)} mph` : 'no data'; }
+  if(el('batSpeedAvg'))   el('batSpeedAvg').textContent   = statLine(batStats);
+  if(el('exitVeloAvg'))   el('exitVeloAvg').textContent   = statLine(exitStats);
+  if(el('throwVeloAvg'))  el('throwVeloAvg').textContent  = statLine(throwStats);
 
   const sparkOpts = (pbVal, color) => ({
     ...cloneOpts(),
@@ -9664,6 +9711,82 @@ function renderLeaderboard() {
       +'<td style="padding:7px 8px;text-align:right;color:var(--blue);">'+(d.burst!==null?d.burst.toFixed(1)+' ft':'—')+'</td>'
       +'<td style="padding:7px 8px;text-align:right;color:var(--green);">'+(d.step!==null?d.step.toFixed(2)+'s':'—')+'</td>'
       +'<td style="padding:7px 8px;text-align:right;color:var(--text3);">'+d.runs+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+// ── TEAM VELO LEADERBOARD (bat speed / exit velo / throw velo) ─────────────
+var veloLbMetric = 'bat';   // 'bat' | 'exit' | 'throwV'
+var veloLbSortCol = 'max';
+var veloLbSortDir = -1;
+const VELO_METRIC_LABEL = { bat: 'Bat Speed', exit: 'Exit Velo', throwV: 'Throw Velo' };
+
+function veloSwitchMetric(metric) {
+  veloLbMetric = metric;
+  ['bat','exit','throwV'].forEach(function(m) {
+    var tab = document.getElementById('velo-lb-tab-'+m);
+    if (!tab) return;
+    var active = m === metric;
+    tab.style.background = active ? 'rgba(245,158,11,0.15)' : 'var(--bg3)';
+    tab.style.borderColor = active ? 'rgba(245,158,11,0.4)' : 'var(--border)';
+    tab.style.color = active ? '#f59e0b' : 'var(--text)';
+    tab.style.fontWeight = active ? '700' : '400';
+  });
+  renderVeloLeaderboard();
+}
+
+function veloLbSort(col) {
+  if (veloLbSortCol === col) veloLbSortDir *= -1; else { veloLbSortCol = col; veloLbSortDir = -1; }
+  renderVeloLeaderboard();
+}
+
+function renderVeloLeaderboard() {
+  var tbody = document.getElementById('velo-leaderboard-tbody');
+  if (!tbody) return;
+
+  function p90(arr){ if(!arr.length) return 0; var s=arr.slice().sort(function(a,b){return a-b;}); return s[Math.floor(s.length*0.9)]; }
+  function avg(arr){ return arr.length?arr.reduce(function(s,v){return s+v;},0)/arr.length:0; }
+
+  var players = Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); });
+  var metric = veloLbMetric;
+
+  var data = players.map(function(name) {
+    var hist = (importedData.hitting && importedData.hitting[name]) || [];
+    var vals = hist.map(function(h){ return h[metric] || 0; }).filter(function(v){ return v > 0; });
+    if (!vals.length) return null;
+    return {
+      name: name,
+      max: Math.max.apply(null, vals),
+      p90: p90(vals),
+      avg: avg(vals),
+      events: vals.length,
+    };
+  }).filter(Boolean);
+
+  data.sort(function(a,b){ return (a[veloLbSortCol]-b[veloLbSortCol])*veloLbSortDir; });
+
+  var maxVal = data.length ? Math.max.apply(null, data.map(function(d){return d.max;})) : 1;
+  function veloBar(val) {
+    var pct = val/maxVal*100;
+    return '<div style="display:inline-block;background:rgba(245,158,11,0.3);border-radius:2px;height:6px;width:'+pct.toFixed(0)+'px;max-width:80px;vertical-align:middle;margin-left:4px;"></div>';
+  }
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text3);">No '+VELO_METRIC_LABEL[metric]+' data imported yet</td></tr>';
+    return;
+  }
+
+  var medals = ['🥇','🥈','🥉'];
+  tbody.innerHTML = data.map(function(d, i) {
+    var isCurrentPlayer = d.name === currentPlayer;
+    var rowBg = isCurrentPlayer ? 'rgba(245,158,11,0.08)' : 'transparent';
+    return '<tr style="border-bottom:1px solid var(--border);background:'+rowBg+';cursor:pointer;" onclick="selectPlayer(\''+d.name+'\')">'
+      +'<td style="padding:7px 8px;text-align:center;font-size:14px;">'+(medals[i]||'#'+(i+1))+'</td>'
+      +'<td style="padding:7px 8px;font-weight:600;color:'+(isCurrentPlayer?'#f59e0b':'#fff')+';white-space:nowrap;">'+d.name+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;font-weight:700;color:#f59e0b;">'+d.max.toFixed(1)+veloBar(d.max)+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;color:#f59e0b;">'+d.p90.toFixed(1)+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;color:var(--text2);">'+d.avg.toFixed(1)+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;color:var(--text3);">'+d.events+'</td>'
       +'</tr>';
   }).join('');
 }
