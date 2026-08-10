@@ -13998,11 +13998,19 @@ function pbSetExField(bi, ei, field, val) {
 // Triggered automatically when an exercise is swapped (see pbSetExField above),
 // and also available on-demand via the ✨ button next to every notes field.
 async function pbGenerateExerciseNote(bi, ei) {
-  if (!PB_ACTIVE_DAY) return;
+  if (!PB_ACTIVE_DAY) {
+    console.warn('[pbGenerateExerciseNote] PB_ACTIVE_DAY not set — bi:', bi, 'ei:', ei);
+    if (typeof showStatus === 'function') showStatus('⚠️ No active day selected — could not generate note');
+    return;
+  }
   var wk  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx];
-  var day = wk.days[PB_ACTIVE_DAY.dayIdx];
-  var ex  = day.blocks[bi] && day.blocks[bi].exercises[ei];
-  if (!ex || !ex.name) return;
+  var day = wk && wk.days[PB_ACTIVE_DAY.dayIdx];
+  var ex  = day && day.blocks[bi] && day.blocks[bi].exercises[ei];
+  if (!ex || !ex.name) {
+    console.warn('[pbGenerateExerciseNote] exercise not found — PB_ACTIVE_DAY:', JSON.stringify(PB_ACTIVE_DAY), 'bi:', bi, 'ei:', ei, 'day:', day);
+    if (typeof showStatus === 'function') showStatus('⚠️ Could not find that exercise (bi=' + bi + ', ei=' + ei + ') — try refreshing the grid');
+    return;
+  }
 
   var prevNotes = ex.notes;
   ex.notes = '⏳ …';
