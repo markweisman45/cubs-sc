@@ -13705,6 +13705,7 @@ function pbOpenDay(weekIdx, dayIdx) {
           +'<input value="'+(ex.notes||'')+'" placeholder="Notes / times" onchange="pbSetExField('+bi+','+ei+',\'notes\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'
           +'<div style="display:flex;gap:2px;flex-shrink:0;">'
           +'<button onclick="pbGenerateExerciseNote('+bi+','+ei+')" title="Generate a coaching note with AI" style="background:none;border:none;color:var(--yellow);cursor:pointer;font-size:12px;padding:1px 3px;">✨</button>'
+          +'<button onclick="pbOpenSyncModal('+bi+','+ei+')" title="Sync this exercise to other weeks" style="background:none;border:none;color:#60a5fa;cursor:pointer;font-size:12px;padding:1px 3px;">🔁</button>'
           +(ei > 0 ? '<button onclick="pbMoveEx('+bi+','+ei+',-1)" title="Move up" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↑</button>' : '<span style="width:20px;"></span>')
           +(ei < (block.exercises||[]).length-1 ? '<button onclick="pbMoveEx('+bi+','+ei+',1)" title="Move down" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↓</button>' : '<span style="width:20px;"></span>')
           +'<button onclick="pbDupEx('+bi+','+ei+')" title="Duplicate row" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">⧉</button>'
@@ -13742,6 +13743,7 @@ function pbOpenDay(weekIdx, dayIdx) {
         +'<input value="'+(ex.notes||'')+'" placeholder="Notes" onchange="pbSetExField('+bi+','+ei+',\'notes\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;width:100%;">'
         +'<div style="display:flex;gap:2px;flex-shrink:0;">'
         +'<button onclick="pbGenerateExerciseNote('+bi+','+ei+')" title="Generate a coaching note with AI" style="background:none;border:none;color:var(--yellow);cursor:pointer;font-size:12px;padding:1px 3px;">✨</button>'
+        +'<button onclick="pbOpenSyncModal('+bi+','+ei+')" title="Sync this exercise to other weeks" style="background:none;border:none;color:#60a5fa;cursor:pointer;font-size:12px;padding:1px 3px;">🔁</button>'
         +(ei > 0 ? '<button onclick="pbMoveEx('+bi+','+ei+',-1)" title="Move up" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↑</button>' : '<span style="width:20px;"></span>')
         +(ei < (block.exercises||[]).length-1 ? '<button onclick="pbMoveEx('+bi+','+ei+',1)" title="Move down" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">↓</button>' : '<span style="width:20px;"></span>')
         +'<button onclick="pbDupEx('+bi+','+ei+')" title="Duplicate row" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">⧉</button>'
@@ -13984,10 +13986,17 @@ function pbSetExField(bi, ei, field, val) {
   var ex = day.blocks[bi].exercises[ei];
   var nameChanged = field === 'name' && ex.name !== val && val;
   ex[field] = val;
+  // Refresh both: the weekly overview cards (exercise counts) AND the actual
+  // visible day editor — pbRenderDayGrid() alone only does the former, which
+  // meant field edits weren't reliably reflected in what you're looking at
+  // (native browser behavior on the edited input often masked this, but
+  // anything computed/derived from the change stayed stale).
   pbRenderDayGrid();
+  if (!nameChanged) pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
   // Swapping the exercise leaves the OLD exercise's notes sitting there —
   // they almost never apply to the new one, so clear them and generate a
-  // fresh, relevant coaching cue automatically.
+  // fresh, relevant coaching cue automatically. pbGenerateExerciseNote does
+  // its own pbOpenDay refresh, so skip the redundant one above for this case.
   if (nameChanged) {
     ex.notes = '';
     pbGenerateExerciseNote(bi, ei);
@@ -13997,6 +14006,92 @@ function pbSetExField(bi, ei, field, val) {
 // ── AI-generated coaching note for a single exercise ─────────────────────────
 // Triggered automatically when an exercise is swapped (see pbSetExField above),
 // and also available on-demand via the ✨ button next to every notes field.
+// ── Sync one exercise's current values to the matching slot in other weeks ──
+// Position-matched by day-of-week + block index + exercise index, same
+// convention "Apply to All Weeks" uses. This is the surgical version for a
+// single ad-hoc edit rather than a full week rebuild — overwrites whatever
+// is currently in the target weeks for that slot.
+var PB_SYNC_FIELD_LABELS = {
+  name:'Exercise', sets:'Sets', reps:'Reps', distance:'Distance', pct:'%',
+  load:'Load', tempo:'Tempo', rest:'Rest', notes:'Notes / Cue',
+};
+
+function pbOpenSyncModal(bi, ei) {
+  if (!PB_ACTIVE_DAY) return;
+  var wk  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx];
+  var day = wk && wk.days[PB_ACTIVE_DAY.dayIdx];
+  var ex  = day && day.blocks[bi] && day.blocks[bi].exercises[ei];
+  if (!ex || !ex.name) return;
+
+  var otherWeeks = PB_STATE.weekData.map(function(w,i){ return i; }).filter(function(i){ return i !== PB_ACTIVE_DAY.weekIdx; });
+  if (!otherWeeks.length) { alert('This program only has one week.'); return; }
+
+  // Only offer fields this exercise actually has, in a sensible order
+  var fieldOrder = ['name','sets','reps','distance','pct','load','tempo','rest','notes'];
+  var fields = fieldOrder.filter(function(f){ return ex[f] !== undefined; });
+
+  var modal = document.createElement('div');
+  modal.id = 'pb-sync-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:22px;width:420px;max-width:95vw;max-height:85vh;overflow-y:auto;">'
+    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">🔁 Sync "'+ex.name+'" to other weeks</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Overwrites the matching exercise slot (same day, same position) in whichever weeks you pick.</div>'
+    + '<div style="margin-bottom:14px;">'
+    + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Fields to copy</label>'
+    + fields.map(function(f) {
+        return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;color:#fff;cursor:pointer;">'
+          + '<input type="checkbox" class="pb-sync-field" value="'+f+'" checked> '+(PB_SYNC_FIELD_LABELS[f]||f)+'</label>';
+      }).join('')
+    + '</div>'
+    + '<div style="margin-bottom:16px;">'
+    + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Apply to weeks</label>'
+    + '<div style="display:flex;gap:6px;margin-bottom:8px;">'
+    + '<button onclick="document.querySelectorAll(\'.pb-sync-week\').forEach(function(c){c.checked=true;})" style="font-size:10px;padding:4px 8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:5px;color:var(--text3);cursor:pointer;">All</button>'
+    + '<button onclick="document.querySelectorAll(\'.pb-sync-week\').forEach(function(c){c.checked=false;})" style="font-size:10px;padding:4px 8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:5px;color:var(--text3);cursor:pointer;">None</button>'
+    + '</div>'
+    + otherWeeks.map(function(wi) {
+        return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;color:#fff;cursor:pointer;">'
+          + '<input type="checkbox" class="pb-sync-week" value="'+wi+'" checked> Week '+(wi+1)+'</label>';
+      }).join('')
+    + '</div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    + '<button onclick="document.getElementById(\'pb-sync-modal\').remove()" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button onclick="pbConfirmSync('+bi+','+ei+')" style="padding:8px 18px;background:#22c55e;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">Apply</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if (e.target===modal) modal.remove(); });
+}
+
+function pbConfirmSync(bi, ei) {
+  var wk  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx];
+  var day = wk && wk.days[PB_ACTIVE_DAY.dayIdx];
+  var ex  = day && day.blocks[bi] && day.blocks[bi].exercises[ei];
+  var modal = document.getElementById('pb-sync-modal');
+  if (!ex) { if (modal) modal.remove(); return; }
+
+  var fields = Array.prototype.slice.call(document.querySelectorAll('.pb-sync-field:checked')).map(function(c){ return c.value; });
+  var weeks  = Array.prototype.slice.call(document.querySelectorAll('.pb-sync-week:checked')).map(function(c){ return parseInt(c.value); });
+
+  if (!fields.length || !weeks.length) { alert('Pick at least one field and one week.'); return; }
+
+  var applied = 0, missing = 0;
+  weeks.forEach(function(wi) {
+    var targetWk  = PB_STATE.weekData[wi];
+    var targetDay = targetWk && targetWk.days[PB_ACTIVE_DAY.dayIdx];
+    var targetEx  = targetDay && targetDay.blocks[bi] && targetDay.blocks[bi].exercises[ei];
+    if (!targetEx) { missing++; return; }
+    fields.forEach(function(f) { targetEx[f] = ex[f]; });
+    applied++;
+  });
+
+  if (modal) modal.remove();
+  pbRenderDayGrid();
+  pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+  var msg = '✅ Synced to ' + applied + ' week' + (applied===1?'':'s');
+  if (missing) msg += ' — ' + missing + ' week' + (missing===1?'':'s') + " didn't have a matching exercise slot (different structure that day)";
+  if (typeof showStatus === 'function') showStatus(msg);
+}
+
 async function pbGenerateExerciseNote(bi, ei) {
   if (!PB_ACTIVE_DAY) {
     console.warn('[pbGenerateExerciseNote] PB_ACTIVE_DAY not set — bi:', bi, 'ei:', ei);
@@ -14014,7 +14109,7 @@ async function pbGenerateExerciseNote(bi, ei) {
 
   var prevNotes = ex.notes;
   ex.notes = '⏳ …';
-  pbRenderDayGrid();
+  pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
 
   try {
     var athLabel = (typeof PB_STATE !== 'undefined' && PB_STATE.athlete !== '(Sandbox)') ? PB_STATE.athlete : 'a baseball player';
@@ -14049,7 +14144,7 @@ async function pbGenerateExerciseNote(bi, ei) {
     ex.notes = prevNotes === '⏳ …' ? '' : prevNotes;
     if (typeof showStatus === 'function') showStatus('⚠️ Could not generate a note — ' + err.message);
   }
-  pbRenderDayGrid();
+  pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
 }
 function pbUpdateDayLabel(val) {
   if (!PB_ACTIVE_DAY) return;
