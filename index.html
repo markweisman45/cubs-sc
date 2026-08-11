@@ -14239,11 +14239,19 @@ var PB_SYNC_FIELD_LABELS = {
 };
 
 function pbOpenSyncModal(bi, ei) {
-  if (!PB_ACTIVE_DAY) return;
+  if (!PB_ACTIVE_DAY) {
+    console.warn('[pbOpenSyncModal] PB_ACTIVE_DAY not set — bi:', bi, 'ei:', ei);
+    if (typeof showStatus === 'function') showStatus('⚠️ No active day selected — could not open sync');
+    return;
+  }
   var wk  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx];
   var day = wk && wk.days[PB_ACTIVE_DAY.dayIdx];
   var ex  = day && day.blocks[bi] && day.blocks[bi].exercises[ei];
-  if (!ex || !ex.name) return;
+  if (!ex || !ex.name) {
+    console.warn('[pbOpenSyncModal] exercise not found — PB_ACTIVE_DAY:', JSON.stringify(PB_ACTIVE_DAY), 'bi:', bi, 'ei:', ei, 'day:', day);
+    if (typeof showStatus === 'function') showStatus('⚠️ Could not find that exercise (bi=' + bi + ', ei=' + ei + ') — try refreshing the grid');
+    return;
+  }
 
   var otherWeeks = PB_STATE.weekData.map(function(w,i){ return i; }).filter(function(i){ return i !== PB_ACTIVE_DAY.weekIdx; });
   if (!otherWeeks.length) { alert('This program only has one week.'); return; }
