@@ -3413,6 +3413,14 @@ function fillFromBuilder() {
   // Store the full HTML for rich rendering
   document.getElementById('drop-prog-content').value = out.innerHTML;
   document.getElementById('drop-prog-source-info').textContent = '✅ Program content loaded from builder';
+  // Also capture the structured week/day/block data if the rich grid builder
+  // has an active multi-week program — this is what lets "Load" later reopen
+  // it with working week tabs instead of just a flat read-only HTML snapshot.
+  if (typeof PB_STATE !== 'undefined' && PB_STATE.weekData && PB_STATE.weekData.length) {
+    window._pbDropPbState = JSON.parse(JSON.stringify(PB_STATE));
+  } else {
+    window._pbDropPbState = null;
+  }
   // Auto-fill name from builder controls
   const athlete = document.getElementById('prog-athlete')?.value || currentPlayer;
   const meso    = document.getElementById('prog-meso')?.value || '';
@@ -3446,7 +3454,12 @@ function dropProgram() {
     content,
     created: new Date().toISOString(),
     athlete: currentPlayer,
+    // Structured week/day/block data, if this came from the rich builder via
+    // "Fill from Builder" — lets this program be reopened with real week
+    // tabs later instead of a flat read-only snapshot.
+    pbState: window._pbDropPbState || null,
   };
+  window._pbDropPbState = null;
 
   athletePrograms[currentPlayer].unshift(entry); // newest first
   persistAthletePrograms();
@@ -3625,8 +3638,34 @@ function loadProgToBuilder(id) {
   const progs = athletePrograms[currentPlayer] || [];
   const prog  = progs.find(p => p.id === id);
   if (!prog) return;
-  // Switch to program builder tab
-  // Navigate to program builder tab
+
+  // If this program has structured week/day/block data (built in the rich
+  // grid builder), restore it there so week tabs and exercise editing work —
+  // instead of just showing a flat, uneditable HTML snapshot.
+  if (prog.pbState && prog.pbState.weekData && prog.pbState.weekData.length) {
+    PB_STATE = JSON.parse(JSON.stringify(prog.pbState));
+    if (PB_STATE.activeWeek >= PB_STATE.weekData.length) PB_STATE.activeWeek = 0;
+
+    var navBtn = Array.prototype.slice.call(document.querySelectorAll('.nav-btn')).filter(function(b){ return b.textContent.indexOf('Program Builder')>=0; })[0];
+    switchTab('program', navBtn);
+    switchProgTab('builder', document.getElementById('ptab-builder'));
+
+    var phaseEl = document.getElementById('pb-phase'); if (phaseEl) phaseEl.value = PB_STATE.phase || 'accumulation';
+    var weeksEl = document.getElementById('pb-weeks'); if (weeksEl) weeksEl.value = PB_STATE.weeks || 4;
+    var progEl  = document.getElementById('pb-progression'); if (progEl) progEl.value = PB_STATE.progression || 'linear';
+    var nameEl  = document.getElementById('pb-program-name'); if (nameEl) nameEl.value = prog.name;
+    if (PB_STATE.athlete === '(Sandbox)') { pbSetMode('sandbox'); }
+    else { pbSetMode('athlete'); var athEl = document.getElementById('pb-athlete'); if (athEl) athEl.value = PB_STATE.athlete; }
+
+    pbRenderWeekTabs();
+    pbRenderDayGrid();
+    if (typeof pbRenderWeekTargets === 'function') pbRenderWeekTargets();
+    showStatus(`✅ "${prog.name}" loaded into builder — use the week tabs to switch weeks`);
+    return;
+  }
+
+  // No structured data (an older drop, or one built outside the grid
+  // builder) — fall back to the flat read-only HTML view, same as before.
   document.querySelectorAll('.nav-btn, .sidebar-btn, [onclick*="switchTab"]').forEach(b => {
     if ((b.textContent||'').toLowerCase().includes('program builder') ||
         (b.getAttribute('onclick')||'').includes("'program'")) {
@@ -3639,7 +3678,7 @@ function loadProgToBuilder(id) {
       out.innerHTML = prog.content.trim().startsWith('<') ? prog.content
         : `<pre style="font-family:\'DM Mono\',monospace;font-size:12px;color:var(--text);white-space:pre-wrap;">${prog.content}</pre>`;
       afterGenerate();
-      showStatus(`✅ "${prog.name}" loaded into builder`);
+      showStatus(`✅ "${prog.name}" loaded (read-only view — no week data was saved for this one)`);
     }
   }, 200);
 }
