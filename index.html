@@ -3610,6 +3610,8 @@ function renderAthletePrograms() {
             style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:5px;padding:4px 10px;color:var(--green);font-size:11px;cursor:pointer;">📅 Schedule</button>
           <button onclick="event.stopPropagation();loadProgToBuilder('${p.id}')" title="Load to Builder"
             style="background:rgba(59,122,196,0.2);border:1px solid rgba(59,122,196,0.4);border-radius:5px;padding:4px 10px;color:var(--blue);font-size:11px;cursor:pointer;">Load</button>
+          ${(!p.pbState && isHTML) ? `<button onclick="event.stopPropagation();pbRecoverProgram('${p.id}')" title="Attempt to rebuild week-by-week structure from this program's content, so it can reopen with working week tabs"
+            style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:5px;padding:4px 10px;color:#f59e0b;font-size:11px;cursor:pointer;">🔧 Recover Weeks</button>` : ''}
           <button onclick="event.stopPropagation();printAthleteProgram('${p.id}')" title="Print"
             style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:5px;padding:4px 10px;color:var(--text2);font-size:11px;cursor:pointer;">🖨</button>
           <button onclick="event.stopPropagation();deleteAthleteProgram('${p.id}')" title="Delete"
@@ -3681,6 +3683,136 @@ function loadProgToBuilder(id) {
       showStatus(`✅ "${prog.name}" loaded (read-only view — no week data was saved for this one)`);
     }
   }, 200);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// RECOVER STRUCTURED WEEK DATA FROM A FLAT PROGRAM SNAPSHOT
+// ══════════════════════════════════════════════════════════════════════════
+// Programs dropped before the pbState-capture fix only ever saved a flat,
+// rendered HTML snapshot — no week/day/block/exercise objects underneath.
+// This walks that snapshot's actual DOM (week headers, day headers, block
+// labels, and the exercise tables) in document order and reconstructs a
+// PB_STATE.weekData-shaped structure from it, so those older programs can
+// be reopened with working week tabs instead of staying read-only forever.
+// Best-effort: category tags and a couple of minor fields aren't present in
+// the flat render and will come back blank — everything else (exercise
+// names, sets, reps, load/distance, rest, notes, pairing) is recovered.
+function pbParseFlatProgramHTML(html) {
+  var container = document.createElement('div');
+  container.innerHTML = html;
+
+  var weekData = [];
+  var curWeek = null, curDay = null, pendingSessionLabel = '';
+  var DOW_RE = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s*[·•]\s*(.+)$/;
+  var WEEK_RE = /^Week\s+(\d+)\s*(?:[·•]\s*(Deload))?$/i;
+  var SESSION_RE = /^—\s*(.+?)\s*—$/;
+
+  var nodes = container.querySelectorAll('div, table');
+  nodes.forEach(function(el) {
+    if (el.tagName === 'TABLE') {
+      if (!curDay) return; // stray table outside any recognized day — skip
+      var rows = el.querySelectorAll('tbody tr');
+      if (!rows.length) return;
+      // Header row is the first <tr> (has <th> cells) — use its 5th column
+      // label to tell a "Dist" (speed-type) block from a "Load" (lift-type) one.
+      var headerCells = rows[0].querySelectorAll('th');
+      var col5 = headerCells[4] ? headerCells[4].textContent.trim() : '';
+      var isSpeed = /dist/i.test(col5);
+      var exercises = [];
+      for (var i = 1; i < rows.length; i++) {
+        var cells = rows[i].querySelectorAll('td');
+        if (cells.length < 7) continue;
+        var ex = {
+          pair: cells[0].textContent.trim(),
+          name: cells[1].textContent.trim(),
+          sets: cells[2].textContent.trim(),
+          reps: cells[3].textContent.trim(),
+          rest: cells[5].textContent.trim(),
+          notes: cells[6].textContent.trim(),
+        };
+        if (isSpeed) ex.distance = cells[4].textContent.trim();
+        else ex.load = cells[4].textContent.trim();
+        if (ex.name) exercises.push(ex);
+      }
+      if (!exercises.length) return;
+      var label = (pendingSessionLabel ? pendingSessionLabel + ' — ' : '') + (curDay._pendingBlockLabel || (isSpeed ? 'Speed Block' : 'Lift Block'));
+      curDay.blocks.push({ blockType: isSpeed ? 'speed' : 'lift', label: label, exercises: exercises });
+      curDay._pendingBlockLabel = '';
+      return;
+    }
+
+    // DIV — only care about leaf divs (no element children), which are the
+    // week/day/session/block-label markers. Container divs are skipped.
+    if (el.children.length > 0) return;
+    var txt = el.textContent.replace(/\s+/g, ' ').trim();
+    if (!txt) return;
+
+    var m;
+    if ((m = txt.match(WEEK_RE))) {
+      curWeek = { week: parseInt(m[1]), isDeload: !!m[2], days: [] };
+      weekData.push(curWeek);
+      curDay = null;
+      pendingSessionLabel = '';
+      return;
+    }
+    if (!curWeek) return; // ignore anything before the first week header
+
+    if ((m = txt.match(DOW_RE))) {
+      curDay = { day: m[1], label: m[2], blocks: [], _pendingBlockLabel: '' };
+      curWeek.days.push(curDay);
+      pendingSessionLabel = '';
+      return;
+    }
+    if (!curDay) return; // ignore anything before the first day header in this week
+
+    if ((m = txt.match(SESSION_RE))) {
+      pendingSessionLabel = m[1];
+      return;
+    }
+
+    // Anything else at this point is treated as the label for the block
+    // whose table comes right after it.
+    curDay._pendingBlockLabel = txt;
+  });
+
+  weekData = weekData.filter(function(w){ return w.days.length; });
+  weekData.forEach(function(w) { w.days.forEach(function(d) { delete d._pendingBlockLabel; }); });
+  return weekData;
+}
+
+function pbRecoverProgram(id) {
+  const progs = athletePrograms[currentPlayer] || [];
+  const prog  = progs.find(p => p.id === id);
+  if (!prog) return;
+
+  var weekData;
+  try {
+    weekData = pbParseFlatProgramHTML(prog.content);
+  } catch(err) {
+    console.error('[pbRecoverProgram]', err);
+    alert('Could not parse this program\'s content: ' + err.message);
+    return;
+  }
+
+  if (!weekData.length) {
+    alert('Could not find any recognizable week/day/exercise structure in this program. It may use a different format than the recovery tool expects.');
+    return;
+  }
+
+  var totalEx = weekData.reduce(function(s,w){ return s + w.days.reduce(function(s2,d){ return s2 + d.blocks.reduce(function(s3,b){ return s3+b.exercises.length; },0); },0); },0);
+  if (!confirm('Recovered ' + weekData.length + ' week(s) with ' + totalEx + ' total exercises. This is a best-effort reconstruction — category tags and a few minor fields won\'t carry over, and it\'s worth reviewing once loaded. Save this structure to "' + prog.name + '" so it can reopen with working week tabs?')) return;
+
+  prog.pbState = {
+    athlete: currentPlayer,
+    phase: 'custom',
+    weeks: weekData.length,
+    progression: 'linear',
+    activeWeek: 0,
+    weekData: weekData,
+  };
+  persistAthletePrograms();
+  renderAthletePrograms();
+  showStatus('✅ Recovered week structure for "' + prog.name + '" — click Load to open it in the builder');
 }
 
 function printAthleteProgram(id) {
