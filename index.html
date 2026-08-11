@@ -14080,20 +14080,32 @@ function pbOpenSyncModal(bi, ei) {
   // Only offer fields this exercise actually has, in a sensible order
   var fieldOrder = ['name','sets','reps','distance','pct','load','tempo','rest','notes'];
   var fields = fieldOrder.filter(function(f){ return ex[f] !== undefined; });
+  // These fields can progress by an amount per week instead of just being
+  // copied flat — the ones with simple leading-number formats (sets: "3",
+  // reps: "8", pct: "75%", distance: "10yd") that are safe to parse and
+  // reconstruct. rest/tempo/load have messier formats (":30", "3-1-1-0")
+  // not worth the parsing risk.
+  var progressable = ['sets','reps','pct','distance'];
 
   var modal = document.createElement('div');
   modal.id = 'pb-sync-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
-  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:22px;width:420px;max-width:95vw;max-height:85vh;overflow-y:auto;">'
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:22px;width:440px;max-width:95vw;max-height:85vh;overflow-y:auto;">'
     + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">🔁 Sync "'+ex.name+'" to other weeks</div>'
     + '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Overwrites the matching exercise slot (same day, same position) in whichever weeks you pick.</div>'
     + '<div style="margin-bottom:14px;">'
     + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Fields to copy</label>'
     + fields.map(function(f) {
-        return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;color:#fff;cursor:pointer;">'
-          + '<input type="checkbox" class="pb-sync-field" value="'+f+'" checked> '+(PB_SYNC_FIELD_LABELS[f]||f)+'</label>';
+        var isProg = progressable.indexOf(f) >= 0;
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;gap:10px;">'
+          + '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#fff;cursor:pointer;flex:1;">'
+          + '<input type="checkbox" class="pb-sync-field" value="'+f+'" checked> '+(PB_SYNC_FIELD_LABELS[f]||f)+' <span style="color:var(--text3);font-size:10px;">('+ex[f]+')</span></label>'
+          + (isProg ? '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);white-space:nowrap;">'
+              + '<input type="number" class="pb-sync-delta" data-field="'+f+'" value="0" step="any" style="width:48px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-size:11px;text-align:center;"> /wk</span>' : '')
+          + '</div>';
       }).join('')
     + '</div>'
+    + (progressable.some(function(f){return fields.indexOf(f)>=0;}) ? '<div style="font-size:9px;color:var(--text3);margin:-6px 0 14px 0;line-height:1.5;">A "/wk" value scales with distance from Week '+(PB_ACTIVE_DAY.weekIdx+1)+' — e.g. +1 on Sets going to Week '+(PB_ACTIVE_DAY.weekIdx+3)+' adds +2. Use negative to decrease. Leave 0 to copy as-is.</div>' : '')
     + '<div style="margin-bottom:16px;">'
     + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Apply to weeks</label>'
     + '<div style="display:flex;gap:6px;margin-bottom:8px;">'
@@ -14113,6 +14125,23 @@ function pbOpenSyncModal(bi, ei) {
   modal.addEventListener('click', function(e){ if (e.target===modal) modal.remove(); });
 }
 
+// Parses a leading number off a field value (e.g. "75%"->75+"%", "10yd"->10+"yd",
+// "3"->3+""), applies a delta scaled by how many weeks away the target is from
+// the source week, and reconstructs the value with its original suffix intact.
+// Returns the value unchanged if it doesn't start with a parseable number.
+function pbAdjustFieldValue(baseVal, deltaPerWeek, weekDistance) {
+  if (!deltaPerWeek || !weekDistance) return baseVal;
+  var s = String(baseVal == null ? '' : baseVal);
+  var m = s.match(/^(-?\d+(?:\.\d+)?)(.*)$/);
+  if (!m) return baseVal;
+  var num = parseFloat(m[1]);
+  var suffix = m[2] || '';
+  var newNum = num + (deltaPerWeek * weekDistance);
+  if (newNum < 0) newNum = 0;
+  newNum = (Number.isInteger(num) && Number.isInteger(deltaPerWeek)) ? Math.round(newNum) : parseFloat(newNum.toFixed(1));
+  return newNum + suffix;
+}
+
 function pbConfirmSync(bi, ei) {
   var wk  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx];
   var day = wk && wk.days[PB_ACTIVE_DAY.dayIdx];
@@ -14125,13 +14154,23 @@ function pbConfirmSync(bi, ei) {
 
   if (!fields.length || !weeks.length) { alert('Pick at least one field and one week.'); return; }
 
+  // Per-field progression amounts (0 = flat copy, unchanged from before)
+  var deltas = {};
+  Array.prototype.slice.call(document.querySelectorAll('.pb-sync-delta')).forEach(function(inp) {
+    var v = parseFloat(inp.value);
+    if (v) deltas[inp.getAttribute('data-field')] = v;
+  });
+
   var applied = 0, missing = 0;
   weeks.forEach(function(wi) {
     var targetWk  = PB_STATE.weekData[wi];
     var targetDay = targetWk && targetWk.days[PB_ACTIVE_DAY.dayIdx];
     var targetEx  = targetDay && targetDay.blocks[bi] && targetDay.blocks[bi].exercises[ei];
     if (!targetEx) { missing++; return; }
-    fields.forEach(function(f) { targetEx[f] = ex[f]; });
+    var weekDistance = wi - PB_ACTIVE_DAY.weekIdx;
+    fields.forEach(function(f) {
+      targetEx[f] = deltas[f] ? pbAdjustFieldValue(ex[f], deltas[f], weekDistance) : ex[f];
+    });
     applied++;
   });
 
