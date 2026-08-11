@@ -1176,7 +1176,10 @@ body {
 
             <!-- Save & Drafts -->
             <div class="card" style="padding:14px;">
-              <div class="card-title" style="margin-bottom:8px;">💾 SAVE</div>
+              <div class="card-title" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+                <span>💾 SAVE</span>
+                <span id="pb-autosave-indicator" style="font-size:9px;font-weight:400;color:var(--text3);opacity:0.5;text-transform:none;letter-spacing:0;font-family:'DM Mono',monospace;">Not yet auto-saved</span>
+              </div>
               <div style="display:flex;flex-direction:column;gap:6px;">
                 <input type="text" id="pb-program-name" placeholder="Program name (e.g. Accumulation Block A)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
                 <button onclick="pbSaveDraft()" style="padding:7px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;">📝 Save as Draft</button>
@@ -6004,7 +6007,7 @@ function switchTab(page, btn) {
   if (topbarPlayerEl) topbarPlayerEl.style.display = page === 'dashboard' ? '' : 'none';
   if (topbarMetaEl)   topbarMetaEl.style.display   = page === 'dashboard' ? '' : 'none';
   if (page === 'brief') { renderBrief(); }
-  if (page === 'program') { if (typeof pbInit==='function') pbInit(); }
+  if (page === 'program') { if (typeof pbInit==='function') pbInit(); if (typeof pbCheckAutoSaveRestore==='function') pbCheckAutoSaveRestore(); }
   if (page === 'programs') renderProgramLibrary();
   if (page === 'calendar') { renderCalendar(); populateScheduleWorkoutProgramPicker(); }
   if (page === 'dashboard') renderDashboard();
@@ -13480,11 +13483,59 @@ function pbSelectWeek(idx) {
 
 const PB_DAY_COLORS = {lift:'#6366f1',speed:'#f59e0b',esd:'#22c55e',off:'#334155'};
 
+// ── Auto-save the in-progress program, separate from manual "Save Draft" ──
+// Debounced so rapid edits (e.g. typing) don't hammer localStorage — writes
+// ~1.2s after the last change. Hooked into pbRenderDayGrid() below since
+// nearly every edit path already calls it to refresh the screen, so this
+// covers field edits, exercise swaps, moves, duplicates, removals, and
+// week/block changes without needing to touch each one individually.
+var PB_AUTOSAVE_KEY = 'cubs_sc_pb_autosave_v1';
+var _pbAutoSaveTimer = null;
+function pbAutoSaveDebounced() {
+  if (!PB_STATE.weekData || !PB_STATE.weekData.length) return;
+  clearTimeout(_pbAutoSaveTimer);
+  _pbAutoSaveTimer = setTimeout(function() {
+    try {
+      localStorage.setItem(PB_AUTOSAVE_KEY, JSON.stringify({ savedAt: new Date().toISOString(), state: PB_STATE }));
+      var ind = document.getElementById('pb-autosave-indicator');
+      if (ind) {
+        ind.textContent = '✓ Auto-saved ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        ind.style.opacity = '1';
+        clearTimeout(ind._fadeTimer);
+        ind._fadeTimer = setTimeout(function(){ ind.style.opacity = '0.5'; }, 2500);
+      }
+    } catch(e) { console.warn('[pbAutoSaveDebounced] failed:', e); }
+  }, 1200);
+}
+
+// Offer to restore an auto-saved session that's newer than what's currently
+// loaded — call this when Program Builder first opens.
+function pbCheckAutoSaveRestore() {
+  try {
+    var raw = localStorage.getItem(PB_AUTOSAVE_KEY);
+    if (!raw) return;
+    var saved = JSON.parse(raw);
+    if (!saved || !saved.state || !saved.state.weekData || !saved.state.weekData.length) return;
+    // Only prompt if there's no program currently loaded, so we never
+    // silently clobber something the coach is already actively working on.
+    if (PB_STATE.weekData && PB_STATE.weekData.length) return;
+    var when = new Date(saved.savedAt).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+    if (confirm('Found an auto-saved session from ' + when + ' (' + saved.state.athlete + ', ' + saved.state.phase + ') that was never saved as a draft. Restore it?')) {
+      PB_STATE = saved.state;
+      pbRenderDayGrid();
+      if (typeof pbRenderWeekTargets === 'function') pbRenderWeekTargets();
+      showStatus('✅ Restored auto-saved session from ' + when);
+    }
+  } catch(e) { console.warn('[pbCheckAutoSaveRestore] failed:', e); }
+}
+
 function pbRenderDayGrid() {
   var grid = document.getElementById('pb-day-grid');
   if (!grid || !PB_STATE.weekData.length) return;
   var wk = PB_STATE.weekData[PB_STATE.activeWeek];
   if (!wk) return;
+
+  pbAutoSaveDebounced();
 
   grid.innerHTML = wk.days.map(function(d,di) {
     var col = PB_DAY_COLORS[d.type] || '#334155';
