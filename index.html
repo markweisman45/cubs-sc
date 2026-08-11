@@ -14080,12 +14080,14 @@ function pbOpenSyncModal(bi, ei) {
   // Only offer fields this exercise actually has, in a sensible order
   var fieldOrder = ['name','sets','reps','distance','pct','load','tempo','rest','notes'];
   var fields = fieldOrder.filter(function(f){ return ex[f] !== undefined; });
-  // These fields can progress by an amount per week instead of just being
-  // copied flat — the ones with simple leading-number formats (sets: "3",
-  // reps: "8", pct: "75%", distance: "10yd") that are safe to parse and
-  // reconstruct. rest/tempo/load have messier formats (":30", "3-1-1-0")
-  // not worth the parsing risk.
-  var progressable = ['sets','reps','pct','distance'];
+  // Fields that can progress by an amount per week instead of just being
+  // copied flat. sets/reps/distance/pct/load all have simple leading-number
+  // formats ("3", "8", "10yd", "75%") safe to parse and reconstruct. rest
+  // gets its own handling since it's a time format (":30", "1:00"). tempo
+  // ("3-1-1-0") is a multi-segment notation with no unambiguous single
+  // "increase" — left flat-copy only.
+  var progressable = ['sets','reps','pct','distance','load'];
+  var progressableTime = ['rest'];
 
   var modal = document.createElement('div');
   modal.id = 'pb-sync-modal';
@@ -14097,15 +14099,18 @@ function pbOpenSyncModal(bi, ei) {
     + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Fields to copy</label>'
     + fields.map(function(f) {
         var isProg = progressable.indexOf(f) >= 0;
+        var isTime = progressableTime.indexOf(f) >= 0;
         return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;gap:10px;">'
           + '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#fff;cursor:pointer;flex:1;">'
           + '<input type="checkbox" class="pb-sync-field" value="'+f+'" checked> '+(PB_SYNC_FIELD_LABELS[f]||f)+' <span style="color:var(--text3);font-size:10px;">('+ex[f]+')</span></label>'
           + (isProg ? '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);white-space:nowrap;">'
               + '<input type="number" class="pb-sync-delta" data-field="'+f+'" value="0" step="any" style="width:48px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-size:11px;text-align:center;"> /wk</span>' : '')
+          + (isTime ? '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);white-space:nowrap;">'
+              + '<input type="number" class="pb-sync-delta-time" data-field="'+f+'" value="0" step="1" style="width:48px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-size:11px;text-align:center;"> sec/wk</span>' : '')
           + '</div>';
       }).join('')
     + '</div>'
-    + (progressable.some(function(f){return fields.indexOf(f)>=0;}) ? '<div style="font-size:9px;color:var(--text3);margin:-6px 0 14px 0;line-height:1.5;">A "/wk" value scales with distance from Week '+(PB_ACTIVE_DAY.weekIdx+1)+' — e.g. +1 on Sets going to Week '+(PB_ACTIVE_DAY.weekIdx+3)+' adds +2. Use negative to decrease. Leave 0 to copy as-is.</div>' : '')
+    + ((progressable.some(function(f){return fields.indexOf(f)>=0;}) || progressableTime.some(function(f){return fields.indexOf(f)>=0;})) ? '<div style="font-size:9px;color:var(--text3);margin:-6px 0 14px 0;line-height:1.5;">A "/wk" value scales with distance from Week '+(PB_ACTIVE_DAY.weekIdx+1)+' — e.g. +1 on Sets going to Week '+(PB_ACTIVE_DAY.weekIdx+3)+' adds +2. Rest uses seconds. Use negative to decrease. Leave 0 to copy as-is.</div>' : '')
     + '<div style="margin-bottom:16px;">'
     + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Apply to weeks</label>'
     + '<div style="display:flex;gap:6px;margin-bottom:8px;">'
@@ -14129,6 +14134,31 @@ function pbOpenSyncModal(bi, ei) {
 // "3"->3+""), applies a delta scaled by how many weeks away the target is from
 // the source week, and reconstructs the value with its original suffix intact.
 // Returns the value unchanged if it doesn't start with a parseable number.
+// Rest gets its own handling since it's a time format (":30", "1:00", "90")
+// rather than a simple leading-number-plus-suffix value.
+function pbParseRestSeconds(s) {
+  s = String(s == null ? '' : s).trim();
+  var m = s.match(/^(\d+):(\d{2})$/);   // "1:30" -> 90s
+  if (m) return parseInt(m[1])*60 + parseInt(m[2]);
+  m = s.match(/^:(\d+)$/);              // ":30" -> 30s
+  if (m) return parseInt(m[1]);
+  m = s.match(/^(\d+)$/);               // "30" bare -> 30s
+  if (m) return parseInt(m[1]);
+  return null;
+}
+function pbFormatRestSeconds(total) {
+  total = Math.max(0, Math.round(total));
+  if (total < 60) return ':' + (total < 10 ? '0'+total : total);
+  var mins = Math.floor(total/60), secs = total%60;
+  return mins + ':' + (secs < 10 ? '0'+secs : secs);
+}
+function pbAdjustRestValue(baseVal, deltaSecPerWeek, weekDistance) {
+  if (!deltaSecPerWeek || !weekDistance) return baseVal;
+  var totalSec = pbParseRestSeconds(baseVal);
+  if (totalSec === null) return baseVal;
+  return pbFormatRestSeconds(totalSec + deltaSecPerWeek*weekDistance);
+}
+
 function pbAdjustFieldValue(baseVal, deltaPerWeek, weekDistance) {
   if (!deltaPerWeek || !weekDistance) return baseVal;
   var s = String(baseVal == null ? '' : baseVal);
@@ -14160,6 +14190,11 @@ function pbConfirmSync(bi, ei) {
     var v = parseFloat(inp.value);
     if (v) deltas[inp.getAttribute('data-field')] = v;
   });
+  var timeDeltas = {};
+  Array.prototype.slice.call(document.querySelectorAll('.pb-sync-delta-time')).forEach(function(inp) {
+    var v = parseFloat(inp.value);
+    if (v) timeDeltas[inp.getAttribute('data-field')] = v;
+  });
 
   var applied = 0, missing = 0;
   weeks.forEach(function(wi) {
@@ -14169,7 +14204,9 @@ function pbConfirmSync(bi, ei) {
     if (!targetEx) { missing++; return; }
     var weekDistance = wi - PB_ACTIVE_DAY.weekIdx;
     fields.forEach(function(f) {
-      targetEx[f] = deltas[f] ? pbAdjustFieldValue(ex[f], deltas[f], weekDistance) : ex[f];
+      if (deltas[f]) targetEx[f] = pbAdjustFieldValue(ex[f], deltas[f], weekDistance);
+      else if (timeDeltas[f]) targetEx[f] = pbAdjustRestValue(ex[f], timeDeltas[f], weekDistance);
+      else targetEx[f] = ex[f];
     });
     applied++;
   });
