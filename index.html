@@ -3647,6 +3647,10 @@ function loadProgToBuilder(id) {
   if (prog.pbState && prog.pbState.weekData && prog.pbState.weekData.length) {
     PB_STATE = JSON.parse(JSON.stringify(prog.pbState));
     if (PB_STATE.activeWeek >= PB_STATE.weekData.length) PB_STATE.activeWeek = 0;
+    // Remember which program this is so edits (sync, field changes, etc.)
+    // can be saved back into it directly, not just into a generic "recover
+    // my session" slot that has no connection to this specific program.
+    PB_LOADED_PROGRAM_ID = id;
 
     var navBtn = Array.prototype.slice.call(document.querySelectorAll('.nav-btn')).filter(function(b){ return b.textContent.indexOf('Program Builder')>=0; })[0];
     switchTab('program', navBtn);
@@ -13613,6 +13617,7 @@ function pbBuild() {
   var deloadWk = phase === 'custom' ? pbGetCustomDeload(weeks) : (weeks === 4 ? 3 : 4);
 
   PB_STATE = { athlete, phase, weeks, progression:prog, activeWeek:0, weekData:[] };
+  PB_LOADED_PROGRAM_ID = null; // starting fresh — no longer editing a previously-loaded program
 
   var days = phase === 'custom' ? pbGetCustomDays() : pbGetDays(phase);
 
@@ -13650,6 +13655,15 @@ function pbSelectWeek(idx) {
   PB_STATE.activeWeek = idx;
   pbRenderWeekTabs();
   pbRenderDayGrid();
+  // If a specific day's detailed exercise editor is currently open, follow
+  // it into the newly selected week (same day-of-week) — otherwise switching
+  // weeks silently left the editor showing the OLD week's data, since this
+  // function only ever refreshed the small overview cards, never the actual
+  // exercise table someone's looking at.
+  if (PB_ACTIVE_DAY) {
+    var newDay = PB_STATE.weekData[idx] && PB_STATE.weekData[idx].days[PB_ACTIVE_DAY.dayIdx];
+    if (newDay) pbOpenDay(idx, PB_ACTIVE_DAY.dayIdx);
+  }
 }
 
 const PB_DAY_COLORS = {lift:'#6366f1',speed:'#f59e0b',esd:'#22c55e',off:'#334155'};
@@ -13660,6 +13674,8 @@ const PB_DAY_COLORS = {lift:'#6366f1',speed:'#f59e0b',esd:'#22c55e',off:'#334155
 // nearly every edit path already calls it to refresh the screen, so this
 // covers field edits, exercise swaps, moves, duplicates, removals, and
 // week/block changes without needing to touch each one individually.
+var PB_LOADED_PROGRAM_ID = null; // set by loadProgToBuilder — which My Programs entry (if any) is currently open for editing, so auto-save can write changes back into it directly
+
 var PB_AUTOSAVE_KEY = 'cubs_sc_pb_autosave_v1';
 var _pbAutoSaveTimer = null;
 function pbAutoSaveDebounced() {
@@ -13668,9 +13684,23 @@ function pbAutoSaveDebounced() {
   _pbAutoSaveTimer = setTimeout(function() {
     try {
       localStorage.setItem(PB_AUTOSAVE_KEY, JSON.stringify({ savedAt: new Date().toISOString(), state: PB_STATE }));
+      // If this session started from an existing My Programs entry, save
+      // the changes back into that specific program too — otherwise edits
+      // (sync, field changes, anything) only ever lived in a generic
+      // recovery slot with no connection to the program you actually opened,
+      // so they'd quietly vanish from My Programs on the next reload.
+      if (PB_LOADED_PROGRAM_ID && typeof athletePrograms !== 'undefined') {
+        var owner = (PB_STATE.athlete && PB_STATE.athlete !== '(Sandbox)') ? PB_STATE.athlete : currentPlayer;
+        var list = athletePrograms[owner] || [];
+        var prog = list.find(function(p){ return p.id === PB_LOADED_PROGRAM_ID; });
+        if (prog) {
+          prog.pbState = JSON.parse(JSON.stringify(PB_STATE));
+          if (typeof persistAthletePrograms === 'function') persistAthletePrograms();
+        }
+      }
       var ind = document.getElementById('pb-autosave-indicator');
       if (ind) {
-        ind.textContent = '✓ Auto-saved ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        ind.textContent = '✓ Auto-saved ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + (PB_LOADED_PROGRAM_ID ? ' (to this program)' : '');
         ind.style.opacity = '1';
         clearTimeout(ind._fadeTimer);
         ind._fadeTimer = setTimeout(function(){ ind.style.opacity = '0.5'; }, 2500);
