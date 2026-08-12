@@ -14356,10 +14356,16 @@ function pbConfirmSync(bi, ei) {
   var day = wk && wk.days[PB_ACTIVE_DAY.dayIdx];
   var ex  = day && day.blocks[bi] && day.blocks[bi].exercises[ei];
   var modal = document.getElementById('pb-sync-modal');
-  if (!ex) { if (modal) modal.remove(); return; }
+  if (!ex) {
+    console.warn('[pbConfirmSync] source exercise not found — PB_ACTIVE_DAY:', JSON.stringify(PB_ACTIVE_DAY), 'bi:', bi, 'ei:', ei);
+    if (typeof showStatus === 'function') showStatus('⚠️ Sync failed — could not find the source exercise (bi=' + bi + ', ei=' + ei + ')');
+    if (modal) modal.remove();
+    return;
+  }
 
   var fields = Array.prototype.slice.call(document.querySelectorAll('.pb-sync-field:checked')).map(function(c){ return c.value; });
   var weeks  = Array.prototype.slice.call(document.querySelectorAll('.pb-sync-week:checked')).map(function(c){ return parseInt(c.value); });
+  console.log('[pbConfirmSync] fields checked:', fields, '| weeks checked:', weeks);
 
   if (!fields.length || !weeks.length) { alert('Pick at least one field and one week.'); return; }
 
@@ -14380,12 +14386,15 @@ function pbConfirmSync(bi, ei) {
     var targetWk  = PB_STATE.weekData[wi];
     var targetDay = targetWk && targetWk.days[PB_ACTIVE_DAY.dayIdx];
     var targetEx  = targetDay && targetDay.blocks[bi] && targetDay.blocks[bi].exercises[ei];
+    console.log('[pbConfirmSync] week index', wi, '-> targetWk found:', !!targetWk, '| targetDay found:', !!targetDay, targetDay && targetDay.label, '| targetEx found:', !!targetEx, targetEx && targetEx.name);
     if (!targetEx) { missing++; return; }
     var weekDistance = wi - PB_ACTIVE_DAY.weekIdx;
     fields.forEach(function(f) {
+      var before = targetEx[f];
       if (deltas[f]) targetEx[f] = pbAdjustFieldValue(ex[f], deltas[f], weekDistance);
       else if (timeDeltas[f]) targetEx[f] = pbAdjustRestValue(ex[f], timeDeltas[f], weekDistance);
       else targetEx[f] = ex[f];
+      console.log('[pbConfirmSync]   field', f, ':', before, '->', targetEx[f]);
     });
     applied++;
   });
