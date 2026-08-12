@@ -829,24 +829,31 @@ body {
         </div>
         <!-- Individual hitting/arm charts -->
         <div class="section-mb" style="display:flex;flex-direction:column;gap:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">📈 Season Trend — Bat Speed / Exit Velo / Throw Velo</div>
+            <div style="display:flex;gap:4px;">
+              <button id="vtg-week" onclick="veloTrendGroup('week')" style="padding:5px 10px;border-radius:5px;border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.2);color:#f59e0b;font-weight:700;font-size:10px;cursor:pointer;">Weekly</button>
+              <button id="vtg-month" onclick="veloTrendGroup('month')" style="padding:5px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:10px;cursor:pointer;">Monthly</button>
+            </div>
+          </div>
           <div class="card">
-            <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;">
               <span>🪄 Bat Speed</span>
-              <span id="batSpeedAvg" style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--cubs-light-blue);"></span>
+              <span><span id="batSpeedAvg" style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--cubs-light-blue);"></span><span id="batSpeedAvgTrend" style="font-family:\'DM Mono\',monospace;font-size:11px;"></span></span>
             </div>
             <div class="chart-wrap xl"><canvas id="batSpeedChart"></canvas></div>
           </div>
           <div class="card">
-            <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;">
               <span>💥 Exit Velocity</span>
-              <span id="exitVeloAvg" style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--cubs-red);"></span>
+              <span><span id="exitVeloAvg" style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--cubs-red);"></span><span id="exitVeloAvgTrend" style="font-family:\'DM Mono\',monospace;font-size:11px;"></span></span>
             </div>
             <div class="chart-wrap xl"><canvas id="exitVeloChart"></canvas></div>
           </div>
           <div class="card">
-            <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;">
               <span>🎯 Throw Velocity</span>
-              <span id="throwVeloAvg" style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--cyan, #06b6d4);"></span>
+              <span><span id="throwVeloAvg" style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--cyan, #06b6d4);"></span><span id="throwVeloAvgTrend" style="font-family:\'DM Mono\',monospace;font-size:11px;"></span></span>
             </div>
             <div class="chart-wrap xl"><canvas id="throwVeloChart"></canvas></div>
           </div>
@@ -7653,18 +7660,7 @@ function renderAllCharts(p) {
 
   // Zero → null so missing games don't plot as zero on charts
   const nz = v => v || null;
-  mkTrendChart('batSpeedChart',  labels, [
-    {label:'Bat Speed (mph)', data:games.map(g=>nz(g.bat)),    borderColor:C.red,  backgroundColor:'rgba(204,52,51,0.08)', fill:true},
-    {label:'PB',              data:games.map(()=>pbBat),   borderColor:'rgba(204,52,51,0.3)', borderDash:[4,4], pointRadius:0, borderWidth:1},
-  ]);
-  mkTrendChart('exitVeloChart',  labels, [
-    {label:'Exit Velo (mph)', data:games.map(g=>nz(g.exit)),   borderColor:C.blue, backgroundColor:'rgba(59,122,196,0.08)', fill:true},
-    {label:'PB',              data:games.map(()=>pbExit),  borderColor:'rgba(59,122,196,0.3)',  borderDash:[4,4], pointRadius:0, borderWidth:1},
-  ]);
-  mkTrendChart('throwVeloChart', labels, [
-    {label:'Throw Velo (mph)',data:games.map(g=>nz(g.throwV)), borderColor:C.cyan, backgroundColor:'rgba(6,182,212,0.08)',  fill:true},
-    {label:'PB',              data:games.map(()=>pbThrow), borderColor:'rgba(6,182,212,0.3)',   borderDash:[4,4], pointRadius:0, borderWidth:1},
-  ]);
+  renderVeloSeasonTrends();
 
   // Combined statcast (overview)
   mkChart('statcastChart', {
@@ -9916,6 +9912,100 @@ function veloSwitchMetric(metric) {
 function veloLbSort(col) {
   if (veloLbSortCol === col) veloLbSortDir *= -1; else { veloLbSortCol = col; veloLbSortDir = -1; }
   renderVeloLeaderboard();
+}
+
+// ── SEASON TREND — bat speed / exit velo / throw velo ──────────────────────
+// Same pattern as HE Runs' Speed Trend: group the full season into weekly or
+// monthly buckets, plot 90th percentile + max + avg per bucket, and overlay
+// a linear regression trend line so the season arc is actually readable
+// instead of a dense, noisy per-game line.
+var veloTrendGrouping = 'week';
+function veloTrendGroup(g) {
+  veloTrendGrouping = g;
+  var wBtn = document.getElementById('vtg-week'), mBtn = document.getElementById('vtg-month');
+  if (wBtn) wBtn.style.cssText += (g==='week' ? ';background:rgba(245,158,11,0.2);color:#f59e0b;font-weight:700;border-color:rgba(245,158,11,0.4);' : ';background:transparent;color:var(--text3);font-weight:400;border-color:var(--border);');
+  if (mBtn) mBtn.style.cssText += (g==='month' ? ';background:rgba(245,158,11,0.2);color:#f59e0b;font-weight:700;border-color:rgba(245,158,11,0.4);' : ';background:transparent;color:var(--text3);font-weight:400;border-color:var(--border);');
+  renderVeloSeasonTrends();
+}
+
+function renderVeloSeasonTrends() {
+  renderVeloTrendChart('bat',    'batSpeedChart',   '#cc3433', 'batSpeedAvgTrend');
+  renderVeloTrendChart('exit',   'exitVeloChart',   '#3b7ac4', 'exitVeloAvgTrend');
+  renderVeloTrendChart('throwV', 'throwVeloChart',  '#06b6d4', 'throwVeloAvgTrend');
+}
+
+function renderVeloTrendChart(metric, canvasId, color, trendBadgeId) {
+  var ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  if (ctx._chart) { ctx._chart.destroy(); ctx._chart = null; }
+
+  var hist = (importedData.hitting && importedData.hitting[currentPlayer]) || [];
+  var pts = hist.filter(function(h){ return h[metric] > 0 && h.date; });
+  var badgeEl = document.getElementById(trendBadgeId);
+
+  if (!pts.length) { if (badgeEl) badgeEl.innerHTML = ''; return; }
+
+  function p90(arr){ var s=arr.slice().sort(function(a,b){return a-b;}); return s[Math.floor(s.length*0.9)]; }
+  function avg(arr){ return arr.reduce(function(s,v){return s+v;},0)/arr.length; }
+
+  var groups = {};
+  pts.forEach(function(h) {
+    var d = safeParseDate(h.date);
+    var key;
+    if (veloTrendGrouping === 'week') {
+      var jan1 = new Date(d.getFullYear(),0,1);
+      var week = Math.ceil((((d-jan1)/86400000)+jan1.getDay()+1)/7);
+      key = d.getFullYear()+'-W'+String(week).padStart(2,'0');
+    } else {
+      key = d.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+    }
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(h[metric]);
+  });
+
+  var labels = Object.keys(groups).sort();
+  var p90Data = labels.map(function(k){ return p90(groups[k]); });
+  var maxData = labels.map(function(k){ return Math.max.apply(null, groups[k]); });
+  var avgData = labels.map(function(k){ return avg(groups[k]); });
+  var countData = labels.map(function(k){ return groups[k].length; });
+
+  var n=p90Data.length, sx=0, sy=0, sxy=0, sx2=0;
+  p90Data.forEach(function(v,i){ sx+=i; sy+=v; sxy+=i*v; sx2+=i*i; });
+  var slope = n>1 ? (n*sxy-sx*sy)/(n*sx2-sx*sx) : 0;
+  var intercept = n>1 ? (sy-slope*sx)/n : sy;
+  var trendData = p90Data.map(function(_,i){ return parseFloat((slope*i+intercept).toFixed(2)); });
+
+  ctx._chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: labels, datasets: [
+      {label:'90th Pct', data:p90Data, borderColor:color, backgroundColor:color+'22', pointRadius:5, borderWidth:2, tension:0.3, fill:true, order:2},
+      {label:'Max', data:maxData, borderColor:'rgba(239,68,68,0.5)', backgroundColor:'transparent', pointRadius:2, borderWidth:1, borderDash:[4,4], order:3},
+      {label:'Avg', data:avgData, borderColor:'rgba(148,163,184,0.6)', backgroundColor:'transparent', pointRadius:2, borderWidth:1, borderDash:[4,4], order:3},
+      {label:'Trend', data:trendData, borderColor:'rgba(167,139,250,0.85)', backgroundColor:'transparent', pointRadius:0, borderWidth:2, borderDash:[6,3], order:1},
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#94a3b8',font:{size:9},boxWidth:8}},
+        tooltip:{callbacks:{afterBody:function(items){return 'Events: '+countData[items[0].dataIndex];}}}
+      },
+      scales:{
+        x:{ticks:{color:'#94a3b8',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.05)'}},
+        y:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'rgba(255,255,255,0.05)'},title:{display:true,text:'mph',color:'#94a3b8',font:{size:9}}}
+      }
+    }
+  });
+
+  if (badgeEl) {
+    if (p90Data.length >= 2) {
+      var change = p90Data[p90Data.length-1] - p90Data[0];
+      var dir = slope > 0.05 ? '📈' : slope < -0.05 ? '📉' : '➡️';
+      var dirColor = slope > 0.05 ? 'var(--green)' : slope < -0.05 ? 'var(--red)' : 'var(--text3)';
+      badgeEl.innerHTML = ' · <span style="color:'+dirColor+';">'+dir+' '+(change>=0?'+':'')+change.toFixed(1)+' mph season</span>';
+    } else {
+      badgeEl.innerHTML = '';
+    }
+  }
 }
 
 function renderVeloLeaderboard() {
