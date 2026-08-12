@@ -832,6 +832,7 @@ body {
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
             <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">📈 Season Trend — Bat Speed / Exit Velo / Throw Velo</div>
             <div style="display:flex;gap:4px;">
+              <button id="vtg-day" onclick="veloTrendGroup('day')" style="padding:5px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:10px;cursor:pointer;">Daily</button>
               <button id="vtg-week" onclick="veloTrendGroup('week')" style="padding:5px 10px;border-radius:5px;border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.2);color:#f59e0b;font-weight:700;font-size:10px;cursor:pointer;">Weekly</button>
               <button id="vtg-month" onclick="veloTrendGroup('month')" style="padding:5px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:10px;cursor:pointer;">Monthly</button>
             </div>
@@ -9922,9 +9923,16 @@ function veloLbSort(col) {
 var veloTrendGrouping = 'week';
 function veloTrendGroup(g) {
   veloTrendGrouping = g;
-  var wBtn = document.getElementById('vtg-week'), mBtn = document.getElementById('vtg-month');
-  if (wBtn) wBtn.style.cssText += (g==='week' ? ';background:rgba(245,158,11,0.2);color:#f59e0b;font-weight:700;border-color:rgba(245,158,11,0.4);' : ';background:transparent;color:var(--text3);font-weight:400;border-color:var(--border);');
-  if (mBtn) mBtn.style.cssText += (g==='month' ? ';background:rgba(245,158,11,0.2);color:#f59e0b;font-weight:700;border-color:rgba(245,158,11,0.4);' : ';background:transparent;color:var(--text3);font-weight:400;border-color:var(--border);');
+  var btns = { day: document.getElementById('vtg-day'), week: document.getElementById('vtg-week'), month: document.getElementById('vtg-month') };
+  Object.keys(btns).forEach(function(k) {
+    var b = btns[k];
+    if (!b) return;
+    var active = (k === g);
+    b.style.background   = active ? 'rgba(245,158,11,0.2)' : 'transparent';
+    b.style.color         = active ? '#f59e0b' : 'var(--text3)';
+    b.style.fontWeight    = active ? '700' : '400';
+    b.style.borderColor   = active ? 'rgba(245,158,11,0.4)' : 'var(--border)';
+  });
   renderVeloSeasonTrends();
 }
 
@@ -9949,25 +9957,33 @@ function renderVeloTrendChart(metric, canvasId, color, trendBadgeId) {
   function avg(arr){ return arr.reduce(function(s,v){return s+v;},0)/arr.length; }
 
   var groups = {};
+  var labelFor = {};
   pts.forEach(function(h) {
     var d = safeParseDate(h.date);
-    var key;
-    if (veloTrendGrouping === 'week') {
+    var key, label;
+    if (veloTrendGrouping === 'day') {
+      key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      label = fmtDate(h.date);
+    } else if (veloTrendGrouping === 'week') {
       var jan1 = new Date(d.getFullYear(),0,1);
       var week = Math.ceil((((d-jan1)/86400000)+jan1.getDay()+1)/7);
       key = d.getFullYear()+'-W'+String(week).padStart(2,'0');
+      label = key;
     } else {
-      key = d.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+      key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      label = d.toLocaleDateString('en-US',{month:'short',year:'numeric'});
     }
     if (!groups[key]) groups[key] = [];
     groups[key].push(h[metric]);
+    labelFor[key] = label;
   });
 
-  var labels = Object.keys(groups).sort();
-  var p90Data = labels.map(function(k){ return p90(groups[k]); });
-  var maxData = labels.map(function(k){ return Math.max.apply(null, groups[k]); });
-  var avgData = labels.map(function(k){ return avg(groups[k]); });
-  var countData = labels.map(function(k){ return groups[k].length; });
+  var sortedKeys = Object.keys(groups).sort();
+  var labels = sortedKeys.map(function(k){ return labelFor[k]; });
+  var p90Data = sortedKeys.map(function(k){ return p90(groups[k]); });
+  var maxData = sortedKeys.map(function(k){ return Math.max.apply(null, groups[k]); });
+  var avgData = sortedKeys.map(function(k){ return avg(groups[k]); });
+  var countData = sortedKeys.map(function(k){ return groups[k].length; });
 
   var n=p90Data.length, sx=0, sy=0, sxy=0, sx2=0;
   p90Data.forEach(function(v,i){ sx+=i; sy+=v; sxy+=i*v; sx2+=i*i; });
