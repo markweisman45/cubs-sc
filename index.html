@@ -3267,6 +3267,7 @@ body {
           <input type="file" id="hittingCSVInput" accept=".csv" style="display:none" onchange="handleHittingCSVUpload(this)">
           <button onclick="document.getElementById('throwCSVInput').click()" style="padding:8px 14px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:8px;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;">&#128202; Import Throw Velo CSV</button>
           <input type="file" id="throwCSVInput" accept=".csv" style="display:none" onchange="handleThrowCSVUpload(this)">
+          <button onclick="cleanupFutureDatedData()" style="padding:8px 14px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:8px;color:#f59e0b;font-size:13px;font-weight:600;cursor:pointer;" title="Find and remove hitting/throw data entries dated in the future (usually caused by a date-parsing mismatch during import)">🧹 Clean Up Future-Dated Data</button>
         </div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">
           Or enter manually — bat speed, exit velocity, and throw velocity per player per game date.
@@ -19721,6 +19722,61 @@ function handleHittingCSVUpload(input) {
   };
   reader.readAsText(file,'ISO-8859-1');
 }
+// ── Clean up future-dated data (caused by a date-parsing mismatch on import) ──
+// A row with a date after today is never legitimate real game data — this
+// finds every such row across every player, shows exactly what it found
+// before touching anything, and removes only what's confirmed.
+function cleanupFutureDatedData() {
+  var today = new Date(); today.setHours(0,0,0,0);
+  var found = []; // {name, date, bat, exit, throwV}
+
+  Object.keys(importedData.hitting || {}).forEach(function(name) {
+    (importedData.hitting[name] || []).forEach(function(h) {
+      var d = safeParseDate(h.date);
+      if (d && d > today) found.push({ name: name, date: h.date, bat: h.bat, exit: h.exit, throwV: h.throwV });
+    });
+  });
+
+  if (!found.length) { alert('No future-dated entries found — nothing to clean up.'); return; }
+
+  var preview = found.slice(0, 15).map(function(f) {
+    return f.name + ' — ' + fmtDate(f.date) + ' (bat:' + (f.bat||0) + ' exit:' + (f.exit||0) + ' throw:' + (f.throwV||0) + ')';
+  }).join('\n');
+  var msg = 'Found ' + found.length + ' hitting/throw entr' + (found.length===1?'y':'ies') + ' dated after today:\n\n' + preview
+    + (found.length > 15 ? '\n…and ' + (found.length-15) + ' more' : '')
+    + '\n\nRemove these? This cannot be undone.';
+  if (!confirm(msg)) return;
+
+  var removed = 0;
+  Object.keys(importedData.hitting || {}).forEach(function(name) {
+    var before = importedData.hitting[name].length;
+    importedData.hitting[name] = importedData.hitting[name].filter(function(h) {
+      var d = safeParseDate(h.date);
+      return !(d && d > today);
+    });
+    removed += before - importedData.hitting[name].length;
+    // Also strip the same bad rows out of recentGames so charts/leaderboards
+    // reflect the cleanup immediately, not just the raw import store.
+    var p = PLAYERS[name];
+    if (p && p.recentGames) {
+      p.recentGames = p.recentGames.filter(function(g) {
+        var d = safeParseDate(g.date);
+        return !(d && d > today);
+      });
+    }
+  });
+
+  saveHitting();
+  persistImportedData();
+  if (typeof syncToSupabase === 'function') setTimeout(syncToSupabase, 1000);
+  buildPlayerList();
+  renderDashboard();
+  if (typeof renderVeloLeaderboard === 'function') renderVeloLeaderboard();
+  if (typeof renderAllCharts === 'function' && PLAYERS[currentPlayer]) renderAllCharts(PLAYERS[currentPlayer]);
+  showStatus('✅ Removed ' + removed + ' future-dated entr' + (removed===1?'y':'ies'));
+  alert('Removed ' + removed + ' future-dated entr' + (removed===1?'y':'ies') + '.');
+}
+
 function handleThrowCSVUpload(input) {
   var file=input.files[0]; if(!file)return;
   var gameDate=(document.getElementById('csv-game-date')||{}).value||new Date().toISOString().slice(0,10);
@@ -19738,13 +19794,22 @@ function handleThrowCSVUpload(input) {
         if(!g[k])g[k]={p:p,d:d,arm:0};
         if(arm>g[k].arm)g[k].arm=arm;
       });
-      var hitData=JSON.parse(localStorage.getItem(HITTING_KEY)||'{}'),n=0,sk=0;
+      var hitData=JSON.parse(localStorage.getItem(HITTING_KEY)||'{}'),n=0,sk=0,badDate=0;
+      var today = new Date(); today.setHours(0,0,0,0);
       Object.values(g).forEach(function(x){
         var name=resolveRosterName(x.p); if(!name){sk++;return;}
         if(!hitData[name])hitData[name]=[];
         var i=hitData[name].findIndex(function(h){return fmtDate(h.date)===fmtDate(x.d);});
-        if(i>=0)hitData[name][i].throwV=x.arm;
-        else hitData[name].push({date:x.d,bat:0,exit:0,throwV:x.arm});
+        if(i>=0){ hitData[name][i].throwV=x.arm; n++; return; }
+        // No existing row matched this date — before creating a brand new
+        // one, sanity-check the parsed date. A mismatch here usually means
+        // this file's date format wasn't recognized and got misparsed
+        // (e.g. into a future date) rather than that this is genuinely a
+        // new game day — silently creating a row in that case is exactly
+        // what corrupted data before, so skip and report it instead.
+        var parsed = safeParseDate(x.d);
+        if (!parsed || isNaN(parsed.getTime()) || parsed > today) { badDate++; return; }
+        hitData[name].push({date:x.d,bat:0,exit:0,throwV:x.arm});
         n++;
       });
       localStorage.setItem(HITTING_KEY,JSON.stringify(hitData));
@@ -19752,8 +19817,8 @@ function handleThrowCSVUpload(input) {
       mergeHittingIntoRecentGames();
       saveHitting(); persistImportedData();
       requestAnimationFrame(() => { rebuildCMJTrends(); buildPlayerList(); renderDashboard(); });
-      showStatus('Throw velo: '+n+' roster rows imported'+(sk?' ('+sk+' non-roster skipped)':''));
-      alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':''));
+      showStatus('Throw velo: '+n+' roster rows imported'+(sk?' ('+sk+' non-roster skipped)':'')+(badDate?' ('+badDate+' skipped — unrecognized/future date)':''));
+      alert('Done! '+n+' roster rows imported.'+(sk?'\n'+sk+' non-roster players skipped.':'')+(badDate?'\n'+badDate+' row(s) skipped — date could not be matched to an existing entry and looked invalid or in the future. Check this file\'s date column format.':''));
     }catch(err){alert('Error: '+err.message);}
   };
   reader.readAsText(file,'ISO-8859-1');
