@@ -19728,23 +19728,45 @@ function handleHittingCSVUpload(input) {
 // before touching anything, and removes only what's confirmed.
 function cleanupFutureDatedData() {
   var today = new Date(); today.setHours(0,0,0,0);
-  var found = []; // {name, date, bat, exit, throwV}
+  var curYear = today.getFullYear();
 
+  // recentGames stores dates as short "Mon DD" with no year, which JS's
+  // Date parser handles inconsistently on its own (a bare "Nov 21" can
+  // silently fail to compare as being in the future at all, which is
+  // exactly what let stranded rows survive the first version of this tool).
+  // Appending the current year explicitly makes the parse well-defined.
+  function isFutureShortDate(label) {
+    var d = new Date(label + ' ' + curYear);
+    return !isNaN(d.getTime()) && d > today;
+  }
+
+  var found = []; // {name, date, bat, exit, throwV, source}
   Object.keys(importedData.hitting || {}).forEach(function(name) {
     (importedData.hitting[name] || []).forEach(function(h) {
       var d = safeParseDate(h.date);
-      if (d && d > today) found.push({ name: name, date: h.date, bat: h.bat, exit: h.exit, throwV: h.throwV });
+      if (d && d > today) found.push({ name: name, date: fmtDate(h.date), bat: h.bat, exit: h.exit, throwV: h.throwV, source: 'hitting' });
+    });
+  });
+  Object.keys(PLAYERS).forEach(function(name) {
+    var p = PLAYERS[name];
+    (p.recentGames || []).forEach(function(g) {
+      if (isFutureShortDate(g.date)) found.push({ name: name, date: g.date, bat: g.bat, exit: g.exit, throwV: g.throwV, source: 'recentGames' });
     });
   });
 
   if (!found.length) { alert('No future-dated entries found — nothing to clean up.'); return; }
 
-  var preview = found.slice(0, 15).map(function(f) {
-    return f.name + ' — ' + fmtDate(f.date) + ' (bat:' + (f.bat||0) + ' exit:' + (f.exit||0) + ' throw:' + (f.throwV||0) + ')';
-  }).join('\n');
-  var msg = 'Found ' + found.length + ' hitting/throw entr' + (found.length===1?'y':'ies') + ' dated after today:\n\n' + preview
-    + (found.length > 15 ? '\n…and ' + (found.length-15) + ' more' : '')
-    + '\n\nRemove these? This cannot be undone.';
+  var uniquePreview = [];
+  var seen = {};
+  found.forEach(function(f) {
+    var k = f.name + '|' + f.date;
+    if (seen[k]) return;
+    seen[k] = true;
+    uniquePreview.push(f.name + ' — ' + f.date + ' (bat:' + (f.bat||0) + ' exit:' + (f.exit||0) + ' throw:' + (f.throwV||0) + ')');
+  });
+  var msg = 'Found ' + uniquePreview.length + ' future-dated entr' + (uniquePreview.length===1?'y':'ies') + ':\n\n' + uniquePreview.slice(0,15).join('\n')
+    + (uniquePreview.length > 15 ? '\n…and ' + (uniquePreview.length-15) + ' more' : '')
+    + '\n\nRemove these (from both the raw import store and each athlete\'s game log)? This cannot be undone.';
   if (!confirm(msg)) return;
 
   var removed = 0;
@@ -19755,15 +19777,13 @@ function cleanupFutureDatedData() {
       return !(d && d > today);
     });
     removed += before - importedData.hitting[name].length;
-    // Also strip the same bad rows out of recentGames so charts/leaderboards
-    // reflect the cleanup immediately, not just the raw import store.
+  });
+  Object.keys(PLAYERS).forEach(function(name) {
     var p = PLAYERS[name];
-    if (p && p.recentGames) {
-      p.recentGames = p.recentGames.filter(function(g) {
-        var d = safeParseDate(g.date);
-        return !(d && d > today);
-      });
-    }
+    if (!p.recentGames) return;
+    var before = p.recentGames.length;
+    p.recentGames = p.recentGames.filter(function(g) { return !isFutureShortDate(g.date); });
+    removed += before - p.recentGames.length;
   });
 
   saveHitting();
