@@ -7358,12 +7358,17 @@ function calcACWR(rows, refDate) {
 }
 
 function computeLiveACWR(playerName) {
-  var rows = [];
-  try {
-    var statcast = (typeof importedData !== 'undefined' && importedData.statcast) ? importedData.statcast : {};
-    var key = Object.keys(statcast).find(k=>k===playerName)||Object.keys(statcast).find(k=>k.toLowerCase()===playerName.toLowerCase());
-    if (key) rows = (statcast[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
-  } catch(e) {}
+  var p = PLAYERS[playerName];
+  if (!p || !p.recentGames || !p.recentGames.length) return null;
+  // Source from p.recentGames rather than importedData.statcast — recentGames
+  // reliably stays current no matter which daily import path is actually
+  // used (Statcast file vs. HE Runs), whereas importedData.statcast only
+  // gets written by one specific button and silently goes stale the moment
+  // that one isn't used, even while everything else keeps updating fine.
+  var rows = p.recentGames
+    .filter(function(g){ return g.date; })
+    .map(function(g){ return { date: g.date, heDist: g.he||0, dist: g.dist||0 }; })
+    .sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
   if (!rows.length) return null;
   // Use last game date as ref — avoids EWMA decay from off days after last game
   var lastDate = safeParseDate(rows[rows.length-1].date);
@@ -7383,12 +7388,15 @@ function computeLiveACWR(playerName) {
 //   ACWR(L) = (λa·L + (1-λa)·a) / (λc·L + (1-λc)·c) = t
 //   → L(t) = [t(1-λc)c − (1-λa)a] / (λa − t·λc)
 function calcSafeDistToday(playerName) {
-  var rows = [];
-  try {
-    var statcast = (typeof importedData !== 'undefined' && importedData.statcast) ? importedData.statcast : {};
-    var key = Object.keys(statcast).find(k=>k===playerName)||Object.keys(statcast).find(k=>k.toLowerCase()===playerName.toLowerCase());
-    if (key) rows = (statcast[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
-  } catch(e) {}
+  var p = PLAYERS[playerName];
+  if (!p || !p.recentGames || !p.recentGames.length) return null;
+  // Same source switch as computeLiveACWR — p.recentGames stays current
+  // regardless of which daily import path was used; importedData.statcast
+  // does not.
+  var rows = p.recentGames
+    .filter(function(g){ return g.date; })
+    .map(function(g){ return { date: g.date, heDist: g.he||0, dist: g.dist||0 }; })
+    .sort(function(a,b){ return safeParseDate(a.date)-safeParseDate(b.date); });
   if (!rows.length) return null;
 
   const la = 2/(7+1), lc = 2/(28+1);
