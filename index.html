@@ -16657,16 +16657,6 @@ function rebuildCMJTrends() {
   });
 }
 
-function clearAllImportedData() {
-  if (!confirm('Clear all imported data and reset to defaults?')) return;
-  importedData = { cmj:{}, abcmj:{}, statcast:{}, hitting:{} };
-  localStorage.removeItem(IMPORTED_DATA_KEY);
-  localStorage.removeItem(PLAYERS_STATE_KEY);
-  localStorage.removeItem(WELLNESS_KEY);
-  // Note: 1RM, coach notes, exercise library preserved — only imported data cleared
-  location.reload();
-}
-
 // ── Roster name normalizer (handles minor differences in spacing/punctuation)
 function normalizeName(n) {
   return n.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z ]/g,'').replace(/\s+/g,' ');
@@ -17363,10 +17353,12 @@ function addPitcherRow(data={}) {
 
 function applyPitcherData() { /* pitcher section removed */ }
 function clearAllImportedData() {
-  if (!confirm('Reset all imported data? This will revert to placeholder values.')) return;
-  Object.keys(importedData).forEach(k => { importedData[k] = {}; });
-  logImport('All imported data cleared. Reverted to defaults.', 'warn');
-  showStatus('⚠ All imported data cleared.', 'warn');
+  if (!confirm('Reset all imported data? This clears CMJ, statcast, hitting, and wellness data and reloads the page. 1RM, coach notes, and the exercise library are preserved.')) return;
+  importedData = { cmj:{}, abcmj:{}, statcast:{}, hitting:{} };
+  localStorage.removeItem(IMPORTED_DATA_KEY);
+  localStorage.removeItem(PLAYERS_STATE_KEY);
+  localStorage.removeItem(WELLNESS_KEY);
+  location.reload();
 }
 
 
@@ -19562,43 +19554,6 @@ function loadAllData() {
   if(ab){try{importedData.abcmj=JSON.parse(ab);}catch(e){}}else if(old&&old.abcmj)importedData.abcmj=old.abcmj;
 }
 // Legacy "Last, F" → roster name map (kept for backward-compat with old CSV format)
-function resolveRosterName(raw) {
-  if (!raw) return null;
-  raw = raw.trim();
-  if (HITTING_NAME_MAP[raw]) return HITTING_NAME_MAP[raw];
-  return findRosterMatch(raw) || null;
-}
-function mergeHittingIntoRecentGames() {
-  Object.entries(importedData.hitting).forEach(function(entry) {
-    var name=entry[0], records=entry[1];
-    var p=PLAYERS[name]; if(!p) return;
-    if(!p.recentGames) p.recentGames=[];
-    records.forEach(function(h) {
-      var dateStr=fmtDate(h.date);
-      var existing=p.recentGames.find(function(g){return g.date===dateStr;});
-      if(existing) {
-        if(h.bat){existing.bat=h.bat; if(h.bat>(p.bests.bat||0))p.bests.bat=h.bat;}
-        if(h.exit){existing.exit=h.exit; if(h.exit>(p.bests.exit||0))p.bests.exit=h.exit;}
-        if(h.throwV){existing.throwV=h.throwV; if(h.throwV>(p.bests.throwV||0))p.bests.throwV=h.throwV;}
-      } else {
-        p.recentGames.push({date:dateStr,bat:h.bat||0,exit:h.exit||0,throwV:h.throwV||0,
-          speed:0,he:0,dist:0,midEff:0,highEff:0,
-          jump:p.latestJump||0,ppbm:p.latestPPBM||0,readiness:p.readiness||1.0,acwr:p.acwr||1.0,status:'YELLOW'});
-        p.recentGames.sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);});
-        if(h.bat&&h.bat>(p.bests.bat||0))p.bests.bat=h.bat;
-        if(h.exit&&h.exit>(p.bests.exit||0))p.bests.exit=h.exit;
-        if(h.throwV&&h.throwV>(p.bests.throwV||0))p.bests.throwV=h.throwV;
-      }
-    });
-    var lb=records.slice().reverse().find(function(h){return h.bat;});
-    var le=records.slice().reverse().find(function(h){return h.exit;});
-    var lt=records.slice().reverse().find(function(h){return h.throwV;});
-    if(lb)p.latestBat=lb.bat;
-    if(le)p.latestExit=le.exit;
-    if(lt)p.latestThrow=lt.throwV;
-  });
-}
-
 var HITTING_NAME_MAP = {
   'Crow-Armstrong, P':'Pete Crow-Armstrong','Hoerner, N':'Nico Hoerner',
   'Swanson, D':'Dansby Swanson','Shaw, M':'Matt Shaw','Kelly, C':'Carson Kelly',
@@ -21566,7 +21521,7 @@ function rtpCreateProtocol(btn) {
 function rtpPlanWorkload() {
   var p = RTP_ACTIVE_PROTOCOL;
   if (!p) return;
-  var phase = p.phases[p.currentPhase] || p.phases[0];
+  var phase = p.phases[p._viewPhase != null ? p._viewPhase : p.currentPhase] || p.phases[0];
   if (!phase) { showStatus('Phase data missing'); return; }
 
   var phaseTarget = phase.workload || {run:[0,1],throw:[0,1],swing:[0,1],lift:[0,1]};
@@ -21743,11 +21698,12 @@ function rtpSavePlan2(count, dates) {
       notes:   (document.getElementById('pnotes-'+i)||{}).value||'',
     });
   }
-  p.phases[p.currentPhase].plannedWorkload = plan;
-  p.phases[p.currentPhase].targetAcwr = {};
+  var targetPhaseIdx = p._viewPhase != null ? p._viewPhase : p.currentPhase;
+  p.phases[targetPhaseIdx].plannedWorkload = plan;
+  p.phases[targetPhaseIdx].targetAcwr = {};
   RTP_STREAMS.forEach(function(s) {
     var el=document.getElementById('tacwr-'+s);
-    if (el) p.phases[p.currentPhase].targetAcwr[s]=parseFloat(el.value)||1;
+    if (el) p.phases[targetPhaseIdx].targetAcwr[s]=parseFloat(el.value)||1;
   });
   rtpSave();
   var m=document.getElementById('rtp-plan-modal'); if(m) m.remove();
@@ -22024,7 +21980,8 @@ function rtpRenderBuildPlanSection(p) {
 function rtpEditPhase() {
   var p = RTP_ACTIVE_PROTOCOL;
   if (!p) return;
-  var phase = p.phases[p.currentPhase];
+  var editIdx = p._viewPhase != null ? p._viewPhase : p.currentPhase;
+  var phase = p.phases[editIdx];
   if (!phase) return;
 
   var critRows = (phase.criteria||[]).map(function(c, i) {
@@ -22048,7 +22005,7 @@ function rtpEditPhase() {
   var modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;';
   modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:520px;max-width:95vw;">'
-    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:14px;">✎ Edit Phase '+(p.currentPhase+1)+'</div>'
+    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:14px;">✎ Edit Phase '+(editIdx+1)+'</div>'
     + '<div style="display:grid;grid-template-columns:1fr 90px;gap:10px;margin-bottom:12px;">'
     + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Phase Name</label>'
     + '<input id="ep-name" value="'+String(phase.name).replace(/"/g,'&quot;')+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;"></div>'
@@ -22090,7 +22047,7 @@ function rtpAddCriteriaRow() {
 function rtpSavePhaseEdit(btn) {
   var p = RTP_ACTIVE_PROTOCOL;
   if (!p) return;
-  var phase = p.phases[p.currentPhase];
+  var phase = p.phases[p._viewPhase != null ? p._viewPhase : p.currentPhase];
   if (!phase) return;
 
   phase.name = document.getElementById('ep-name').value.trim() || phase.name;
@@ -22481,6 +22438,7 @@ function rtpLiveProj() {
 function rtpLinkProgram() {
   var p = RTP_ACTIVE_PROTOCOL;
   if (!p) return;
+  var linkIdx = p._viewPhase != null ? p._viewPhase : p.currentPhase;
 
   // Get saved programs for this athlete
   var athleteProgs = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : [])
@@ -22499,7 +22457,7 @@ function rtpLinkProgram() {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
   modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:420px;max-width:95vw;">'
     + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">🔗 Link Program to Phase</div>'
-    + '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">'+p.phases[p.currentPhase].name+'</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">'+p.phases[linkIdx].name+'</div>'
     + '<div style="margin-bottom:14px;">'
     + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Select Program</label>'
     + '<select id="rtp-link-prog-sel" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;">'
@@ -22520,20 +22478,21 @@ function rtpConfirmLinkProgram(btn) {
   var progId = document.getElementById('rtp-link-prog-sel').value;
   var prog  = (SAVED_PROGRAMS||[]).find(function(pr){ return String(pr.id) === String(progId); });
   if (!prog || !p) return;
+  var linkIdx = p._viewPhase != null ? p._viewPhase : p.currentPhase;
 
-  p.phases[p.currentPhase].linkedProgramId   = String(progId);
-  p.phases[p.currentPhase].linkedProgramName = prog.name;
+  p.phases[linkIdx].linkedProgramId   = String(progId);
+  p.phases[linkIdx].linkedProgramName = prog.name;
   rtpSave();
 
   btn.closest('div[style*="fixed"]').remove();
   rtpRenderDetail();
-  showStatus('✅ "'+prog.name+'" linked to '+p.phases[p.currentPhase].name);
+  showStatus('✅ "'+prog.name+'" linked to '+p.phases[linkIdx].name);
 }
 
 function rtpAssignLinkedProgram() {
   var p = RTP_ACTIVE_PROTOCOL;
   if (!p) return;
-  var phase = p.phases[p.currentPhase];
+  var phase = p.phases[p._viewPhase != null ? p._viewPhase : p.currentPhase];
   if (!phase.linkedProgramId) { showStatus('Link a program to this phase first'); return; }
 
   // Set athlete and trigger the push modal
@@ -22583,6 +22542,14 @@ function rtpRenderDetail() {
     return;
   }
   if (p.currentPhase >= p.phases.length || p.currentPhase < 0) p.currentPhase = 0;
+  // Which phase is being VIEWED/EDITED in this detail pane — separate from
+  // p.currentPhase (the athlete's real, active phase). Lets a coach open and
+  // plan a locked future phase (criteria, workload targets, linked program)
+  // without that phase becoming active or gating being bypassed. Defaults to
+  // the real current phase whenever nothing else has been explicitly selected.
+  if (p._viewPhase === undefined || p._viewPhase === null || p._viewPhase >= p.phases.length || p._viewPhase < 0) {
+    p._viewPhase = p.currentPhase;
+  }
 
   // Migrate old phase data — ensure all required fields exist
   p.phases.forEach(function(ph) {
@@ -22600,10 +22567,18 @@ function rtpRenderDetail() {
   rtpSave();
 
   // Declare phase BEFORE building any HTML that references it
-  var phase = p.phases[p.currentPhase] || p.phases[0];
+  var phase = p.phases[p._viewPhase] || p.phases[p.currentPhase] || p.phases[0];
 
   var daysIn = Math.floor((Date.now() - new Date(p.created).getTime()) / 86400000);
   var injDate = p.injuryDate ? new Date(p.injuryDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+
+  var viewingOtherPhase = p._viewPhase !== p.currentPhase;
+  var planningBanner = viewingOtherPhase
+    ? '<div style="background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.3);border-radius:8px;padding:9px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
+      + '<span style="font-size:11px;color:#60a5fa;">📋 Planning <b>'+phase.name+'</b>'+(phase.status==='locked'?' (locked — not yet active)':'')+' — the athlete\'s real active phase is still <b>'+p.phases[p.currentPhase].name+'</b></span>'
+      + '<button onclick="p=RTP_ACTIVE_PROTOCOL;p._viewPhase=p.currentPhase;rtpRenderDetail();" style="font-size:10px;padding:4px 10px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);border-radius:5px;color:#60a5fa;cursor:pointer;white-space:nowrap;">← Back to current phase</button>'
+      + '</div>'
+    : '';
 
   // Header
   var html = '<div style="margin-bottom:20px;">'
@@ -22628,17 +22603,23 @@ function rtpRenderDetail() {
     + '</div>'
     + '</div>';
 
-  // Phase progress bar
+  html += planningBanner;
+
+  // Phase progress bar — every phase is clickable now, including locked
+  // ones, so a coach can open and plan ahead. Locked phases just can't be
+  // reached by rtpAdvancePhase until their criteria are actually met; that
+  // gating is unaffected by what's merely being viewed here.
   html += '<div style="display:flex;gap:4px;margin-bottom:16px;">';
-  p.phases.forEach(function(phase, i) {
-    var active = i === p.currentPhase;
-    var done   = phase.status === 'complete';
-    var locked = phase.status === 'locked';
-    var label  = done ? '✓' : locked ? '🔒' : ('P'+(i+1));
-    var hint   = (phase.name || 'Phase '+(i+1)) + (done ? ' — complete' : locked ? ' — locked until earlier phases clear' : active ? ' — current phase' : '');
-    html += '<div onclick="rtpSelectPhase('+i+')" title="'+hint+'" style="flex:1;cursor:'+(locked?'default':'pointer')+';">'
-      + '<div style="height:6px;border-radius:3px;background:'+(done?phase.color:active?phase.color:'rgba(255,255,255,0.08)')+';opacity:'+(locked?0.3:1)+';"></div>'
-      + '<div style="font-size:9px;color:'+(active?phase.color:done?'#4ade80':'var(--text3)')+';margin-top:3px;text-align:center;font-weight:'+(active?700:400)+';">'+label+'</div>'
+  p.phases.forEach(function(ph, i) {
+    var active   = i === p.currentPhase;
+    var viewing  = i === p._viewPhase;
+    var done     = ph.status === 'complete';
+    var locked   = ph.status === 'locked';
+    var label    = done ? '✓' : locked ? '🔒' : ('P'+(i+1));
+    var hint     = (ph.name || 'Phase '+(i+1)) + (done ? ' — complete' : locked ? ' — locked (click to plan ahead — won\'t activate it)' : active ? ' — current phase' : '');
+    html += '<div onclick="rtpSelectPhase('+i+')" title="'+hint+'" style="flex:1;cursor:pointer;">'
+      + '<div style="height:6px;border-radius:3px;background:'+(done?ph.color:active?ph.color:'rgba(255,255,255,0.08)')+';opacity:'+(locked?0.45:1)+';'+(viewing&&!active?'outline:2px solid rgba(96,165,250,0.6);outline-offset:1px;':'')+'"></div>'
+      + '<div style="font-size:9px;color:'+(active?ph.color:done?'#4ade80':viewing?'#60a5fa':'var(--text3)')+';margin-top:3px;text-align:center;font-weight:'+(active||viewing?700:400)+';">'+label+'</div>'
       + '</div>';
   });
   html += '</div></div>';
@@ -22659,7 +22640,7 @@ function rtpRenderDetail() {
 
   phase.criteria.forEach(function(c, ci) {
     html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);">'
-      + '<div onclick="rtpToggleCriteria('+p.currentPhase+','+ci+')" style="width:18px;height:18px;border-radius:4px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;'
+      + '<div onclick="rtpToggleCriteria('+(p._viewPhase!=null?p._viewPhase:p.currentPhase)+','+ci+')" style="width:18px;height:18px;border-radius:4px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;'
       + (c.met ? 'background:rgba(74,222,128,0.2);border:1px solid rgba(74,222,128,0.4);color:#4ade80;' : 'background:rgba(255,255,255,0.05);border:1px solid var(--border2);color:transparent;')+'">✓</div>'
       + '<div style="flex:1;">'
       + '<div style="font-size:11px;color:'+(c.met?'#4ade80':'var(--text)')+';text-decoration:'+(c.met?'line-through':'none')+';">'+c.text+'</div>'
@@ -22678,11 +22659,16 @@ function rtpRenderDetail() {
       + '</div>';
   }
 
+  // Advance Phase only makes sense for the REAL current phase — advancing
+  // while looking at a different (planned-ahead) phase would move progress
+  // for a phase that isn't even on screen.
   html += '<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">'
     + '<div style="font-size:10px;color:var(--text3);">'+metCount+' / '+phase.criteria.length+' criteria met</div>'
-    + (p.currentPhase < p.phases.length - 1
-      ? '<button onclick="rtpAdvancePhase()" '+(allMet?'':'disabled title="Meet all criteria first"')+' style="padding:5px 12px;background:'+(allMet?'rgba(74,222,128,0.2)':'rgba(255,255,255,0.05)')+';border:1px solid '+(allMet?'rgba(74,222,128,0.4)':'var(--border)')+';border-radius:6px;color:'+(allMet?'#4ade80':'var(--text3)')+';font-size:10px;font-weight:600;cursor:'+(allMet?'pointer':'not-allowed')+';">Advance Phase →</button>'
-      : (allMet ? '<button onclick="rtpClearProtocol()" style="padding:5px 12px;background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;">✓ Mark Cleared</button>' : ''))
+    + (viewingOtherPhase
+      ? '<div style="font-size:9px;color:var(--text3);font-style:italic;">Switch to the current phase to advance</div>'
+      : (p.currentPhase < p.phases.length - 1
+        ? '<button onclick="rtpAdvancePhase()" '+(allMet?'':'disabled title="Meet all criteria first"')+' style="padding:5px 12px;background:'+(allMet?'rgba(74,222,128,0.2)':'rgba(255,255,255,0.05)')+';border:1px solid '+(allMet?'rgba(74,222,128,0.4)':'var(--border)')+';border-radius:6px;color:'+(allMet?'#4ade80':'var(--text3)')+';font-size:10px;font-weight:600;cursor:'+(allMet?'pointer':'not-allowed')+';">Advance Phase →</button>'
+        : (allMet ? '<button onclick="rtpClearProtocol()" style="padding:5px 12px;background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;">✓ Mark Cleared</button>' : '')))
     + '</div>'
     + '</div>';
 
@@ -22805,6 +22791,7 @@ function rtpAdvancePhase() {
   p.currentPhase++;
   p.phases[p.currentPhase].status    = 'active';
   p.phases[p.currentPhase].startedAt = new Date().toISOString();
+  p._viewPhase = p.currentPhase; // follow the view to the newly-active phase
 
   rtpSave();
   rtpRenderLists();
@@ -22814,8 +22801,12 @@ function rtpAdvancePhase() {
 
 function rtpSelectPhase(idx) {
   var p = RTP_ACTIVE_PROTOCOL;
-  if (!p || p.phases[idx].status === 'locked') return;
-  p.currentPhase = idx;
+  if (!p || !p.phases[idx]) return;
+  // Selecting a phase here only changes what's being VIEWED/planned — it
+  // never touches p.currentPhase (the athlete's real active phase), so
+  // opening a locked future phase to plan it can't accidentally activate it
+  // or bypass the real progression gating in rtpAdvancePhase.
+  p._viewPhase = idx;
   rtpRenderDetail();
 }
 
