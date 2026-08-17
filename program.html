@@ -438,10 +438,15 @@ var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
   var manifestLink = document.getElementById('pwa-manifest');
   if (manifestLink) manifestLink.setAttribute('href', manifestUrl);
 
-  // Service worker — best effort, never blocks the page if it fails
+  // Service worker — scoped explicitly to program.html only. Registering
+  // without an explicit scope defaults to the directory containing this
+  // file, which would ALSO cover index.html (the coach dashboard) sitting
+  // right next to it — silently serving cached, stale copies of the coach
+  // tool to anyone whose browser had ever opened an athlete's program link.
+  // That was a real, live bug: this scope option is the fix.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('./sw.js').catch(function(e){ console.warn('[PWA] SW registration failed:', e); });
+      navigator.serviceWorker.register('./sw.js', { scope: './program.html' }).catch(function(e){ console.warn('[PWA] SW registration failed:', e); });
     });
   }
 
