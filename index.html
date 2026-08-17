@@ -22231,6 +22231,16 @@ function wlLogs() {
 // into the same {date, run} shape the manual log system expects, using
 // total distance as the volume and letting RPE default to 6 (same default
 // wlSessionLoad and wlSafeRange already use for unspecified RPE).
+// Local calendar-day "today" as YYYY-MM-DD, without going through UTC.
+// new Date().toISOString() converts to UTC first, which can silently shift
+// the date by one depending on the user's timezone and time of day (e.g.
+// late evening in a timezone behind UTC can roll over to "tomorrow" in UTC
+// terms) — this reads the browser's own local date fields directly instead.
+function wlTodayLocal() {
+  var d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
 function wlAutoRunLogs(name) {
   var p = PLAYERS[name];
   if (!p || !p.recentGames) return [];
@@ -22249,7 +22259,7 @@ function wlRender() {
     return;
   }
   var logs = wlLogs();
-  var today = new Date().toISOString().slice(0,10);
+  var today = wlTodayLocal();
 
   // Current ACWR + today's safe range per stream
   var streamCards = RTP_STREAMS.map(function(s) {
@@ -22305,7 +22315,7 @@ function wlRender() {
 
 function wlLogModal() {
   if (!WL_ACTIVE) return;
-  var today = new Date().toISOString().slice(0,10);
+  var today = wlTodayLocal();
   var modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
   modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:400px;max-width:95vw;">'
@@ -22849,7 +22859,7 @@ function rtpLogWorkload() {
   var modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
 
-  var today = new Date().toISOString().slice(0,10);
+  var today = wlTodayLocal();
 
   modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:420px;max-width:95vw;">'
     + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">📊 Log Workload — '+p.athlete+'</div>'
