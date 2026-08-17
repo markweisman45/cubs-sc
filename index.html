@@ -22224,6 +22224,23 @@ function wlLogs() {
   return WL_DATA[WL_ACTIVE].logs;
 }
 
+// The Run stream is the only one with a clean CSV-derived equivalent (total
+// distance, already tracked everywhere else in the app) — Throw only has
+// velocity (not volume) and Lift has no data source at all in any import,
+// so those stay manual-entry only via wlLogs(). This converts recentGames
+// into the same {date, run} shape the manual log system expects, using
+// total distance as the volume and letting RPE default to 6 (same default
+// wlSessionLoad and wlSafeRange already use for unspecified RPE).
+function wlAutoRunLogs(name) {
+  var p = PLAYERS[name];
+  if (!p || !p.recentGames) return [];
+  return p.recentGames.filter(function(g){ return g.date && g.dist; }).map(function(g) {
+    var d = safeParseDate(g.date);
+    var iso = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    return { date: iso, run: g.dist };
+  });
+}
+
 function wlRender() {
   var el = document.getElementById('wl-body');
   if (!el) return;
@@ -22236,18 +22253,25 @@ function wlRender() {
 
   // Current ACWR + today's safe range per stream
   var streamCards = RTP_STREAMS.map(function(s) {
-    var proj = wlProjectACWR(logs, [{date: today, run:0, throw:0, swing:0, lift:0, rpe:6}], s);
+    // Run pulls from CSV imports automatically; Throw/Swing/Lift need the
+    // manual log below (Throw has no volume data in any import, Lift has
+    // no data source at all, Swing is manual by choice).
+    var streamLogs = (s === 'run') ? wlAutoRunLogs(WL_ACTIVE) : logs;
+    var proj = wlProjectACWR(streamLogs, [{date: today, run:0, throw:0, swing:0, lift:0, rpe:6}], s);
     // Current ACWR based only on actuals through yesterday + zero today
     var acwrToday = proj.length ? proj[0].acwr : null;
-    var range = wlSafeRange(logs, [], s, today, 6);
+    var range = wlSafeRange(streamLogs, [], s, today, 6);
     var col = acwrToday === null ? 'var(--text3)' : (acwrToday >= WL_BAND[0] && acwrToday <= WL_BAND[1]) ? '#4ade80' : (acwrToday < WL_BAND[0] ? '#fcd34d' : '#f87171');
     return '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;">'
-      + '<div style="font-size:12px;color:var(--text2);margin-bottom:6px;">'+RTP_STREAM_ICONS[s]+' '+RTP_STREAM_LABELS[s]+'</div>'
+      + '<div style="font-size:12px;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">'
+      +   '<span>'+RTP_STREAM_ICONS[s]+' '+RTP_STREAM_LABELS[s]+'</span>'
+      +   '<span style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;">'+(s==='run'?'auto · csv':'manual')+'</span>'
+      + '</div>'
       + '<div style="font-size:22px;font-weight:800;color:'+col+';">'+(acwrToday===null?'—':acwrToday.toFixed(2))+'</div>'
       + '<div style="font-size:9px;color:var(--text3);margin-bottom:8px;">ACWR if today = rest</div>'
       + (range
           ? '<div style="font-size:10px;color:#60a5fa;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.15);border-radius:6px;padding:6px 8px;">Safe today: <b>'+range.minVol+'–'+range.maxVol+'</b> '+RTP_STREAM_UNITS[s]+' <span style="color:var(--text3);">(@RPE 6)</span></div>'
-          : '<div style="font-size:10px;color:var(--text3);">No baseline — log workload</div>')
+          : '<div style="font-size:10px;color:var(--text3);">No baseline'+(s==='run'?' — no CSV distance data yet':' — log workload')+'</div>')
       + '</div>';
   }).join('');
 
