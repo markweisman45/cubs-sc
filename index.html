@@ -7188,28 +7188,26 @@ function renderPerfTable(p) {
   const tbody = document.getElementById('perfTableBody');
   const sc = s => s === 'GREEN' ? 'green' : s === 'RED' ? 'red' : 'yellow';
 
-  // Load statcast from localStorage for live ACWR calc
-  let allSC = [];
-  try {
-    const stored = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
-    const key = Object.keys(stored).find(k=>k===currentPlayer) || Object.keys(stored).find(k=>k.toLowerCase()===currentPlayer.toLowerCase());
-    if (key) allSC = (stored[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
-  } catch(e) {}
+  // Rows for live ACWR calc — sourced from p.recentGames (reliably current
+  // no matter which daily import path was used), not the statcast-only
+  // store. That store silently goes stale the moment a different import
+  // (e.g. HE Runs instead of Statcast file) is used, and every row whose
+  // date it couldn't match was falling back to the SAME frozen last entry
+  // — which is exactly why ACWR looked identical on every row here.
+  const acwrRows = p.recentGames
+    .filter(g => g.date)
+    .map(g => ({ date: g.date, heDist: g.he||0, dist: g.dist||0 }))
+    .sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
 
   function calcRowACWR(dateStr) {
-    if (!allSC.length) return 1.0;
-    // Match formatted date "Apr 26" to raw statcast dates
-    let match = allSC.find(r => fmtDate(r.date) === dateStr);
-    if (!match) {
-      // Fall back to nearest available statcast date
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const parseShort = s => { const [m,d] = s.split(' '); return months.indexOf(m)*31+parseInt(d); };
-      const target = parseShort(dateStr);
-      const before = allSC.filter(r => parseShort(fmtDate(r.date)) <= target);
-      match = before.length ? before[before.length-1] : allSC[allSC.length-1];
-    }
+    if (!acwrRows.length) return 1.0;
+    // dateStr always comes from p.recentGames itself (see the .map below),
+    // and acwrRows is built from that same array, so this always matches —
+    // no "nearest available" fallback needed, which is what caused the
+    // frozen value before.
+    const match = acwrRows.find(r => r.date === dateStr);
     if (!match) return 1.0;
-    return calcACWR(allSC, safeParseDate(match.date)).acwr;
+    return calcACWR(acwrRows, safeParseDate(match.date)).acwr;
   }
 
   tbody.innerHTML = p.recentGames.slice(-14).map(g => {
@@ -7224,15 +7222,8 @@ function renderPerfTable(p) {
       <td>${g.exit  ? g.exit.toFixed(1)  : '—'}</td>
       <td>${g.throwV ? g.throwV.toFixed(1): '—'}</td>
       <td>${(function(){
-        var allRows=[];
-        try{var s=JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
-          var k=Object.keys(s).find(function(k){return k===currentPlayer;})||Object.keys(s).find(function(k){return k.toLowerCase()===currentPlayer.toLowerCase();});
-          if(k) allRows=(s[k]||[]).slice().sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);});
-        }catch(e){}
-        var match=allRows.find(function(r){return fmtDate(r.date)===g.date;});
-        if(!match) return '—';
-        var ms=computeMonotonyStrain(currentPlayer, safeParseDate(match.date));
-        return ms.strain>0?ms.strain.toLocaleString():'—';
+        var ms = computeMonotonyStrain(currentPlayer, safeParseDate(g.date));
+        return ms.strain>0 ? ms.strain.toLocaleString() : '—';
       })()}</td>
       <td>${liveAcwr.toFixed(3)}</td>
       <td><span class="pill ${sc(liveStatus)}">${liveStatus}</span></td>
@@ -7971,20 +7962,20 @@ function renderAllCharts(p) {
   mkCMJChart('abcmjJumpChart', clAB, cmjAB.map(c=>c.jump),       {color:'rgba(239,68,68,0.9)',  colorRgb:'239,68,68'});
   mkCMJChart('abcmjPPBMChart', clAB, cmjAB.map(c=>c.ppbm),       {color:'rgba(245,158,11,0.9)',colorRgb:'245,158,11'});
   mkCMJChart('abcmjVTOChart',  clAB, cmjAB.map(c=>c.vto||null),  {color:'rgba(6,182,212,0.9)', colorRgb:'6,182,212'});
-  // ACWR chart — read from localStorage, use calcACWR (same formula as hero + team list)
-  const acwrKey = p._name || currentPlayer;
-  let allStatcast = [];
-  try {
-    const stored = JSON.parse(localStorage.getItem(STATCAST_KEY)||'{}');
-    const key = Object.keys(stored).find(k=>k===acwrKey)||Object.keys(stored).find(k=>k.toLowerCase()===acwrKey.toLowerCase());
-    if (key) allStatcast = (stored[key]||[]).slice().sort((a,b)=>safeParseDate(a.date)-safeParseDate(b.date));
-  } catch(e) {}
+  // ACWR chart — sourced from p.recentGames (reliably current no matter
+  // which daily import path was used), not the statcast-only store, which
+  // was cutting this chart off wherever statcast-specific imports last ran
+  // even while everything else on screen kept updating fine.
+  const acwrRowsForChart = p.recentGames
+    .filter(g => g.date)
+    .map(g => ({ date: g.date, heDist: g.he||0, dist: g.dist||0 }))
+    .sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
 
   let ac;
-  if (allStatcast.length >= 1) {
-    const displayRows = allStatcast.slice(-20); // last 20 games
+  if (acwrRowsForChart.length >= 1) {
+    const displayRows = acwrRowsForChart.slice(-20); // last 20 games
     ac = displayRows.map(r => {
-      const res = calcACWR(allStatcast, safeParseDate(r.date));
+      const res = calcACWR(acwrRowsForChart, safeParseDate(r.date));
       return { date:fmtDate(r.date), he:res.heAcwr, td:res.tdAcwr, comb:res.acwr };
     });
   } else {
