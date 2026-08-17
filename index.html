@@ -17163,8 +17163,15 @@ function applyStatcastData() {
     });
     // Re-sort chronologically
     p.recentGames.sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
-    // Use the full merged set for ACWR calculation
-    const rows_for_acwr = allRows;
+    // Use p.recentGames (just updated above) rather than the statcast-only
+    // store — recentGames reflects whichever daily import path was actually
+    // used and stays current even when statcast-specific imports lag or
+    // aren't used every day, whereas allRows only ever reflects this one
+    // narrower source and can silently be stale.
+    const rows_for_acwr = p.recentGames
+      .filter(g => g.date)
+      .map(g => ({ date: g.date, heDist: g.he||0, dist: g.dist||0, speed: g.speed||0 }))
+      .sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
 
     // Update latest values
     const last = rows_for_acwr[rows_for_acwr.length - 1];
