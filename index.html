@@ -904,10 +904,34 @@ body {
       <div id="dash-cmj" class="page">
         <!-- CMJ filter bar -->
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-          <div id="cmjFilterBar" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+          <div id="cmjFilterBar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <button onclick="cmjSetRange('all')"  id="cmj-range-all"  class="cmj-range-btn" style="padding:5px 11px;border-radius:6px;border:1px solid rgba(96,165,250,0.4);background:rgba(96,165,250,0.15);color:#60a5fa;font-size:11px;font-weight:700;cursor:pointer;">All Time</button>
+            <button onclick="cmjSetRange('30')"   id="cmj-range-30"   class="cmj-range-btn" style="padding:5px 11px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:11px;cursor:pointer;">Last 30d</button>
+            <button onclick="cmjSetRange('90')"   id="cmj-range-90"   class="cmj-range-btn" style="padding:5px 11px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:11px;cursor:pointer;">Last 90d</button>
+            <button onclick="cmjSetRange('season')" id="cmj-range-season" class="cmj-range-btn" style="padding:5px 11px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:11px;cursor:pointer;">This Season</button>
+            <div style="display:flex;align-items:center;gap:5px;margin-left:4px;">
+              <input type="date" id="cmj-range-from" onchange="cmjSetCustomRange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-size:11px;">
+              <span style="color:var(--text3);font-size:11px;">to</span>
+              <input type="date" id="cmj-range-to" onchange="cmjSetCustomRange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-size:11px;">
+            </div>
+          </div>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text3);margin-left:auto;">
             <input type="checkbox" id="cmjShowPR" checked onchange="rebuildCMJTrends()"> Show PRs
           </label>
+        </div>
+
+        <!-- ── Compare Metrics (overlay) ── -->
+        <div class="card section-mb">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+            <div class="card-title" style="margin:0;">📊 Compare Metrics — Overlay</div>
+            <div style="display:flex;gap:4px;">
+              <button onclick="cmjSetOverlayType('CMJ')" id="cmj-overlay-type-CMJ" style="padding:4px 10px;border-radius:5px;border:1px solid rgba(59,122,196,0.4);background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);font-size:10px;font-weight:700;cursor:pointer;">No Arm Swing</button>
+              <button onclick="cmjSetOverlayType('ABCMJ')" id="cmj-overlay-type-ABCMJ" style="padding:4px 10px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--text3);font-size:10px;cursor:pointer;">Arm Swing</button>
+            </div>
+          </div>
+          <div id="cmj-overlay-metric-picker" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+          <div style="font-size:9px;color:var(--text3);margin-bottom:8px;">Each metric is normalized to % of its own peak in the selected range, so different units (cm, W/kg, m/s, N/m) can be compared on one chart — hover a point for the real value.</div>
+          <div class="chart-wrap xl"><canvas id="cmjOverlayChart"></canvas></div>
         </div>
 
         <!-- ── CMJ (No Arm Swing) ── -->
@@ -7827,7 +7851,8 @@ function renderAllCharts(p) {
         let yr = 2020;
         if (c.rawDate) { yr = new Date(c.rawDate).getFullYear(); }
         else { const m = (c.date||'').match(/\b(20\d{2})\b/); yr = m ? parseInt(m[1]) : new Date().getFullYear(); }
-        return yr >= 2024;
+        if (yr < 2024) return false;
+        return cmjInSelectedRange(c.rawDate || c.date);
       })
       .sort((a,b) => safeParseDate(a.rawDate||a.date) - safeParseDate(b.rawDate||b.date));
   };
@@ -7836,6 +7861,7 @@ function renderAllCharts(p) {
   const cmjAB  = groupMax(cmjAll.filter(c => c.type === 'ABCMJ'));
   const clStd  = cmjStd.map(c => c.date);
   const clAB   = cmjAB.map(c => c.date);
+  renderCMJOverlayChart(cmjStd, cmjAB);
 
   // Helper: build enhanced chart config with avg line + PR marker + gradient fill
   const mkCMJChart = (id, labels, data, opts={}) => {
@@ -16694,6 +16720,164 @@ function isCMJExcluded(playerName, rawDate) {
     const exDt = new Date(ex);
     if (!isNaN(exDt)) return exDt.toISOString().slice(0,10) === iso;
     return ex === rawDate;
+  });
+}
+
+// ── CMJ date range filter ────────────────────────────────────────────────
+var CMJ_RANGE = { mode: 'all', from: null, to: null };
+
+function cmjInSelectedRange(rawDate) {
+  if (CMJ_RANGE.mode === 'all') return true;
+  var d = safeParseDate(rawDate);
+  if (!d || isNaN(d.getTime())) return true;
+  d.setHours(0,0,0,0);
+  var today = new Date(); today.setHours(0,0,0,0);
+
+  if (CMJ_RANGE.mode === '30' || CMJ_RANGE.mode === '90') {
+    var days = CMJ_RANGE.mode === '30' ? 30 : 90;
+    var cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - days);
+    return d >= cutoff && d <= today;
+  }
+  if (CMJ_RANGE.mode === 'season') {
+    // "This season" = current calendar year, matching how the rest of the
+    // app treats a season (no separate season-boundary concept exists yet).
+    return d.getFullYear() === today.getFullYear();
+  }
+  if (CMJ_RANGE.mode === 'custom') {
+    if (CMJ_RANGE.from && d < CMJ_RANGE.from) return false;
+    if (CMJ_RANGE.to && d > CMJ_RANGE.to) return false;
+    return true;
+  }
+  return true;
+}
+
+function cmjSetRange(mode) {
+  CMJ_RANGE = { mode: mode, from: null, to: null };
+  var fromEl = document.getElementById('cmj-range-from'), toEl = document.getElementById('cmj-range-to');
+  if (fromEl) fromEl.value = ''; if (toEl) toEl.value = '';
+  document.querySelectorAll('.cmj-range-btn').forEach(function(b) {
+    var active = b.id === 'cmj-range-' + mode;
+    b.style.background = active ? 'rgba(96,165,250,0.15)' : 'transparent';
+    b.style.color = active ? '#60a5fa' : 'var(--text2)';
+    b.style.fontWeight = active ? '700' : '400';
+    b.style.borderColor = active ? 'rgba(96,165,250,0.4)' : 'var(--border2)';
+  });
+  if (PLAYERS[currentPlayer]) renderAllCharts(PLAYERS[currentPlayer]);
+}
+
+function cmjSetCustomRange() {
+  var fromEl = document.getElementById('cmj-range-from'), toEl = document.getElementById('cmj-range-to');
+  var from = fromEl && fromEl.value ? new Date(fromEl.value + 'T00:00:00') : null;
+  var to   = toEl && toEl.value ? new Date(toEl.value + 'T00:00:00') : null;
+  if (!from && !to) return;
+  CMJ_RANGE = { mode: 'custom', from: from, to: to };
+  document.querySelectorAll('.cmj-range-btn').forEach(function(b) {
+    b.style.background = 'transparent'; b.style.color = 'var(--text2)'; b.style.fontWeight = '400'; b.style.borderColor = 'var(--border2)';
+  });
+  if (PLAYERS[currentPlayer]) renderAllCharts(PLAYERS[currentPlayer]);
+}
+
+// ── CMJ metric overlay (compare multiple metrics on one normalized chart) ──
+var CMJ_OVERLAY_METRIC_DEFS = {
+  jump:    { label: 'Jump Height',      unit: 'cm',   color: '#3b7ac4' },
+  ppbm:    { label: 'Peak Power/BM',    unit: 'W/kg', color: '#22c55e' },
+  vto:     { label: 'VTO',              unit: 'm/s',  color: '#06b6d4' },
+  conc:    { label: 'Concentric Power', unit: 'W',    color: '#f59e0b' },
+  stiff:   { label: 'Stiffness',        unit: 'N/m',  color: '#a78bfa' },
+  rsiMod:  { label: 'RSI-mod',          unit: '',     color: '#ec4899' },
+  pkPow:   { label: 'Peak Power',       unit: 'W',    color: '#ef4444' },
+  cmDepth: { label: 'CM Depth',         unit: 'cm',   color: '#94a3b8' },
+};
+var CMJ_OVERLAY_TYPE = 'CMJ';
+var CMJ_OVERLAY_METRICS = ['jump', 'ppbm']; // default selection
+
+function cmjSetOverlayType(type) {
+  CMJ_OVERLAY_TYPE = type;
+  ['CMJ','ABCMJ'].forEach(function(t) {
+    var b = document.getElementById('cmj-overlay-type-' + t);
+    if (!b) return;
+    var active = t === type;
+    b.style.background = active ? 'rgba(59,122,196,0.15)' : 'transparent';
+    b.style.color = active ? 'var(--cubs-light-blue)' : 'var(--text3)';
+    b.style.fontWeight = active ? '700' : '400';
+    b.style.borderColor = active ? 'rgba(59,122,196,0.4)' : 'var(--border2)';
+  });
+  if (PLAYERS[currentPlayer]) renderAllCharts(PLAYERS[currentPlayer]);
+}
+
+function cmjToggleOverlayMetric(key) {
+  var i = CMJ_OVERLAY_METRICS.indexOf(key);
+  if (i >= 0) CMJ_OVERLAY_METRICS.splice(i, 1);
+  else CMJ_OVERLAY_METRICS.push(key);
+  if (PLAYERS[currentPlayer]) renderAllCharts(PLAYERS[currentPlayer]);
+}
+
+function cmjRenderOverlayMetricPicker() {
+  var el = document.getElementById('cmj-overlay-metric-picker');
+  if (!el) return;
+  el.innerHTML = Object.keys(CMJ_OVERLAY_METRIC_DEFS).map(function(key) {
+    var def = CMJ_OVERLAY_METRIC_DEFS[key];
+    var active = CMJ_OVERLAY_METRICS.indexOf(key) >= 0;
+    return '<button onclick="cmjToggleOverlayMetric(\''+key+'\')" style="padding:5px 10px;border-radius:6px;font-size:10px;cursor:pointer;'
+      + (active ? 'background:'+def.color+'26;border:1px solid '+def.color+';color:'+def.color+';font-weight:700;' : 'background:transparent;border:1px solid var(--border2);color:var(--text3);')
+      + '">'+def.label+(def.unit?' ('+def.unit+')':'')+'</button>';
+  }).join('');
+}
+
+function renderCMJOverlayChart(cmjStd, cmjAB) {
+  cmjRenderOverlayMetricPicker();
+  var ctx = document.getElementById('cmjOverlayChart');
+  if (!ctx) return;
+  if (ctx._chart) { ctx._chart.destroy(); ctx._chart = null; }
+
+  var rows = CMJ_OVERLAY_TYPE === 'ABCMJ' ? cmjAB : cmjStd;
+  if (!rows || !rows.length || !CMJ_OVERLAY_METRICS.length) return;
+
+  var labels = rows.map(function(r){ return r.date; });
+  var datasets = CMJ_OVERLAY_METRICS.map(function(key) {
+    var def = CMJ_OVERLAY_METRIC_DEFS[key];
+    var raw = rows.map(function(r){ return r[key] || 0; });
+    var validVals = raw.filter(function(v){ return v > 0; });
+    var max = validVals.length ? Math.max.apply(null, validVals) : 1;
+    var normalized = raw.map(function(v){ return v > 0 ? parseFloat(((v/max)*100).toFixed(1)) : null; });
+    return {
+      label: def.label,
+      data: normalized,
+      _rawValues: raw, // stashed for tooltip access to real units
+      _unit: def.unit,
+      borderColor: def.color,
+      backgroundColor: def.color + '15',
+      borderWidth: 2,
+      tension: 0.35,
+      pointRadius: 3,
+      pointHoverRadius: 6,
+      spanGaps: true,
+      fill: false,
+    };
+  });
+
+  ctx._chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10 } },
+        tooltip: {
+          callbacks: {
+            label: function(item) {
+              var ds = item.dataset;
+              var raw = ds._rawValues[item.dataIndex];
+              return ds.label + ': ' + (raw != null ? raw.toFixed(1) : '—') + (ds._unit ? ' ' + ds._unit : '') + '  (' + item.formattedValue + '% of peak)';
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { min: 0, max: 105, ticks: { color: '#94a3b8', font: { size: 9 }, callback: function(v){ return v+'%'; } }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: '% of peak in range', color: '#94a3b8', font: { size: 9 } } }
+      }
+    }
   });
 }
 
