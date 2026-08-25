@@ -1064,9 +1064,17 @@ body {
           <!-- LEFT PANEL: Setup -->
           <div style="display:flex;flex-direction:column;gap:10px;">
 
-            <!-- Block Setup -->
-            <div class="card" style="padding:14px;">
-              <div class="card-title" style="margin-bottom:10px;">⚙️ BLOCK SETUP</div>
+            <!-- Collapsed summary bar (shown once a program is built, replaces the full setup form) -->
+            <div class="card" id="pb-setup-summary" style="display:none;padding:12px 14px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <div style="font-size:11px;color:var(--text2);line-height:1.5;" id="pb-setup-summary-text"></div>
+                <button onclick="pbExpandSetup()" style="flex-shrink:0;font-size:10px;padding:5px 10px;background:rgba(255,255,255,0.06);border:1px solid var(--border2);border-radius:5px;color:var(--text2);cursor:pointer;white-space:nowrap;">Change ✎</button>
+              </div>
+            </div>
+
+            <!-- Block Setup (Step 1 — full form; collapses to the summary bar above once built) -->
+            <div class="card" id="pb-setup-full" style="padding:14px;">
+              <div class="card-title" style="margin-bottom:10px;">1️⃣ WHO & WHAT</div>
               <div style="display:flex;flex-direction:column;gap:8px;">
                 <!-- Sandbox toggle -->
                 <div style="display:flex;gap:6px;margin-bottom:2px;">
@@ -1172,8 +1180,18 @@ body {
                     </select>
                   </div>
                 </div>
-                <button onclick="pbBuild()" style="padding:8px;background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.5);border-radius:6px;color:#a78bfa;font-size:12px;font-weight:700;cursor:pointer;width:100%;">🔨 Build Program</button>
+                <button onclick="pbBuild()" style="padding:8px;background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.5);border-radius:6px;color:#a78bfa;font-size:12px;font-weight:700;cursor:pointer;width:100%;">🔨 Build Program →</button>
               </div>
+            </div>
+
+            <!-- Start from a draft or template instead -->
+            <div class="card" id="pb-start-from-saved" style="padding:14px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <div class="card-title" style="margin:0;">OR START FROM SAVED</div>
+                <button onclick="pbToggleDraftsList()" id="pb-drafts-toggle" style="font-size:10px;padding:4px 10px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:5px;color:var(--text2);cursor:pointer;">📂 My Drafts / Templates ▾</button>
+              </div>
+              <button onclick="loadPhaseTemplates()" style="width:100%;font-size:11px;padding:7px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;cursor:pointer;font-weight:600;margin-bottom:6px;">⚡ Load Built-In Phase Templates</button>
+              <div id="pb-drafts-list" style="display:none;max-height:220px;overflow-y:auto;margin-top:4px;"></div>
             </div>
 
             <!-- Week progression preview -->
@@ -1182,26 +1200,30 @@ body {
               <div id="pb-week-targets" style="font-size:11px;color:var(--text3);">Build a program to see progression</div>
             </div>
 
-            <!-- Save & Drafts -->
+            <!-- Save -->
             <div class="card" style="padding:14px;">
               <div class="card-title" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
-                <span>💾 SAVE</span>
+                <span>2️⃣ SAVE</span>
                 <span id="pb-autosave-indicator" style="font-size:9px;font-weight:400;color:var(--text3);opacity:0.5;text-transform:none;letter-spacing:0;font-family:'DM Mono',monospace;">Not yet auto-saved</span>
               </div>
-              <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;flex-direction:column;gap:8px;">
                 <input type="text" id="pb-program-name" placeholder="Program name (e.g. Accumulation Block A)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
-                <button onclick="pbSaveDraft()" style="padding:7px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;">📝 Save as Draft</button>
-                <button onclick="pbSave()" style="padding:7px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:11px;font-weight:700;cursor:pointer;">💾 Save to My Programs</button>
-              </div>
-            </div>
 
-            <!-- Saved Drafts -->
-            <div class="card" style="padding:14px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <div class="card-title" style="margin:0;">📂 MY DRAFTS</div>
-                <button onclick="loadPhaseTemplates()" style="font-size:10px;padding:4px 10px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;cursor:pointer;font-weight:600;">⚡ Load Phase Templates</button>
+                <div>
+                  <button onclick="pbSaveDraft()" style="width:100%;padding:7px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;">📝 Save as Draft</button>
+                  <div style="font-size:9px;color:var(--text3);margin-top:3px;padding:0 2px;">Work in progress — come back and finish it later</div>
+                </div>
+
+                <div>
+                  <button onclick="pbSave()" style="width:100%;padding:7px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:11px;font-weight:700;cursor:pointer;">💾 Save to My Programs</button>
+                  <div style="font-size:9px;color:var(--text3);margin-top:3px;padding:0 2px;">Finished and ready — ends up in My Programs, assignable to this athlete</div>
+                </div>
+
+                <div>
+                  <button onclick="pbSaveAsTemplate()" style="width:100%;padding:7px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);border-radius:6px;color:#60a5fa;font-size:11px;font-weight:700;cursor:pointer;">⭐ Save as Template</button>
+                  <div style="font-size:9px;color:var(--text3);margin-top:3px;padding:0 2px;">Strips athlete assignment — reusable as a starting point for anyone later</div>
+                </div>
               </div>
-              <div id="pb-drafts-list" style="max-height:200px;overflow-y:auto;"></div>
             </div>
           </div>
 
@@ -3675,6 +3697,7 @@ function loadProgToBuilder(id) {
     pbRenderWeekTabs();
     pbRenderDayGrid();
     if (typeof pbRenderWeekTargets === 'function') pbRenderWeekTargets();
+    if (typeof pbCollapseSetup === 'function') pbCollapseSetup();
     showStatus(`✅ "${prog.name}" loaded into builder — use the week tabs to switch weeks`);
     return;
   }
@@ -13019,6 +13042,7 @@ function pbLoadDraft(id) {
   pbRenderDayGrid();
   pbRenderWeekTargets();
   pbCloseEditor();
+  pbCollapseSetup();
 
   showStatus('✅ Loaded draft: "' + draft.name + '" · ' + PB_STATE.weekData.length + ' weeks · ' + PB_STATE.weekData.reduce(function(n,w){ return n + w.days.reduce(function(m,d){ return m + d.blocks.reduce(function(k,b){ return k+(b.exercises||[]).length; },0); },0); },0) + ' exercises');
   renderPBDrafts();
@@ -13529,28 +13553,69 @@ function loadPhaseTemplates() {
 function renderPBDrafts() {
   var el = document.getElementById('pb-drafts-list');
   if (!el) return;
-  if (!pbDrafts.length) {
-    el.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:6px 0;">No drafts yet — build a program and click Save as Draft</div>';
+
+  var templates = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : []).filter(function(pr){ return pr && pr.isTemplate; });
+
+  var draftsHtml = !pbDrafts.length
+    ? '<div style="font-size:11px;color:var(--text3);padding:6px 0;">No drafts yet — build a program and click Save as Draft</div>'
+    : pbDrafts.map(function(d) {
+        var date = new Date(d.updated).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+        var athleteColor = d.athlete==='(Sandbox)' ? '#a78bfa' : 'var(--blue)';
+        return '<div style="padding:8px;border-radius:6px;border:1px solid var(--border);margin-bottom:6px;background:rgba(255,255,255,0.02);">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:6px;">'
+          +   '<div style="min-width:0;">'
+          +     '<div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+d.name+'</div>'
+          +     '<div style="font-size:9px;color:'+athleteColor+';">'+d.athlete+' · '+d.phase+' · '+d.weeks+'wk · '+date+'</div>'
+          +   '</div>'
+          + '</div>'
+          + '<div style="display:flex;gap:4px;flex-wrap:wrap;">'
+          +   '<button onclick="pbLoadDraft('+d.id+')" style="padding:4px 8px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);border-radius:4px;color:#818cf8;font-size:10px;font-weight:600;cursor:pointer;">✏ Load & Edit</button>'
+          +   '<button onclick="pbDuplicateDraft('+d.id+')" style="padding:4px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:var(--text3);font-size:10px;cursor:pointer;">⧉ Copy</button>'
+          +   '<button onclick="pbPromoteToProgram('+d.id+')" style="padding:4px 8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;color:var(--green);font-size:10px;cursor:pointer;">💾 Save to Programs</button>'
+          +   '<button onclick="pbDeleteDraft('+d.id+')" style="padding:4px 8px;background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;">✕</button>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+
+  var templatesHtml = !templates.length ? '' :
+    '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px;">⭐ Templates</div>'
+    + templates.map(function(t) {
+        return '<div style="padding:8px;border-radius:6px;border:1px solid rgba(96,165,250,0.25);margin-bottom:6px;background:rgba(96,165,250,0.04);">'
+          + '<div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;">'+t.name+'</div>'
+          + '<div style="font-size:9px;color:#60a5fa;margin-bottom:6px;">'+(t.notes||'')+'</div>'
+          + '<button onclick="loadProgToBuilderTemplate(\''+t.id+'\')" style="padding:4px 8px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);border-radius:4px;color:#60a5fa;font-size:10px;font-weight:600;cursor:pointer;">✏ Use This Template</button>'
+          + '</div>';
+      }).join('');
+
+  el.innerHTML = draftsHtml + templatesHtml;
+}
+
+// Load a template (SAVED_PROGRAMS entry with isTemplate:true) into the
+// builder for the CURRENTLY selected athlete/sandbox mode — unlike loading
+// a draft or a regular saved program, this never carries over an athlete
+// assignment, since the whole point of a template is reusing it for anyone.
+function loadProgToBuilderTemplate(id) {
+  var prog = (SAVED_PROGRAMS||[]).find(function(p){ return String(p.id) === String(id); });
+  if (!prog || !prog.pbState || !prog.pbState.weekData || !prog.pbState.weekData.length) {
+    showStatus('⚠️ This template has no usable data');
     return;
   }
-  el.innerHTML = pbDrafts.map(function(d) {
-    var date = new Date(d.updated).toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    var athleteColor = d.athlete==='(Sandbox)' ? '#a78bfa' : 'var(--blue)';
-    return '<div style="padding:8px;border-radius:6px;border:1px solid var(--border);margin-bottom:6px;background:rgba(255,255,255,0.02);">'
-      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:6px;">'
-      +   '<div style="min-width:0;">'
-      +     '<div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+d.name+'</div>'
-      +     '<div style="font-size:9px;color:'+athleteColor+';">'+d.athlete+' · '+d.phase+' · '+d.weeks+'wk · '+date+'</div>'
-      +   '</div>'
-      + '</div>'
-      + '<div style="display:flex;gap:4px;flex-wrap:wrap;">'
-      +   '<button onclick="pbLoadDraft('+d.id+')" style="padding:4px 8px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);border-radius:4px;color:#818cf8;font-size:10px;font-weight:600;cursor:pointer;">✏ Load & Edit</button>'
-      +   '<button onclick="pbDuplicateDraft('+d.id+')" style="padding:4px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:var(--text3);font-size:10px;cursor:pointer;">⧉ Copy</button>'
-      +   '<button onclick="pbPromoteToProgram('+d.id+')" style="padding:4px 8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;color:var(--green);font-size:10px;cursor:pointer;">💾 Save to Programs</button>'
-      +   '<button onclick="pbDeleteDraft('+d.id+')" style="padding:4px 8px;background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;">✕</button>'
-      + '</div>'
-      + '</div>';
-  }).join('');
+  var keepAthlete = (pbMode==='sandbox') ? '(Sandbox)' : ((document.getElementById('pb-athlete')||{}).value || currentPlayer);
+  PB_STATE = JSON.parse(JSON.stringify(prog.pbState));
+  PB_STATE.athlete = keepAthlete; // template content, but for whoever is currently selected
+  if (PB_STATE.activeWeek >= PB_STATE.weekData.length) PB_STATE.activeWeek = 0;
+  PB_LOADED_PROGRAM_ID = null; // this is a fresh copy, not the template itself being edited
+
+  var phaseEl = document.getElementById('pb-phase'); if (phaseEl) phaseEl.value = PB_STATE.phase || 'accumulation';
+  var weeksEl = document.getElementById('pb-weeks'); if (weeksEl) weeksEl.value = PB_STATE.weeks || 4;
+  var progEl  = document.getElementById('pb-progression'); if (progEl) progEl.value = PB_STATE.progression || 'linear';
+  var nameEl  = document.getElementById('pb-program-name'); if (nameEl) nameEl.value = prog.name + ' — ' + keepAthlete;
+
+  pbRenderWeekTabs();
+  pbRenderDayGrid();
+  if (typeof pbRenderWeekTargets === 'function') pbRenderWeekTargets();
+  pbCollapseSetup();
+  showStatus('✅ "'+prog.name+'" loaded from template for ' + keepAthlete);
 }
 
 var _pbInited = false;
@@ -13742,6 +13807,38 @@ function pbBuild() {
   pbRenderWeekTabs();
   pbRenderDayGrid();
   pbRenderWeekTargets();
+  pbCollapseSetup();
+}
+
+// ── Setup collapse/expand — Step 1 shrinks to a one-line summary once a
+// program exists, so the week/day editor (the actual work) becomes the
+// clear focus instead of competing with a full setup form for attention.
+function pbCollapseSetup() {
+  var full = document.getElementById('pb-setup-full');
+  var summary = document.getElementById('pb-setup-summary');
+  var summaryText = document.getElementById('pb-setup-summary-text');
+  if (!full || !summary || !PB_STATE.weekData.length) return;
+  var athleteLabel = PB_STATE.athlete === '(Sandbox)' ? '🧪 Sandbox' : '👤 ' + PB_STATE.athlete;
+  if (summaryText) summaryText.innerHTML = '<b>' + athleteLabel + '</b> · ' + PB_STATE.phase + ' · ' + PB_STATE.weeks + ' weeks · ' + PB_STATE.progression;
+  full.style.display = 'none';
+  summary.style.display = 'block';
+}
+
+function pbExpandSetup() {
+  var full = document.getElementById('pb-setup-full');
+  var summary = document.getElementById('pb-setup-summary');
+  if (!full || !summary) return;
+  summary.style.display = 'none';
+  full.style.display = 'block';
+}
+
+function pbToggleDraftsList() {
+  var list = document.getElementById('pb-drafts-list');
+  var btn = document.getElementById('pb-drafts-toggle');
+  if (!list) return;
+  var open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  if (btn) btn.textContent = open ? '📂 My Drafts / Templates ▾' : '📂 My Drafts / Templates ▴';
 }
 
 function pbRenderWeekTabs() {
@@ -14712,6 +14809,29 @@ function pbClearWeek() {
   wk.days.forEach(function(d){ d.blocks = []; });
   pbCloseEditor();
   pbRenderDayGrid();
+}
+
+function pbSaveAsTemplate() {
+  if (!PB_STATE.weekData.length) { alert('Build a program first'); return; }
+  var name = (document.getElementById('pb-program-name')||{}).value ||
+    (PB_STATE.phase+' '+PB_STATE.weeks+'wk Template');
+  if (!name.trim()) { alert('Enter a name for this template'); return; }
+
+  var prog = {
+    id: Date.now(), name: name,
+    notes: PB_STATE.phase+' · '+PB_STATE.weeks+' weeks · '+PB_STATE.progression,
+    athlete: 'Template Library', // templates aren't athlete-specific
+    meso: PB_STATE.phase, macro: PB_STATE.phase,
+    scope:'meso', scopeLabel:'Mesocycle', mesoLabel:name,
+    html:'', content:'',
+    created: new Date().toISOString(),
+    isTemplate: true,
+    pbState: JSON.parse(JSON.stringify(PB_STATE))
+  };
+
+  SAVED_PROGRAMS.unshift(prog);
+  persistPrograms();
+  showStatus('⭐ Saved "'+name+'" as a reusable template');
 }
 
 function pbSave() {
