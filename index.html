@@ -23007,8 +23007,8 @@ function rtpRenderDetail() {
 
   // Recent workload log
   var allLogs = [];
-  p.phases.forEach(function(ph){ (ph.workloadLog||[]).forEach(function(l){ allLogs.push(l); }); });
-  allLogs.sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  p.phases.forEach(function(ph, phIdx){ (ph.workloadLog||[]).forEach(function(l, logIdx){ allLogs.push({ log: l, phIdx: phIdx, logIdx: logIdx }); }); });
+  allLogs.sort(function(a,b){ return new Date(b.log.date)-new Date(a.log.date); });
   var recentLogs = allLogs.slice(0,7);
 
   html += '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;">'
@@ -23028,15 +23028,18 @@ function rtpRenderDetail() {
       + '<th style="text-align:center;padding:4px;">🏏 Swing</th>'
       + '<th style="text-align:center;padding:4px;">🏋️ Lift</th>'
       + '<th style="text-align:center;padding:4px;">RPE</th>'
+      + '<th style="width:24px;"></th>'
       + '</tr>';
-    recentLogs.forEach(function(log) {
-      html += '<tr style="border-top:1px solid rgba(255,255,255,0.04);">'
+    recentLogs.forEach(function(item) {
+      var log = item.log;
+      html += '<tr style="border-top:1px solid rgba(255,255,255,0.04);cursor:pointer;" onclick="rtpLogWorkload('+item.phIdx+','+item.logIdx+')" title="Click to edit or delete">'
         + '<td style="padding:5px 0;color:var(--text2);">'+new Date(log.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td>'
         + '<td style="text-align:center;color:var(--text);">'+(log.run||'—')+'</td>'
         + '<td style="text-align:center;color:var(--text);">'+(log.throw||'—')+'</td>'
         + '<td style="text-align:center;color:var(--text);">'+(log.swing||'—')+'</td>'
         + '<td style="text-align:center;color:var(--text);">'+(log.lift||'—')+'</td>'
         + '<td style="text-align:center;color:#fcd34d;">'+(log.rpe||'—')+'</td>'
+        + '<td style="text-align:center;color:var(--text3);font-size:10px;">✎</td>'
         + '</tr>';
     });
     html += '</table>';
@@ -23138,48 +23141,55 @@ function rtpClearProtocol() {
   showStatus('✅ ' + p.athlete + ' marked as cleared');
 }
 
-function rtpLogWorkload() {
+function rtpLogWorkload(editPhaseIdx, editLogIdx) {
   var p = RTP_ACTIVE_PROTOCOL;
   if (!p) return;
+
+  var isEdit = editPhaseIdx != null && editLogIdx != null;
+  var existing = isEdit ? (p.phases[editPhaseIdx].workloadLog || [])[editLogIdx] : null;
+  if (isEdit && !existing) { showStatus('⚠️ Could not find that log entry'); return; }
 
   var modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
 
   var today = wlTodayLocal();
+  var v = existing || {};
 
   modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:420px;max-width:95vw;">'
-    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">📊 Log Workload — '+p.athlete+'</div>'
-    + '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Phase '+(p.currentPhase+1)+' · '+p.phases[p.currentPhase].name+'</div>'
+    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">'+(isEdit?'✎ Edit':'📊 Log')+' Workload — '+p.athlete+'</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Phase '+((isEdit?editPhaseIdx:p.currentPhase)+1)+' · '+p.phases[isEdit?editPhaseIdx:p.currentPhase].name+'</div>'
     + '<div style="display:flex;flex-direction:column;gap:10px;">'
     + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Date</label>'
-    + '<input id="rtp-log-date" type="date" value="'+today+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;"></div>'
+    + '<input id="rtp-log-date" type="date" value="'+(v.date||today)+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;"></div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-    + rtpLogField('run',   '🏃 Running (yards)',  'Sprint + tempo yards')
-    + rtpLogField('throw', '⚾ Throwing (throws)', 'Total throws all sources')
-    + rtpLogField('swing', '🏏 Swings',            'Tee + front toss + BP + game')
-    + rtpLogField('lift',  '🏋️ Lifting (lbs)',     'Total tonnage (sets×reps×load)')
+    + rtpLogField('run',   '🏃 Running (yards)',  'Sprint + tempo yards', v.run)
+    + rtpLogField('throw', '⚾ Throwing (throws)', 'Total throws all sources', v.throw)
+    + rtpLogField('swing', '🏏 Swings',            'Tee + front toss + BP + game', v.swing)
+    + rtpLogField('lift',  '🏋️ Lifting (lbs)',     'Total tonnage (sets×reps×load)', v.lift)
     + '</div>'
     + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Session RPE (1-10)</label>'
-    + '<input id="rtp-log-rpe" type="number" min="1" max="10" placeholder="6" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;"></div>'
+    + '<input id="rtp-log-rpe" type="number" min="1" max="10" placeholder="6" value="'+(v.rpe||'')+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;"></div>'
     + '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Notes</label>'
-    + '<input id="rtp-log-notes" placeholder="Any soreness, movement observations..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;"></div>'
+    + '<input id="rtp-log-notes" placeholder="Any soreness, movement observations..." value="'+(v.notes||'').replace(/"/g,'&quot;')+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;"></div>'
     + '</div>'
-    + '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">'
+    + '<div style="display:flex;gap:8px;margin-top:16px;justify-content:'+(isEdit?'space-between':'flex-end')+';">'
+    + (isEdit ? '<button onclick="rtpDeleteWorkloadLog('+editPhaseIdx+','+editLogIdx+',this)" style="padding:8px 14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#f87171;font-size:12px;cursor:pointer;">🗑 Delete</button>' : '')
+    + '<div style="display:flex;gap:8px;">'
     + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
-    + '<button onclick="rtpSaveWorkloadLog(this)" style="padding:8px 18px;background:#4ade80;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">Save Log</button>'
-    + '</div></div>';
+    + '<button onclick="rtpSaveWorkloadLog(this,'+(isEdit?editPhaseIdx:'null')+','+(isEdit?editLogIdx:'null')+')" style="padding:8px 18px;background:#4ade80;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">'+(isEdit?'Save Changes':'Save Log')+'</button>'
+    + '</div></div></div>';
 
   document.body.appendChild(modal);
   modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
 }
 
-function rtpLogField(id, label, hint) {
+function rtpLogField(id, label, hint, value) {
   return '<div><label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px;">'+label+'</label>'
-    + '<input id="rtp-log-'+id+'" type="number" min="0" placeholder="0" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;">'
+    + '<input id="rtp-log-'+id+'" type="number" min="0" placeholder="0" value="'+(value||'')+'" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;">'
     + '<div style="font-size:9px;color:var(--text3);margin-top:2px;">'+hint+'</div></div>';
 }
 
-function rtpSaveWorkloadLog(btn) {
+function rtpSaveWorkloadLog(btn, editPhaseIdx, editLogIdx) {
   var p = RTP_ACTIVE_PROTOCOL;
   if (!p) return;
   var entry = {
@@ -23191,12 +23201,28 @@ function rtpSaveWorkloadLog(btn) {
     rpe:   parseFloat(document.getElementById('rtp-log-rpe').value)   || 5,
     notes: document.getElementById('rtp-log-notes').value,
   };
-  if (!p.phases[p.currentPhase].workloadLog) p.phases[p.currentPhase].workloadLog = [];
-  p.phases[p.currentPhase].workloadLog.push(entry);
+  var isEdit = editPhaseIdx != null && editLogIdx != null;
+  if (isEdit) {
+    p.phases[editPhaseIdx].workloadLog[editLogIdx] = entry;
+  } else {
+    if (!p.phases[p.currentPhase].workloadLog) p.phases[p.currentPhase].workloadLog = [];
+    p.phases[p.currentPhase].workloadLog.push(entry);
+  }
   rtpSave();
   btn.closest('div[style*="fixed"]').remove();
   rtpRenderDetail();
-  showStatus('✅ Workload logged for ' + new Date(entry.date).toLocaleDateString());
+  showStatus((isEdit?'✅ Updated workload log for ':'✅ Workload logged for ') + new Date(entry.date).toLocaleDateString());
+}
+
+function rtpDeleteWorkloadLog(phaseIdx, logIdx, btn) {
+  var p = RTP_ACTIVE_PROTOCOL;
+  if (!p) return;
+  if (!confirm('Delete this workload log entry? This cannot be undone.')) return;
+  p.phases[phaseIdx].workloadLog.splice(logIdx, 1);
+  rtpSave();
+  if (btn) { var m = btn.closest('div[style*="fixed"]'); if (m) m.remove(); }
+  rtpRenderDetail();
+  showStatus('🗑 Workload log entry deleted');
 }
 
 // Initialize RTP when tab is opened
