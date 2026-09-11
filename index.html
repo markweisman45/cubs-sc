@@ -2454,6 +2454,10 @@ body {
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;">
           <input type="text" id="he-search" placeholder="Search play context..." oninput="filterHERuns()"
             style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:11px;font-family:\'DM Mono\',monospace;width:180px;">
+          <select id="he-year-filter" onchange="filterHERuns()"
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;">
+            <option value="all">All Years</option>
+          </select>
           <select id="he-date-filter" onchange="filterHERuns()"
             style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;">
             <option value="all">All Dates</option>
@@ -2617,6 +2621,7 @@ body {
           <div style="display:flex;gap:6px;">
             <button onclick="speedTrendGroup('week')" id="stg-week" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.2);color:#f59e0b;font-size:10px;font-weight:700;cursor:pointer;">By Week</button>
             <button onclick="speedTrendGroup('month')" id="stg-month" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--text3);font-size:10px;cursor:pointer;">By Month</button>
+            <button onclick="speedTrendToggleYearCompare()" id="stg-yearcompare" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(96,165,250,0.4);background:transparent;color:#60a5fa;font-size:10px;font-weight:600;cursor:pointer;margin-left:6px;">📅 Compare Years</button>
           </div>
         </div>
         <div style="height:260px;position:relative;"><canvas id="speedTrendChart"></canvas></div>
@@ -9253,6 +9258,7 @@ function sprintToggle(type) {
 function renderSpeedTrend() {
   var runs = (heRunsData[currentPlayer]||[]).filter(function(r){ return r.speed>0 && r.date; });
   if (!runs.length) return;
+  if (speedTrendYearCompare) { renderSpeedTrendYearCompare(runs); return; }
   function p90(arr){ if(!arr.length) return 0; var s=arr.slice().sort(function(a,b){return a-b;}); return s[Math.floor(s.length*0.9)]; }
   function avg(arr){ return arr.reduce(function(s,v){return s+v;},0)/arr.length; }
   var groups = {};
@@ -9304,6 +9310,74 @@ function renderSpeedTrend() {
 }
 
 var speedTrendGrouping='week';
+var speedTrendYearCompare=false;
+var SPEED_TREND_YEAR_COLORS=['#f59e0b','#3b82f6','#22c55e','#ec4899','#a78bfa','#06b6d4'];
+
+function speedTrendToggleYearCompare(){
+  speedTrendYearCompare=!speedTrendYearCompare;
+  var btn=document.getElementById('stg-yearcompare');
+  if(btn){
+    btn.style.background=speedTrendYearCompare?'rgba(96,165,250,0.2)':'transparent';
+    btn.style.color=speedTrendYearCompare?'#60a5fa':'#60a5fa';
+    btn.style.fontWeight=speedTrendYearCompare?'700':'600';
+  }
+  // Week/Month grouping only applies to the single-line view — hide while comparing years
+  var weekBtn=document.getElementById('stg-week'), monthBtn=document.getElementById('stg-month');
+  if(weekBtn) weekBtn.style.display=speedTrendYearCompare?'none':'inline-block';
+  if(monthBtn) monthBtn.style.display=speedTrendYearCompare?'none':'inline-block';
+  renderSpeedTrend();
+}
+
+// Year-over-year comparison: one line per year, aligned by month-of-year
+// (Jan-Dec on the x-axis regardless of which calendar year each point is
+// actually from), so e.g. May 2024 sits directly above May 2025.
+function renderSpeedTrendYearCompare(runs){
+  var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function p90(arr){ if(!arr.length) return null; var s=arr.slice().sort(function(a,b){return a-b;}); return s[Math.floor(s.length*0.9)]; }
+
+  var byYear={};
+  runs.forEach(function(r){
+    var d=safeParseDate(r.date);
+    if(!d||isNaN(d.getTime())) return;
+    var yr=d.getFullYear(), mo=d.getMonth();
+    if(!byYear[yr]) byYear[yr]=MONTHS.map(function(){return [];});
+    byYear[yr][mo].push(r.speed);
+  });
+  var years=Object.keys(byYear).sort();
+
+  var ctx=document.getElementById('speedTrendChart'); if(!ctx) return;
+  if(ctx._chart) ctx._chart.destroy();
+
+  var datasets=years.map(function(yr,i){
+    var color=SPEED_TREND_YEAR_COLORS[i%SPEED_TREND_YEAR_COLORS.length];
+    return {
+      label:yr,
+      data:byYear[yr].map(function(arr){return p90(arr);}),
+      borderColor:color,
+      backgroundColor:color+'1A',
+      pointRadius:4, pointHoverRadius:7, borderWidth:2, tension:0.3, spanGaps:true, fill:false,
+    };
+  });
+
+  ctx._chart=new Chart(ctx,{type:'line',data:{labels:MONTHS,datasets:datasets},options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#94a3b8',font:{size:10},boxWidth:10}}},
+    scales:{
+      x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'rgba(255,255,255,0.05)'}},
+      y:{title:{display:true,text:'90th Pct Speed (ft/s)',color:'#94a3b8',font:{size:10}},ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}}
+    }
+  }});
+
+  var insEl=document.getElementById('speed-trend-insights');
+  if(insEl){
+    insEl.innerHTML=years.map(function(yr){
+      var allSpeeds=byYear[yr].flat();
+      var p=p90(allSpeeds)||0;
+      return '<div class="card" style="padding:10px;text-align:center;"><div style="font-size:16px;font-weight:700;color:'+SPEED_TREND_YEAR_COLORS[years.indexOf(yr)%SPEED_TREND_YEAR_COLORS.length]+';font-family:\'DM Mono\',monospace;">'+p.toFixed(2)+'</div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;">'+yr+' · 90th Pct (n='+allSpeeds.length+')</div></div>';
+    }).join('');
+  }
+}
+
 function speedTrendGroup(g){
   speedTrendGrouping=g;
   document.getElementById('stg-week').style.cssText+=(g==='week'?';background:rgba(245,158,11,0.2);color:#f59e0b;font-weight:700;':';background:transparent;color:var(--text3);font-weight:400;');
@@ -10272,6 +10346,23 @@ function renderSprintProfile() {
   if (activeBtn) { activeBtn.style.fontWeight='700'; activeBtn.style.opacity='1'; }
 }
 
+// Populate the year filter with whatever years actually exist in this
+// player's data, preserving the current selection if it's still valid.
+function heRenderYearOptions(runs) {
+  var sel = document.getElementById('he-year-filter');
+  if (!sel) return;
+  var years = Array.from(new Set(runs.map(function(r){
+    var d = safeParseDate(r.date);
+    return d && !isNaN(d.getTime()) ? d.getFullYear() : null;
+  }).filter(Boolean))).sort(function(a,b){ return b-a; });
+
+  var current = sel.value || 'all';
+  sel.innerHTML = '<option value="all">All Years</option>' + years.map(function(y) {
+    return '<option value="'+y+'">'+y+'</option>';
+  }).join('');
+  if (years.indexOf(parseInt(current)) >= 0 || current === 'all') sel.value = current;
+}
+
 function renderHERuns() {
   var runs = heRunsData[currentPlayer] || [];
   if (!runs.length) {
@@ -10280,15 +10371,19 @@ function renderHERuns() {
     return;
   }
 
+  heRenderYearOptions(runs);
+
   // Apply filters
   var search  = (document.getElementById('he-search')||{}).value||'';
   var dateFlt = (document.getElementById('he-date-filter')||{}).value||'all';
+  var yearFlt = (document.getElementById('he-year-filter')||{}).value||'all';
   var posFlt  = (document.getElementById('he-pos-filter')||{}).value||'all';
   var cutoff  = dateFlt!=='all' ? new Date(Date.now()-parseInt(dateFlt)*86400000) : null;
   var p90speed = percentile90(runs.map(function(r){return r.speed;}));
 
   var filtered = runs.filter(function(r) {
     if (cutoff && safeParseDate(r.date) < cutoff) return false;
+    if (yearFlt!=='all' && String(safeParseDate(r.date).getFullYear())!==yearFlt) return false;
     if (posFlt!=='all' && !(r.pos||'').toLowerCase().includes(posFlt.toLowerCase())) return false;
     if (search && !(r.context||'').toLowerCase().includes(search.toLowerCase()) &&
         !(r.base||'').toLowerCase().includes(search.toLowerCase())) return false;
