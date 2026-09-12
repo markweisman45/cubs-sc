@@ -9265,6 +9265,11 @@ function sprintToggle(type) {
 function renderSpeedTrend() {
   var runs = (heRunsData[currentPlayer]||[]).filter(function(r){ return r.speed>0 && r.date; });
   if (speedTrendType!=='all') runs = runs.filter(function(r){ return classifyRun(r)===speedTrendType; });
+  // Respect the main Year filter too — previously this chart always pooled
+  // every year's data regardless of what was selected up top, which is why
+  // it never visibly changed even though the summary cards did.
+  var yearFlt = (document.getElementById('he-year-filter')||{}).value || 'all';
+  if (yearFlt !== 'all') runs = runs.filter(function(r){ var d=safeParseDate(r.date); return d && String(d.getFullYear())===yearFlt; });
   if (!runs.length) return;
   if (speedTrendYearCompare) { renderSpeedTrendYearCompare(runs); return; }
   function p90(arr){ if(!arr.length) return 0; var s=arr.slice().sort(function(a,b){return a-b;}); return s[Math.floor(s.length*0.9)]; }
@@ -9732,6 +9737,8 @@ function exportPlayerPDF(){
 
 function renderBurstAnalysis() {
   var runs = heRunsData[currentPlayer] || [];
+  var yearFlt = (document.getElementById('he-year-filter')||{}).value || 'all';
+  if (yearFlt !== 'all') runs = runs.filter(function(r){ var d=safeParseDate(r.date); return d && String(d.getFullYear())===yearFlt; });
   var validBurst = runs.filter(function(r){ return r.burst>0 && r.speed>0; });
   var validStep  = runs.filter(function(r){ return r.step && r.step!=='--' && parseFloat(r.step)>0 && r.speed>0; });
 
@@ -9876,6 +9883,8 @@ function szToggle(type) {
 
 function renderSpeedZones() {
   var runs = (heRunsData[currentPlayer]||[]).filter(function(r){ return r.speed > 0; });
+  var yearFlt = (document.getElementById('he-year-filter')||{}).value || 'all';
+  if (yearFlt !== 'all') runs = runs.filter(function(r){ var d=safeParseDate(r.date); return d && String(d.getFullYear())===yearFlt; });
 
   // Filter by run type
   var filtered;
@@ -9984,9 +9993,11 @@ function renderLeaderboard() {
   function avg(arr){ return arr.length?arr.reduce(function(s,v){return s+v;},0)/arr.length:0; }
 
   var players = Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); });
+  var yearFlt = (document.getElementById('he-year-filter')||{}).value || 'all';
 
   var data = players.map(function(name) {
     var runs = (heRunsData[name]||[]).filter(function(r){ return r.speed>0; });
+    if (yearFlt !== 'all') runs = runs.filter(function(r){ var d=safeParseDate(r.date); return d && String(d.getFullYear())===yearFlt; });
     if (!runs.length) return null;
     var speeds = runs.map(function(r){return r.speed;});
     var bursts = runs.filter(function(r){return r.burst>0;}).map(function(r){return r.burst;});
@@ -10221,6 +10232,8 @@ function renderVeloLeaderboard() {
 
 function renderSprintProfile() {
   var runs = heRunsData[currentPlayer]||[];
+  var yearFlt = (document.getElementById('he-year-filter')||{}).value || 'all';
+  if (yearFlt !== 'all') runs = runs.filter(function(r){ var d=safeParseDate(r.date); return d && String(d.getFullYear())===yearFlt; });
   if (!runs.length) return;
 
   // Classify all runs
@@ -10527,7 +10540,14 @@ function heSort(col) {
   renderHERuns();
 }
 
-function filterHERuns() { renderHERuns(); }
+function filterHERuns() {
+  renderHERuns();
+  if (typeof renderSpeedTrend === 'function') renderSpeedTrend();
+  if (typeof renderSprintProfile === 'function') renderSprintProfile();
+  if (typeof renderBurstAnalysis === 'function') renderBurstAnalysis();
+  if (typeof renderSpeedZones === 'function') renderSpeedZones();
+  if (typeof renderLeaderboard === 'function') renderLeaderboard();
+}
 
 function heShowTopSpeed() {
   heTopOnly = !heTopOnly;
