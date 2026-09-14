@@ -1218,10 +1218,17 @@ body {
               <div id="pb-drafts-list" style="display:none;max-height:220px;overflow-y:auto;margin-top:4px;"></div>
             </div>
 
-            <!-- Week progression preview -->
+            <!-- Week progression preview (theoretical, from phase template) -->
             <div class="card" style="padding:14px;">
-              <div class="card-title" style="margin-bottom:8px;">📊 WEEK PROGRESSION</div>
+              <div class="card-title" style="margin-bottom:8px;">📊 WEEK PROGRESSION (planned)</div>
               <div id="pb-week-targets" style="font-size:11px;color:var(--text3);">Build a program to see progression</div>
+            </div>
+
+            <!-- Real weekly volume/intensity/density, from actual content typed in -->
+            <div class="card" style="padding:14px;">
+              <div class="card-title" style="margin-bottom:2px;">📈 ACTUAL PROGRESSION (built)</div>
+              <div style="font-size:9px;color:var(--text3);margin-bottom:10px;">Volume, intensity & density from what's actually in the grid — normalized to % of this program's own peak.</div>
+              <div style="height:180px;position:relative;"><canvas id="pbWeeklyProgressionChart"></canvas></div>
             </div>
 
             <!-- Save -->
@@ -14123,6 +14130,80 @@ function pbRenderDayGrid() {
   }).join('');
 }
 
+// ── REAL weekly Volume / Intensity / Density — from actual exercise content
+// you've typed in, not the theoretical phase-template projection above.
+//   Volume    = total sets across the whole week
+//   Intensity = average %1RM across lift-type exercises that have a numeric load%
+//   Density   = sets per minute of total session time (work rate)
+function pbCalcWeeklyProgression() {
+  if (!PB_STATE.weekData.length) return [];
+  return PB_STATE.weekData.map(function(wk) {
+    var totalSets = 0, totalTUT = 0, totalRestSec = 0, allLoadSamples = [];
+    (wk.days||[]).forEach(function(day) {
+      var d = pbCalcSessionTime(day);
+      totalSets += d.totalSets;
+      totalTUT += d.totalTUT;
+      totalRestSec += d.totalRestSec;
+      allLoadSamples = allLoadSamples.concat(d.loadSamples);
+    });
+    var totalMinutes = (totalTUT + totalRestSec) / 60;
+    return {
+      week: wk.week,
+      isDeload: wk.isDeload,
+      volume: totalSets,
+      intensity: allLoadSamples.length ? parseFloat((allLoadSamples.reduce(function(s,v){return s+v;},0)/allLoadSamples.length).toFixed(1)) : null,
+      density: totalMinutes > 0.1 ? parseFloat((totalSets/totalMinutes).toFixed(2)) : null,
+    };
+  });
+}
+
+function pbRenderWeeklyProgressionChart() {
+  var ctx = document.getElementById('pbWeeklyProgressionChart');
+  if (!ctx) return;
+  if (ctx._chart) { ctx._chart.destroy(); ctx._chart = null; }
+
+  var data = pbCalcWeeklyProgression();
+  if (!data.length) return;
+
+  var labels = data.map(function(w){ return 'W'+w.week + (w.isDeload?' 🔄':''); });
+
+  function normalize(arr) {
+    var valid = arr.filter(function(v){ return v != null && v > 0; });
+    var max = valid.length ? Math.max.apply(null, valid) : 1;
+    return arr.map(function(v){ return v != null ? parseFloat(((v/max)*100).toFixed(1)) : null; });
+  }
+
+  var volumeRaw = data.map(function(w){ return w.volume; });
+  var intensityRaw = data.map(function(w){ return w.intensity; });
+  var densityRaw = data.map(function(w){ return w.density; });
+
+  var datasets = [
+    { label:'Volume (sets)', data: normalize(volumeRaw), _raw: volumeRaw, _unit:'sets', borderColor:'#6366f1', backgroundColor:'#6366f11A', pointRadius:4, pointHoverRadius:7, borderWidth:2, tension:0.3, spanGaps:true },
+    { label:'Intensity (avg %1RM)', data: normalize(intensityRaw), _raw: intensityRaw, _unit:'%1RM', borderColor:'#22c55e', backgroundColor:'#22c55e1A', pointRadius:4, pointHoverRadius:7, borderWidth:2, tension:0.3, spanGaps:true },
+    { label:'Density (sets/min)', data: normalize(densityRaw), _raw: densityRaw, _unit:'sets/min', borderColor:'#f59e0b', backgroundColor:'#f59e0b1A', pointRadius:4, pointHoverRadius:7, borderWidth:2, tension:0.3, spanGaps:true },
+  ];
+
+  ctx._chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color:'#94a3b8', font:{size:9}, boxWidth:8 } },
+        tooltip: { callbacks: { label: function(item) {
+          var ds = item.dataset;
+          var raw = ds._raw[item.dataIndex];
+          return ds.label + ': ' + (raw != null ? raw : '—') + ' ' + ds._unit + ' (' + item.formattedValue + '% of peak)';
+        } } }
+      },
+      scales: {
+        x: { ticks:{color:'#94a3b8',font:{size:9}}, grid:{color:'rgba(255,255,255,0.05)'} },
+        y: { min:0, max:105, ticks:{color:'#94a3b8',font:{size:9},callback:function(v){return v+'%';}}, grid:{color:'rgba(255,255,255,0.05)'}, title:{display:true,text:'% of program peak',color:'#94a3b8',font:{size:9}} }
+      }
+    }
+  });
+}
+
 function pbRenderWeekTargets() {
   var el = document.getElementById('pb-week-targets');
   if (!el || !PB_STATE.weekData.length) return;
@@ -14147,6 +14228,8 @@ function pbRenderWeekTargets() {
         +'<div style="font-size:10px;color:#22c55e;">'+load+'%</div>';
     }).join('')
     +'</div>';
+
+  if (typeof pbRenderWeeklyProgressionChart === 'function') pbRenderWeeklyProgressionChart();
 }
 
 // ── SESSION EDITOR ────────────────────────────────────────────────────────────
@@ -14454,7 +14537,7 @@ function pbOpenDay(weekIdx, dayIdx) {
   }
 
   // ── Time under tension + session duration estimate (coach-only) ──
-  var timeSummary = pbCalcSessionTime(day);
+  var timeSummary = pbRenderSessionTimeHTML(pbCalcSessionTime(day));
 
   editor.innerHTML = '<div style="padding:14px;">'
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px;">'
@@ -14479,15 +14562,18 @@ function pbOpenDay(weekIdx, dayIdx) {
 
 // Calculate time-under-tension per set and total session duration — coach-only metric
 // Never surfaced on the athlete-facing program.html page
+// Returns raw numbers (used both for this day's display AND for weekly
+// volume/intensity/density aggregation) — see pbRenderSessionTimeHTML for
+// the display string built from this.
 function pbCalcSessionTime(day) {
   var totalTUT = 0;        // seconds, sum of all working-set tension time
   var totalRestSec = 0;    // seconds, sum of all rest periods
   var totalSets = 0;
+  var setsByType = {};     // blockType -> total sets, e.g. {lift: 24, speed: 20}
+  var loadSamples = [];    // numeric load% values, lift-type exercises only — feeds intensity
   var blockBreakdown = [];
 
   function parseTempo(tempo) {
-    // Tempo formats: "31X1", "3-1-3-0", "5000", "00X0" etc.
-    // X = explosive/fast (~0.3s), numbers = seconds per phase
     if (!tempo) return null;
     var clean = String(tempo).replace(/-/g, '');
     if (clean.length < 3) return null;
@@ -14500,7 +14586,6 @@ function pbCalcSessionTime(day) {
   }
 
   function parseRest(rest) {
-    // Formats: ":30", "1:00", "2:30", "90s", "10"
     if (!rest) return 0;
     var s = String(rest).trim();
     if (s.includes(':')) {
@@ -14525,6 +14610,7 @@ function pbCalcSessionTime(day) {
   (day.blocks||[]).forEach(function(block) {
     if (block.blockType === 'session-header') return;
     var blockTUT = 0, blockRest = 0, blockSets = 0;
+    var type = block.blockType || 'lift'; // unlabeled blocks default to lift/strength
 
     (block.exercises||[]).filter(function(e){ return e.name; }).forEach(function(ex) {
       var sets = parseSets(ex.sets);
@@ -14535,22 +14621,28 @@ function pbCalcSessionTime(day) {
       blockSets += sets;
 
       if (tempoSec) {
-        // TUT = tempo seconds per rep × reps × sets
         blockTUT += tempoSec * reps * sets;
       } else if (block.blockType === 'speed' || block.blockType === 'esd') {
-        // Speed work: estimate ~3-8s per rep based on distance, else skip
         var distMatch = (ex.distance||'').match(/(\d+)/);
         var distYds = distMatch ? parseInt(distMatch[1]) : 0;
-        var estSec = distYds ? Math.max(1, distYds * 0.15) : 3; // rough yd/sec estimate
+        var estSec = distYds ? Math.max(1, distYds * 0.15) : 3;
         blockTUT += estSec * reps * sets;
       }
 
       blockRest += restSec * sets;
+
+      // Intensity input — numeric %1RM from lift-type blocks only (a "10yd"
+      // distance or "BW" bodyweight load isn't a %1RM figure to average in)
+      if (type === 'lift' && ex.load) {
+        var loadMatch = String(ex.load).match(/(\d+(?:\.\d+)?)\s*%/);
+        if (loadMatch) loadSamples.push(parseFloat(loadMatch[1]));
+      }
     });
 
     totalTUT += blockTUT;
     totalRestSec += blockRest;
     totalSets += blockSets;
+    setsByType[type] = (setsByType[type]||0) + blockSets;
 
     if (blockSets > 0) {
       blockBreakdown.push({
@@ -14562,23 +14654,44 @@ function pbCalcSessionTime(day) {
     }
   });
 
-  if (!totalSets) return '';
+  return {
+    totalTUT: totalTUT,
+    totalRestSec: totalRestSec,
+    totalSets: totalSets,
+    setsByType: setsByType,
+    loadSamples: loadSamples,
+    blockBreakdown: blockBreakdown,
+  };
+}
 
-  var totalSeconds = totalTUT + totalRestSec;
+var PB_BLOCK_TYPE_LABELS = { lift:'🏋️ Strength', speed:'⚡ Speed', mobility:'🧘 Mobility', esd:'❤️ ESD', prep:'🔥 Prep' };
+
+function pbRenderSessionTimeHTML(data) {
+  if (!data.totalSets) return '';
+
+  var totalSeconds = data.totalTUT + data.totalRestSec;
   var totalMin = Math.round(totalSeconds / 60);
-  var tutMin = (totalTUT / 60).toFixed(1);
+  var tutMin = (data.totalTUT / 60).toFixed(1);
 
   function fmtTime(sec) {
     var m = Math.floor(sec/60), s = Math.round(sec%60);
     return m > 0 ? m+'m '+s+'s' : s+'s';
   }
 
-  var breakdownHtml = blockBreakdown.map(function(b) {
+  var breakdownHtml = data.blockBreakdown.map(function(b) {
     return '<span style="display:inline-block;margin-right:14px;">'
       + '<span style="color:var(--text3);">'+b.label+':</span> '
       + '<span style="color:#FCD34D;">'+fmtTime(b.tut)+' TUT</span>'
       + '</span>';
   }).join('');
+
+  // Sets by type — the specific breakdown requested: strength vs speed sets
+  // shown separately instead of only a combined daily total.
+  var typeHtml = Object.keys(data.setsByType)
+    .sort(function(a,b){ return data.setsByType[b]-data.setsByType[a]; })
+    .map(function(t) {
+      return '<span style="display:inline-block;margin-right:12px;"><b style="color:var(--blue-light);">'+data.setsByType[t]+'</b> <span style="color:var(--text3);">'+(PB_BLOCK_TYPE_LABELS[t]||t)+'</span></span>';
+    }).join('');
 
   return '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
     + '<div style="display:flex;align-items:center;gap:6px;">'
@@ -14586,8 +14699,9 @@ function pbCalcSessionTime(day) {
     + '</div>'
     + '<div style="font-size:12px;color:var(--text2);"><b style="color:#fff;">'+totalMin+' min</b> est. total</div>'
     + '<div style="font-size:12px;color:var(--text2);"><b style="color:#FCD34D;">'+tutMin+' min</b> time under tension</div>'
-    + '<div style="font-size:12px;color:var(--text2);"><b style="color:var(--blue-light);">'+totalSets+'</b> total sets</div>'
-    + (breakdownHtml ? '<div style="font-size:11px;width:100%;margin-top:4px;">'+breakdownHtml+'</div>' : '')
+    + '<div style="font-size:12px;color:var(--text2);"><b style="color:var(--blue-light);">'+data.totalSets+'</b> total sets</div>'
+    + '<div style="font-size:11px;width:100%;">'+typeHtml+'</div>'
+    + (breakdownHtml ? '<div style="font-size:11px;width:100%;margin-top:2px;">'+breakdownHtml+'</div>' : '')
     + '</div>';
 }
 
