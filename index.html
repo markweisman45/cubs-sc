@@ -1270,6 +1270,8 @@ body {
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
               <div id="pb-week-tabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
               <div style="display:flex;gap:6px;">
+                <button onclick="pbAIOpenWeekModal()" style="padding:6px 12px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:11px;font-weight:700;cursor:pointer;" title="AI-generate every training day in the currently open week">✨ AI Generate Week</button>
+                <button onclick="pbAIGenerateFullTemplate()" style="padding:6px 12px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;" title="AI-generate one week, then scale it across the whole program with progression">✨ AI Generate Full Program</button>
                 <button onclick="pbApplyToAllWeeks()" style="padding:6px 12px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;font-size:11px;font-weight:600;cursor:pointer;" title="Copy Week 1 exercises to all weeks, scaled by progression">↕ Apply to All Weeks</button>
                 <button onclick="pbOpenSubstituteModal()" style="padding:6px 12px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);border-radius:6px;color:#60a5fa;font-size:11px;font-weight:600;cursor:pointer;" title="Replace one exercise with another everywhere it appears in this program">🔁 Swap Exercise Everywhere</button>
                 <button onclick="pbClearWeek()" style="padding:6px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:var(--red);font-size:11px;cursor:pointer;">🗑 Clear Week</button>
@@ -21211,22 +21213,18 @@ function pbAIRenderPreview(result) {
   results.style.display = 'block';
 }
 
-function pbAIInsert() {
-  if (!_pbAILastResult || !PB_ACTIVE_DAY) return;
-  var day  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
-  var mode = document.getElementById('pbai-mode-sel').value;
-  if (mode === 'insert') day.blocks = [];
-
-  var blocksToInsert = _pbAILastResult.blocks || [];
-
-  // Auto-split: if only 1 block returned with 5+ exercises, split by bucket
-  if (blocksToInsert.length === 1 && (blocksToInsert[0].exercises||[]).length >= 5) {
-    blocksToInsert = pbAIAutoSplit(blocksToInsert[0]);
+// Apply AI-returned blocks to an ARBITRARY day (not just PB_ACTIVE_DAY) —
+// same mapping pbAIInsert uses for the single-day flow, extracted so week/
+// template generation can reuse it without going through the modal.
+function pbAIApplyBlocksToDay(day, blocks, replace) {
+  if (replace) day.blocks = [];
+  var toInsert = blocks || [];
+  if (toInsert.length === 1 && (toInsert[0].exercises||[]).length >= 5) {
+    toInsert = pbAIAutoSplit(toInsert[0]);
   }
-
-  blocksToInsert.forEach(function(block) {
-    var bt  = block.blockType || 'lift';
-    var exs = (block.exercises || []).map(function(ex) {
+  toInsert.forEach(function(block) {
+    var bt = block.blockType || 'lift';
+    var exs = (block.exercises||[]).map(function(ex) {
       var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === (ex.name||'').toLowerCase(); });
       if (bt === 'speed' || bt === 'esd') {
         return { type:'speed', name:ex.name||'', cat:(dbEx&&dbEx.cat)||ex.cat||'', sets:ex.sets||'', reps:ex.reps||'', distance:ex.distance||'', pct:ex.pct||'', rest:ex.rest||'', notes:ex.notes||'' };
@@ -21235,12 +21233,125 @@ function pbAIInsert() {
     });
     day.blocks.push({ blockType:bt, label:block.label||'', exercises:exs });
   });
+  return toInsert.reduce(function(n,b){ return n+(b.exercises||[]).length; }, 0);
+}
+
+// ── AI Generate Week — runs the same day-design AI call once per training
+// day in a week, applying results directly (no per-day preview/confirm,
+// since that would mean 4-6 manual review cycles). Review/edit happens in
+// the grid afterward, same as any other generated content.
+function pbAIOpenWeekModal(weekIdx) {
+  if (!PB_STATE.weekData.length) { alert('Build a program first'); return; }
+  weekIdx = weekIdx != null ? weekIdx : (PB_ACTIVE_DAY ? PB_ACTIVE_DAY.weekIdx : 0);
+  var wk = PB_STATE.weekData[weekIdx];
+  var trainingDays = wk.days.filter(function(d){ return d.type !== 'off'; });
+  if (!trainingDays.length) { alert('This week has no training days to fill'); return; }
+
+  var defaultMods = ['lower_lift','upper_lift','speed_acc','core'];
+  var modOptions = PB_MODALITIES.map(function(m) {
+    var checked = defaultMods.indexOf(m.id) >= 0 ? 'checked' : '';
+    return '<label style="display:flex;align-items:center;gap:7px;padding:4px 0;font-size:12px;color:#fff;cursor:pointer;">'
+      + '<input type="checkbox" class="pbai-week-mod" value="'+m.id+'" '+checked+'> '+m.icon+' '+m.label+'</label>';
+  }).join('');
+
+  var modal = document.createElement('div');
+  modal.id = 'pb-ai-week-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:22px;width:420px;max-width:95vw;max-height:85vh;overflow-y:auto;">'
+    + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">✨ AI Generate Week ' + wk.week + '</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Fills all ' + trainingDays.length + ' training days in this week. Existing content in those days will be replaced.</div>'
+    + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Modalities to include each day</label>'
+    + modOptions
+    + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin:14px 0 5px;">Exercises per day</label>'
+    + '<input type="number" id="pbai-week-total" value="12" min="4" max="25" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;margin-bottom:14px;">'
+    + '<div id="pbai-week-progress-wrap" style="display:none;margin-bottom:10px;">'
+    + '<div style="height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;"><div id="pbai-week-progress" style="height:100%;width:0%;background:#60a5fa;transition:width .3s;"></div></div>'
+    + '<div id="pbai-week-status" style="font-size:10px;color:var(--text3);margin-top:5px;"></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    + '<button onclick="document.getElementById(\'pb-ai-week-modal\').remove()" style="padding:7px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button id="pbai-week-gen-btn" onclick="pbAIGenerateWeek('+weekIdx+')" style="padding:7px 16px;background:#60a5fa;border:none;border-radius:6px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">✨ Generate Week</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+}
+
+async function pbAIGenerateWeek(weekIdx) {
+  var wk = PB_STATE.weekData[weekIdx];
+  var trainingDays = wk.days.map(function(d,i){ return {day:d, idx:i}; }).filter(function(o){ return o.day.type !== 'off'; });
+  var mods = Array.prototype.slice.call(document.querySelectorAll('.pbai-week-mod:checked')).map(function(c){ return c.value; });
+  var totalExercises = parseInt(document.getElementById('pbai-week-total').value) || 12;
+  if (!mods.length) { alert('Pick at least one modality'); return; }
+
+  var btn = document.getElementById('pbai-week-gen-btn');
+  var progWrap = document.getElementById('pbai-week-progress-wrap');
+  var prog = document.getElementById('pbai-week-progress');
+  var status = document.getElementById('pbai-week-status');
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  progWrap.style.display = 'block';
+
+  var athLabel = PB_STATE.athlete !== '(Sandbox)' ? PB_STATE.athlete : 'a baseball player';
+  var libraryList = EXERCISE_DB.filter(function(e){ return e && e.name && e.cat; }).map(function(e){ return e.name + ' (' + e.cat + ')'; }).join(', ');
+  var totalInserted = 0, failed = [];
+
+  for (var i = 0; i < trainingDays.length; i++) {
+    var day = trainingDays[i].day;
+    status.textContent = 'Day ' + (i+1) + '/' + trainingDays.length + ' — ' + day.day + (day.label ? ' (' + day.label + ')' : '') + '...';
+    prog.style.width = Math.round(((i)/trainingDays.length)*100) + '%';
+    try {
+      var ctx = {
+        designMode: 'day', position: 'position_player', phase: 'inseason',
+        extraContext: day.label || '', libraryList: libraryList, athlete: athLabel,
+        weekNum: wk.week, totalWeeks: PB_STATE.weeks, dayLabel: day.label, dayType: day.type,
+        progMod: wk.progMod, modalities: mods, totalExercises: totalExercises,
+      };
+      var result = await callPBDesignAPI(ctx);
+      totalInserted += pbAIApplyBlocksToDay(day, result.blocks || [], true);
+    } catch (err) {
+      console.error('[pbAIGenerateWeek]', day.day, err);
+      failed.push(day.day);
+    }
+  }
+
+  prog.style.width = '100%';
+  var modal = document.getElementById('pb-ai-week-modal');
+  if (modal) modal.remove();
+  pbRenderDayGrid();
+  if (PB_ACTIVE_DAY && PB_ACTIVE_DAY.weekIdx === weekIdx) pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+  showStatus((failed.length ? '⚠️ ' : '✅ ') + 'Week ' + wk.week + ' generated — ' + totalInserted + ' exercises across ' + (trainingDays.length-failed.length) + ' days'
+    + (failed.length ? ' (failed: ' + failed.join(', ') + ')' : ''));
+}
+
+// ── AI Generate Full Template — generates ONE week richly via AI, then uses
+// the existing, already-reliable progression scaler to propagate it across
+// every other week. Deliberately does NOT ask the AI to generate an entire
+// multi-week program in one response — that's a much larger, failure-prone
+// JSON payload for no real benefit over generating one week well and scaling it.
+function pbAIGenerateFullTemplate() {
+  if (!PB_STATE.weekData.length) { alert('Build a program first (pick phase/weeks, then Build Program) — AI fills it in from there.'); return; }
+  var srcWeekIdx = PB_ACTIVE_DAY ? PB_ACTIVE_DAY.weekIdx : 0;
+  pbAIOpenWeekModal(srcWeekIdx);
+  // Swap the generate button's target so it scales to every other week
+  // once this one week is done.
+  var btn = document.getElementById('pbai-week-gen-btn');
+  if (btn) {
+    btn.textContent = '✨ Generate Full Program';
+    btn.setAttribute('onclick', 'pbAIGenerateWeek(' + srcWeekIdx + ').then(function(){ pbApplyToAllWeeks(); showStatus("✅ Full program generated — Week " + (' + srcWeekIdx + '+1) + " built by AI, scaled to all other weeks"); })');
+  }
+}
+
+function pbAIInsert() {
+  if (!_pbAILastResult || !PB_ACTIVE_DAY) return;
+  var day  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
+  var mode = document.getElementById('pbai-mode-sel').value;
+
+  var totalEx = pbAIApplyBlocksToDay(day, _pbAILastResult.blocks || [], mode === 'insert');
 
   closeModal('pbAIModal');
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
   pbRenderDayGrid();
-  var totalEx = blocksToInsert.reduce(function(n,b){ return n+(b.exercises||[]).length; }, 0);
-  showStatus('✅ Inserted ' + blocksToInsert.length + ' blocks · ' + totalEx + ' exercises');
+  var blockCount = (_pbAILastResult.blocks||[]).length;
+  showStatus('✅ Inserted ' + blockCount + ' blocks · ' + totalEx + ' exercises');
 }
 
 // Split a single oversized block into logical sub-blocks by bucket
