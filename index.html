@@ -9716,13 +9716,42 @@ function exportPlayerPDF(){
   var batGameVals = games30.map(function(g){return g.bat||null;});
 
   // ── CSS & HTML ──────────────────────────────────────────────────────────────
-  var css='*{margin:0;padding:0;box-sizing:border-box;}body{font-family:"Helvetica Neue",Arial,sans-serif;color:#111;padding:24px 28px;font-size:12px;}h1{font-size:24px;font-weight:800;letter-spacing:-0.5px;}h2{font-size:10px;font-weight:700;color:#1e40af;border-bottom:2px solid #1e40af;padding-bottom:3px;margin:14px 0 7px;text-transform:uppercase;letter-spacing:.6px;}.sub{font-size:11px;color:#6b7280;margin-bottom:14px;}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px;}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px;}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;}.card{border:1px solid #e5e7eb;border-radius:6px;padding:9px 11px;}.val{font-size:19px;font-weight:800;font-family:monospace;line-height:1.1;}.pct{font-size:10px;font-weight:600;margin-top:1px;}.lbl{font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}table{width:100%;border-collapse:collapse;font-size:10px;}th{padding:4px 6px;text-align:left;border-bottom:2px solid #e5e7eb;color:#6b7280;font-size:9px;text-transform:uppercase;}td{padding:4px 6px;border-bottom:1px solid #f3f4f6;}.chart-card{border:1px solid #e5e7eb;border-radius:6px;padding:10px;margin-bottom:8px;}.chart-title{font-size:9px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}.footer{margin-top:16px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:9px;color:#9ca3af;display:flex;justify-content:space-between;}@media print{body{padding:14px 18px;}}';
+  var css='*{margin:0;padding:0;box-sizing:border-box;}'
+    +'body{font-family:"Helvetica Neue",Arial,sans-serif;color:#111827;background:#f3f4f6;padding:0;font-size:13px;}'
+    +'.page-wrap{max-width:980px;margin:0 auto;background:#fff;padding:0 0 40px;}'
+    +'.cover{background:linear-gradient(135deg,#0E3386 0%,#1E4FCC 60%,#0A2255 100%);color:#fff;padding:42px 48px 34px;}'
+    +'.cover-eyebrow{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.75;margin-bottom:10px;}'
+    +'h1{font-size:38px;font-weight:800;letter-spacing:-.5px;line-height:1.05;}'
+    +'.sub{font-size:13px;color:rgba(255,255,255,0.8);margin-top:8px;}'
+    +'.content{padding:32px 48px 8px;}'
+    +'h2{font-size:13px;font-weight:800;color:#0E3386;border-bottom:2px solid #0E3386;padding-bottom:6px;margin:32px 0 14px;text-transform:uppercase;letter-spacing:1px;}'
+    +'h2:first-child{margin-top:0;}'
+    +'.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:8px;}'
+    +'.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px;}'
+    +'.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px;}'
+    +'.grid1{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:8px;}'
+    +'.card{border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;background:#fafbfc;box-shadow:0 1px 2px rgba(0,0,0,0.03);}'
+    +'.val{font-size:26px;font-weight:800;font-family:"SF Mono",Consolas,monospace;line-height:1.1;}'
+    +'.pct{font-size:11px;font-weight:700;margin-top:3px;}'
+    +'.lbl{font-size:9.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-top:4px;font-weight:600;}'
+    +'table{width:100%;border-collapse:collapse;font-size:11.5px;}'
+    +'th{padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:.4px;}'
+    +'td{padding:8px 10px;border-bottom:1px solid #f3f4f6;}'
+    +'tr:hover td{background:#fafbfc;}'
+    +'.chart-card{border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px 14px;margin-bottom:14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.04);}'
+    +'.chart-title{font-size:12px;font-weight:800;color:#1f2937;letter-spacing:.2px;margin-bottom:10px;}'
+    +'.footer{margin-top:36px;padding:18px 48px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;display:flex;justify-content:space-between;background:#fafbfc;}'
+    +'@media print{.page-wrap{max-width:100%;}.cover{padding:28px 32px;}.content{padding:20px 32px;}}';
 
   var w=window.open('','_blank','width=960,height=1200');
   w.document.write('<!DOCTYPE html><html><head><title>'+currentPlayer+' — S&C Report</title><style>'+css+'</style></head><body>');
+  w.document.write('<div class="page-wrap">');
 
+  w.document.write('<div class="cover"><div class="cover-eyebrow">Chicago Cubs &middot; Strength &amp; Conditioning</div>');
   w.document.write('<h1>'+currentPlayer+'</h1>');
-  w.document.write('<div class="sub">Chicago Cubs &middot; '+(p.pos||'')+' &middot; #'+(p.number||'')+'&nbsp;&nbsp;|&nbsp;&nbsp;Report: '+date+'</div>');
+  w.document.write('<div class="sub">'+(p.pos||'')+' &middot; #'+(p.number||'')+'&nbsp;&nbsp;|&nbsp;&nbsp;Report generated '+date+'</div></div>');
+
+  w.document.write('<div class="content">');
 
   // ── Load Status ─────────────────────────────────────────────────────────────
   w.document.write('<h2>Load Status</h2><div class="grid4">');
@@ -9732,30 +9761,30 @@ function exportPlayerPDF(){
   w.document.write('<div class="card"><div class="val">'+ms.monotony.toFixed(2)+'</div><div class="lbl">Monotony</div></div></div>');
 
   // ── Trend Charts row 1: Strain + ACWR ───────────────────────────────────────
-  w.document.write('<h2>Workload Trends — Last 30 Games</h2><div class="grid2">');
+  w.document.write('<h2>Workload Trends — Last 30 Games</h2><div class="grid1">');
   w.document.write('<div class="chart-card"><div class="chart-title">Strain (Weekly HE × Monotony)</div>');
-  w.document.write(makeSVG(strainVals,{w:400,h:110,color:'#d97706',label:'',xLabels:gameLabels,yMin:0,refLines:[{y:1500,color:'#d97706',label:'1,500'},{y:3000,color:'#dc2626',label:'3,000'}]}));
+  w.document.write(makeSVG(strainVals,{w:900,h:230,color:'#d97706',label:'',xLabels:gameLabels,yMin:0,refLines:[{y:1500,color:'#d97706',label:'1,500'},{y:3000,color:'#dc2626',label:'3,000'}]}));
   w.document.write('</div>');
   w.document.write('<div class="chart-card"><div class="chart-title">ACWR (Acute:Chronic Workload Ratio)</div>');
-  w.document.write(makeSVG(acwrVals,{w:400,h:110,color:'#3b82f6',label:'',xLabels:gameLabels,refLines:[{y:0.85,color:'#d97706',label:'0.85'},{y:1.15,color:'#d97706',label:'1.15'},{y:1.25,color:'#dc2626',label:'1.25'}]}));
+  w.document.write(makeSVG(acwrVals,{w:900,h:230,color:'#3b82f6',label:'',xLabels:gameLabels,refLines:[{y:0.85,color:'#d97706',label:'0.85'},{y:1.15,color:'#d97706',label:'1.15'},{y:1.25,color:'#dc2626',label:'1.25'}]}));
   w.document.write('</div></div>');
 
   // ── Trend Charts row 2: HE Runs + Bat Speed ─────────────────────────────────
-  w.document.write('<div class="grid2">');
+  w.document.write('<div class="grid1">');
   w.document.write('<div class="chart-card"><div class="chart-title">HE Distance Per Game (ft)</div>');
-  w.document.write(makeSVG(heVals,{w:400,h:110,color:'#22c55e',label:'',xLabels:gameLabels,yMin:0}));
+  w.document.write(makeSVG(heVals,{w:900,h:230,color:'#22c55e',label:'',xLabels:gameLabels,yMin:0}));
   w.document.write('</div>');
   w.document.write('<div class="chart-card"><div class="chart-title">Bat Speed Per Game (mph)</div>');
-  w.document.write(makeSVG(batGameVals,{w:400,h:110,color:'#ef4444',label:'',xLabels:gameLabels,refLines:batP90>0?[{y:batP90,color:'#9ca3af',label:'90th'}]:[]}));
+  w.document.write(makeSVG(batGameVals,{w:900,h:230,color:'#ef4444',label:'',xLabels:gameLabels,refLines:batP90>0?[{y:batP90,color:'#9ca3af',label:'90th'}]:[]}));
   w.document.write('</div></div>');
 
   // ── CMJ Charts ──────────────────────────────────────────────────────────────
-  w.document.write('<h2>CMJ Force Plate Trends — Last 30 Sessions</h2><div class="grid2">');
+  w.document.write('<h2>CMJ Force Plate Trends — Last 30 Sessions</h2><div class="grid1">');
   w.document.write('<div class="chart-card"><div class="chart-title">PP/BM — Peak Power per Body Mass (W/kg)</div>');
-  w.document.write(makeSVG(ppbmVals,{w:400,h:110,color:'#8b5cf6',label:'',xLabels:cmjLabels,refLines:ppbmAvg>0?[{y:ppbmAvg,color:'#9ca3af',label:'30d avg'}]:[]}));
+  w.document.write(makeSVG(ppbmVals,{w:900,h:230,color:'#8b5cf6',label:'',xLabels:cmjLabels,refLines:ppbmAvg>0?[{y:ppbmAvg,color:'#9ca3af',label:'30d avg'}]:[]}));
   w.document.write('</div>');
   w.document.write('<div class="chart-card"><div class="chart-title">Jump Height (cm)</div>');
-  w.document.write(makeSVG(jumpVals,{w:400,h:110,color:'#06b6d4',label:'',xLabels:cmjLabels,refLines:jumpAvg>0?[{y:jumpAvg,color:'#9ca3af',label:'30d avg'}]:[]}));
+  w.document.write(makeSVG(jumpVals,{w:900,h:230,color:'#06b6d4',label:'',xLabels:cmjLabels,refLines:jumpAvg>0?[{y:jumpAvg,color:'#9ca3af',label:'30d avg'}]:[]}));
   w.document.write('</div></div>');
 
   // ── CMJ metrics ─────────────────────────────────────────────────────────────
@@ -9793,6 +9822,33 @@ function exportPlayerPDF(){
     w.document.write('</div>');
   }
 
+  // ── Return-to-Play status (if an active protocol exists) ────────────────────
+  var activeProtocols = (RTP_DATA[currentPlayer]||[]).filter(function(pr){ return pr.status !== 'complete'; });
+  if (activeProtocols.length) {
+    w.document.write('<h2>Return-to-Play Status</h2>');
+    activeProtocols.forEach(function(pr) {
+      var phase = pr.phases[pr.currentPhase];
+      var metCount = phase.criteria.filter(function(c){ return c.met; }).length;
+      var daysIn = Math.floor((Date.now() - new Date(pr.created).getTime()) / 86400000);
+      w.document.write('<div class="card" style="margin-bottom:10px;"><div style="font-weight:700;font-size:13px;margin-bottom:4px;">'+pr.injuryType+'</div>'
+        + '<div style="font-size:12px;color:#374151;">Phase '+(pr.currentPhase+1)+' of '+pr.phases.length+' — <b>'+phase.name+'</b> · Day '+daysIn+' since injury</div>'
+        + '<div style="font-size:11px;color:#6b7280;margin-top:4px;">'+metCount+' / '+phase.criteria.length+' phase criteria met</div>'
+        + '</div>');
+    });
+  }
+
+  // ── Recent Coach Notes ────────────────────────────────────────────────────────
+  var recentNotesForPDF = Object.entries(coachNotesDB[currentPlayer] || {})
+    .sort(function(a,b){ return new Date(b[0]) - new Date(a[0]); })
+    .slice(0, 5);
+  if (recentNotesForPDF.length) {
+    w.document.write('<h2>Recent Coach Notes</h2>');
+    recentNotesForPDF.forEach(function(kv) {
+      if (!kv[1]) return;
+      w.document.write('<div style="font-size:11px;color:#374151;padding:6px 0;border-bottom:1px solid #e5e7eb;"><b>'+new Date(kv[0]).toLocaleDateString('en-US',{month:'short',day:'numeric'})+':</b> '+kv[1]+'</div>');
+    });
+  }
+
   // ── Recent Games Table ───────────────────────────────────────────────────────
   w.document.write('<h2>Recent Games (Last 10)</h2>');
   w.document.write('<table><thead><tr><th>Date</th><th>HE Dist</th><th>Total Dist</th><th>Top Speed</th><th>Exit Velo</th><th>Bat Speed</th><th>Throw</th><th>ACWR</th></tr></thead><tbody>');
@@ -9802,7 +9858,9 @@ function exportPlayerPDF(){
     w.document.write('<tr><td>'+g.date+'</td><td>'+(g.he||'—')+' ft</td><td>'+(g.dist?g.dist.toLocaleString():'—')+' ft</td><td>'+(g.speed?g.speed.toFixed(2)+' ft/s':'—')+'</td><td>'+(g.exit?g.exit.toFixed(1)+' mph':'—')+'</td><td>'+(g.bat?g.bat.toFixed(1)+' mph':'—')+'</td><td>'+(g.throwV?g.throwV.toFixed(1)+' mph':'—')+'</td><td style="color:'+gc+';">'+ga+'</td></tr>');
   });
   w.document.write('</tbody></table>');
+  w.document.write('</div>'); // close .content
   w.document.write('<div class="footer"><span>Cubs S&C Dashboard &mdash; Confidential</span><span>Generated '+date+'</span></div>');
+  w.document.write('</div>'); // close .page-wrap
   w.document.write('</body></html>');
   w.document.close();
   setTimeout(function(){w.print();},700);
