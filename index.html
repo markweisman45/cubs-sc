@@ -9728,18 +9728,13 @@ function exportPlayerPDF(){
   var games30 = (p.recentGames||[]).slice(-30);
   var gameLabels = games30.map(function(g){return g.date;});
 
-  // Per-game strain
-  var sc=(typeof importedData!=='undefined'&&importedData.statcast)?importedData.statcast:{};
-  var sk=Object.keys(sc).find(function(k){return k===currentPlayer||k.toLowerCase()===currentPlayer.toLowerCase();});
-  var scRows=sk?(sc[sk]||[]).sort(function(a,b){return safeParseDate(a.date)-safeParseDate(b.date);}):[];
+  // Per-game strain — uses computeMonotonyStrain (sources from p.recentGames,
+  // which stays current regardless of which daily import path was used) —
+  // not the statcast-only store directly, which is what was silently empty
+  // here and made this chart show "No data".
   var strainVals = games30.map(function(g){
-    var match=scRows.find(function(r){return fmtDate(r.date)===g.date;});
-    if(!match)return null;
-    var ref=safeParseDate(match.date);ref.setHours(0,0,0,0);
-    var daily=[];
-    for(var i=6;i>=0;i--){var d=new Date(ref);d.setDate(d.getDate()-i);d.setHours(0,0,0,0);var r=scRows.find(function(r){var rd=safeParseDate(r.date);rd.setHours(0,0,0,0);return rd.getTime()===d.getTime();});daily.push(r?(r.heDist||0):0);}
-    var wk=daily.reduce(function(s,v){return s+v;},0),avg=wk/7,sd=Math.sqrt(daily.reduce(function(s,v){return s+Math.pow(v-avg,2);},0)/7),mono=sd>0?avg/sd:0;
-    return Math.round(wk*mono);
+    var ms = computeMonotonyStrain(currentPlayer, safeParseDate(g.date));
+    return ms.strain > 0 ? ms.strain : null;
   });
 
   // ACWR per game
