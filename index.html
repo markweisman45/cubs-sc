@@ -10535,14 +10535,23 @@ function renderHERuns() {
     }).join('');
   }
 
-  // Speed chart — max speed per game
+  // Speed chart — max speed per game. Uses the year-filtered `scoped` set
+  // (not the full all-years `runs`) so it actually respects the year filter,
+  // and keys by a year-safe ISO date (not the year-less "Mon DD" label) so
+  // the same calendar day in different years can't collide/overwrite once
+  // multi-year data exists.
   var byDate = {};
-  runs.forEach(function(r) {
-    var d = fmtDate(r.date);
-    if (!byDate[d] || r.speed > byDate[d]) byDate[d] = r.speed;
+  var labelFor = {};
+  scoped.forEach(function(r) {
+    var d = safeParseDate(r.date);
+    if (!d || isNaN(d.getTime())) return;
+    var key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if (!(key in byDate) || r.speed > byDate[key]) byDate[key] = r.speed;
+    labelFor[key] = fmtDate(r.date);
   });
-  var chartDates = Object.keys(byDate).sort(function(a,b){ return safeParseDate(a)-safeParseDate(b); });
-  var chartSpeeds = chartDates.map(function(d){ return byDate[d]; });
+  var sortedKeys = Object.keys(byDate).sort();
+  var chartDates = sortedKeys.map(function(k){ return labelFor[k]; });
+  var chartSpeeds = sortedKeys.map(function(k){ return byDate[k]; });
   var ctx = document.getElementById('heSpeedChart');
   if (ctx) {
     if (ctx._chart) ctx._chart.destroy();
