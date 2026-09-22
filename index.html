@@ -9608,39 +9608,65 @@ function exportPlayerPDF(){
   var acwrColor=p.acwr>1.25||p.acwr<0.75?'#dc2626':p.acwr>1.15||p.acwr<0.85?'#d97706':'#16a34a';
 
   // ── SVG Chart builder ───────────────────────────────────────────────────────
+  var _svgGradCounter = 0;
   function makeSVG(data, opts) {
     // data: array of numbers (nulls allowed), opts: {w,h,color,refLines,label,unit,yMin}
-    var W=opts.w||600, H=opts.h||120, pad={l:48,r:16,t:20,b:28};
+    var W=opts.w||600, H=opts.h||120, pad={l:54,r:20,t:24,b:32};
+    var FONT='font-family="Helvetica Neue, Arial, sans-serif"'; // SVG text doesn't inherit page CSS — omitting this is why labels were rendering in the browser's plain default font
     var vals = data.filter(function(v){return v!==null&&v!==undefined&&!isNaN(v);});
     if (!vals.length) return '<div style="height:'+H+'px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:11px;font-style:italic;">No data</div>';
-    var minV = opts.yMin!==undefined ? opts.yMin : Math.min.apply(null,vals)*0.97;
-    var maxV = Math.max.apply(null,vals)*1.03;
+    var minV = opts.yMin!==undefined ? opts.yMin : Math.min.apply(null,vals)*0.94;
+    var maxV = Math.max.apply(null,vals)*1.08;
     if (maxV===minV) { maxV+=1; minV-=1; }
     var cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
     function xp(i){return pad.l + (i/(data.length-1||1))*cW;}
     function yp(v){return pad.t + cH - ((v-minV)/(maxV-minV))*cH;}
     var color = opts.color||'#3b82f6';
+    var gradId = 'grad'+(_svgGradCounter++);
 
-    // Build path
-    var pathD='', areaD='';
-    var first=true, firstX=0, lastX=0, lastY=0;
+    // Catmull-Rom → cubic bezier smoothing, applied per contiguous segment
+    // (breaks at nulls so gaps in the data don't get bridged with a curve).
+    function smoothPath(pts) {
+      if (!pts.length) return '';
+      if (pts.length===1) return 'M'+pts[0].x.toFixed(1)+','+pts[0].y.toFixed(1);
+      var d='M'+pts[0].x.toFixed(1)+','+pts[0].y.toFixed(1);
+      for (var i=0;i<pts.length-1;i++) {
+        var p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+        var c1x=p1.x+(p2.x-p0.x)/6, c1y=p1.y+(p2.y-p0.y)/6;
+        var c2x=p2.x-(p3.x-p1.x)/6, c2y=p2.y-(p3.y-p1.y)/6;
+        d+=' C'+c1x.toFixed(1)+','+c1y.toFixed(1)+' '+c2x.toFixed(1)+','+c2y.toFixed(1)+' '+p2.x.toFixed(1)+','+p2.y.toFixed(1);
+      }
+      return d;
+    }
+
+    // Break data into contiguous (non-null) segments
+    var segments=[], cur=[];
     data.forEach(function(v,i){
-      if (v===null||v===undefined||isNaN(v)) { first=true; return; }
-      var x=xp(i), y=yp(v);
-      if (first) { pathD+='M'+x.toFixed(1)+','+y.toFixed(1); areaD+='M'+x.toFixed(1)+','+(pad.t+cH).toFixed(1)+' L'+x.toFixed(1)+','+y.toFixed(1); firstX=x; first=false; }
-      else { pathD+=' L'+x.toFixed(1)+','+y.toFixed(1); areaD+=' L'+x.toFixed(1)+','+y.toFixed(1); }
-      lastX=x; lastY=y;
+      if (v===null||v===undefined||isNaN(v)) { if (cur.length) segments.push(cur); cur=[]; return; }
+      cur.push({x:xp(i), y:yp(v)});
     });
-    areaD+=' L'+lastX.toFixed(1)+','+(pad.t+cH).toFixed(1)+' Z';
+    if (cur.length) segments.push(cur);
 
-    // Y axis ticks (4 lines)
-    var ticks=''; var gridLines='';
+    var pathD = segments.map(function(seg){ return smoothPath(seg); }).join(' ');
+    var areaD = segments.map(function(seg){
+      if (seg.length<2) return '';
+      var d='M'+seg[0].x.toFixed(1)+','+(pad.t+cH).toFixed(1)+' L'+seg[0].x.toFixed(1)+','+seg[0].y.toFixed(1);
+      d+=smoothPath(seg).replace(/^M[^C]+/,''); // reuse the curve commands, drop its own M
+      var last=seg[seg.length-1];
+      d+=' L'+last.x.toFixed(1)+','+(pad.t+cH).toFixed(1)+' Z';
+      return d;
+    }).join(' ');
+
+    // Y axis ticks + subtle horizontal gridlines only
+    var ticks='', gridLines='';
     for (var ti=0;ti<=3;ti++) {
       var tv = minV + (maxV-minV)*ti/3;
       var ty = yp(tv);
-      ticks += '<text x="'+(pad.l-6).toFixed(1)+'" y="'+(ty+4).toFixed(1)+'" font-size="9" fill="#9ca3af" text-anchor="end">'+tv.toFixed(tv>100?0:1)+'</text>';
-      gridLines += '<line x1="'+pad.l+'" y1="'+ty.toFixed(1)+'" x2="'+(pad.l+cW)+'" y2="'+ty.toFixed(1)+'" stroke="#e5e7eb" stroke-width="0.5"/>';
+      ticks += '<text '+FONT+' x="'+(pad.l-10).toFixed(1)+'" y="'+(ty+3.5).toFixed(1)+'" font-size="10" font-weight="500" fill="#9ca3af" text-anchor="end">'+tv.toFixed(tv>100?0:1)+'</text>';
+      if (ti>0) gridLines += '<line x1="'+pad.l+'" y1="'+ty.toFixed(1)+'" x2="'+(pad.l+cW)+'" y2="'+ty.toFixed(1)+'" stroke="#eef0f3" stroke-width="1"/>';
     }
+    // Baseline slightly darker for grounding
+    gridLines += '<line x1="'+pad.l+'" y1="'+(pad.t+cH).toFixed(1)+'" x2="'+(pad.l+cW)+'" y2="'+(pad.t+cH).toFixed(1)+'" stroke="#e2e5ea" stroke-width="1"/>';
 
     // X axis labels (show ~6 evenly spaced)
     var xLabels='';
@@ -9648,36 +9674,51 @@ function exportPlayerPDF(){
       var step = Math.max(1, Math.floor(opts.xLabels.length/6));
       opts.xLabels.forEach(function(lbl,i){
         if (i%step===0||i===opts.xLabels.length-1) {
-          xLabels += '<text x="'+xp(i).toFixed(1)+'" y="'+(H-6)+'" font-size="8" fill="#9ca3af" text-anchor="middle">'+lbl+'</text>';
+          xLabels += '<text '+FONT+' x="'+xp(i).toFixed(1)+'" y="'+(H-8)+'" font-size="9.5" font-weight="500" fill="#9ca3af" text-anchor="middle">'+lbl+'</text>';
         }
       });
     }
 
-    // Reference lines
+    // Reference lines, with a small background chip behind the label so it
+    // stays legible when it crosses the plotted line.
     var refs='';
     if (opts.refLines) opts.refLines.forEach(function(r){
       if (r.y < minV || r.y > maxV) return;
       var ry = yp(r.y);
-      refs += '<line x1="'+pad.l+'" y1="'+ry.toFixed(1)+'" x2="'+(pad.l+cW)+'" y2="'+ry.toFixed(1)+'" stroke="'+r.color+'" stroke-width="1" stroke-dasharray="4,3"/>';
-      refs += '<text x="'+(pad.l+cW-2)+'" y="'+(ry-3).toFixed(1)+'" font-size="8" fill="'+r.color+'" text-anchor="end">'+r.label+'</text>';
+      var labelW = 14 + r.label.length*5.2;
+      refs += '<line x1="'+pad.l+'" y1="'+ry.toFixed(1)+'" x2="'+(pad.l+cW)+'" y2="'+ry.toFixed(1)+'" stroke="'+r.color+'" stroke-width="1.25" stroke-dasharray="5,4" opacity="0.75"/>';
+      refs += '<rect x="'+(pad.l+cW-labelW).toFixed(1)+'" y="'+(ry-15).toFixed(1)+'" width="'+labelW.toFixed(1)+'" height="14" rx="3" fill="white" opacity="0.9"/>';
+      refs += '<text '+FONT+' x="'+(pad.l+cW-6)+'" y="'+(ry-5).toFixed(1)+'" font-size="9.5" font-weight="700" fill="'+r.color+'" text-anchor="end">'+r.label+'</text>';
     });
 
-    // Dots
+    // Endpoint — larger dot with a soft halo ring, plus its value as a small badge
     var dots='';
     data.forEach(function(v,i){
       if (v===null||v===undefined||isNaN(v)) return;
       var isLast = (i===data.length-1 || data.slice(i+1).every(function(x){return x===null||isNaN(x);}));
-      if (isLast) dots += '<circle cx="'+xp(i).toFixed(1)+'" cy="'+yp(v).toFixed(1)+'" r="4" fill="'+color+'" stroke="white" stroke-width="1.5"/>';
+      if (!isLast) return;
+      var cx=xp(i).toFixed(1), cy=yp(v).toFixed(1);
+      dots += '<circle cx="'+cx+'" cy="'+cy+'" r="9" fill="'+color+'" opacity="0.14"/>';
+      dots += '<circle cx="'+cx+'" cy="'+cy+'" r="5" fill="'+color+'" stroke="white" stroke-width="2"/>';
+      var valStr = v>=100 ? v.toFixed(0) : v.toFixed(1);
+      var badgeW = 12 + valStr.length*7.5;
+      var badgeX = Math.min(parseFloat(cx)+10, pad.l+cW-badgeW);
+      dots += '<rect x="'+badgeX.toFixed(1)+'" y="'+(parseFloat(cy)-11).toFixed(1)+'" width="'+badgeW.toFixed(1)+'" height="18" rx="4" fill="'+color+'"/>';
+      dots += '<text '+FONT+' x="'+(badgeX+badgeW/2).toFixed(1)+'" y="'+(parseFloat(cy)+1.5).toFixed(1)+'" font-size="10.5" font-weight="700" fill="white" text-anchor="middle">'+valStr+'</text>';
     });
 
     // Chart label
-    var lbl = opts.label ? '<text x="'+pad.l+'" y="13" font-size="10" fill="#374151" font-weight="600">'+opts.label+'</text>' : '';
+    var lbl = opts.label ? '<text '+FONT+' x="'+pad.l+'" y="15" font-size="11" fill="#374151" font-weight="700">'+opts.label+'</text>' : '';
 
     return '<svg width="'+W+'" height="'+H+'" style="display:block;width:100%;" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'
+      +'<defs><linearGradient id="'+gradId+'" x1="0" y1="0" x2="0" y2="1">'
+      +'<stop offset="0%" stop-color="'+color+'" stop-opacity="0.28"/>'
+      +'<stop offset="100%" stop-color="'+color+'" stop-opacity="0.02"/>'
+      +'</linearGradient></defs>'
       +'<rect width="'+W+'" height="'+H+'" fill="white"/>'
       + lbl + gridLines
-      + '<path d="'+areaD+'" fill="'+color+'" opacity="0.08"/>'
-      + '<path d="'+pathD+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round"/>'
+      + '<path d="'+areaD+'" fill="url(#'+gradId+')"/>'
+      + '<path d="'+pathD+'" fill="none" stroke="'+color+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'
       + refs + ticks + xLabels + dots
       +'</svg>';
   }
