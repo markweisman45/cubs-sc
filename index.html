@@ -9615,9 +9615,26 @@ function exportPlayerPDF(){
     var FONT='font-family="Helvetica Neue, Arial, sans-serif"'; // SVG text doesn't inherit page CSS — omitting this is why labels were rendering in the browser's plain default font
     var vals = data.filter(function(v){return v!==null&&v!==undefined&&!isNaN(v);});
     if (!vals.length) return '<div style="height:'+H+'px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:11px;font-style:italic;">No data</div>';
-    var minV = opts.yMin!==undefined ? opts.yMin : Math.min.apply(null,vals)*0.94;
-    var maxV = Math.max.apply(null,vals)*1.08;
-    if (maxV===minV) { maxV+=1; minV-=1; }
+
+    // "Nice number" axis rounding — snaps the range and tick step to clean
+    // values (1/2/5×10^n) instead of raw min/max fractions, which is what
+    // was producing ugly ticks like 1008/2016/3024 instead of 1000/2000/3000.
+    function niceNum(range, round) {
+      var exp = Math.floor(Math.log10(range || 1));
+      var frac = (range || 1) / Math.pow(10, exp);
+      var niceFrac;
+      if (round) { niceFrac = frac<1.5?1:frac<3?2:frac<7?5:10; }
+      else { niceFrac = frac<=1?1:frac<=2?2:frac<=5?5:10; }
+      return niceFrac * Math.pow(10, exp);
+    }
+    var rawMin = opts.yMin!==undefined ? opts.yMin : Math.min.apply(null,vals);
+    var rawMax = Math.max.apply(null,vals);
+    if (rawMax===rawMin) { rawMax+=1; }
+    var niceRange = niceNum(rawMax - rawMin, false);
+    var tickStep = niceNum(niceRange/3, true);
+    var minV = opts.yMin!==undefined ? opts.yMin : Math.floor(rawMin/tickStep)*tickStep;
+    var maxV = Math.ceil(rawMax/tickStep)*tickStep;
+    if (maxV===minV) maxV = minV + tickStep*3;
     var cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
     function xp(i){return pad.l + (i/(data.length-1||1))*cW;}
     function yp(v){return pad.t + cH - ((v-minV)/(maxV-minV))*cH;}
@@ -9657,13 +9674,13 @@ function exportPlayerPDF(){
       return d;
     }).join(' ');
 
-    // Y axis ticks + subtle horizontal gridlines only
+    // Y axis ticks + subtle horizontal gridlines only — one per clean tickStep increment
     var ticks='', gridLines='';
-    for (var ti=0;ti<=3;ti++) {
-      var tv = minV + (maxV-minV)*ti/3;
+    for (var tv=minV; tv<=maxV+0.001; tv+=tickStep) {
       var ty = yp(tv);
-      ticks += '<text '+FONT+' x="'+(pad.l-10).toFixed(1)+'" y="'+(ty+3.5).toFixed(1)+'" font-size="10" font-weight="500" fill="#9ca3af" text-anchor="end">'+tv.toFixed(tv>100?0:1)+'</text>';
-      if (ti>0) gridLines += '<line x1="'+pad.l+'" y1="'+ty.toFixed(1)+'" x2="'+(pad.l+cW)+'" y2="'+ty.toFixed(1)+'" stroke="#eef0f3" stroke-width="1"/>';
+      var tvRound = Math.round(tv/tickStep)*tickStep; // clean up float drift
+      ticks += '<text '+FONT+' x="'+(pad.l-10).toFixed(1)+'" y="'+(ty+3.5).toFixed(1)+'" font-size="10" font-weight="500" fill="#9ca3af" text-anchor="end">'+(tvRound===0?'0':tvRound>=1000?(tvRound/1000)+'k':tvRound.toFixed(tvRound>10?0:1))+'</text>';
+      if (tv>minV) gridLines += '<line x1="'+pad.l+'" y1="'+ty.toFixed(1)+'" x2="'+(pad.l+cW)+'" y2="'+ty.toFixed(1)+'" stroke="#eef0f3" stroke-width="1"/>';
     }
     // Baseline slightly darker for grounding
     gridLines += '<line x1="'+pad.l+'" y1="'+(pad.t+cH).toFixed(1)+'" x2="'+(pad.l+cW)+'" y2="'+(pad.t+cH).toFixed(1)+'" stroke="#e2e5ea" stroke-width="1"/>';
