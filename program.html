@@ -538,6 +538,23 @@ function lastTime(name, beforeWi, beforeDi){
 }
 
 // ── Rendering ───────────────────────────────────────────────────────────────
+// Weekly sprint summary from game data (written by the coach dashboard)
+function speedCardHTML(){
+  var sp = PROG.speed; if (!sp || !sp.lastRun) return '';
+  var p = String(sp.lastRun).split('-'), last = new Date(+p[0], +p[1] - 1, +p[2]);
+  if ((Date.now() - last) / 86400000 > 21) return '';
+  var mph = function(x){ return (x * 0.681818).toFixed(1); };
+  var stat = function(v, l, c){ return '<div style="flex:1;min-width:80px;"><div style="font-size:20px;font-weight:800;color:' + (c || '#fff') + ';line-height:1.1;">' + v + '</div><div style="font-size:10px;color:var(--text2);margin-top:2px;">' + l + '</div></div>'; };
+  return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25);">'
+    + '<div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#f59e0b;margin-bottom:8px;">⚡ YOUR SPEED · LAST 7 DAYS OF GAMES</div>'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+    + stat(sp.weekTop ? sp.weekTop.toFixed(1) + ' <span style="font-size:11px;font-weight:600;color:var(--text2);">ft/s</span>' : '—', sp.weekTop ? 'top speed · ' + sp.weekTopPct + '% of your best · ' + mph(sp.weekTop) + ' mph' : 'no game sprints this week')
+    + stat(sp.exp7, 'full-speed days (90%+)', sp.exp7 >= 2 ? '#22c55e' : sp.exp7 === 1 ? '#fff' : '#fbbf24')
+    + stat(sp.best.toFixed(1) + ' <span style="font-size:11px;font-weight:600;color:var(--text2);">ft/s</span>', 'your best (top-3 avg) · ' + mph(sp.best) + ' mph')
+    + '</div>'
+    + (sp.note ? '<div style="font-size:12px;color:var(--text);margin-top:8px;line-height:1.45;">' + esc(sp.note) + '</div>' : '')
+    + '</div>';
+}
 function renderHero(){
   var d = PROG, dt, label;
   var sel = dayDate(S.week, S.day);
@@ -554,6 +571,7 @@ function renderHero(){
     + '<span class="chip">' + doneDays + ' / ' + totalDays + ' sessions done</span></div>'
     + (d.note ? '<div class="coach-note"><b>Coach:</b> ' + esc(d.note) + '</div>' : '')
     + (PROG.messages || []).filter(function(m){ return !m.ref; }).slice(-3).reverse().map(function(m){ return '<div class="coach-note"><b>Coach' + (m.at ? ' · ' + esc(new Date(m.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : '') + ':</b> ' + esc(m.text) + '</div>'; }).join('')
+    + speedCardHTML()
     + '</div>';
   document.getElementById('hero').innerHTML = h;
 }
@@ -913,7 +931,7 @@ async function init(){
   var pb = null;
   try { pb = typeof row.pb_state === 'string' ? JSON.parse(row.pb_state) : row.pb_state; } catch(e) {}
   if (!pb || !pb.weekData || !pb.weekData.length) { document.getElementById('root').innerHTML = '<div class="err">This program has no weeks yet. Ask your coach to re-send it.</div>'; return; }
-  PROG = { id: String(id), athlete: row.athlete, name: row.name, weekData: pb.weekData, startDate: pb.startDate || null, note: pb.pushNote || row.notes || '', messages: pb.messages || [] };
+  PROG = { id: String(id), athlete: row.athlete, name: row.name, weekData: pb.weekData, startDate: pb.startDate || null, note: pb.pushNote || row.notes || '', messages: pb.messages || [], speed: pb.speedSummary || null };
   if (PROG.note && /^[a-z_]+ · \d+ weeks · /.test(PROG.note)) PROG.note = '';   // auto-generated summary, not a coach message
   LOG = mergeLogs(loadLocalLog(), cloudLog);
   try { localStorage.setItem(logKey(), JSON.stringify(LOG)); } catch(e) {}

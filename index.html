@@ -2519,6 +2519,8 @@ body {
         </div>
       </div>
 
+      <!-- Speed readiness (js/speed-intel.js) -->
+      <div class="card" id="si-card" style="margin-bottom:14px;padding:14px 16px;"></div>
       <!-- Summary cards -->
       <div id="he-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;"></div>
 
@@ -3110,6 +3112,12 @@ body {
     <div class="card" style="margin-bottom:16px;padding:16px;">
       <div class="card-title" style="margin-bottom:10px;">📲 ATHLETE CHECK-INS · LAST 7 DAYS</div>
       <div id="brief-checkins" style="font-size:12px;color:var(--text3);">Loading…</div>
+    </div>
+
+    <!-- Speed flags from HE runs (js/speed-intel.js) -->
+    <div class="card" style="margin-bottom:16px;padding:16px;">
+      <div class="card-title" style="margin-bottom:10px;">⚡ SPEED FLAGS · MAX-V EXPOSURE &amp; EFFORT-MATCHED SPEED</div>
+      <div id="brief-speed" style="font-size:12px;color:var(--text3);">Loading…</div>
     </div>
 
     <!-- All Flags -->
@@ -24264,6 +24272,7 @@ try {
   </div>
 
 <script src="js/training-core.js?v=3"></script>
-<script src="js/coach-loop.js?v=3"></script>
+<script src="js/coach-loop.js?v=4"></script>
+<script src="js/speed-intel.js?v=1"></script>
 </body>
 </html>
