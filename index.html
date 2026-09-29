@@ -114,6 +114,9 @@ body {
 .status-dot.green { background: var(--green); }
 .status-dot.yellow { background: var(--yellow); }
 .status-dot.red { background: var(--red); }
+.pb-more summary::-webkit-details-marker { display:none; }
+.pb-more div button:hover { background: rgba(255,255,255,0.06) !important; }
+#pb-session-editor[style*="display: block"] ~ #pb-empty-hint, #pb-session-editor[style*="display:block"] ~ #pb-empty-hint { display:none; }
 .status-dot.nodata { background: var(--text3); opacity: .6; }
 .readiness-hero.nodata-status::before { background: linear-gradient(90deg, var(--text3), transparent); }
 .status-badge.nodata { background: rgba(255,255,255,0.06); color: var(--text3); }
@@ -1234,6 +1237,24 @@ body {
               </div>
             </div>
 
+            <!-- Save & send -->
+            <div class="card" style="padding:14px;border-color:rgba(99,102,241,0.35);">
+              <div class="card-title" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+                <span>2️⃣ SAVE &amp; SEND</span>
+                <span id="pb-autosave-indicator" style="font-size:9px;font-weight:400;color:var(--text3);opacity:0.5;text-transform:none;letter-spacing:0;font-family:'DM Mono',monospace;">Not yet auto-saved</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <input type="text" id="pb-program-name" placeholder="Program name (e.g. Offseason Block 1)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 8px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;">
+                <button onclick="pbAssignAndPush()" style="width:100%;padding:10px;background:#6366f1;border:none;border-radius:7px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📤 Save &amp; Send to Athletes</button>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                  <button onclick="pbSave()" title="Save to My Programs (updates the same program each time)" style="padding:6px 4px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:6px;color:var(--green);font-size:10px;font-weight:700;cursor:pointer;">💾 Save</button>
+                  <button onclick="pbSaveDraft()" title="Work in progress — finish later" style="padding:6px 4px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.35);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;">📝 Draft</button>
+                  <button onclick="pbSaveAsTemplate()" title="Reusable starting point for anyone" style="padding:6px 4px;background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.35);border-radius:6px;color:#60a5fa;font-size:10px;font-weight:700;cursor:pointer;">⭐ Template</button>
+                </div>
+                <div style="font-size:9px;color:var(--text3);line-height:1.5;">Sending again updates the same athlete links — their logs are kept.</div>
+              </div>
+            </div>
+
             <!-- Start from a draft or template instead -->
             <div class="card" id="pb-start-from-saved" style="padding:14px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -1244,65 +1265,44 @@ body {
               <div id="pb-drafts-list" style="display:none;max-height:220px;overflow-y:auto;margin-top:4px;"></div>
             </div>
 
-            <!-- Week progression preview (theoretical, from phase template) -->
-            <div class="card" style="padding:14px;">
-              <div class="card-title" style="margin-bottom:8px;">📊 WEEK PROGRESSION (planned)</div>
-              <div id="pb-week-targets" style="font-size:11px;color:var(--text3);">Build a program to see progression</div>
-            </div>
-
-            <!-- Real weekly volume/intensity/density, from actual content typed in -->
-            <div class="card" style="padding:14px;">
-              <div class="card-title" style="margin-bottom:2px;">📈 ACTUAL PROGRESSION (built)</div>
-              <div style="font-size:9px;color:var(--text3);margin-bottom:10px;">Volume, intensity & density from what's actually in the grid — normalized to % of this program's own peak.</div>
-              <div style="height:180px;position:relative;"><canvas id="pbWeeklyProgressionChart"></canvas></div>
-            </div>
-
-            <!-- Save -->
-            <div class="card" style="padding:14px;">
-              <div class="card-title" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
-                <span>2️⃣ SAVE</span>
-                <span id="pb-autosave-indicator" style="font-size:9px;font-weight:400;color:var(--text3);opacity:0.5;text-transform:none;letter-spacing:0;font-family:'DM Mono',monospace;">Not yet auto-saved</span>
+            <!-- Progression charts (folded away until needed) -->
+            <details class="card" id="pb-analytics" style="padding:12px 14px;" ontoggle="if(this.open){ if(typeof pbRenderWeekTargets==='function') pbRenderWeekTargets(); if(typeof pbRenderWeeklyProgressionChart==='function') pbRenderWeeklyProgressionChart(); }">
+              <summary style="cursor:pointer;font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.5px;">📊 PROGRESSION CHARTS</summary>
+              <div style="margin-top:12px;">
+                <div class="card-title" style="margin-bottom:8px;">WEEK PROGRESSION (planned)</div>
+                <div id="pb-week-targets" style="font-size:11px;color:var(--text3);">Build a program to see progression</div>
+                <div class="card-title" style="margin:14px 0 2px;">ACTUAL PROGRESSION (built)</div>
+                <div style="font-size:9px;color:var(--text3);margin-bottom:10px;">Volume, intensity &amp; density from what's in the grid — % of this program's own peak.</div>
+                <div style="height:180px;position:relative;"><canvas id="pbWeeklyProgressionChart"></canvas></div>
               </div>
-              <div style="display:flex;flex-direction:column;gap:8px;">
-                <input type="text" id="pb-program-name" placeholder="Program name (e.g. Accumulation Block A)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
-
-                <div>
-                  <button onclick="pbSaveDraft()" style="width:100%;padding:7px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;">📝 Save as Draft</button>
-                  <div style="font-size:9px;color:var(--text3);margin-top:3px;padding:0 2px;">Work in progress — come back and finish it later</div>
-                </div>
-
-                <div>
-                  <button onclick="pbSave()" style="width:100%;padding:7px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:var(--green);font-size:11px;font-weight:700;cursor:pointer;">💾 Save to My Programs</button>
-                  <div style="font-size:9px;color:var(--text3);margin-top:3px;padding:0 2px;">Finished and ready — ends up in My Programs, assignable to this athlete</div>
-                </div>
-
-                <div>
-                  <button onclick="pbSaveAsTemplate()" style="width:100%;padding:7px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);border-radius:6px;color:#60a5fa;font-size:11px;font-weight:700;cursor:pointer;">⭐ Save as Template</button>
-                  <div style="font-size:9px;color:var(--text3);margin-top:3px;padding:0 2px;">Strips athlete assignment — reusable as a starting point for anyone later</div>
-                </div>
-              </div>
-            </div>
+            </details>
           </div>
 
           <!-- RIGHT PANEL: Week builder -->
           <div>
-            <!-- Day type selector + week tabs -->
+            <!-- Week tabs + actions -->
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
               <div id="pb-week-tabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
-              <div style="display:flex;gap:6px;">
-                <button onclick="pbAIOpenWeekModal()" style="padding:6px 12px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:11px;font-weight:700;cursor:pointer;" title="AI-generate every training day in the currently open week">✨ AI Generate Week</button>
-                <button onclick="pbAIGenerateFullTemplate()" style="padding:6px 12px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer;" title="AI-generate one week, then scale it across the whole program with progression">✨ AI Generate Full Program</button>
-                <button onclick="pbApplyToAllWeeks()" style="padding:6px 12px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;font-size:11px;font-weight:600;cursor:pointer;" title="Copy Week 1 exercises to all weeks, scaled by progression">↕ Apply to All Weeks</button>
-                <button onclick="pbOpenSubstituteModal()" style="padding:6px 12px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);border-radius:6px;color:#60a5fa;font-size:11px;font-weight:600;cursor:pointer;" title="Replace one exercise with another everywhere it appears in this program">🔁 Swap Exercise Everywhere</button>
-                <button onclick="pbClearWeek()" style="padding:6px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:var(--red);font-size:11px;cursor:pointer;">🗑 Clear Week</button>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <button onclick="pbApplyToAllWeeks()" style="padding:6px 12px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;font-size:11px;font-weight:700;cursor:pointer;" title="Copy this whole week to every other week, scaled by the progression">↕ Week → all weeks</button>
+                <details class="pb-more" style="position:relative;">
+                  <summary style="list-style:none;cursor:pointer;padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;font-weight:600;">More ▾</summary>
+                  <div style="position:absolute;right:0;top:calc(100% + 4px);z-index:50;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;min-width:230px;box-shadow:0 10px 30px rgba(0,0,0,.5);" onclick="this.parentNode.removeAttribute('open')">
+                    <button onclick="pbAIOpenWeekModal()" style="text-align:left;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:#6BA3F8;font-size:12px;cursor:pointer;">✨ AI generate this week</button>
+                    <button onclick="pbAIGenerateFullTemplate()" style="text-align:left;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:#a78bfa;font-size:12px;cursor:pointer;">✨ AI generate full program</button>
+                    <button onclick="pbOpenSubstituteModal()" style="text-align:left;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:#60a5fa;font-size:12px;cursor:pointer;">🔁 Swap an exercise everywhere</button>
+                    <button onclick="pbClearWeek()" style="text-align:left;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:var(--red);font-size:12px;cursor:pointer;">🗑 Clear this week</button>
+                  </div>
+                </details>
               </div>
             </div>
 
             <!-- Day cards grid -->
-            <div id="pb-day-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;"></div>
+            <div id="pb-day-grid" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;"></div>
 
             <!-- Session editor (slides in when day clicked) -->
-            <div id="pb-session-editor" style="display:none;margin-top:16px;" class="card"></div>
+            <div id="pb-session-editor" style="display:none;margin-top:12px;scroll-margin-top:12px;" class="card"></div>
+            <div id="pb-empty-hint" style="margin-top:12px;font-size:12px;color:var(--text3);">Pick a day above to program it.</div>
           </div>
         </div>
       </div>
@@ -3082,6 +3082,12 @@ body {
         <div class="card-title" style="margin-bottom:10px;color:var(--green);">🟢 OPTIMAL LOAD</div>
         <div id="brief-optimal" style="font-size:12px;"></div>
       </div>
+    </div>
+
+    <!-- Athlete check-ins from their program page -->
+    <div class="card" style="margin-bottom:16px;padding:16px;">
+      <div class="card-title" style="margin-bottom:10px;">📲 ATHLETE CHECK-INS · LAST 7 DAYS</div>
+      <div id="brief-checkins" style="font-size:12px;color:var(--text3);">Loading…</div>
     </div>
 
     <!-- All Flags -->
@@ -6807,6 +6813,49 @@ function buildPlayerList() {
 
 // ── Program Compliance — planned vs. actual, pulled from the athlete's own
 // completion log on program.html (pushed to Supabase as they log sets) ──
+// Finished-session entries athletes leave on their program page
+function programCheckins(row) {
+  var out = [], log = row.completion_log || {};
+  Object.keys(log).forEach(function(k) {
+    if (k.indexOf('day:') !== 0 || !log[k] || !log[k].done) return;
+    var d = log[k];
+    var exNotes = [];
+    var m = k.slice(4).split('-');
+    Object.keys(log).forEach(function(nk) {
+      if (nk.indexOf('n:' + m[0] + '-' + m[1] + '-') === 0 && log[nk] && log[nk].text) exNotes.push(log[nk].text);
+    });
+    out.push({ athlete: row.athlete, program: row.name, at: d.at || '', date: d.date || '', week: d.week, day: d.day, label: d.dayLabel, note: d.note, pain: d.pain, exNotes: exNotes });
+  });
+  return out;
+}
+function checkinHTML(c) {
+  var when = c.date ? fmtDate(c.date) : '';
+  var pain = c.pain ? '<div style="color:#f87171;font-weight:600;margin-top:2px;">🚩 Pain' + (c.pain.level ? ' ' + c.pain.level + '/10' : '') + ' — ' + escHtml((c.pain.areas || []).join(', ')) + (c.pain.note ? ': <span style="font-weight:400;color:#fca5a5;">' + escHtml(c.pain.note) + '</span>' : '') + '</div>' : '';
+  var notes = [c.note].concat(c.exNotes || []).filter(Boolean);
+  return '<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:11px;">'
+    + '<div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:#fff;font-weight:600;">' + (c.athlete ? escHtml(c.athlete) + ' · ' : '') + escHtml(c.label || c.day || '') + ' <span style="color:var(--text3);font-weight:400;">Wk ' + escHtml(c.week || '') + '</span></span><span style="color:var(--text3);">' + escHtml(when) + '</span></div>'
+    + pain
+    + notes.map(function(n){ return '<div style="color:var(--text2);margin-top:2px;">💬 ' + escHtml(n) + '</div>'; }).join('')
+    + (!pain && !notes.length ? '<div style="color:var(--green);margin-top:2px;">✓ Finished · no issues</div>' : '')
+    + '</div>';
+}
+// Daily Brief: every athlete's check-ins from the last 7 days, pain first
+async function renderBriefCheckins() {
+  var el = document.getElementById('brief-checkins');
+  if (!el) return;
+  try {
+    var db = getSupaClient(); if (!db) { el.innerHTML = '<div style="color:var(--text3);">Cloud not connected.</div>'; return; }
+    var since = new Date(); since.setDate(since.getDate() - 7);
+    var res = await db.from('athlete_programs').select('id,athlete,name,completion_log,completion_updated_at')
+      .not('completion_log', 'is', null).gte('completion_updated_at', since.toISOString());
+    if (res.error) throw res.error;
+    var cutoff = isoDate(since), all = [];
+    (res.data || []).forEach(function(row){ all = all.concat(programCheckins(row).filter(function(c){ return !c.date || c.date >= cutoff; })); });
+    all.sort(function(a,b){ return (b.pain ? 1 : 0) - (a.pain ? 1 : 0) || String(b.at).localeCompare(String(a.at)); });
+    el.innerHTML = all.length ? all.slice(0, 20).map(checkinHTML).join('') : '<div style="color:var(--text3);padding:6px 0;">No sessions finished in the last 7 days.</div>';
+  } catch(e) { console.warn('[renderBriefCheckins]', e); el.innerHTML = '<div style="color:var(--text3);">Couldn\'t load check-ins.</div>'; }
+}
+
 async function renderProgramCompliance() {
   var card = document.getElementById('compliance-card');
   var body = document.getElementById('compliance-body');
@@ -6855,8 +6904,14 @@ async function renderProgramCompliance() {
         + '</div>';
     }).filter(Boolean).join('');
 
-    if (!cardsHtml) return;
-    body.innerHTML = cardsHtml;
+    var checkins = [];
+    res.data.forEach(function(row){ checkins = checkins.concat(programCheckins(row)); });
+    checkins.sort(function(a,b){ return String(b.at).localeCompare(String(a.at)); });
+    var ciHtml = checkins.length ? '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">'
+      + '<div style="font-size:10px;color:var(--text3);letter-spacing:.5px;margin-bottom:6px;">RECENT CHECK-INS</div>'
+      + checkins.slice(0, 5).map(checkinHTML).join('') + '</div>' : '';
+    if (!cardsHtml && !ciHtml) return;
+    body.innerHTML = cardsHtml + ciHtml;
     card.style.display = 'block';
   } catch(e) { console.warn('[renderProgramCompliance]', e); }
 }
@@ -8368,182 +8423,168 @@ function getSwingWorkloadFromSlider() {
 // DAILY BRIEF
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ── PUSH PROGRAM TO PLAYER ────────────────────────────────────────────────────
-function showPushProgramModal(progId) {
-  var prog = SAVED_PROGRAMS.find(function(p){ return p.id==progId; }); // == not === for type safety
-  if (!prog) return;
+// ── ASSIGN & PUSH ────────────────────────────────────────────────────────────
+// One place to send a saved program to one or more athletes. Each athlete gets
+// their own link (their own loads from their 1RMs, their own log). If a program
+// was already sent to an athlete, pushing again updates THAT link in place —
+// same URL, and everything they've logged is kept.
+var PUSH_BASE_URL = 'https://markweisman45.github.io/cubs-sc/program.html?id=';
 
-  var players = Object.keys(PLAYERS);
-  var playerOpts = players.map(function(n){
-    return '<option value="'+n+'"'+(prog.athlete===n?' selected':'')+'>'+n+' ('+PLAYERS[n].pos+')</option>';
+// Fill in video links + actual lbs (from %1RM) for one athlete
+function pbComputeLoadsForAthlete(pbState, player) {
+  var st = JSON.parse(JSON.stringify(pbState));
+  (st.weekData || []).forEach(function(wk) {
+    (wk.days || []).forEach(function(day) {
+      (day.blocks || []).forEach(function(block) {
+        (block.exercises || []).forEach(function(ex) {
+          if (!ex || !ex.name) return;
+          delete ex.calcWeight; delete ex.calcWeightSource;
+          var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
+          if (dbEx && dbEx.video) ex.video = dbEx.video;
+          if (ex.load && /%/.test(String(ex.load)) && dbEx && dbEx.liftKey) {
+            var m = String(ex.load).match(/(\d+(?:\.\d+)?)/);
+            var oneRM = m ? get1RM(player, dbEx.liftKey) : null;
+            var lbs = oneRM ? calcMROUND(parseFloat(m[1]), oneRM) : null;
+            if (lbs) { ex.calcWeight = lbs; ex.calcWeightSource = dbEx.liftKey + ' 1RM: ' + oneRM + ' lbs'; }
+          }
+        });
+      });
+    });
+  });
+  return st;
+}
+
+function showPushProgramModal(progId) {
+  var prog = SAVED_PROGRAMS.find(function(p){ return String(p.id) === String(progId); });
+  if (!prog) { alert('Program not found in My Programs'); return; }
+  if (!prog.pbState || !prog.pbState.weekData || !prog.pbState.weekData.length) {
+    // Old-style / template programs without week data can't be logged — keep the old share path
+    if (typeof forceSyncProgram === 'function') { forceSyncProgram(prog.id); return; }
+    alert('This program has no week-by-week data to send.'); return;
+  }
+  var pushes = prog.pushes || [];
+  var pushedTo = {}; pushes.forEach(function(x){ pushedTo[x.athlete] = x; });
+  var pre = prog.athlete && prog.athlete !== '(Sandbox)' && PLAYERS[prog.athlete] ? prog.athlete : null;
+  var st = prog.pbState;
+  // Default start: next Monday (or today if today is Monday)
+  var d = new Date(); var add = (8 - d.getDay()) % 7; d.setDate(d.getDate() + add);
+  var defStart = (pushes.length && pushes[0].startDate) || isoDate(d);
+
+  var rows = Object.keys(PLAYERS).map(function(n) {
+    var was = pushedTo[n];
+    var checked = (n === pre) || !!was;
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;background:rgba(255,255,255,0.02);">'
+      + '<input type="checkbox" class="push-ath" value="' + escHtml(n) + '"' + (checked ? ' checked' : '') + ' style="width:16px;height:16px;accent-color:#6366f1;">'
+      + '<span style="flex:1;font-size:13px;color:#fff;">' + escHtml(n) + ' <span style="color:var(--text3);font-size:11px;">' + escHtml(PLAYERS[n].pos || '') + '</span></span>'
+      + (was ? '<span style="font-size:10px;color:#4ADE80;">● live — will update</span>' : '')
+      + '</label>';
   }).join('');
 
   var modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;width:420px;max-width:95vw;">'
-    +'<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">📤 Push Program to Player</div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">'+prog.name+'</div>'
-    +'<div style="display:flex;flex-direction:column;gap:12px;">'
-    +'<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Assign To</label>'
-    +'<select id="push-player-sel" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 10px;color:#fff;font-size:13px;">'+playerOpts+'</select></div>'
-    +'<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Start Date</label>'
-    +'<input type="date" id="push-start-date" value="'+localISODate()+'" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 10px;color:#fff;font-size:13px;box-sizing:border-box;"></div>'
-    +'<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Note (optional)</label>'
-    +'<input type="text" id="push-note" placeholder="e.g. Post-series lift" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 10px;color:#fff;font-size:13px;box-sizing:border-box;"></div>'
-    +'</div>'
-    +'<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end;">'
-    +'<button id="push-cancel" style="padding:8px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
-    +'<button id="push-confirm" style="padding:8px 20px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📤 Push Program</button>'
-    +'</div></div>';
-
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = '<div class="push-box" style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:22px;width:520px;max-width:100%;max-height:90vh;overflow-y:auto;">'
+    + '<div style="font-size:17px;font-weight:700;color:#fff;">📤 Send to athletes</div>'
+    + '<div style="font-size:12px;color:var(--text3);margin:4px 0 16px;">' + escHtml(prog.name) + ' · ' + st.weekData.length + ' weeks</div>'
+    + '<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Athletes</div>'
+    + '<div style="display:flex;flex-direction:column;gap:4px;max-height:230px;overflow-y:auto;margin-bottom:14px;">' + rows + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Week 1 starts</label>'
+    + '<input type="date" id="push-start-date" value="' + defStart + '" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 10px;color:#fff;font-size:13px;box-sizing:border-box;"></div>'
+    + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Message on their page</label>'
+    + '<input type="text" id="push-note" value="' + escHtml((pushes[0] && pushes[0].note) || '') + '" placeholder="e.g. Offseason block 1 — send me videos of your cleans" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 10px;color:#fff;font-size:13px;box-sizing:border-box;"></div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.5;">Loads written as a % are converted to lbs from each athlete\'s 1RM. Athletes already on this program keep the same link and everything they\'ve logged.</div>'
+    + '<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end;">'
+    + '<button id="push-cancel" style="padding:9px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
+    + '<button id="push-confirm" style="padding:9px 20px;background:#6366f1;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">📤 Send</button>'
+    + '</div></div>';
   document.body.appendChild(modal);
+  modal.querySelector('#push-cancel').onclick = function(){ modal.remove(); };
+  modal.addEventListener('click', function(e){ if (e.target === modal) modal.remove(); });
 
   modal.querySelector('#push-confirm').onclick = async function() {
-    var player    = modal.querySelector('#push-player-sel').value;
+    var athletes = Array.prototype.map.call(modal.querySelectorAll('.push-ath:checked'), function(i){ return i.value; });
     var startDate = modal.querySelector('#push-start-date').value;
-    var note      = modal.querySelector('#push-note').value;
-    if (!player) { alert('Please select a player'); return; }
-
+    var note = modal.querySelector('#push-note').value.trim();
+    if (!athletes.length) { alert('Pick at least one athlete'); return; }
     var btn = modal.querySelector('#push-confirm');
-    btn.disabled = true;
-    btn.textContent = 'Syncing...';
-
-    // 1. Create assigned copy with new ID
-    var copy = JSON.parse(JSON.stringify(prog));
-    copy.id           = Date.now();
-    copy.athlete      = player;
-    copy.assignedTo   = player;
-    copy.assignedDate = startDate;
-    copy.note         = note;
-    copy.isAssigned   = true;
-    copy.created      = new Date().toISOString();
-
-    // Inject video URLs and calculate actual weights from 1RM data
-    if (copy.pbState && copy.pbState.weekData) {
-      copy.pbState.weekData.forEach(function(wk) {
-        (wk.days||[]).forEach(function(day) {
-          (day.blocks||[]).forEach(function(block) {
-            (block.exercises||[]).forEach(function(ex) {
-              if (!ex.name) return;
-              var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
-
-              // Video URL — always prefer the current Library link over whatever
-              // was snapshotted when this exercise was added to the program
-              if (dbEx && dbEx.video) ex.video = dbEx.video;
-
-              // Calculate actual lbs from % load using athlete's 1RM
-              if (ex.load && typeof ex.load === 'string' && ex.load.includes('%') && dbEx && dbEx.liftKey) {
-                var pctMatch = ex.load.match(/(\d+(?:\.\d+)?)/);
-                if (pctMatch) {
-                  var pct = parseFloat(pctMatch[1]);
-                  var oneRM = get1RM(player, dbEx.liftKey);
-                  if (oneRM) {
-                    var calcLbs = calcMROUND(pct, oneRM);
-                    if (calcLbs) {
-                      ex.calcWeight = calcLbs;        // numeric lbs for athlete page
-                      ex.calcWeightSource = dbEx.liftKey + ' 1RM: ' + oneRM + ' lbs';
-                    }
-                  }
-                }
-              }
-            });
-          });
-        });
-      });
-    }
-
-    // Populate content for template programs
-    if (!copy.content && !copy.pbState && typeof OC_PROGRAMS !== 'undefined') {
-      var baseName = (prog.name||'').replace(/ -- [^-]+$/, '').replace(/\s*\(Copy\)\s*/g,'').trim();
-      var tKey = Object.keys(OC_PROGRAMS).find(function(k){ return k===baseName||k===prog.name; });
-      if (tKey && typeof renderTemplateHTML === 'function') {
-        copy.content = renderTemplateHTML(tKey);
-        copy.html    = copy.content;
+    btn.disabled = true; btn.textContent = 'Sending…';
+    var db = getSupaClient();
+    var results = [];
+    // New link ids: unique and never equal to any saved program's id
+    var nextId = Date.now();
+    SAVED_PROGRAMS.forEach(function(p){ var n = Number(p.id); if (n >= nextId) nextId = n + 1; });
+    for (var i = 0; i < athletes.length; i++) {
+      var player = athletes[i];
+      var prev = pushedTo[player];
+      var id = prev ? String(prev.id) : String(nextId++);
+      var athState = pbComputeLoadsForAthlete(prog.pbState, player);
+      athState.athlete = player; athState.startDate = startDate; athState.pushNote = note;
+      athState.sourceProgramId = String(prog.id);
+      var now = new Date().toISOString();
+      var row = { id: id, athlete: player, name: prog.name || '', type: prog.meso || '', phase: prog.meso || '',
+                  notes: note, content: '', pb_state: JSON.stringify(athState), updated_at: now };
+      if (!prev) row.created_at = now;
+      var err = null;
+      try {
+        if (!db) throw new Error('Supabase not loaded');
+        var r = await db.from('athlete_programs').upsert(row, { onConflict: 'id' });
+        if (r.error) throw r.error;
+      } catch(e) { err = e.message || String(e); }
+      results.push({ athlete: player, id: id, url: PUSH_BASE_URL + encodeURIComponent(id), err: err, updated: !!prev });
+      if (!err) {
+        var rec = { athlete: player, id: id, startDate: startDate, note: note, at: now };
+        prog.pushes = (prog.pushes || []).filter(function(x){ return x.athlete !== player; });
+        prog.pushes.unshift(rec);
+        // Keep one assigned copy per athlete in My Programs (update it instead of piling up copies)
+        var copy = SAVED_PROGRAMS.find(function(p){ return String(p.id) === id && p.isAssigned; });
+        if (!copy) { copy = JSON.parse(JSON.stringify(prog)); delete copy.pushes; copy.id = Number(id); SAVED_PROGRAMS.push(copy); }
+        copy.name = prog.name; copy.athlete = player; copy.assignedTo = player; copy.assignedDate = startDate;
+        copy.note = note; copy.isAssigned = true; copy.pbState = athState; copy.sourceProgramId = String(prog.id);
+        copy.created = copy.created || now;
       }
     }
-
-    SAVED_PROGRAMS.unshift(copy);
     persistPrograms();
-
-    // 2. Sync to Supabase immediately
-    var synced = false;
-    var syncError = '';
-    try {
-      if (_supaClient) {
-        var row = {
-          id:         String(copy.id),
-          athlete:    player,
-          name:       copy.name || '',
-          type:       copy.meso || copy.type || '',
-          phase:      copy.meso || '',
-          notes:      note || copy.notes || '',
-          content:    copy.content || '',
-          pb_state:   copy.pbState ? JSON.stringify(copy.pbState) : null,
-          created_at: copy.created,
-          updated_at: new Date().toISOString(),
-        };
-        var { error } = await _supaClient
-          .from('athlete_programs')
-          .upsert(row, { onConflict: 'id' });
-        if (!error) {
-          synced = true;
-        } else {
-          // pb_state column may not exist yet — retry without it
-          console.warn('[push] First attempt failed:', error.message, '— retrying without pb_state');
-          var rowFallback = Object.assign({}, row);
-          delete rowFallback.pb_state;
-          var { error: error2 } = await _supaClient
-            .from('athlete_programs')
-            .upsert(rowFallback, { onConflict: 'id' });
-        if (!error2) synced = true;
-          else {
-            console.error('[push] Supabase fallback error:', error2.message);
-            syncError = error2.message;
-          }
-        }
-      }
-    } catch(err) { console.error('[push]', err); }
-
-    // 3. Shareable URL
-    var url = 'https://markweisman45.github.io/cubs-sc/program.html?id=' + encodeURIComponent(String(copy.id));
-
-    // 4. Swap modal content to success view
-    var box = modal.querySelector('div[style*="border-radius:12px"]');
-    if (box) {
-      box.innerHTML =
-        '<div style="text-align:center;padding:16px 0 8px;">'
-        + '<div style="font-size:36px;margin-bottom:10px;">&#x2705;</div>'
-        + '<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:4px;">' + (copy.name||prog.name) + '</div>'
-        + '<div style="font-size:12px;color:#888;margin-bottom:16px;">Assigned to ' + player + ' &middot; Starting ' + startDate + '</div>'
-        + (synced
-            ? '<div style="font-size:11px;color:#4ADE80;margin-bottom:12px;">&#10003; Synced to Supabase &mdash; link is live</div>'
-            : '<div style="font-size:11px;color:#FCD34D;margin-bottom:12px;">&#9888; Supabase sync failed' + (syncError ? ': ' + syncError : ' &mdash; check RLS policies or run SQL to disable RLS') + '</div>')
-        + '<div style="background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:10px 12px;margin-bottom:16px;text-align:left;">'
-        + '<div style="font-size:10px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Athlete link</div>'
-        + '<div id="push-url-display" style="font-size:11px;color:#6BA3F8;word-break:break-all;font-family:monospace;">' + url + '</div>'
-        + '</div>'
-        + '<div style="display:flex;gap:8px;justify-content:center;">'
-        + '<button id="push-copy-btn" style="padding:9px 22px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">&#128203; Copy link</button>'
-        + '<button id="push-done-btn" style="padding:9px 18px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Done</button>'
-        + '</div></div>';
-
-      document.getElementById('push-copy-btn').onclick = function() {
-        navigator.clipboard.writeText(url).then(function(){
-          document.getElementById('push-copy-btn').textContent = 'Copied!';
-        }).catch(function(){ window.prompt('Copy this link:', url); });
-      };
-      document.getElementById('push-done-btn').onclick = function(){ modal.remove(); };
-    }
-
     if (typeof renderBriefPrograms === 'function') renderBriefPrograms();
-  };
 
-  modal.querySelector('#push-cancel').onclick = function(){ modal.remove(); };
-  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+    var box = modal.querySelector('.push-box');
+    box.innerHTML = '<div style="font-size:17px;font-weight:700;color:#fff;margin-bottom:4px;">' + (results.every(function(r){ return !r.err; }) ? '✅ Sent' : '⚠️ Some sends failed') + '</div>'
+      + '<div style="font-size:12px;color:var(--text3);margin-bottom:14px;">' + escHtml(prog.name) + ' · Week 1 starts ' + escHtml(fmtDate(startDate)) + '</div>'
+      + results.map(function(r, i) {
+          var first = r.athlete.split(' ')[0];
+          var msg = 'Your new program is ready, ' + first + ': ' + r.url;
+          return '<div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);margin-bottom:8px;">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">'
+            + '<div style="font-size:13px;color:#fff;font-weight:600;">' + escHtml(r.athlete) + (r.err ? '' : ' <span style="font-size:10px;color:' + (r.updated ? '#60a5fa' : '#4ADE80') + ';font-weight:500;">' + (r.updated ? 'updated — same link' : 'new link') + '</span>') + '</div>'
+            + (r.err ? '<span style="font-size:11px;color:#f87171;">' + escHtml(r.err) + '</span>'
+              : '<div style="display:flex;gap:6px;">'
+                + '<button data-copy="' + escHtml(r.url) + '" style="padding:6px 10px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">Copy link</button>'
+                + '<a href="sms:&body=' + encodeURIComponent(msg) + '" style="padding:6px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#cbd5e1;font-size:11px;text-decoration:none;">Text</a>'
+                + '<a href="' + escHtml(r.url) + '" target="_blank" style="padding:6px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#cbd5e1;font-size:11px;text-decoration:none;">Open</a>'
+                + '</div>')
+            + '</div>'
+            + (r.err ? '' : '<div style="font-size:10px;color:#6BA3F8;font-family:monospace;margin-top:4px;word-break:break-all;">' + escHtml(r.url) + '</div>')
+            + '</div>';
+        }).join('')
+      + '<div style="display:flex;justify-content:flex-end;margin-top:12px;"><button id="push-done-btn" style="padding:9px 18px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#cbd5e1;font-size:12px;cursor:pointer;">Done</button></div>';
+    box.querySelectorAll('[data-copy]').forEach(function(b) {
+      b.onclick = function() {
+        var u = b.getAttribute('data-copy');
+        (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(function(){ b.textContent = 'Copied!'; }).catch(function(){ window.prompt('Copy this link:', u); });
+      };
+    });
+    box.querySelector('#push-done-btn').onclick = function(){ modal.remove(); };
+  };
 }
 
+// Save from the builder, then open Send. Also used by "Update live links".
+function pbAssignAndPush() {
+  var prog = pbSave(true);
+  if (prog) showPushProgramModal(prog.id);
+}
 
 function renderBrief() {
+  if (typeof renderBriefCheckins === 'function') renderBriefCheckins();
   // Date header
   var dateEl = document.getElementById('brief-date');
   if (dateEl) {
@@ -14007,6 +14048,7 @@ function loadProgToBuilderTemplate(id) {
   PB_STATE.athlete = keepAthlete; // template content, but for whoever is currently selected
   if (PB_STATE.activeWeek >= PB_STATE.weekData.length) PB_STATE.activeWeek = 0;
   PB_LOADED_PROGRAM_ID = null; // this is a fresh copy, not the template itself being edited
+  delete PB_STATE._savedProgId;
 
   var phaseEl = document.getElementById('pb-phase'); if (phaseEl) phaseEl.value = PB_STATE.phase || 'accumulation';
   var weeksEl = document.getElementById('pb-weeks'); if (weeksEl) weeksEl.value = PB_STATE.weeks || 4;
@@ -14335,25 +14377,25 @@ function pbCheckAutoSaveRestore() {
   } catch(e) { console.warn('[pbCheckAutoSaveRestore] failed:', e); }
 }
 
-function pbRenderDayGrid() {
+function pbRenderDayGrid(skipSave) {
   var grid = document.getElementById('pb-day-grid');
   if (!grid || !PB_STATE.weekData.length) return;
   var wk = PB_STATE.weekData[PB_STATE.activeWeek];
   if (!wk) return;
 
-  pbAutoSaveDebounced();
+  if (!skipSave) pbAutoSaveDebounced();
 
   grid.innerHTML = wk.days.map(function(d,di) {
     var col = PB_DAY_COLORS[d.type] || '#334155';
     var isOff = d.type === 'off';
     var exCount = d.blocks.reduce(function(s,b){ return s+(b.exercises||[]).length; }, 0);
-    return '<div onclick="'+(isOff?'':'pbOpenDay('+PB_STATE.activeWeek+','+di+')')+'" '
-      +'style="border:1px solid '+col+(isOff?'33':'66')+';border-radius:8px;padding:10px;'
-      +'cursor:'+(isOff?'default':'pointer')+';background:'+col+(isOff?'08':'12')+';">'
-      +'<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:'+col+';margin-bottom:4px;">'+d.day+'</div>'
-      +'<div style="font-size:11px;color:var(--text);font-weight:600;">'+d.label+'</div>'
-      +(exCount ? '<div style="font-size:9px;color:'+col+';margin-top:6px;">'+exCount+' exercises · '+d.blocks.length+' blocks</div>' : '')
-      +(!isOff && !exCount ? '<div style="font-size:9px;color:var(--text3);margin-top:6px;">+ Click to add session</div>' : '')
+    var isOpen = PB_ACTIVE_DAY && PB_ACTIVE_DAY.weekIdx === PB_STATE.activeWeek && PB_ACTIVE_DAY.dayIdx === di;
+    return '<div onclick="pbOpenDay('+PB_STATE.activeWeek+','+di+')" title="'+(isOff?'Off day — click to program it anyway':'Edit '+escHtml(d.label))+'" '
+      +'style="border:'+(isOpen?'2px solid '+col:'1px solid '+col+(isOff?'33':'66'))+';border-radius:8px;padding:'+(isOpen?'7px 8px':'8px 9px')+';min-height:64px;'
+      +'cursor:pointer;background:'+col+(isOpen?'2a':isOff?'08':'12')+';'+(isOff?'opacity:.6;':'')+'">'
+      +'<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:'+col+';margin-bottom:3px;">'+d.day+'</div>'
+      +'<div style="font-size:11px;color:var(--text);font-weight:600;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">'+escHtml(d.label)+'</div>'
+      +(exCount ? '<div style="font-size:9px;color:'+col+';margin-top:4px;">'+exCount+' ex</div>' : (!isOff ? '<div style="font-size:9px;color:var(--text3);margin-top:4px;">+ add</div>' : ''))
       +'</div>';
   }).join('');
 }
@@ -14595,6 +14637,7 @@ function pbOpenDay(weekIdx, dayIdx) {
 
   var catOpts = '<option value="">— Category —</option>' + cats.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
 
+  var _pairLbl = pbPairLabels(day);
   // Group blocks by session
   var sessions = day.sessions || [{ label:'Session 1', blockIndices: day.blocks.map(function(_,i){return i;}) }];
   // If no sessions structure yet, show all blocks flat
@@ -14622,14 +14665,13 @@ function pbOpenDay(weekIdx, dayIdx) {
         }
         // Pair selector for speed rows
         var sPairLetters = ['','A','B','C','D','E','F','G','H'];
-        var sPairOpts = sPairLetters.map(function(l){ return '<option value="'+l+'"'+(ex.pair===l?' selected':'')+'>'+(l?l:'—')+'</option>'; }).join('');
+        var sPairOpts = sPairLetters.map(function(l){ return '<option value="'+l+'"'+(ex.pair===l?' selected':'')+'>'+(l?(l===ex.pair?(_pairLbl[bi+'-'+ei]||l):l):'—')+'</option>'; }).join('');
         var sPairColors = {A:'#AFA9EC',B:'#5DCAA5',C:'#EF9F27',D:'#ED93B1',E:'#85B7EB',F:'#F0997B',G:'#f59e0b',H:'#a78bfa'};
         var sPairColor = ex.pair ? (sPairColors[ex.pair]||'#6BA3F8') : 'var(--text3)';
         var sPairBg    = ex.pair ? 'rgba(79,142,247,0.12)' : 'transparent';
-        return '<div style="display:grid;grid-template-columns:28px 110px 130px 45px 45px 65px 50px 50px 1fr auto;gap:4px;align-items:center;margin-bottom:5px;">'
+        return '<div style="display:grid;grid-template-columns:40px minmax(170px,1.5fr) 45px 45px 65px 50px 50px 1fr auto;gap:4px;align-items:center;margin-bottom:5px;">'
           +'<select onchange="pbSetExField('+bi+','+ei+',\'pair\',this.value)" title="Pairing" style="background:'+sPairBg+';border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:2px 2px;color:'+sPairColor+';font-size:10px;font-weight:700;font-family:\'DM Mono\',monospace;text-align:center;">'+sPairOpts+'</select>'
-          +'<select onchange="pbSetExCat('+bi+','+ei+',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-size:10px;font-family:\'DM Mono\',monospace;">'+sCatOpts+'</select>'
-          +'<select onchange="pbSetExField('+bi+','+ei+',\'name\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;">'+sExOpts+'</select>'
+          + pbExSearch(bi, ei, ex)
           + pbFieldSelect(bi,ei,'sets',ex.sets||'','Sets')
           + pbFieldSelect(bi,ei,'reps',ex.reps||'','Reps')
           + pbFieldSelect(bi,ei,'distance',ex.distance||'','Dist')
@@ -14644,7 +14686,8 @@ function pbOpenDay(weekIdx, dayIdx) {
           +'<button onclick="pbDupEx('+bi+','+ei+')" title="Duplicate row" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">⧉</button>'
           +'<button onclick="pbRemoveEx('+bi+','+ei+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:1px 3px;">✕</button>'
           +'</div>'
-          +'</div>';
+          +'</div>'
+          + (function(){ var pv = pbProgressionPreview(dayIdx, bi, ei); return pv ? '<div style="font-size:9px;color:var(--text3);margin:-3px 0 7px 44px;font-family:\'DM Mono\',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml(pv)+'</div>' : ''; })();
       }
       var exOpts = '<option value="">— Exercise —</option>';
       if (ex.cat) {
@@ -14657,17 +14700,16 @@ function pbOpenDay(weekIdx, dayIdx) {
       // Pairing letter selector
       var pairLetters = ['','A','B','C','D','E','F','G','H'];
       var pairOpts = pairLetters.map(function(l){
-        return '<option value="'+l+'"'+(ex.pair===l?' selected':'')+'>'+( l ? l : '—')+'</option>';
+        return '<option value="'+l+'"'+(ex.pair===l?' selected':'')+'>'+( l ? (l===ex.pair ? (_pairLbl[bi+'-'+ei]||l) : l) : '—')+'</option>';
       }).join('');
       // Color per pair
       var pairColors = {A:'#AFA9EC',B:'#5DCAA5',C:'#EF9F27',D:'#ED93B1',E:'#85B7EB',F:'#F0997B',G:'#f59e0b',H:'#a78bfa'};
       var pairColor = ex.pair ? (pairColors[ex.pair]||'#6BA3F8') : 'var(--text3)';
       var pairBg    = ex.pair ? 'rgba(79,142,247,0.12)' : 'transparent';
 
-      return '<div style="display:grid;grid-template-columns:28px 120px 1fr 50px 55px 65px 60px 50px 1fr auto;gap:4px;align-items:center;margin-bottom:5px;">'
+      return '<div style="display:grid;grid-template-columns:40px minmax(170px,1.5fr) 50px 55px 65px 60px 50px 1fr auto;gap:4px;align-items:center;margin-bottom:5px;">'
         +'<select onchange="pbSetExField('+bi+','+ei+',\'pair\',this.value)" title="Pairing" style="background:'+pairBg+';border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:2px 2px;color:'+pairColor+';font-size:10px;font-weight:700;font-family:\'DM Mono\',monospace;text-align:center;">'+pairOpts+'</select>'
-        +'<select onchange="pbSetExCat('+bi+','+ei+',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text3);font-size:10px;font-family:\'DM Mono\',monospace;">'+catOpts.replace('value="'+ex.cat+'"','value="'+ex.cat+'" selected')+'</select>'
-        + buildBucketExSelect(bi, ei, ex.name, ex.cat)
+        + pbExSearch(bi, ei, ex)
         + pbFieldSelect(bi,ei,'sets',ex.sets||'','Sets')
         + pbFieldSelect(bi,ei,'reps',ex.reps||'','Reps')
         + pbFieldSelect(bi,ei,'load',ex.load||'','Load')
@@ -14682,7 +14724,8 @@ function pbOpenDay(weekIdx, dayIdx) {
         +'<button onclick="pbDupEx('+bi+','+ei+')" title="Duplicate row" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:1px 3px;">⧉</button>'
         +'<button onclick="pbRemoveEx('+bi+','+ei+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:1px 3px;">✕</button>'
         +'</div>'
-        +'</div>';
+        +'</div>'
+        + (function(){ var pv = pbProgressionPreview(dayIdx, bi, ei); return pv ? '<div style="font-size:9px;color:var(--text3);margin:-3px 0 7px 44px;font-family:\'DM Mono\',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml(pv)+'</div>' : ''; })();
     }).join('');
 
     // Session header divider — handled at top of map
@@ -14696,9 +14739,8 @@ function pbOpenDay(weekIdx, dayIdx) {
       ? (bIcon + ' ' + block.label)
       : (bIcon + ' Block ' + String.fromCharCode(65+bi) + (isSpd ? ' · Speed' : ' · Lift'));
     var colHdr = isSpd
-      ? '<div style="display:grid;grid-template-columns:28px 110px 130px 45px 45px 65px 50px 50px 1fr 20px;gap:4px;margin-bottom:6px;">'
+      ? '<div style="display:grid;grid-template-columns:40px minmax(170px,1.5fr) 45px 45px 65px 50px 50px 1fr 20px;gap:4px;margin-bottom:6px;">'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;text-align:center;">PAIR</div>'
-        +'<div style="font-size:8px;color:var(--text3);font-weight:600;">CATEGORY</div>'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">EXERCISE</div>'
         +'<div style="font-size:8px;color:#f59e0b;font-weight:600;text-align:center;">SETS</div>'
         +'<div style="font-size:8px;color:#f59e0b;font-weight:600;text-align:center;">REPS</div>'
@@ -14707,9 +14749,8 @@ function pbOpenDay(weekIdx, dayIdx) {
         +'<div style="font-size:8px;color:#f59e0b;font-weight:600;text-align:center;">REST</div>'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">NOTES / TIMES</div>'
         +'<div></div></div>'
-      : '<div style="display:grid;grid-template-columns:28px 120px 1fr 50px 55px 65px 60px 50px 1fr 20px;gap:4px;margin-bottom:6px;">'
+      : '<div style="display:grid;grid-template-columns:40px minmax(170px,1.5fr) 50px 55px 65px 60px 50px 1fr 20px;gap:4px;margin-bottom:6px;">'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;text-align:center;">PAIR</div>'
-        +'<div style="font-size:8px;color:var(--text3);font-weight:600;">CATEGORY</div>'
         +'<div style="font-size:8px;color:var(--text3);font-weight:600;">EXERCISE</div>'
         +'<div style="font-size:8px;color:'+bColor+';font-weight:600;text-align:center;">SETS</div>'
         +'<div style="font-size:8px;color:'+bColor+';font-weight:600;text-align:center;">REPS</div>'
@@ -14725,6 +14766,7 @@ function pbOpenDay(weekIdx, dayIdx) {
       +(bi > 0 ? '<button onclick="pbMoveBlock('+bi+',-1)" title="Move block up" style="font-size:10px;color:var(--text3);background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:2px 6px;cursor:pointer;">↑</button>' : '')
       +(bi < day.blocks.length-1 ? '<button onclick="pbMoveBlock('+bi+',1)" title="Move block down" style="font-size:10px;color:var(--text3);background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:2px 6px;cursor:pointer;">↓</button>' : '')
       +'<button onclick="pbAddEx('+bi+')" style="font-size:9px;color:'+bColor+';background:transparent;border:1px dashed '+bColor+'55;border-radius:4px;padding:2px 8px;cursor:pointer;">＋ Row</button>'
+      +'<button onclick="pbAutoPair('+bi+')" title="Pair this block\'s exercises in twos (A1/A2, B1/B2…)" style="font-size:9px;color:#C4B5FD;background:rgba(196,181,253,0.08);border:1px solid rgba(196,181,253,0.3);border-radius:4px;padding:2px 8px;cursor:pointer;">A1/A2 Pair</button>'
       +'<button onclick="pbDupBlock('+bi+')" title="Duplicate block" style="font-size:9px;color:var(--text2);background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:2px 8px;cursor:pointer;">⧉ Dup</button>'
       +'<button onclick="pbCopyBlockToDay('+bi+')" title="Copy block to another day" style="font-size:9px;color:var(--text2);background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:2px 8px;cursor:pointer;">→ Copy to day</button>'
       +'<button onclick="pbRemoveBlock('+bi+')" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;">Remove</button>'
@@ -14767,7 +14809,7 @@ function pbOpenDay(weekIdx, dayIdx) {
   // ── Time under tension + session duration estimate (coach-only) ──
   var timeSummary = pbRenderSessionTimeHTML(pbCalcSessionTime(day));
 
-  editor.innerHTML = '<div style="padding:14px;">'
+  editor.innerHTML = pbExDatalistHTML() + '<div style="padding:14px;">'
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px;">'
     +'<div style="flex:1;min-width:200px;">'
     +'<input id="pb-day-label-input" value="'+day.label+'" onchange="pbUpdateDayLabel(this.value)" placeholder="e.g. Acceleration + UB Lift" style="font-size:14px;font-weight:700;color:#fff;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.2);padding:2px 0;width:100%;outline:none;margin-bottom:4px;">'
@@ -14777,15 +14819,28 @@ function pbOpenDay(weekIdx, dayIdx) {
     +'<button onclick="pbAddBlock(\'lift\')" style="padding:5px 10px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);border-radius:6px;color:#818cf8;font-size:10px;font-weight:600;cursor:pointer;">🏋️ Lift Block</button>'
     +'<button onclick="pbAddBlock(\'speed\')" style="padding:5px 10px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;font-size:10px;font-weight:600;cursor:pointer;">⚡ Speed Block</button>'
     +'<button onclick="pbAIDesign()" style="padding:5px 10px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:10px;font-weight:600;cursor:pointer;">✨ AI Design</button>'
-    +'<button onclick="pbApplyToAllWeeks()" style="padding:5px 10px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:600;cursor:pointer;" title="Apply Week 1 to all weeks with progression">↕ All Weeks</button>'
+    +'<button onclick="pbApplyDayToAllWeeks()" style="padding:5px 10px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:600;cursor:pointer;" title="Copy this day to the same day in every other week, with the progression applied">↕ This day → all weeks</button>'
     +'<button onclick="pbCopyDayToWeek()" style="padding:5px 10px;background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.4);border-radius:6px;color:#5DCAA5;font-size:10px;font-weight:600;cursor:pointer;" title="Copy this day to another week">📋 Copy to week</button>'
     +'<button onclick="pbClearDay()" style="padding:5px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:6px;color:var(--red);font-size:10px;cursor:pointer;" title="Clear all blocks from this day">🗑 Clear</button>'
     +'<button onclick="pbCloseEditor()" style="padding:5px 8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:10px;cursor:pointer;">✕</button>'
     +'</div></div>'
     + timeSummary
+    + (day.blocks.length ? '' : '<div style="padding:18px;border:1px dashed var(--border2);border-radius:8px;text-align:center;color:var(--text3);font-size:12px;margin-bottom:10px;">Empty day — add a <b style="color:#f59e0b;">⚡ Speed Block</b> (speed first) or a <b style="color:#818cf8;">🏋️ Lift Block</b>, then search exercises by name.</div>')
     + blocksHtml
     + coverageSummary
     +'</div>';
+  var _openKey = weekIdx + '-' + dayIdx;
+  if (PB_LAST_OPEN_KEY !== _openKey) {
+    PB_LAST_OPEN_KEY = _openKey;
+    var _r = editor.getBoundingClientRect();
+    if (_r.top > window.innerHeight * 0.6 || _r.top < 0) editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  if (PB_FOCUS) {
+    var _f = editor.querySelector('[data-pb-ex="' + PB_FOCUS + '"]');
+    PB_FOCUS = null;
+    if (_f) _f.focus();
+  }
+  pbRenderDayGrid(true);
 }
 
 // Calculate time-under-tension per set and total session duration — coach-only metric
@@ -15224,11 +15279,13 @@ function pbAddBlock(type) {
   if (!PB_ACTIVE_DAY) { console.error('pbAddBlock: PB_ACTIVE_DAY is null'); return; }
   if (!PB_STATE.weekData || !PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx]) { console.error('pbAddBlock: no weekData'); return; }
   var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
+  if (day.type === 'off') { day.type = type === 'speed' ? 'speed' : 'lift'; if (/^off/i.test(day.label || '')) day.label = type === 'speed' ? 'Speed' : 'Lift'; }
   type = type || 'lift';
   var emptyEx = type === 'speed'
-    ? {type:'speed',name:'',sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
-    : {type:'lift', cat:'',name:'',pair:'',sets:'',reps:'',load:'',tempo:'',rest:''};
-  day.blocks.push({ blockType:type, exercises:[emptyEx] });
+    ? {type:'speed',name:'',pair:pbNextPair(day),sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
+    : {type:'lift', cat:'',name:'',pair:pbNextPair(day),sets:'',reps:'',load:'',tempo:'',rest:''};
+  day.blocks.push({ blockType:type, label:(type === 'speed' ? 'Speed' : 'Lift'), exercises:[emptyEx] });
+  PB_FOCUS = (day.blocks.length - 1) + '-0';
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
 }
 function pbAddEx(bi) {
@@ -15236,11 +15293,175 @@ function pbAddEx(bi) {
   var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
   var isSpd = day.blocks[bi] && day.blocks[bi].blockType === 'speed';
   var emptyEx = isSpd
-    ? {type:'speed',name:'',sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
-    : {type:'lift', cat:'',name:'',pair:'',sets:'',reps:'',load:'',tempo:'',rest:''};
+    ? {type:'speed',name:'',pair:pbNextPair(day),sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
+    : {type:'lift', cat:'',name:'',pair:pbNextPair(day),sets:'',reps:'',load:'',tempo:'',rest:''};
   day.blocks[bi].exercises.push(emptyEx);
+  PB_FOCUS = bi + '-' + (day.blocks[bi].exercises.length - 1);
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
 }
+// ── Faster exercise entry, pairing and progression ─────────────────────────
+var PB_FOCUS = null;          // 'bi-ei' of a row whose search box should get focus after re-render
+var PB_LAST_OPEN_KEY = null;  // scroll the editor into view only when a different day opens
+var PB_PAIR_LETTERS = ['A','B','C','D','E','F','G','H'];
+
+function pbDayRef() { return PB_ACTIVE_DAY ? PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx] : null; }
+
+// One searchable box instead of Category → Exercise dropdowns. Type any part
+// of a name; picking a library exercise also sets its category.
+function pbExDatalistHTML() {
+  var seen = {};
+  return '<datalist id="pb-ex-datalist">' + EXERCISE_DB.filter(function(e){
+    if (!e || !e.name || seen[e.name.toLowerCase()]) return false; seen[e.name.toLowerCase()] = 1; return true;
+  }).sort(function(a,b){ return a.name.localeCompare(b.name); }).map(function(e){
+    return '<option value="' + escHtml(e.name) + '">' + escHtml([e.cat, e.muscle_head].filter(Boolean).join(' · ')) + '</option>';
+  }).join('') + '</datalist>';
+}
+function pbExSearch(bi, ei, ex) {
+  var known = ex.name && EXERCISE_DB.some(function(e){ return e && e.name === ex.name; });
+  return '<input list="pb-ex-datalist" data-pb-ex="' + bi + '-' + ei + '" value="' + escHtml(ex.name || '') + '" placeholder="Search exercise…" '
+    + 'onchange="pbPickExercise(' + bi + ',' + ei + ',this.value)" onkeydown="if(event.key===\'Enter\'){this.blur();}" '
+    + 'title="' + escHtml(ex.cat || '') + '" '
+    + 'style="background:var(--bg3);border:1px solid ' + (ex.name && !known ? 'rgba(245,158,11,0.5)' : 'var(--border)') + ';border-radius:4px;padding:5px 7px;color:var(--text);font-size:11px;font-family:\'DM Sans\',sans-serif;font-weight:600;width:100%;min-width:0;">';
+}
+// Default prescription for a newly picked lift, from the block phase
+function pbDefaultRx(dbEx) {
+  var d = (typeof PHASE_DEFAULTS !== 'undefined') ? PHASE_DEFAULTS[PB_STATE.phase] : null;
+  if (!d) return {};
+  var rx = {};
+  if (d.sets) rx.sets = String(Array.isArray(d.sets) ? d.sets[0] : d.sets);
+  if (d.repsLo) rx.reps = String(d.repsLo === d.repsHi || !d.repsHi ? d.repsLo : Math.round((d.repsLo + d.repsHi) / 2));
+  if (dbEx && dbEx.liftKey && d.loadStart) rx.load = d.loadStart + '%';
+  if (d.restSec) {
+    var sec = parseInt(String(d.restSec).split('-')[0]);
+    if (sec) rx.rest = Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+  }
+  return rx;
+}
+function pbPickExercise(bi, ei, val) {
+  var day = pbDayRef(); if (!day) return;
+  val = String(val || '').trim();
+  var ex = day.blocks[bi].exercises[ei];
+  if (!val) { ex.name = ''; pbRenderDayGrid(); pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx); return; }
+  var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === val.toLowerCase(); });
+  if (dbEx) { val = dbEx.name; if (dbEx.cat) ex.cat = dbEx.cat; }
+  // Fill an empty lift row with the phase's default sets / reps / load / rest
+  var isSpd = day.blocks[bi].blockType === 'speed';
+  if (!isSpd && !ex.sets && !ex.reps && !ex.load) {
+    var rx = pbDefaultRx(dbEx);
+    Object.keys(rx).forEach(function(k){ if (!ex[k]) ex[k] = rx[k]; });
+  }
+  pbSetExField(bi, ei, 'name', val);
+}
+
+// Pair labels (A1, A2, B1…) in order through the whole day
+function pbPairLabels(day) {
+  var counts = {}, out = {};
+  (day.blocks || []).forEach(function(b, bi){
+    (b.exercises || []).forEach(function(ex, ei){
+      if (!ex.pair) return;
+      counts[ex.pair] = (counts[ex.pair] || 0) + 1;
+      out[bi + '-' + ei] = ex.pair + counts[ex.pair];
+    });
+  });
+  return out;
+}
+// Letter for a new row: finish the current pair, then start the next letter
+function pbNextPair(day) {
+  var seq = [];
+  (day.blocks || []).forEach(function(b){ (b.exercises || []).forEach(function(ex){ if (ex.pair) seq.push(ex.pair); }); });
+  if (!seq.length) return 'A';
+  var last = seq[seq.length - 1];
+  var n = seq.filter(function(p){ return p === last; }).length;
+  if (n < 2) return last;
+  var used = {}; seq.forEach(function(p){ used[p] = 1; });
+  var next = PB_PAIR_LETTERS.find(function(l){ return !used[l]; });
+  return next || last;
+}
+// Re-letter one block in twos (A1/A2, B1/B2…), continuing after earlier blocks
+function pbAutoPair(bi) {
+  var day = pbDayRef(); if (!day) return;
+  var used = {};
+  day.blocks.forEach(function(b, i){ if (i < bi) (b.exercises || []).forEach(function(ex){ if (ex.pair) used[ex.pair] = 1; }); });
+  var letters = PB_PAIR_LETTERS.filter(function(l){ return !used[l]; });
+  var exs = day.blocks[bi].exercises || [];
+  var named = exs.filter(function(e){ return e.name; });
+  var perPair = named.length === 3 ? 3 : 2;           // an odd 3 becomes a tri-set
+  var k = 0;
+  exs.forEach(function(ex){ if (!ex.name) return; ex.pair = letters[Math.floor(k / perPair)] || ''; k++; });
+  pbRenderDayGrid();
+  pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+}
+
+// ── Progression: copy a day (or week) to other weeks, scaled ──
+// Scaling is relative to the SOURCE week's multipliers, so copying from any
+// week (not just Week 1) lands the right numbers in every target week.
+function _pbScaleEx(ex, mSrc, mDst) {
+  var r = function(k){ return (mDst[k] || 1) / (mSrc[k] || 1); };
+  if (ex.sets && /^\d+$/.test(String(ex.sets).trim())) ex.sets = String(Math.max(1, Math.round(parseInt(ex.sets) * r('sets'))));
+  if (ex.reps && /^\d+$/.test(String(ex.reps).trim())) ex.reps = String(Math.max(1, Math.round(parseInt(ex.reps) * r('reps'))));
+  if (ex.load && /%/.test(String(ex.load))) {
+    var m = String(ex.load).match(/(\d+(?:\.\d+)?)/);
+    if (m) ex.load = String(ex.load).replace(m[1], String(Math.min(100, Math.round(parseFloat(m[1]) * r('load')))));
+  }
+  return ex;
+}
+function _pbCopyDay(srcDay, dstDay, mSrc, mDst) {
+  dstDay.label = srcDay.label;
+  dstDay.blocks = JSON.parse(JSON.stringify(srcDay.blocks || [])).map(function(block){
+    if (block.blockType === 'session-header' || !(block.exercises || []).length) return block;
+    block.exercises = block.exercises.map(function(ex){ return _pbScaleEx(ex, mSrc, mDst); });
+    return block;
+  });
+}
+function pbApplyDayToAllWeeks() {
+  if (!PB_ACTIVE_DAY) return;
+  var wi = PB_ACTIVE_DAY.weekIdx, di = PB_ACTIVE_DAY.dayIdx;
+  var src = PB_STATE.weekData[wi], srcDay = src.days[di];
+  if (!(srcDay.blocks || []).length) { alert('This day is empty — add exercises first.'); return; }
+  var targets = PB_STATE.weekData.map(function(wk, i){ return i; }).filter(function(i){ return i !== wi; });
+  var filled = targets.filter(function(i){ return (PB_STATE.weekData[i].days[di].blocks || []).length; });
+  if (filled.length && !confirm('Copy ' + (srcDay.label || srcDay.day) + ' to every other week with the progression applied?\n\nThis replaces what\'s already on ' + srcDay.day + ' in week' + (filled.length > 1 ? 's ' : ' ') + filled.map(function(i){ return i + 1; }).join(', ') + '.')) return;
+  targets.forEach(function(i){
+    var wk = PB_STATE.weekData[i];
+    if (!wk.days[di]) return;
+    _pbCopyDay(srcDay, wk.days[di], src.progMod || {}, wk.progMod || {});
+    if (wk.days[di].type === 'off' && srcDay.type !== 'off') wk.days[di].type = srcDay.type;
+  });
+  pbRenderDayGrid();
+  pbOpenDay(wi, di);
+  showStatus('✅ ' + srcDay.day + ' copied to ' + targets.length + ' other week' + (targets.length === 1 ? '' : 's') + ' with progression');
+}
+function pbApplyToAllWeeks() {
+  if (!PB_STATE.weekData.length) { alert('Build a program first'); return; }
+  var srcIdx = PB_ACTIVE_DAY ? PB_ACTIVE_DAY.weekIdx : PB_STATE.activeWeek;
+  var src = PB_STATE.weekData[srcIdx];
+  var others = PB_STATE.weekData.length - 1;
+  if (!confirm('Copy all of Week ' + (srcIdx + 1) + ' to the other ' + others + ' week' + (others === 1 ? '' : 's') + ' with the progression applied?\n\nDays that are empty in Week ' + (srcIdx + 1) + ' are left alone; everything else is replaced.')) return;
+  PB_STATE.weekData.forEach(function(wk, wi){
+    if (wi === srcIdx) return;
+    wk.days.forEach(function(day, di){
+      var srcDay = src.days[di];
+      if (!srcDay || day.type === 'off' || !(srcDay.blocks || []).length) return;
+      _pbCopyDay(srcDay, day, src.progMod || {}, wk.progMod || {});
+    });
+  });
+  pbRenderDayGrid();
+  if (PB_ACTIVE_DAY) pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+  showStatus('✅ Week ' + (srcIdx + 1) + ' copied to all other weeks with progression');
+}
+// Compact "W1 3×8 70% → W2 …" preview for one exercise slot across weeks
+function pbProgressionPreview(di, bi, ei) {
+  var parts = PB_STATE.weekData.map(function(wk){
+    var b = (wk.days[di] && wk.days[di].blocks || [])[bi];
+    var ex = b && (b.exercises || [])[ei];
+    if (!ex || !ex.name) return null;
+    var rx = [ex.sets && ex.reps ? ex.sets + '×' + ex.reps : (ex.sets || ex.reps || ''), ex.load || ex.distance || ''].filter(Boolean).join(' ');
+    return rx ? 'W' + wk.week + (wk.isDeload ? 'ᴰ' : '') + ' ' + rx : null;
+  });
+  if (parts.filter(Boolean).length < 2) return '';
+  return parts.map(function(p){ return p || '—'; }).join('  ·  ');
+}
+
 function pbRemoveEx(bi, ei) {
   if (!PB_ACTIVE_DAY) return;
   var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
@@ -15258,9 +15479,10 @@ function pbCloseEditor() {
   var e = document.getElementById('pb-session-editor');
   if (e) e.style.display = 'none';
   PB_ACTIVE_DAY = null;
+  PB_LAST_OPEN_KEY = null;
+  pbRenderDayGrid(true);
 }
 
-// ── APPLY WEEK 1 TO ALL WEEKS WITH PROGRESSION ────────────────────────────────
 // ── Swap one exercise for another everywhere it appears in the program ──
 function pbOpenSubstituteModal() {
   if (!PB_STATE.weekData.length) { alert('Build a program first'); return; }
@@ -15339,56 +15561,6 @@ function pbConfirmSubstitute() {
   showStatus('✅ Replaced "'+fromName+'" with "'+toName+'" in '+replaced+' spot(s) across '+weeks.length+' week(s) — notes cleared, use ✨ to regenerate cues');
 }
 
-function pbApplyToAllWeeks() {
-  if (!PB_STATE.weekData.length) { alert('Build a program first'); return; }
-
-  // Copy from the currently active week (not always Week 1)
-  var srcWeekIdx = PB_ACTIVE_DAY ? PB_ACTIVE_DAY.weekIdx : 0;
-  var srcWeek    = PB_STATE.weekData[srcWeekIdx];
-
-  PB_STATE.weekData.forEach(function(wk, wi) {
-    if (wi === srcWeekIdx) return; // skip source week
-    var m = wk.progMod;
-
-    wk.days.forEach(function(day, di) {
-      var srcDay = srcWeek.days[di];
-      if (!srcDay || day.type === 'off' || !(srcDay.blocks||[]).length) return;
-
-      // Deep copy blocks from source week
-      day.blocks = JSON.parse(JSON.stringify(srcDay.blocks)).map(function(block) {
-        // Skip session-header blocks (no exercises to scale)
-        if (block.blockType === 'session-header' || !(block.exercises||[]).length) return block;
-
-        block.exercises = block.exercises.map(function(ex) {
-          // Scale sets — only if purely numeric
-          if (ex.sets && /^\d+$/.test(String(ex.sets).trim())) {
-            ex.sets = String(Math.max(1, Math.round(parseInt(ex.sets) * m.sets)));
-          }
-          // Scale reps — only if purely numeric (preserve "8 each", "30s" etc.)
-          if (ex.reps && /^\d+$/.test(String(ex.reps).trim())) {
-            ex.reps = String(Math.max(1, Math.round(parseInt(ex.reps) * m.reps)));
-          }
-          // Scale load %
-          if (ex.load) {
-            var pctMatch = ex.load.match(/(\d+)/);
-            if (pctMatch) {
-              var newPct = Math.min(100, Math.round(parseInt(pctMatch[1]) * m.load));
-              ex.load = ex.load.replace(/\d+/, newPct);
-            }
-          }
-          return ex;
-        });
-        return block;
-      });
-    });
-  });
-
-  pbRenderDayGrid();
-  // Re-open the active day so the editor reflects the updated data
-  if (PB_ACTIVE_DAY) pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
-  showStatus('✅ Week ' + (srcWeekIdx+1) + ' applied to all other weeks with progression scaling');
-}
-
 function pbClearWeek() {
   if (!PB_STATE.weekData.length) return;
   if (!confirm('Clear all sessions for Week '+(PB_STATE.activeWeek+1)+'?')) return;
@@ -15443,52 +15615,49 @@ function pbConfirmSaveAsTemplate(btn, name) {
   if (typeof renderPBDrafts === 'function') renderPBDrafts();
 }
 
-function pbSave() {
-  if (!PB_STATE.weekData.length) { alert('Build a program first'); return; }
-  var name = (document.getElementById('pb-program-name')||{}).value ||
-    (PB_STATE.athlete+' '+PB_STATE.phase+' '+PB_STATE.weeks+'wk');
-  if (!name.trim()) { alert('Enter a program name'); return; }
-
-  // Convert to SAVED_PROGRAMS format — guard session-header blocks
-  var sessions = [];
-  PB_STATE.weekData.forEach(function(wk) {
-    wk.days.forEach(function(day) {
-      if (!(day.blocks||[]).length) return;
-      day.blocks.forEach(function(block) {
-        if (block.blockType === 'session-header' || !(block.exercises||[]).length) return;
-        sessions.push({
-          week: 'Week '+wk.week, day: day.day,
-          session: day.label + (wk.isDeload?' (Deload)':''),
-          type: day.type,
-          exercises: block.exercises.filter(function(e){ return e.name; })
-        });
-      });
-    });
-  });
-
-  var prog = {
-    id: Date.now(), name: name,
-    notes: PB_STATE.phase+' · '+PB_STATE.weeks+' weeks · '+PB_STATE.progression,
-    athlete: PB_STATE.athlete,
-    meso: PB_STATE.phase, macro: PB_STATE.phase,
-    scope:'meso', scopeLabel:'Mesocycle', mesoLabel:name,
-    html:'', content:'',
-    created: new Date().toISOString(),
-    isTemplate: false,
-    pbState: JSON.parse(JSON.stringify(PB_STATE))
-  };
-
-  SAVED_PROGRAMS.unshift(prog);
+function pbSave(silent) {
+  if (!PB_STATE.weekData.length) { alert('Build a program first'); return null; }
+  var nameEl = document.getElementById('pb-program-name');
+  var name = ((nameEl && nameEl.value) || '').trim() || (PB_STATE.athlete + ' ' + PB_STATE.phase + ' ' + PB_STATE.weeks + 'wk');
+  var existing = PB_STATE._savedProgId ? SAVED_PROGRAMS.find(function(p){ return String(p.id) === String(PB_STATE._savedProgId) && !p.isAssigned; }) : null;
+  var prog;
+  if (existing) {
+    prog = existing;
+    prog.name = name;
+    prog.athlete = PB_STATE.athlete;
+    prog.meso = prog.macro = PB_STATE.phase;
+    prog.mesoLabel = name;
+    prog.notes = PB_STATE.phase + ' · ' + PB_STATE.weeks + ' weeks · ' + PB_STATE.progression;
+    prog.modified = new Date().toISOString();
+    prog.pbState = JSON.parse(JSON.stringify(PB_STATE));
+  } else {
+    prog = {
+      id: Date.now(), name: name,
+      notes: PB_STATE.phase + ' · ' + PB_STATE.weeks + ' weeks · ' + PB_STATE.progression,
+      athlete: PB_STATE.athlete,
+      meso: PB_STATE.phase, macro: PB_STATE.phase,
+      scope: 'meso', scopeLabel: 'Mesocycle', mesoLabel: name,
+      html: '', content: '',
+      created: new Date().toISOString(),
+      isTemplate: false
+    };
+    PB_STATE._savedProgId = prog.id;
+    prog.pbState = JSON.parse(JSON.stringify(PB_STATE));
+    SAVED_PROGRAMS.unshift(prog);
+  }
+  if (nameEl && !nameEl.value) nameEl.value = name;
   persistPrograms();
-  showStatus('✅ Saved "'+name+'" to My Programs');
-  if (PB_STATE.athlete && PB_STATE.athlete !== '(Sandbox)') {
-    if (confirm('Push this program to '+PB_STATE.athlete+' now?')) {
-      var saved = SAVED_PROGRAMS[0];
-      if (saved) showPushProgramModal(saved.id);
+  showStatus('✅ Saved "' + name + '" to My Programs');
+  if (!silent) {
+    var live = (prog.pushes || []).length;
+    if (live) {
+      if (confirm('Saved. Update the live program for ' + live + ' athlete' + (live === 1 ? '' : 's') + '? (Same links — their logs are kept.)')) showPushProgramModal(prog.id);
+    } else if (PB_STATE.athlete && PB_STATE.athlete !== '(Sandbox)') {
+      if (confirm('Send this program to ' + PB_STATE.athlete + ' now?')) showPushProgramModal(prog.id);
     }
   }
+  return prog;
 }
-
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ANNUAL PLAN & MESOCYCLE BUILDER
@@ -18650,6 +18819,8 @@ function pbLoadFromProgram(id) {
   // Inject as a draft and load it
   pbDrafts.unshift({ id: prog.id, name: prog.name, athlete: prog.pbState.athlete || prog.athlete, pbState: prog.pbState, updated: Date.now() });
   pbLoadDraft(prog.id);
+  PB_STATE._savedProgId = prog.isAssigned ? (prog.sourceProgramId || null) : prog.id;
+  var _nm = document.getElementById('pb-program-name'); if (_nm) _nm.value = prog.name || '';
   switchProgTab('builder', document.getElementById('ptab-builder'));
 }
 
