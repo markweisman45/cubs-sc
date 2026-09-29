@@ -364,18 +364,19 @@ function projectACWR(athlete, st) {
   var first = keys[0], lastK = planned[planned.length - 1].k, startK = _dayKey(TC.parseISO(st.startDate));
   var seedHe = 0, seedTd = 0, k2 = first;
   for (var i = 0; i < 7; i++) { var l0 = byDay[k2]; if (l0) { seedHe += l0.he; seedTd += l0.td; } k2 = _addDays(k2, 1); }
-  var s = { ha: seedHe / 7, hc: seedHe / 7, ta: seedTd / 7, tc: seedTd / 7 }, peak = null;
+  var s = { ha: seedHe / 7, hc: seedHe / 7, ta: seedTd / 7, tc: seedTd / 7 }, peak = null, low = null;
   for (var d = first; d <= lastK; d = _addDays(d, 1)) {
     var l = byDay[d] || { he: 0, td: 0 };
     s.ha = ACWR_LA * l.he + (1 - ACWR_LA) * s.ha; s.hc = ACWR_LC * l.he + (1 - ACWR_LC) * s.hc;
     s.ta = ACWR_LA * l.td + (1 - ACWR_LA) * s.ta; s.tc = ACWR_LC * l.td + (1 - ACWR_LC) * s.tc;
     if (d < startK) continue;
-    var he = s.hc > 0 ? s.ha / s.hc : 1, td = s.tc > 0 ? s.ta / s.tc : 1, w = acwrWorst(he, td);
-    if (w > 1 && (!peak || w > peak.v)) peak = { v: w, k: d };
+    var he = s.hc > 0 ? s.ha / s.hc : 1, td = s.tc > 0 ? s.ta / s.tc : 1, w = Math.max(he, td), lo = Math.min(he, td);
+    if (!peak || w > peak.v) peak = { v: w, k: d };
+    if (low === null || lo < low) low = lo;
   }
   if (!peak) return { v: null };
   var pw = planned.filter(function (p) { return p.k <= peak.k; }).pop();
-  return { v: Math.round(peak.v * 100) / 100, date: new Date(peak.k), week: pw ? pw.wi + 1 : null };
+  return { v: Math.round(peak.v * 100) / 100, low: Math.round(low * 100) / 100, date: new Date(peak.k), week: pw ? pw.wi + 1 : null };
 }
 
 // ── 6b. Program checks ──────────────────────────────────────────────────────
@@ -393,7 +394,7 @@ function pbCheckRules(state) {
       var unpaired = [], letters = {};
       blocks.forEach(function (b) {
         if (b.blockType === 'prep' || b.blockType === 'mobility' || b.blockType === 'esd') return;
-        TC.namedExs(b).forEach(function (ex) { if (!ex.pair) unpaired.push(ex.name); else letters[ex.pair] = (letters[ex.pair] || 0) + 1; });
+        TC.namedExs(b).forEach(function (ex) { if (!ex.pair) unpaired.push(ex.name); else if (b.blockType !== 'speed') letters[ex.pair] = (letters[ex.pair] || 0) + 1; });   // single sprint letters (C, D, E) are normal in a speed block
       });
       if (unpaired.length) out.push({ wi: wi, di: di, level: 'info', msg: where + ': not paired — ' + unpaired.slice(0, 3).join(', ') + (unpaired.length > 3 ? ' +' + (unpaired.length - 3) : '') });
       Object.keys(letters).forEach(function (l) { if (letters[l] === 1) out.push({ wi: wi, di: di, level: 'info', msg: where + ': pair ' + l + ' has one exercise' }); });
@@ -577,3 +578,33 @@ function sprintTimesHTML(athlete) {
 // Keep program data fresh
 setTimeout(function () { loadProgramRows(); }, 2500);
 setInterval(function () { if (document.visibilityState === 'visible') loadProgramRows(); }, 5 * 60 * 1000);
+
+// ── Template library (data/mw-templates.js) ─────────────────────────────────
+function mwInstallTemplates() {
+  function go() {
+    var existing = SAVED_PROGRAMS.filter(function (p) { return p && p.tplKey; });
+    var replace = true;
+    if (existing.length && !confirm('Update the ' + existing.length + ' library templates you already have to the latest version?\n\nOK = update them (your edits to those templates are replaced)\nCancel = only add ones you don\'t have')) replace = false;
+    var added = 0, updated = 0, base = Date.now();
+    SAVED_PROGRAMS.forEach(function (p) { var n = Number(p.id); if (n >= base) base = n + 1; });
+    MW_TEMPLATES.forEach(function (t) {
+      var ex = SAVED_PROGRAMS.find(function (p) { return p && p.tplKey === t.key; });
+      if (ex && !replace) return;
+      var prog = { name: t.name, notes: t.notes, athlete: 'Template Library', category: t.category, meso: t.pbState.phase, macro: t.pbState.phase,
+        scope: 'meso', scopeLabel: 'Mesocycle', mesoLabel: t.name, html: '', content: '', isTemplate: true, tplKey: t.key, tplVersion: MW_TEMPLATES_VERSION,
+        pbState: JSON.parse(JSON.stringify(t.pbState)) };
+      if (ex) { Object.assign(ex, prog); updated++; }
+      else { prog.id = base++; prog.created = new Date().toISOString(); SAVED_PROGRAMS.push(prog); added++; }
+    });
+    persistPrograms();
+    if (typeof renderPBDrafts === 'function') renderPBDrafts();
+    var list = document.getElementById('pb-drafts-list'); if (list && list.style.display === 'none' && typeof pbToggleDraftsList === 'function') pbToggleDraftsList();
+    showStatus('📚 Template library: ' + added + ' added' + (updated ? ', ' + updated + ' updated' : '') + ' — open My Drafts / Templates to load one');
+  }
+  if (typeof MW_TEMPLATES !== 'undefined') return go();
+  var sc = document.createElement('script');
+  sc.src = 'data/mw-templates.js?v=1';
+  sc.onload = go;
+  sc.onerror = function () { alert('Couldn\'t load the template library file (data/mw-templates.js).'); };
+  document.head.appendChild(sc);
+}
