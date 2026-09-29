@@ -1263,6 +1263,7 @@ body {
                 <div class="card-title" style="margin:0;">OR START FROM SAVED</div>
                 <button onclick="pbToggleDraftsList()" id="pb-drafts-toggle" style="font-size:10px;padding:4px 10px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:5px;color:var(--text2);cursor:pointer;">📂 My Drafts / Templates ▾</button>
               </div>
+              <button onclick="mwInstallTemplates()" title="Reload after IL, Spring Training ramp and In-Season by role — in 6, 4 and 3-day layouts" style="width:100%;font-size:11px;padding:7px;margin-bottom:6px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;cursor:pointer;font-weight:600;">📚 Add Template Library (11)</button>
               <button onclick="loadPhaseTemplates()" style="width:100%;font-size:11px;padding:7px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;cursor:pointer;font-weight:600;margin-bottom:6px;">⚡ Load Built-In Phase Templates</button>
               <div id="pb-drafts-list" style="display:none;max-height:220px;overflow-y:auto;margin-top:4px;"></div>
             </div>
@@ -8540,7 +8541,7 @@ function showPushProgramModal(progId) {
       prep.st.startDate = sd;
       var proj = typeof projectACWR === 'function' ? projectACWR(cb.value, prep.st) : null;
       var lines = prep.notes.slice();
-      if (proj && proj.v) lines.push((proj.v > 1.25 ? '🔴' : proj.v > 1.15 ? '🟡' : '🟢') + ' Projected peak ACWR ' + proj.v.toFixed(2) + (proj.week ? ' (week ' + proj.week + ')' : '') + (proj.v > 1.15 ? ' — above the green zone' : ''));
+      if (proj && proj.v) lines.push((proj.v > 1.25 || proj.low < 0.75 ? '🔴' : proj.v > 1.15 || proj.low < 0.85 ? '🟡' : '🟢') + ' Projected ACWR ' + proj.low.toFixed(2) + '–' + proj.v.toFixed(2) + ' (peak week ' + (proj.week || '?') + ')' + (proj.v > 1.15 ? ' — peak above the green zone' : proj.low < 0.85 ? ' — dips below the green zone (expected while rebuilding)' : ''));
       el.innerHTML = lines.map(escHtml).join('<br>');
       el.style.display = lines.length ? 'block' : 'none';
     });
@@ -15337,8 +15338,8 @@ function pbAddBlock(type) {
   if (day.type === 'off') { day.type = type === 'speed' ? 'speed' : 'lift'; if (/^off/i.test(day.label || '')) day.label = type === 'speed' ? 'Speed' : 'Lift'; }
   type = type || 'lift';
   var emptyEx = type === 'speed'
-    ? {type:'speed',name:'',pair:pbNextPair(day),sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
-    : {type:'lift', cat:'',name:'',pair:pbNextPair(day),sets:'',reps:'',load:'',tempo:'',rest:''};
+    ? {type:'speed',name:'',pair:'A',sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
+    : {type:'lift', cat:'',name:'',pair:'A',sets:'',reps:'',load:'',tempo:'',rest:''};
   day.blocks.push({ blockType:type, label:(type === 'speed' ? 'Speed' : 'Lift'), exercises:[emptyEx] });
   PB_FOCUS = (day.blocks.length - 1) + '-0';
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
@@ -15348,8 +15349,8 @@ function pbAddEx(bi) {
   var day = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
   var isSpd = day.blocks[bi] && day.blocks[bi].blockType === 'speed';
   var emptyEx = isSpd
-    ? {type:'speed',name:'',pair:pbNextPair(day),sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
-    : {type:'lift', cat:'',name:'',pair:pbNextPair(day),sets:'',reps:'',load:'',tempo:'',rest:''};
+    ? {type:'speed',name:'',pair:pbNextPair(day, bi),sets:'',reps:'',distance:'',pct:'',rest:'',notes:''}
+    : {type:'lift', cat:'',name:'',pair:pbNextPair(day, bi),sets:'',reps:'',load:'',tempo:'',rest:''};
   day.blocks[bi].exercises.push(emptyEx);
   PB_FOCUS = bi + '-' + (day.blocks[bi].exercises.length - 1);
   pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
@@ -15412,6 +15413,7 @@ function pbPickExercise(bi, ei, val) {
 function pbPairLabels(day) {
   var counts = {}, out = {};
   (day.blocks || []).forEach(function(b, bi){
+    counts = {};   // numbering restarts per block
     (b.exercises || []).forEach(function(ex, ei){
       if (!ex.pair) return;
       counts[ex.pair] = (counts[ex.pair] || 0) + 1;
@@ -15420,10 +15422,11 @@ function pbPairLabels(day) {
   });
   return out;
 }
-// Letter for a new row: finish the current pair, then start the next letter
-function pbNextPair(day) {
+// Letter for a new row: finish the current pair, then start the next letter (within the block)
+function pbNextPair(day, bi) {
+  var blk = (day.blocks || [])[bi === undefined ? (day.blocks || []).length - 1 : bi];
   var seq = [];
-  (day.blocks || []).forEach(function(b){ (b.exercises || []).forEach(function(ex){ if (ex.pair) seq.push(ex.pair); }); });
+  ((blk && blk.exercises) || []).forEach(function(ex){ if (ex.pair) seq.push(ex.pair); });
   if (!seq.length) return 'A';
   var last = seq[seq.length - 1];
   var n = seq.filter(function(p){ return p === last; }).length;
@@ -15432,12 +15435,10 @@ function pbNextPair(day) {
   var next = PB_PAIR_LETTERS.find(function(l){ return !used[l]; });
   return next || last;
 }
-// Re-letter one block in twos (A1/A2, B1/B2…), continuing after earlier blocks
+// Re-letter one block in twos (A1/A2, B1/B2…)
 function pbAutoPair(bi) {
   var day = pbDayRef(); if (!day) return;
-  var used = {};
-  day.blocks.forEach(function(b, i){ if (i < bi) (b.exercises || []).forEach(function(ex){ if (ex.pair) used[ex.pair] = 1; }); });
-  var letters = PB_PAIR_LETTERS.filter(function(l){ return !used[l]; });
+  var letters = PB_PAIR_LETTERS;   // each block starts at A
   var exs = day.blocks[bi].exercises || [];
   var named = exs.filter(function(e){ return e.name; });
   var perPair = named.length === 3 ? 3 : 2;           // an odd 3 becomes a tri-set

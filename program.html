@@ -700,6 +700,7 @@ function renderSession(){
     if (!exs.length) return;
     h += '<div class="block"><div class="block-head"><span class="bi">' + blockIcon(block.blockType) + '</span><span class="bn">' + esc(block.label || (block.blockType === 'speed' ? 'Speed' : 'Lift')) + '</span><span class="bc">' + exs.length + ' EXERCISES</span></div>';
     // Group consecutive exercises that share a pair letter
+    counts = {};   // A1/A2 numbering restarts in every block (speed block A–E, then lift block A–E)
     var groups = [];
     exs.forEach(function(ex, ei){
       var g = groups[groups.length - 1];
