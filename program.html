@@ -6,6 +6,7 @@
 <title>Cubs S&amp;C</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="js/training-core.js?v=3"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -164,6 +165,17 @@ input,textarea{font-family:inherit;}
 .sheet .actions{display:flex;gap:10px;margin-top:20px;}
 .btn-ghost{height:52px;padding:0 18px;border-radius:14px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:15px;font-weight:600;cursor:pointer;}
 
+.ready-card{margin:0 4px 16px;padding:14px;border-radius:16px;background:var(--surface);border:1px solid rgba(91,140,245,0.3);}
+.ready-card .rc-t{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;color:#fff;}
+.ready-card .rc-t span{font-family:'Inter',sans-serif;font-size:11px;color:var(--text3);letter-spacing:0;margin-left:6px;}
+.ready-card .q{margin:12px 0 7px;font-size:13px;}
+.ready-card .opt{padding:9px 12px;font-size:13px;}
+.actions{display:flex;gap:10px;}
+.ready-bar{margin:0 4px 14px;padding:10px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--border2);font-size:13px;color:var(--text2);}
+.ready-bar b{color:#fff;}
+.ready-bar.lvl-yellow{border-color:rgba(252,211,77,.35);} .ready-bar.lvl-red{border-color:rgba(248,113,113,.4);}
+.ready-why{font-size:11px;color:var(--text3);margin-top:3px;}
+.ex.skip{opacity:.75;}
 .loading{text-align:center;padding:100px 24px;color:var(--text3);}
 .spin{width:28px;height:28px;border:2px solid rgba(255,255,255,0.08);border-top-color:var(--blue-l);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -350,17 +362,45 @@ function targetReps(ex, s){
   return m ? parseInt(m[1]) : null;
 }
 function repsSuffix(ex){ return /\d\s*(ea|each)\b/i.test(String(ex.reps||'')) ? ' ea' : ''; }
-// Target load in lbs, if the program gives one
-function targetLoad(ex){
-  if (ex.calcWeight) return ex.calcWeight;
-  var m = String(ex.load || '').match(/^(\d+(?:\.\d+)?)\s*(lb|lbs)?$/i);
-  return m ? parseFloat(m[1]) : null;
+// ── Target loads ──
+// % loads become lbs from the athlete's working 1RM: their tested 1RM at
+// first, then whatever their logged sets say they can do now (TC.autoLoad).
+// Today's readiness check-in can trim it (−5% yellow, −10% red).
+var SESS = null;
+function pbObj(){ return { weekData: PROG.weekData, startDate: PROG.startDate }; }
+function sessCache(){ if (!SESS) SESS = TC.liftSessions(pbObj(), LOG); return SESS; }
+function readyOf(wi, di){ return LOG['ready:' + wi + '-' + di] || null; }
+function adjOf(wi, di){ var r = readyOf(wi, di); return TC.readinessAdjust(r && !r.skipped ? r.level : 'green'); }
+function loadInfo(wi, di, ex){
+  var a = TC.autoLoad(pbObj(), LOG, ex, wi, di, sessCache());
+  if (!a || !a.lbs) return a;
+  var m = adjOf(wi, di).loadMult;
+  if (m !== 1) { a.beforeReady = a.lbs; a.lbs = TC.mround(a.lbs * m, 5); }
+  return a;
 }
+function targetLoadAt(wi, di, ex){ var a = loadInfo(wi, di, ex); return a ? a.lbs : null; }
 function isBodyweight(ex){ return /^\s*(bw|bodyweight|body weight)\s*$/i.test(String(ex.load||'')); }
-function hasLoadField(block, ex){
-  if (block.blockType === 'speed' || block.blockType === 'esd' || block.blockType === 'mobility') return !!targetLoad(ex);
+function hasLoadField(block, ex, wi, di){
+  if (block.blockType === 'speed' || block.blockType === 'esd' || block.blockType === 'mobility') return !!targetLoadAt(wi, di, ex);
+  if (TC.isRunEx(block, ex)) return false;
   if (ex.distance && !ex.load) return false;
   return !isBodyweight(ex);
+}
+// Sets for the day (a red check-in drops one set from anything with 3+)
+function effSets(wi, di, block, ex){
+  var n = Math.max(1, parseInt(ex.sets) || 1);
+  if (adjOf(wi, di).dropSet && n >= 3 && block.blockType !== 'mobility' && block.blockType !== 'prep') n--;
+  return n;
+}
+// Timed sprints: speed-block runs up to 60 yd get a seconds box
+function isTimedSprint(block, ex){ var ft = TC.repDistanceFt(ex); return TC.isRunEx(block, ex) && ft > 0 && ft <= 180 && TC.isHighEffort(block, ex); }
+function bestTime(name){
+  var best = null, target = String(name).toLowerCase();
+  PROG.weekData.forEach(function(wk, wi){ (wk.days||[]).forEach(function(day, di){ (day.blocks||[]).forEach(function(b, bi){ namedExs(b).forEach(function(ex, ei){
+    if (String(ex.name).toLowerCase() !== target) return;
+    for (var s = 0; s < 12; s++) { var e = LOG[lk(wi,di,bi,ei,s)]; if (e && e.done && parseFloat(e.time) > 0 && (!best || parseFloat(e.time) < best)) best = parseFloat(e.time); }
+  }); }); }); });
+  return best;
 }
 function restSeconds(r){
   r = String(r || '').trim();
@@ -375,20 +415,23 @@ function restSeconds(r){
   }
   var n = numOnly(r); return n ? (n <= 10 ? n * 60 : n) : 0;
 }
-function rxLine(block, ex){
+function rxLine(block, ex, li){
   var p = [];
   var sets = ex.sets ? esc(ex.sets) : '';
   var reps = ex.reps ? esc(ex.reps) : '';
   if (sets && reps) p.push('<b>'+sets+' × '+reps+'</b>'); else if (sets) p.push('<b>'+sets+' sets</b>'); else if (reps) p.push('<b>'+reps+'</b>');
   if (ex.distance) p.push(esc(ex.distance));
-  var tl = targetLoad(ex);
+  var tl = li && li.lbs;
   if (tl) p.push('@ <b>'+tl+' lbs</b>');
   else if (ex.load) p.push('@ '+esc(ex.load));
   return p.join(' ');
 }
-function chipsHTML(ex){
+function chipsHTML(ex, li){
   var c = [];
-  if (ex.calcWeight && ex.load && /%/.test(ex.load)) c.push(esc(ex.load)+' 1RM');
+  if (li && li.lbs && li.pct) c.push(esc(li.pct)+'% of '+(li.how === 'log' ? 'est. ' : '')+'1RM');
+  if (li && li.how === 'log' && li.was && Math.abs(li.lbs - li.was) >= 5 && !li.beforeReady) c.push((li.lbs > li.was ? '↑' : '↓')+' from '+li.was+' · based on your last sessions');
+  if (li && li.beforeReady) c.push('↓ from '+li.beforeReady+' · today\'s check-in');
+  if (ex.swappedFrom) c.push('Home swap for '+esc(ex.swappedFrom));
   if (ex.pct) c.push(esc(ex.pct)+(/%/.test(ex.pct)?'':'%')+' effort');
   if (ex.tempo && ex.tempo !== 'Tempo') c.push('Tempo '+esc(ex.tempo));
   if (ex.rest) c.push('Rest '+esc(ex.rest));
@@ -434,13 +477,14 @@ document.addEventListener('visibilitychange', function(){ if (document.visibilit
 
 // ── Helpers over the program ───────────────────────────────────────────────
 function namedExs(block){ return (block.exercises || []).filter(function(e){ return e && e.name; }); }
-function dayHasWork(day){ return day && day.type !== 'off' && (day.blocks || []).some(function(b){ return namedExs(b).length; }); }
+function dayHasWork(day){ return TC.dayHasWork(day); }
 function countDone(wi, di){
   var day = PROG.weekData[wi].days[di], tot = 0, done = 0;
   (day.blocks || []).forEach(function(b, bi){
     if (b.blockType === 'session-header') return;
     namedExs(b).forEach(function(ex, ei){
-      var n = Math.max(1, parseInt(ex.sets) || 1);
+          if (ex.rtpSkip) return;
+      var n = effSets(wi, di, b, ex);
       for (var s = 0; s < n; s++) { tot++; if ((LOG[lk(wi,di,bi,ei,s)] || {}).done) done++; }
     });
   });
@@ -509,6 +553,7 @@ function renderHero(){
     + '<div class="hero-meta"><span class="chip">Week ' + (S.week + 1) + ' of ' + PROG.weekData.length + '</span>'
     + '<span class="chip">' + doneDays + ' / ' + totalDays + ' sessions done</span></div>'
     + (d.note ? '<div class="coach-note"><b>Coach:</b> ' + esc(d.note) + '</div>' : '')
+    + (PROG.messages || []).filter(function(m){ return !m.ref; }).slice(-3).reverse().map(function(m){ return '<div class="coach-note"><b>Coach' + (m.at ? ' · ' + esc(new Date(m.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : '') + ':</b> ' + esc(m.text) + '</div>'; }).join('')
     + '</div>';
   document.getElementById('hero').innerHTML = h;
 }
@@ -529,19 +574,28 @@ function exHTML(wi, di, bi, ei, block, ex, tag){
   var vurl = ex.video || enr.video || '';
   var vid = ytId(vurl);
   var id = wi + '-' + di + '-' + bi + '-' + ei;
-  var nSets = Math.max(1, parseInt(ex.sets) || 1);
-  var showLoad = hasLoadField(block, ex);
-  var tl = targetLoad(ex);
+  if (ex.rtpSkip) {
+    return '<div class="ex skip" id="ex' + id + '"><div class="ex-top">' + (tag ? '<div class="ex-tag none">' + esc(tag) + '</div>' : '')
+      + '<div class="ex-main"><div class="ex-name" style="color:var(--text3);text-decoration:line-through;">' + esc(ex.name) + '</div>'
+      + '<div class="ex-note" style="border-left-color:var(--amber-l);">Skip for now — ' + esc(ex.rtpNote || 'part of your rehab plan') + '</div></div></div></div>';
+  }
+  var nSets = effSets(wi, di, block, ex);
+  var li = loadInfo(wi, di, ex);
+  var showLoad = hasLoadField(block, ex, wi, di);
+  var tl = li && li.lbs;
+  var timed = isTimedSprint(block, ex);
   var h = '<div class="ex" id="ex' + id + '">';
   h += '<div class="ex-top">';
   h += tag ? '<div class="ex-tag" style="background:' + pairColor(ex.pair) + ';">' + esc(tag) + '</div>' : '';
   h += '<div class="ex-main"><div class="ex-name">' + esc(ex.name) + '</div>';
-  var rx = rxLine(block, ex);
+  var rx = rxLine(block, ex, li);
   if (rx) h += '<div class="ex-rx">' + rx + '</div>';
-  h += chipsHTML(ex) + '</div>';
+  h += chipsHTML(ex, li) + '</div>';
   if (vurl) h += '<div class="vid" onclick="window.open(\'' + esc(vurl).replace(/'/g, '%27') + '\',\'_blank\')">' + (vid ? '<img src="https://img.youtube.com/vi/' + vid + '/mqdefault.jpg" loading="lazy" alt="">' : '') + '</div>';
   h += '</div>';
   if (ex.notes && ex.notes !== ex.name) h += '<div class="ex-note">' + esc(ex.notes) + '</div>';
+  if (ex.rtpNote) h += '<div class="ex-note" style="border-left-color:var(--amber-l);">' + esc(ex.rtpNote) + '</div>';
+  if (timed) { var bt0 = bestTime(ex.name); if (bt0) h += '<div class="ex-last">Best time: <b>' + bt0.toFixed(2) + 's</b></div>'; }
   var last = lastTime(ex.name, wi, di);
   if (last) {
     var s0 = last.sets[last.sets.length - 1];
@@ -553,11 +607,13 @@ function exHTML(wi, di, bi, ei, block, ex, tag){
   for (var s = 0; s < nSets; s++) {
     var k = lk(wi, di, bi, ei, s), e = LOG[k] || {};
     var tr = targetReps(ex, s);
-    var repsField = tr !== null;
+    var repsField = tr !== null && !TC.isRunEx(block, ex);
     var simple = !showLoad && !repsField;
     h += '<div class="set' + (simple ? ' simple' : '') + (e.done ? ' done' : '') + '" id="set' + k + '">';
     h += '<div class="set-n">' + (s + 1) + '</div>';
-    if (simple) {
+    if (simple && timed) {
+      h += '<div class="fld"><input data-f="time" type="number" step="0.01" inputmode="decimal" placeholder="' + esc([ex.distance || ex.reps].filter(Boolean).join('') || 'time') + '" value="' + esc(e.time || '') + '" oninput="setVal(\'' + k + '\',\'time\',this.value)"><span class="u">sec</span></div>';
+    } else if (simple) {
       h += '<div class="set-rx">' + esc([ex.reps, ex.distance].filter(Boolean).join(' · ') || 'Set ' + (s + 1)) + '</div>';
     } else {
       if (showLoad) h += '<div class="fld"><input data-f="weight" type="number" inputmode="decimal" placeholder="' + (tl || '—') + '" value="' + esc(e.weight || '') + '" oninput="setVal(\'' + k + '\',\'weight\',this.value)"><span class="u">lbs</span></div>';
@@ -584,6 +640,45 @@ function exHTML(wi, di, bi, ei, block, ex, tag){
   h += '</div>';
   return h;
 }
+// ── Readiness check-in (30 seconds, before the session) ──
+var RQ = null;
+function readinessHTML(wi, di){
+  var r = readyOf(wi, di), done = dayDone(wi, di);
+  if (RQ && RQ.key !== wi + '-' + di) RQ = null;   // an unfinished check-in belongs to one day only
+  if (r && !RQ) {
+    if (r.skipped) return done ? '' : '<div class="ready-bar">Check-in skipped · <button class="link" onclick="startReady()">Do it now</button></div>';
+    var a = TC.readinessAdjust(r.level);
+    return '<div class="ready-bar lvl-' + r.level + '"><b>' + ({green:'🟢 Ready',yellow:'🟡 A little off',red:'🔴 Low today'})[r.level] + '</b> · ' + esc(a.label)
+      + (r.why && r.why.length ? '<div class="ready-why">' + esc(r.why.join(' · ')) + '</div>' : '')
+      + (done ? '' : ' <button class="link" onclick="startReady()">Change</button>') + '</div>';
+  }
+  if (done && !RQ) return '';
+  RQ = RQ || { key: wi + '-' + di, sleep: null, sore: null, energy: null, jump: '' };
+  var best = TC.bestJump(LOG);
+  function opts(field, vals, labels){ return '<div class="opts">' + vals.map(function(v, i){ return '<button class="opt' + (RQ[field] === v ? ' on' : '') + '" onclick="RQ.' + field + '=' + JSON.stringify(v).replace(/"/g, '&quot;') + ';renderSession()">' + (labels ? labels[i] : v) + '</button>'; }).join('') + '</div>'; }
+  return '<div class="ready-card"><div class="rc-t">Quick check-in <span>30 sec · adjusts today\'s session</span></div>'
+    + '<div class="q">Sleep last night</div>' + opts('sleep', ['<6','6-7','7-8','8+'], ['Under 6 hrs','6–7','7–8','8+'])
+    + '<div class="q">Soreness</div>' + opts('sore', [1,2,3,4,5], ['1 None','2','3','4','5 Very'])
+    + '<div class="q">Energy</div>' + opts('energy', [1,2,3,4,5], ['1 Drained','2','3','4','5 Great'])
+    + '<div class="q">Broad jump <span style="color:var(--text3);font-weight:500;">(optional, inches' + (best ? ' · your best ' + best : '') + ')</span></div>'
+    + '<div class="fld" style="max-width:160px;"><input type="number" inputmode="decimal" id="rq-jump" value="' + esc(RQ.jump || '') + '" oninput="RQ.jump=this.value"><span class="u">in</span></div>'
+    + '<div class="actions" style="margin-top:14px;"><button class="btn-ghost" onclick="skipReady()">Skip</button><button class="btn-main" onclick="saveReady()">Start session</button></div></div>';
+}
+function startReady(){ var r = readyOf(S.week, S.day) || {}; RQ = { key: S.week + '-' + S.day, sleep: r.sleep || null, sore: r.sore || null, energy: r.energy || null, jump: r.jump || '' }; renderSession(); }
+function skipReady(){ LOG['ready:' + S.week + '-' + S.day] = { skipped: true, date: localISO(), t: Date.now() }; RQ = null; saveLog(); renderSession(); }
+function saveReady(){
+  if (!RQ.sleep || !RQ.sore || !RQ.energy) { alert('Answer sleep, soreness and energy (jump is optional).'); return; }
+  var best = TC.bestJump(LOG);
+  var res = TC.readiness(RQ, best);
+  LOG['ready:' + S.week + '-' + S.day] = { sleep: RQ.sleep, sore: RQ.sore, energy: RQ.energy, jump: RQ.jump || null, level: res.level, points: res.points, why: res.why, date: localISO(), t: Date.now() };
+  RQ = null; SESS = null; saveLog(); renderSession();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+// ── Messages from the coach ──
+function dayMessagesHTML(wi, di){
+  var msgs = (PROG.messages || []).filter(function(m){ return m.ref && (m.ref === 'day:' + wi + '-' + di || m.ref.indexOf('n:' + wi + '-' + di + '-') === 0 || m.ref.indexOf('ready:' + wi + '-' + di) === 0); });
+  return msgs.map(function(m){ return '<div class="coach-note" style="margin:0 4px 12px;"><b>Coach:</b> ' + esc(m.text) + '</div>'; }).join('');
+}
 function blockIcon(bt){ return { speed: '⚡', mobility: '🧘', esd: '❤️', prep: '🔥' }[bt] || '🏋️'; }
 function renderSession(){
   var wi = S.week, di = S.day, day = PROG.weekData[wi].days[di];
@@ -595,6 +690,8 @@ function renderSession(){
   // Pair labels (A1, A2…) across the whole day, in order
   var counts = {};
   var h = '<div class="sess-title"><h2>' + esc(day.label || day.day) + '</h2><span>' + esc(day.day) + '</span></div>';
+  h += dayMessagesHTML(wi, di);
+  h += readinessHTML(wi, di);
   var dd = LOG['day:' + wi + '-' + di];
   if (dd && dd.done) h += '<div class="done-banner">✓ Session finished' + (dd.date ? ' · ' + esc(parseISO(dd.date) ? parseISO(dd.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : dd.date) : '') + (dd.pain ? ' · pain reported' : '') + '</div>';
   (day.blocks || []).forEach(function(block, bi){
@@ -651,18 +748,19 @@ function selWeek(wi){
 }
 function selDay(di){ S.day = di; renderAll(); window.scrollTo({ top: 0 }); }
 function toggleEl(id){ var el = document.getElementById(id); if (el) el.classList.toggle('open'); }
-function setVal(k, f, v){ if (!LOG[k]) LOG[k] = {}; LOG[k][f] = v; LOG[k].t = Date.now(); saveLog(); }
+function setVal(k, f, v){ if (!LOG[k]) LOG[k] = {}; LOG[k][f] = v; LOG[k].t = Date.now(); SESS = null; saveLog(); }
 function setNote(id, v){ LOG['n:' + id] = { text: v, t: Date.now() }; saveLog(); }
 function exAt(wi, di, bi, ei){ return namedExs(PROG.weekData[wi].days[di].blocks[bi])[ei]; }
 function toggleSet(wi, di, bi, ei, s){
   var k = lk(wi, di, bi, ei, s);
   var e = LOG[k] || (LOG[k] = {});
   var ex = exAt(wi, di, bi, ei);
-  e.done = !e.done; e.t = Date.now();
+  e.done = !e.done; e.t = Date.now(); SESS = null;
   if (e.done) {
     // Tapping ✓ on an empty set logs it as written
-    var tl = targetLoad(ex), tr = targetReps(ex, s);
-    if (!e.weight && tl && hasLoadField(PROG.weekData[wi].days[di].blocks[bi], ex)) e.weight = String(tl);
+    var blk = PROG.weekData[wi].days[di].blocks[bi];
+    var tl = targetLoadAt(wi, di, ex), tr = TC.isRunEx(blk, ex) ? null : targetReps(ex, s);
+    if (!e.weight && tl && hasLoadField(blk, ex, wi, di)) e.weight = String(tl);
     if (!e.actual_reps && tr !== null) e.actual_reps = String(tr);
     if (navigator.vibrate) navigator.vibrate(12);
   }
@@ -678,7 +776,7 @@ function toggleSet(wi, di, bi, ei, s){
     // Rest: inside a pair, rest after the last exercise of the pair; otherwise after each set
     var exs = namedExs(PROG.weekData[wi].days[di].blocks[bi]);
     var next = exs[ei + 1];
-    var inPairNotLast = ex.pair && next && next.pair === ex.pair;
+    var inPairNotLast = ex.pair && next && next.pair === ex.pair && !next.rtpSkip;
     var secs = restSeconds(inPairNotLast ? '' : ex.rest);
     if (secs > 0) timerStart(secs, 'Rest · next: ' + nextUp(exs, ei, s));
   }
@@ -770,12 +868,13 @@ function saveFinish(){
     (day.blocks || []).forEach(function(b, bi){
       if (b.blockType === 'session-header') return;
       namedExs(b).forEach(function(ex, ei){
-        for (var s = 0; s < Math.max(1, parseInt(ex.sets) || 1); s++) {
+        if (ex.rtpSkip) return;
+        for (var s = 0; s < effSets(wi, di, b, ex); s++) {
           var k = lk(wi, di, bi, ei, s), e = LOG[k] || (LOG[k] = {});
           if (!e.done) {
             e.done = true; e.t = Date.now();
-            var tl = targetLoad(ex), tr = targetReps(ex, s);
-            if (!e.weight && tl && hasLoadField(b, ex)) e.weight = String(tl);
+            var tl = targetLoadAt(wi, di, ex), tr = TC.isRunEx(b, ex) ? null : targetReps(ex, s);
+            if (!e.weight && tl && hasLoadField(b, ex, wi, di)) e.weight = String(tl);
             if (!e.actual_reps && tr !== null) e.actual_reps = String(tr);
           }
         }
@@ -813,7 +912,7 @@ async function init(){
   var pb = null;
   try { pb = typeof row.pb_state === 'string' ? JSON.parse(row.pb_state) : row.pb_state; } catch(e) {}
   if (!pb || !pb.weekData || !pb.weekData.length) { document.getElementById('root').innerHTML = '<div class="err">This program has no weeks yet. Ask your coach to re-send it.</div>'; return; }
-  PROG = { id: String(id), athlete: row.athlete, name: row.name, weekData: pb.weekData, startDate: pb.startDate || null, note: pb.pushNote || row.notes || '' };
+  PROG = { id: String(id), athlete: row.athlete, name: row.name, weekData: pb.weekData, startDate: pb.startDate || null, note: pb.pushNote || row.notes || '', messages: pb.messages || [] };
   if (PROG.note && /^[a-z_]+ · \d+ weeks · /.test(PROG.note)) PROG.note = '';   // auto-generated summary, not a coach message
   LOG = mergeLogs(loadLocalLog(), cloudLog);
   try { localStorage.setItem(logKey(), JSON.stringify(LOG)); } catch(e) {}

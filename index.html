@@ -678,6 +678,7 @@ body {
     <button class="nav-btn" onclick="switchTab('program', this)">💪 Program Builder</button>
     <button class="nav-btn" onclick="switchTab('programs', this)">📁 My Programs</button>
     <button class="nav-btn" onclick="switchTab('calendar', this)">📆 Calendar</button>
+    <button class="nav-btn" onclick="switchTab('inbox', this)">📥 Inbox<span id="inbox-badge" style="display:none;"></span></button>
     <button class="nav-btn" onclick="switchTab('brief', this)">📋 Daily Brief</button>
     <button class="nav-btn" onclick="switchTab('team', this)">👥 Team Summary</button>
     <button class="nav-btn" onclick="switchTab('import', this)">📥 Data Import</button>
@@ -1252,6 +1253,7 @@ body {
                   <button onclick="pbSaveAsTemplate()" title="Reusable starting point for anyone" style="padding:6px 4px;background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.35);border-radius:6px;color:#60a5fa;font-size:10px;font-weight:700;cursor:pointer;">⭐ Template</button>
                 </div>
                 <div style="font-size:9px;color:var(--text3);line-height:1.5;">Sending again updates the same athlete links — their logs are kept.</div>
+                <div id="pb-checks"></div>
               </div>
             </div>
 
@@ -1291,6 +1293,7 @@ body {
                     <button onclick="pbAIOpenWeekModal()" style="text-align:left;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:#6BA3F8;font-size:12px;cursor:pointer;">✨ AI generate this week</button>
                     <button onclick="pbAIGenerateFullTemplate()" style="text-align:left;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:#a78bfa;font-size:12px;cursor:pointer;">✨ AI generate full program</button>
                     <button onclick="pbOpenSubstituteModal()" style="text-align:left;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:#60a5fa;font-size:12px;cursor:pointer;">🔁 Swap an exercise everywhere</button>
+                    <button onclick="openEquipmentModal()" style="text-align:left;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:#cbd5e1;font-size:12px;cursor:pointer;">🏠 Athlete home equipment</button>
                     <button onclick="pbClearWeek()" style="text-align:left;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:var(--red);font-size:12px;cursor:pointer;">🗑 Clear this week</button>
                   </div>
                 </details>
@@ -3047,6 +3050,24 @@ body {
 
     <!-- ══ TEAM SUMMARY ══ -->
     
+
+<div id="page-inbox" class="page">
+  <div style="max-width:900px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">📥 Inbox</div>
+      <div id="inbox-counts" style="font-size:12px;color:var(--text3);">Loading…</div></div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="tab-btn inbox-filter active" data-f="open" onclick="inboxSetFilter('open')">Open</button>
+        <button class="tab-btn inbox-filter" data-f="done" onclick="inboxSetFilter('done')">Done</button>
+        <button class="tab-btn inbox-filter" data-f="all" onclick="inboxSetFilter('all')">All</button>
+        <button onclick="inboxAll()" title="Mark everything except pain and red check-ins as done" style="margin-left:6px;padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;cursor:pointer;">Clear non-urgent</button>
+        <button onclick="loadProgramRows().then(renderInbox)" style="padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;cursor:pointer;">↻</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5;">Pain reports, red check-ins, missed sessions, missed reps, strength changes and notes from every athlete's program. Replies show on the athlete's program page.</div>
+    <div id="inbox-body"></div>
+  </div>
+</div>
 
 <div id="page-brief" class="page">
   <div style="max-width:900px;margin:0 auto;">
@@ -6309,6 +6330,7 @@ var LANDING_CARDS = [
   { page:'program',   icon:'💪', title:'Program Builder', desc:'Build, edit, and AI-generate training programs', color:'#7c3aed' },
   { page:'programs',  icon:'📁', title:'My Programs', desc:'Saved programs, drafts, and templates', color:'#22c55e' },
   { page:'calendar',  icon:'📆', title:'Calendar', desc:'Scheduled sessions across the roster', color:'#f59e0b' },
+  { page:'inbox',     icon:'📥', title:'Inbox', desc:'Pain reports, missed sessions, strength changes and athlete notes', color:'#6366f1' },
   { page:'brief',     icon:'📋', title:'Daily Brief', desc:"Today's readiness and status across every athlete", color:'#06b6d4' },
   { page:'team',      icon:'👥', title:'Team Summary', desc:'Full-roster view of load and status', color:'#ec4899' },
   { page:'import',    icon:'📥', title:'Data Import', desc:'ForceDecks, Statcast, HE Runs, and manual entry', color:'#ef4444' },
@@ -6349,7 +6371,7 @@ function switchTab(page, btn) {
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['dashboard','program','programs','calendar','brief','team','import'].forEach(p => {
+  ['dashboard','program','programs','calendar','brief','team','import','inbox'].forEach(p => {
     const el = document.getElementById('page-'+p);
     if (!el) return;
     el.classList.toggle('page',   p !== page);
@@ -6364,6 +6386,7 @@ function switchTab(page, btn) {
   if (topbarPlayerEl) topbarPlayerEl.style.display = page === 'dashboard' ? '' : 'none';
   if (topbarMetaEl)   topbarMetaEl.style.display   = page === 'dashboard' ? '' : 'none';
   if (page === 'brief') { renderBrief(); }
+  if (page === 'inbox' && typeof renderInbox === 'function') { renderInbox(); loadProgramRows().then(renderInbox); }
   if (page === 'program') { if (typeof pbInit==='function') pbInit(); if (typeof pbCheckAutoSaveRestore==='function') pbCheckAutoSaveRestore(); }
   if (page === 'programs') renderProgramLibrary();
   if (page === 'calendar') { renderCalendar(); populateScheduleWorkoutProgramPicker(); }
@@ -6910,8 +6933,9 @@ async function renderProgramCompliance() {
     var ciHtml = checkins.length ? '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">'
       + '<div style="font-size:10px;color:var(--text3);letter-spacing:.5px;margin-bottom:6px;">RECENT CHECK-INS</div>'
       + checkins.slice(0, 5).map(checkinHTML).join('') + '</div>' : '';
-    if (!cardsHtml && !ciHtml) return;
-    body.innerHTML = cardsHtml + ciHtml;
+    var stHtml = typeof sprintTimesHTML === 'function' ? sprintTimesHTML(currentPlayer) : '';
+    if (!cardsHtml && !ciHtml && !stHtml) return;
+    body.innerHTML = cardsHtml + ciHtml + stHtml;
     card.style.display = 'block';
   } catch(e) { console.warn('[renderProgramCompliance]', e); }
 }
@@ -8477,7 +8501,7 @@ function showPushProgramModal(progId) {
       + '<input type="checkbox" class="push-ath" value="' + escHtml(n) + '"' + (checked ? ' checked' : '') + ' style="width:16px;height:16px;accent-color:#6366f1;">'
       + '<span style="flex:1;font-size:13px;color:#fff;">' + escHtml(n) + ' <span style="color:var(--text3);font-size:11px;">' + escHtml(PLAYERS[n].pos || '') + '</span></span>'
       + (was ? '<span style="font-size:10px;color:#4ADE80;">● live — will update</span>' : '')
-      + '</label>';
+      + '</label><div class="push-prev" data-ath="' + escHtml(n) + '" style="display:none;margin:-2px 0 4px 36px;font-size:10px;line-height:1.5;color:var(--text3);"></div>';
   }).join('');
 
   var modal = document.createElement('div');
@@ -8485,7 +8509,10 @@ function showPushProgramModal(progId) {
   modal.innerHTML = '<div class="push-box" style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:22px;width:520px;max-width:100%;max-height:90vh;overflow-y:auto;">'
     + '<div style="font-size:17px;font-weight:700;color:#fff;">📤 Send to athletes</div>'
     + '<div style="font-size:12px;color:var(--text3);margin:4px 0 16px;">' + escHtml(prog.name) + ' · ' + st.weekData.length + ' weeks</div>'
-    + '<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Athletes</div>'
+    + (function(){ var w = (typeof pbCheckRules === 'function' ? pbCheckRules(st) : []).filter(function(x){ return x.level === 'warn'; });
+        return w.length ? '<div style="margin-bottom:12px;padding:8px 10px;border-radius:8px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.3);font-size:11px;color:#fbbf24;line-height:1.5;">' + w.slice(0, 4).map(function(x){ return '⚠ ' + escHtml(x.msg); }).join('<br>') + (w.length > 4 ? '<br>+' + (w.length - 4) + ' more' : '') + '</div>' : ''; })()
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;">Athletes</div>'
+    + '<button id="push-equip" style="background:none;border:none;color:#6BA3F8;font-size:11px;cursor:pointer;">🏠 Home equipment…</button></div>'
     + '<div style="display:flex;flex-direction:column;gap:4px;max-height:230px;overflow-y:auto;margin-bottom:14px;">' + rows + '</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
     + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Week 1 starts</label>'
@@ -8493,7 +8520,7 @@ function showPushProgramModal(progId) {
     + '<div><label style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Message on their page</label>'
     + '<input type="text" id="push-note" value="' + escHtml((pushes[0] && pushes[0].note) || '') + '" placeholder="e.g. Offseason block 1 — send me videos of your cleans" style="width:100%;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 10px;color:#fff;font-size:13px;box-sizing:border-box;"></div>'
     + '</div>'
-    + '<div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.5;">Loads written as a % are converted to lbs from each athlete\'s 1RM. Athletes already on this program keep the same link and everything they\'ve logged.</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.5;">Each athlete gets his own copy: % loads in lbs from his 1RM (then auto-adjusted from what he logs), exercises swapped for his home equipment, and RTP limits if he\'s in a rehab phase. Athletes already on this program keep the same link, logs and your replies.</div>'
     + '<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end;">'
     + '<button id="push-cancel" style="padding:9px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button>'
     + '<button id="push-confirm" style="padding:9px 20px;background:#6366f1;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">📤 Send</button>'
@@ -8501,6 +8528,26 @@ function showPushProgramModal(progId) {
   document.body.appendChild(modal);
   modal.querySelector('#push-cancel').onclick = function(){ modal.remove(); };
   modal.addEventListener('click', function(e){ if (e.target === modal) modal.remove(); });
+  modal.querySelector('#push-equip').onclick = function(){ if (typeof openEquipmentModal === 'function') openEquipmentModal(); };
+  // Per-athlete preview: home swaps, RTP limits, projected ACWR
+  function preview() {
+    var sd = modal.querySelector('#push-start-date').value;
+    modal.querySelectorAll('.push-ath').forEach(function(cb) {
+      var el = modal.querySelector('.push-prev[data-ath="' + cb.value.replace(/"/g, '\\"') + '"]');
+      if (!el) return;
+      if (!cb.checked || typeof prepareForAthlete !== 'function') { el.style.display = 'none'; return; }
+      var prep = prepareForAthlete(prog.pbState, cb.value);
+      prep.st.startDate = sd;
+      var proj = typeof projectACWR === 'function' ? projectACWR(cb.value, prep.st) : null;
+      var lines = prep.notes.slice();
+      if (proj && proj.v) lines.push((proj.v > 1.25 ? '🔴' : proj.v > 1.15 ? '🟡' : '🟢') + ' Projected peak ACWR ' + proj.v.toFixed(2) + (proj.week ? ' (week ' + proj.week + ')' : '') + (proj.v > 1.15 ? ' — above the green zone' : ''));
+      el.innerHTML = lines.map(escHtml).join('<br>');
+      el.style.display = lines.length ? 'block' : 'none';
+    });
+  }
+  modal.querySelectorAll('.push-ath').forEach(function(cb){ cb.addEventListener('change', preview); });
+  modal.querySelector('#push-start-date').addEventListener('change', preview);
+  setTimeout(preview, 0);
 
   modal.querySelector('#push-confirm').onclick = async function() {
     var athletes = Array.prototype.map.call(modal.querySelectorAll('.push-ath:checked'), function(i){ return i.value; });
@@ -8518,7 +8565,7 @@ function showPushProgramModal(progId) {
       var player = athletes[i];
       var prev = pushedTo[player];
       var id = prev ? String(prev.id) : String(nextId++);
-      var athState = pbComputeLoadsForAthlete(prog.pbState, player);
+      var athState = typeof prepareForAthlete === 'function' ? prepareForAthlete(prog.pbState, player).st : pbComputeLoadsForAthlete(prog.pbState, player);
       athState.athlete = player; athState.startDate = startDate; athState.pushNote = note;
       athState.sourceProgramId = String(prog.id);
       var now = new Date().toISOString();
@@ -8528,6 +8575,12 @@ function showPushProgramModal(progId) {
       var err = null;
       try {
         if (!db) throw new Error('Supabase not loaded');
+        // Keep coach replies already on this athlete's link
+        if (prev) {
+          var old = await db.from('athlete_programs').select('pb_state').eq('id', id).maybeSingle();
+          var oldPb = old && old.data && old.data.pb_state ? (typeof old.data.pb_state === 'string' ? JSON.parse(old.data.pb_state) : old.data.pb_state) : null;
+          if (oldPb && oldPb.messages) { athState.messages = oldPb.messages; row.pb_state = JSON.stringify(athState); }
+        }
         var r = await db.from('athlete_programs').upsert(row, { onConflict: 'id' });
         if (r.error) throw r.error;
       } catch(e) { err = e.message || String(e); }
@@ -14384,6 +14437,7 @@ function pbRenderDayGrid(skipSave) {
   if (!wk) return;
 
   if (!skipSave) pbAutoSaveDebounced();
+  if (typeof pbRenderChecks === 'function') pbRenderChecks();
 
   grid.innerHTML = wk.days.map(function(d,di) {
     var col = PB_DAY_COLORS[d.type] || '#334155';
@@ -14824,6 +14878,7 @@ function pbOpenDay(weekIdx, dayIdx) {
     +'<button onclick="pbClearDay()" style="padding:5px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:6px;color:var(--red);font-size:10px;cursor:pointer;" title="Clear all blocks from this day">🗑 Clear</button>'
     +'<button onclick="pbCloseEditor()" style="padding:5px 8px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:10px;cursor:pointer;">✕</button>'
     +'</div></div>'
+    + (typeof pbDayChecksHTML === 'function' ? pbDayChecksHTML(weekIdx, dayIdx) : '')
     + timeSummary
     + (day.blocks.length ? '' : '<div style="padding:18px;border:1px dashed var(--border2);border-radius:8px;text-align:center;color:var(--text3);font-size:12px;margin-bottom:10px;">Empty day — add a <b style="color:#f59e0b;">⚡ Speed Block</b> (speed first) or a <b style="color:#818cf8;">🏋️ Lift Block</b>, then search exercises by name.</div>')
     + blocksHtml
@@ -23341,7 +23396,7 @@ function wlRender() {
     // Run pulls from CSV imports automatically; Throw/Swing/Lift need the
     // manual log below (Throw has no volume data in any import, Lift has
     // no data source at all, Swing is manual by choice).
-    var streamLogs = (s === 'run') ? wlAutoRunLogs(WL_ACTIVE) : logs;
+    var streamLogs = (s === 'run') ? wlAutoRunLogs(WL_ACTIVE) : (s === 'lift' && typeof wlAutoLiftLogs === 'function') ? logs.concat(wlAutoLiftLogs(WL_ACTIVE).filter(function(a){ return !logs.some(function(l){ return l.date === a.date && l.lift; }); })) : logs;
     var proj = wlProjectACWR(streamLogs, [{date: today, run:0, throw:0, swing:0, lift:0, rpe:6}], s);
     // Current ACWR based only on actuals through yesterday + zero today
     var acwrToday = proj.length ? proj[0].acwr : null;
@@ -24207,5 +24262,7 @@ try {
     </div>
   </div>
 
+<script src="js/training-core.js?v=3"></script>
+<script src="js/coach-loop.js?v=3"></script>
 </body>
 </html>
