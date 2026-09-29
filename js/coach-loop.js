@@ -159,13 +159,23 @@ var CAT_RELATED = {
   'UB Vertical Push': ['UB Vertical Press'], 'UB Vertical Press': ['UB Vertical Push'],
   'Olympic Variations': ['LB Plyos'], 'Strongman Variations': ['Core Anti-Lateral Flexion']
 };
-var _PLYO_WORDS = /jump|hop|bound|throw|slam|toss|pogo|skip|sprint/i;
+var SUB_FAMILIES = [/squat/, /deadlift|\brdl\b|hinge|swing|good morning|pull[- ]?through|hip hinge/, /bench press|floor press|db press|push[- ]?up|chest press|\bdip/, /overhead|military|push press|jerk|arnold|landmine press|\bohp\b/,
+  /\brow\b|rows\b/, /pull[- ]?up|chin|pulldown/, /lunge|split|step[- ]?up|skater/, /carry|farmer|suitcase/, /jump|hop|bound|pogo/, /throw|slam|toss/,
+  /curl/, /raise|fly\b/, /thrust|glute bridge|hip bridge/, /plank|pallof|chop|anti-rotation|dead bug/, /sprint|accel|sled|prowler|march|resisted/];
+function subFamilies(n) { n = String(n).toLowerCase(); var out = []; SUB_FAMILIES.forEach(function (re, i) { if (re.test(n)) out.push(i); }); return out; }
+var _PLYO_WORDS = /jump|hop|bound|throw|slam|toss|pogo|skip|sprint|swing/i;
 var _SUB_WORDS = ['squat','lunge','split','step','deadlift','rdl','hinge','press','row','pull','chin','push','bench','carry','jump','bound','hop','throw','slam','rotation','anti','plank','curl','raise','bridge','thrust','nordic','sprint','accel','shuffle','skip'];
 function findSubstitute(ex, have) {
   var db = EXERCISE_DB.find(function (e) { return e && e.name && e.name.toLowerCase() === String(ex.name).toLowerCase(); });
-  var cat = (db && db.cat) || ex.cat;
-  if (!cat) return null;
   var nm = String(ex.name).toLowerCase();
+  var fam = subFamilies(nm);
+  var cat = (db && db.cat) || ex.cat;
+  if (!cat && fam.length) {   // not in the library: borrow the category of the closest-named library exercise
+    var votes = {};
+    EXERCISE_DB.forEach(function (e) { if (e && e.cat && subFamilies(e.name).some(function (f) { return fam.indexOf(f) >= 0; })) votes[e.cat] = (votes[e.cat] || 0) + 1; });
+    cat = Object.keys(votes).sort(function (a, b) { return votes[b] - votes[a]; })[0];
+  }
+  if (!cat) return null;
   var words = _SUB_WORDS.filter(function (w) { return nm.indexOf(w) >= 0; });
   var loaded = TC.pctOf(ex) !== null || !!(db && db.liftKey);
   var origPlyo = _PLYO_WORDS.test(nm);
@@ -183,13 +193,14 @@ function findSubstitute(ex, have) {
       if (!origPlyo && _PLYO_WORDS.test(c.name)) sc -= 8;    // never turn a strength lift into a jump
       if (origPlyo && !_PLYO_WORDS.test(c.name)) sc -= 4;
       words.forEach(function (w) { if (c.name.toLowerCase().indexOf(w) >= 0) sc += 2; });
-      if (/\bsl\b|single[- ]leg|split|lunge|step|b-stance|skater|pistol|lateral|crossover|cossack|45 degree/.test(nm) === /\bsl\b|single[- ]leg|split|lunge|step|b-stance|skater|pistol|lateral|crossover|cossack|45 degree/.test(c.name.toLowerCase())) sc += 3;
+      if (fam.length) { var cf = subFamilies(c.name); if (!cf.some(function (f) { return fam.indexOf(f) >= 0; })) return; sc += 4; }   // same movement or nothing
+      if (/\bsl\b|single[- ]leg|split|lunge|step|skater|pistol|lateral|crossover|cossack|45 degree/.test(nm) === /\bsl\b|single[- ]leg|split|lunge|step|skater|pistol|lateral|crossover|cossack|45 degree/.test(c.name.toLowerCase())) sc += 3;
       if (c.video) sc += 0.5;
       if (sc > bestScore || (sc === bestScore && best && c.name < best.name)) { best = c; bestScore = sc; }
     });
     return best && bestScore > -3 ? best : null;
   }
-  return pick([cat]) || pick([cat].concat(CAT_RELATED[cat] || []));
+  return pick([cat].concat(CAT_RELATED[cat] || []));
 }
 function openEquipmentModal(athlete) {
   athlete = athlete || (typeof currentPlayer !== 'undefined' ? currentPlayer : Object.keys(PLAYERS)[0]);
