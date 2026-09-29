@@ -493,6 +493,7 @@ function inboxItems() {
       }
     });
   });
+  if (typeof speedInboxItems === 'function') { try { items = items.concat(speedInboxItems()); } catch (e) { console.warn('[speedInboxItems]', e); } }
   return items.sort(function (x, y) { return x.pri - y.pri || (y.date > x.date ? 1 : y.date < x.date ? -1 : 0); });
 }
 function updateInboxBadge() {
@@ -506,7 +507,7 @@ function renderInbox() {
   var el = document.getElementById('inbox-body'); if (!el) return;
   var all = inboxItems();
   var list = all.filter(function (i) { return INBOX_FILTER === 'all' ? true : INBOX_FILTER === 'done' ? INBOX_DONE[i.id] : !INBOX_DONE[i.id]; });
-  var colors = { pain: '#f87171', ready: '#f87171', missed: '#fbbf24', reps: '#fbbf24', strength: '#60a5fa', note: '#cbd5e1' };
+  var colors = { pain: '#f87171', ready: '#f87171', missed: '#fbbf24', reps: '#fbbf24', strength: '#60a5fa', note: '#cbd5e1', speed: '#f59e0b' };
   document.getElementById('inbox-counts').textContent = all.filter(function (i) { return !INBOX_DONE[i.id]; }).length + ' open · ' + PROGRAM_ROWS.length + ' programs';
   el.innerHTML = list.length ? list.map(function (i) {
     return '<div class="card" style="padding:12px 14px;margin-bottom:8px;border-left:3px solid ' + colors[i.type] + ';' + (INBOX_DONE[i.id] ? 'opacity:.55;' : '') + '">'
@@ -516,8 +517,9 @@ function renderInbox() {
       + '<div style="font-size:10px;color:var(--text3);margin-top:4px;">' + escHtml(i.program || '') + (i.date ? ' · ' + escHtml(fmtDate(i.date)) : '') + (i.replied ? ' · <span style="color:var(--green);">replied</span>' : '') + '</div></div>'
       + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
       + (i.type === 'strength' ? '<button onclick="inboxAccept1RM(\'' + jsq(i.id) + '\')" style="padding:6px 10px;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.4);border-radius:6px;color:#60a5fa;font-size:11px;cursor:pointer;">Save as 1RM</button>' : '')
-      + '<button onclick="inboxReply(\'' + jsq(i.id) + '\')" style="padding:6px 10px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);border-radius:6px;color:#a5b4fc;font-size:11px;cursor:pointer;">Reply</button>'
-      + '<a href="' + PUSH_BASE_URL + encodeURIComponent(i.rowId) + '" target="_blank" style="padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;text-decoration:none;">Open</a>'
+      + (i.type === 'speed' ? '<button onclick="siOpenHE(\'' + jsq(i.athlete) + '\')" style="padding:6px 10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f59e0b;font-size:11px;cursor:pointer;">HE Runs</button>' : '')
+      + (i.rowId ? '<button onclick="inboxReply(\'' + jsq(i.id) + '\')" style="padding:6px 10px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);border-radius:6px;color:#a5b4fc;font-size:11px;cursor:pointer;">' + (i.type === 'speed' ? 'Message' : 'Reply') + '</button>'
+      + '<a href="' + PUSH_BASE_URL + encodeURIComponent(i.rowId) + '" target="_blank" style="padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;text-decoration:none;">Open</a>' : '')
       + '<button onclick="inboxToggleDone(\'' + jsq(i.id) + '\')" style="padding:6px 10px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);border-radius:6px;color:var(--green);font-size:11px;cursor:pointer;">' + (INBOX_DONE[i.id] ? 'Reopen' : '✓ Done') + '</button>'
       + '</div></div></div>';
   }).join('') : '<div style="color:var(--text3);font-size:13px;padding:30px;text-align:center;">' + (INBOX_FILTER === 'open' ? 'All caught up ✓' : 'Nothing here.') + '</div>';
@@ -551,7 +553,7 @@ async function sendCoachMessage(rowId, ref, text) {
     if (r.error) throw r.error;
     var pb = typeof r.data.pb_state === 'string' ? JSON.parse(r.data.pb_state) : r.data.pb_state;
     pb.messages = pb.messages || [];
-    pb.messages.push({ at: new Date().toISOString(), text: text, ref: ref && ref.indexOf('e1rm:') !== 0 && ref.indexOf('miss') !== 0 ? String(ref).replace(/:note$/, '') : null });
+    pb.messages.push({ at: new Date().toISOString(), text: text, ref: ref && ref.indexOf('e1rm:') !== 0 && ref.indexOf('miss') !== 0 && ref.indexOf('spd:') !== 0 ? String(ref).replace(/:note$/, '') : null });
     var u = await db.from('athlete_programs').update({ pb_state: JSON.stringify(pb), updated_at: new Date().toISOString() }).eq('id', rowId);
     if (u.error) throw u.error;
     return true;
