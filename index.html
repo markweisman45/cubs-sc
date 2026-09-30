@@ -3078,10 +3078,12 @@ body {
   <div style="max-width:1400px;margin:0 auto;">
     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
       <div><div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">📈 Value Added</div>
-      <div style="font-size:12px;color:var(--text3);">On-field tools and value from Baseball Savant · <span id="va-stamp">loading…</span></div></div>
+      <div style="font-size:12px;color:var(--text3);">On-field tools and value from Baseball Savant &amp; FanGraphs · <span id="va-stamp">loading…</span></div></div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-        <button class="tab-btn va-view active" data-v="tools" onclick="vaSetView('tools')" title="Speed, bat speed, exit velo, arm — change vs his age curve">Physical tools vs age</button>
-        <button class="tab-btn va-view" data-v="value" onclick="vaSetView('value')" title="xwOBA, barrels, run values, defense">Results &amp; run value</button>
+        <button class="tab-btn va-view active" data-v="tools" onclick="vaSetView('tools')" title="Speed, bat speed, exit velo, arm, pop time — vs his age curve and league average">Physical tools</button>
+        <button class="tab-btn va-view" data-v="def" onclick="vaSetView('def')" title="OAA, fielding run value, range/arm runs, catcher framing/blocking/throwing, FanGraphs defense">Defense</button>
+        <button class="tab-btn va-view" data-v="run" onclick="vaSetView('run')" title="Baserunning run value, extra bases, stealing, BsR, sprint speed, bolts">Baserunning</button>
+        <button class="tab-btn va-view" data-v="off" onclick="vaSetView('off')" title="WAR, offense runs, wRC+, xwOBA, barrels">Offense &amp; WAR</button>
         <button onclick="vaRefresh()" title="Pull the latest from Baseball Savant" style="margin-left:6px;padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;cursor:pointer;">↻ Refresh</button>
         <button onclick="vaPrint()" style="padding:6px 10px;background:rgba(14,51,134,.3);border:1px solid rgba(96,165,250,.45);border-radius:6px;color:#93c5fd;font-size:11px;cursor:pointer;">🖨 Print / PDF</button>
       </div>
@@ -6357,7 +6359,7 @@ var LANDING_CARDS = [
   { page:'program',   icon:'💪', title:'Program Builder', desc:'Build, edit, and AI-generate training programs', color:'#7c3aed' },
   { page:'programs',  icon:'📁', title:'My Programs', desc:'Saved programs, drafts, and templates', color:'#22c55e' },
   { page:'calendar',  icon:'📆', title:'Calendar', desc:'Scheduled sessions across the roster', color:'#f59e0b' },
-  { page:'value',     icon:'📈', title:'Value Added', desc:'Speed, bat speed, exit velo, arm and run value from Baseball Savant vs each player\'s age curve', color:'#0E3386' },
+  { page:'value',     icon:'📈', title:'Value Added', desc:'Tools, defense, baserunning and WAR from Savant & FanGraphs vs age curve and league average', color:'#0E3386' },
   { page:'inbox',     icon:'📥', title:'Inbox', desc:'Pain reports, missed sessions, strength changes and athlete notes', color:'#6366f1' },
   { page:'brief',     icon:'📋', title:'Daily Brief', desc:"Today's readiness and status across every athlete", color:'#06b6d4' },
   { page:'team',      icon:'👥', title:'Team Summary', desc:'Full-roster view of load and status', color:'#ec4899' },
@@ -21021,7 +21023,7 @@ async function _initWithSupabase() {
     // Library's videos, Annual Plan, RTP protocols, mesocycles, workload,
     // and Program Builder presets were never being pulled down on a new
     // device/browser even though they were being pushed up fine).
-    const { data: rows, error: rowsErr } = await db.from('cubs_sc_data').select('key,value').not('key', 'like', 'hist:*');
+    const { data: rows, error: rowsErr } = await db.from('cubs_sc_data').select('key,value').not('key', 'like', 'hist:*').not('key', 'like', 'cache:*');
     if (rowsErr) throw rowsErr;
     let replaced = 0;
     if (rows && rows.length) {
@@ -21037,7 +21039,7 @@ async function _initWithSupabase() {
       _syncMetaSuppress = true;
       try {
         rows.forEach(function(row) {
-          if (!row || !row.key || !row.value || row.key === SYNC_CLOUD_META_ROW || row.key.indexOf('hist:') === 0) return;
+          if (!row || !row.key || !row.value || row.key === SYNC_CLOUD_META_ROW || row.key.indexOf('hist:') === 0 || row.key.indexOf('cache:') === 0) return;
           const local = localStorage.getItem(row.key);
           const cloudTs = cloudMeta[row.key] || 0;
           const localTs = meta.modified[row.key] || 0;
@@ -24306,7 +24308,7 @@ try {
 <script src="js/program-edit.js?v=1"></script>
 <script src="js/program-history.js?v=1"></script>
 <script src="js/athlete-profile.js?v=2"></script>
-<script src="js/savant.js?v=1"></script>
-<script src="js/value-added.js?v=1"></script>
+<script src="js/savant.js?v=2"></script>
+<script src="js/value-added.js?v=2"></script>
 </body>
 </html>

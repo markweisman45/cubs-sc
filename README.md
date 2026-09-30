@@ -17,7 +17,7 @@ Athlete Readiness & Performance Dashboard for Chicago Cubs Strength & Conditioni
 - Live program edits: change one athlete's sent program (move/swap days, push the week back, add blocks or weeks) and it updates on his phone with a "coach updated" banner (`js/program-edit.js`)
 - Program history: every send, re-send, live edit and restore is saved as a version you can view or restore (`js/program-history.js`; stored in the cloud only, key `hist:<program id>`)
 - One-page athlete profile across seasons — speed, jump, bat/arm, injuries & RTP, programs & consistency — printable to PDF (`js/athlete-profile.js`)
-- Value Added: on-field tools and run value from Baseball Savant (pulled live, nothing stored) over the last 3 seasons, each compared with the typical change for the player's age across MLB (`js/savant.js`, `js/value-added.js`)
+- Value Added: physical tools, defense (OAA, fielding run value, catcher framing/blocking/pop time), baserunning and WAR over the last 3 seasons — each vs the typical change for the player's age and vs league average. Baseball Savant is pulled live; FanGraphs (WAR, Off, Def, BsR, wRC+) is cached compactly in the cloud (key `cache:fangraphs`, never pulled into localStorage) (`js/savant.js`, `js/value-added.js`)
 
 ## Files
 
