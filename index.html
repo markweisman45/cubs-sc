@@ -1252,7 +1252,7 @@ body {
                   <button onclick="pbSaveDraft()" title="Work in progress — finish later" style="padding:6px 4px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.35);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;">📝 Draft</button>
                   <button onclick="pbSaveAsTemplate()" title="Reusable starting point for anyone" style="padding:6px 4px;background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.35);border-radius:6px;color:#60a5fa;font-size:10px;font-weight:700;cursor:pointer;">⭐ Template</button>
                 </div>
-                <div style="font-size:9px;color:var(--text3);line-height:1.5;">Sending again updates the same athlete links — their logs are kept.</div>
+                <div style="font-size:9px;color:var(--text3);line-height:1.5;">Sending again updates the same athlete links — logs stay with each exercise. To change one athlete only, use ✏️ Edit a live program above.</div>
                 <div id="pb-checks"></div>
               </div>
             </div>
@@ -8549,6 +8549,8 @@ function showPushProgramModal(progId) {
       prep.st.startDate = sd;
       var proj = typeof projectACWR === 'function' ? projectACWR(cb.value, prep.st) : null;
       var lines = prep.notes.slice();
+      var pv = pushedTo[cb.value], liveRow = pv && typeof PROGRAM_ROWS !== 'undefined' ? PROGRAM_ROWS.find(function(r){ return r.id === String(pv.id); }) : null;
+      if (liveRow && liveRow.pb && liveRow.pb.liveEdited) lines.unshift('✏️ He has individual edits from ' + fmtDate(String(liveRow.pb.liveEdited.at).slice(0, 10)) + ' — sending replaces them with this program (his logs stay with each exercise)');
       if (proj && proj.v) lines.push((proj.v > 1.25 || proj.low < 0.75 ? '🔴' : proj.v > 1.15 || proj.low < 0.85 ? '🟡' : '🟢') + ' Projected ACWR ' + proj.low.toFixed(2) + '–' + proj.v.toFixed(2) + ' (peak week ' + (proj.week || '?') + ')' + (proj.v > 1.15 ? ' — peak above the green zone' : proj.low < 0.85 ? ' — dips below the green zone (expected while rebuilding)' : ''));
       el.innerHTML = lines.map(escHtml).join('<br>');
       el.style.display = lines.length ? 'block' : 'none';
@@ -8567,6 +8569,7 @@ function showPushProgramModal(progId) {
     btn.disabled = true; btn.textContent = 'Sending…';
     var db = getSupaClient();
     var results = [];
+    if (typeof TC !== 'undefined' && TC.ensureUids) TC.ensureUids(prog.pbState);   // stable ids so re-sends keep logs on the right exercise
     // New link ids: unique and never equal to any saved program's id
     var nextId = Date.now();
     SAVED_PROGRAMS.forEach(function(p){ var n = Number(p.id); if (n >= nextId) nextId = n + 1; });
@@ -8584,14 +8587,20 @@ function showPushProgramModal(progId) {
       var err = null;
       try {
         if (!db) throw new Error('Supabase not loaded');
-        // Keep coach replies already on this athlete's link
-        if (prev) {
-          var old = await db.from('athlete_programs').select('pb_state').eq('id', id).maybeSingle();
-          var oldPb = old && old.data && old.data.pb_state ? (typeof old.data.pb_state === 'string' ? JSON.parse(old.data.pb_state) : old.data.pb_state) : null;
-          if (oldPb && oldPb.messages) { athState.messages = oldPb.messages; row.pb_state = JSON.stringify(athState); }
+        if (prev && typeof peWriteProgram === 'function') {
+          // Same link: keep his replies, move his logs to match any changes, tell him what changed
+          var w = await peWriteProgram(db, id, athState, { name: row.name, fields: { notes: note, type: row.type, phase: row.phase }, by: 'resend', insert: { athlete: player, content: '', created_at: now } });
+          athState = w.st;
+        } else {
+          if (typeof TC !== 'undefined' && TC.ensureUids) { TC.ensureUids(athState); row.pb_state = JSON.stringify(athState); }
+          if (prev) {
+            var old = await db.from('athlete_programs').select('pb_state').eq('id', id).maybeSingle();
+            var oldPb = old && old.data && old.data.pb_state ? (typeof old.data.pb_state === 'string' ? JSON.parse(old.data.pb_state) : old.data.pb_state) : null;
+            if (oldPb && oldPb.messages) { athState.messages = oldPb.messages; row.pb_state = JSON.stringify(athState); }
+          }
+          var r = await db.from('athlete_programs').upsert(row, { onConflict: 'id' });
+          if (r.error) throw r.error;
         }
-        var r = await db.from('athlete_programs').upsert(row, { onConflict: 'id' });
-        if (r.error) throw r.error;
       } catch(e) { err = e.message || String(e); }
       results.push({ athlete: player, id: id, url: PUSH_BASE_URL + encodeURIComponent(id), err: err, updated: !!prev });
       if (!err) {
@@ -24271,8 +24280,9 @@ try {
     </div>
   </div>
 
-<script src="js/training-core.js?v=3"></script>
-<script src="js/coach-loop.js?v=4"></script>
+<script src="js/training-core.js?v=4"></script>
+<script src="js/coach-loop.js?v=5"></script>
 <script src="js/speed-intel.js?v=1"></script>
+<script src="js/program-edit.js?v=1"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@
 <title>Cubs S&amp;C</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
-<script src="js/training-core.js?v=3"></script>
+<script src="js/training-core.js?v=4"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -457,7 +457,7 @@ function setSync(state){
   el.textContent = state === 'ok' ? '✓ Saved' : state === 'off' ? 'Offline · saved on phone' : state === 'saving' ? 'Saving…' : '';
 }
 function saveLog(){
-  try { localStorage.setItem(logKey(), JSON.stringify(LOG)); } catch(e) {}
+  try { localStorage.setItem(logKey(), JSON.stringify(LOG)); localStorage.setItem('clogv_' + PROG.id, String(PROG.ver || 0)); } catch(e) {}
   _dirty = true;
   setSync('saving');
   clearTimeout(_saveTimer);
@@ -467,6 +467,7 @@ async function pushLog(){
   if (!SUPA || !_dirty) return;
   if (!navigator.onLine) { setSync('off'); return; }
   try {
+    try { var chk = await SUPA.from('athlete_programs').select('updated_at').eq('id', PROG.id).single(); if (chk.data && chk.data.updated_at && chk.data.updated_at !== PROG.updatedAt) await refreshProgram(); } catch(e) {}
     var r = await SUPA.from('athlete_programs').update({ completion_log: LOG, completion_updated_at: new Date().toISOString() }).eq('id', PROG.id);
     if (r.error) throw r.error;
     _dirty = false; setSync('ok');
@@ -555,6 +556,71 @@ function speedCardHTML(){
     + (sp.note ? '<div style="font-size:12px;color:var(--text);margin-top:8px;line-height:1.45;">' + esc(sp.note) + '</div>' : '')
     + '</div>';
 }
+// ── Live updates from the coach ──
+function seenKey(){ return 'cseen_' + PROG.id; }
+function changedDays(){
+  var lc = PROG.lastChange, out = {};
+  if (!lc || !lc.at || Date.now() - new Date(lc.at) > 7 * 86400000) return out;
+  (lc.items || []).forEach(function(c){ if (c.wi !== null && c.wi !== undefined) out[c.wi + '-' + c.di] = 1; });
+  return out;
+}
+function changeBannerHTML(){
+  var lc = PROG.lastChange; if (!lc || !lc.at) return '';
+  var seen = localStorage.getItem(seenKey()) || '';
+  if (seen >= lc.at) return '';
+  var when = new Date(lc.at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  var items = (lc.items || []).slice(0, 6);
+  return '<div class="chg-banner"><div class="chg-h">🔄 YOUR COACH UPDATED YOUR PROGRAM · ' + esc(when) + '</div>'
+    + items.map(function(c){ return '<div class="chg-i"' + (c.wi !== null && c.wi !== undefined ? ' onclick="goChanged(' + c.wi + ',' + c.di + ')"' : '') + '>' + esc(c.text) + '</div>'; }).join('')
+    + ((lc.items || []).length > 6 ? '<div class="chg-i" style="opacity:.7;">+' + (lc.items.length - 6) + ' more</div>' : '')
+    + '<button class="chg-ok" onclick="ackChanges()">Got it</button></div>';
+}
+function ackChanges(){ try { localStorage.setItem(seenKey(), PROG.lastChange.at); } catch(e) {} renderHero(); }
+function goChanged(wi, di){ if (!PROG.weekData[wi]) return; S.week = wi; S.day = di; renderAll(); }
+var _refreshing = null;
+async function refreshProgram(){
+  if (_refreshing) return _refreshing;
+  _refreshing = (async function(){
+    try {
+      var res = await SUPA.from('athlete_programs').select('*').eq('id', PROG.id).single();
+      if (res.error || !res.data) return;
+      var row = res.data, pb = null;
+      try { pb = typeof row.pb_state === 'string' ? JSON.parse(row.pb_state) : row.pb_state; } catch(e) {}
+      if (!pb || !pb.weekData || !pb.weekData.length) return;
+      var cur = ((PROG.weekData[S.week] || {}).days || [])[S.day], selUid = cur && cur.uid;
+      var newVer = pb.structVer || 0;
+      if (newVer > (PROG.ver || 0)) { LOG = TC.upgradeLog(LOG, pb, PROG.ver || 0); RQ = null; }
+      LOG = mergeLogs(LOG, row.completion_log || {});
+      PROG.weekData = pb.weekData; PROG.startDate = pb.startDate || null; PROG.messages = pb.messages || []; PROG.speed = pb.speedSummary || null;
+      PROG.note = pb.pushNote || row.notes || ''; if (PROG.note && /^[a-z_]+ · \d+ weeks · /.test(PROG.note)) PROG.note = '';
+      PROG.name = row.name; PROG.ver = newVer; PROG.updatedAt = row.updated_at || null; PROG.lastChange = pb.lastChange || null; PROG.pb = pb;
+      try { var slim = Object.assign({}, row); delete slim.completion_log; localStorage.setItem('cprog_' + PROG.id, JSON.stringify(slim)); localStorage.setItem(logKey(), JSON.stringify(LOG)); localStorage.setItem('clogv_' + PROG.id, String(PROG.ver)); } catch(e) {}
+      SESS = null; TODAY = findToday();
+      var found = false;
+      if (selUid) PROG.weekData.forEach(function(wk, wi){ (wk.days || []).forEach(function(d, di){ if (!found && d.uid === selUid) { S.week = wi; S.day = di; found = true; } }); });
+      if (S.week >= PROG.weekData.length) S.week = PROG.weekData.length - 1;
+      if (S.day >= (PROG.weekData[S.week].days || []).length) S.day = 0;
+      renderAll();
+    } catch(e) { console.warn('[refresh]', e); }
+    finally { _refreshing = null; }
+  })();
+  return _refreshing;
+}
+async function checkForUpdate(){
+  if (!SUPA || !PROG || !navigator.onLine) return;
+  try { var r = await SUPA.from('athlete_programs').select('updated_at').eq('id', PROG.id).single(); if (!r.error && r.data && r.data.updated_at && r.data.updated_at !== PROG.updatedAt) await refreshProgram(); } catch(e) {}
+}
+document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') checkForUpdate(); });
+window.addEventListener('focus', checkForUpdate);
+window.addEventListener('online', checkForUpdate);
+setInterval(function(){ if (document.visibilityState === 'visible') checkForUpdate(); }, 60000);
+(function(){ var st = document.createElement('style'); st.textContent = '.upd-dot{position:absolute;top:5px;left:6px;width:7px;height:7px;border-radius:50%;background:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.25);}'
+  + '.chg-banner{margin-top:12px;padding:12px;border-radius:12px;background:rgba(245,158,11,0.09);border:1px solid rgba(245,158,11,0.35);}'
+  + '.chg-h{font-size:10px;font-weight:800;letter-spacing:.12em;color:#f59e0b;margin-bottom:6px;}'
+  + '.chg-i{font-size:12.5px;line-height:1.45;color:var(--text);padding:4px 0;border-top:1px solid rgba(255,255,255,0.06);cursor:pointer;}'
+  + '.chg-ok{margin-top:8px;padding:7px 14px;border-radius:100px;border:none;background:#f59e0b;color:#111;font-weight:800;font-size:12px;cursor:pointer;}';
+  document.head.appendChild(st); })();
+
 function renderHero(){
   var d = PROG, dt, label;
   var sel = dayDate(S.week, S.day);
@@ -572,6 +638,7 @@ function renderHero(){
     + (d.note ? '<div class="coach-note"><b>Coach:</b> ' + esc(d.note) + '</div>' : '')
     + (PROG.messages || []).filter(function(m){ return !m.ref; }).slice(-3).reverse().map(function(m){ return '<div class="coach-note"><b>Coach' + (m.at ? ' · ' + esc(new Date(m.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : '') + ':</b> ' + esc(m.text) + '</div>'; }).join('')
     + speedCardHTML()
+    + changeBannerHTML()
     + '</div>';
   document.getElementById('hero').innerHTML = h;
 }
@@ -582,7 +649,7 @@ function renderNav(){
   document.getElementById('day-row').innerHTML = (PROG.weekData[S.week].days || []).map(function(d, di){
     var off = !dayHasWork(d);
     var cls = 'day-card' + (di === S.day && !off ? ' active' : '') + (off ? ' off' : '') + (dayDone(S.week, di) ? ' done' : '') + (TODAY && TODAY.wi === S.week && TODAY.di === di ? ' today' : '');
-    return '<div class="' + cls + '"' + (off ? '' : ' onclick="selDay(' + di + ')"') + '><div class="d1">' + esc(d.day) + '</div><div class="d2">' + (off ? 'Off' : esc(d.label || '')) + '</div></div>';
+    return '<div class="' + cls + '"' + (off ? '' : ' onclick="selDay(' + di + ')"') + '>' + (changedDays()[S.week + '-' + di] ? '<span class="upd-dot" title="Updated by your coach"></span>' : '') + '<div class="d1">' + esc(d.day) + '</div><div class="d2">' + (off ? 'Off' : esc(d.label || '')) + '</div></div>';
   }).join('');
   var act = document.querySelector('.day-card.active');
   if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'center' });
@@ -931,10 +998,12 @@ async function init(){
   var pb = null;
   try { pb = typeof row.pb_state === 'string' ? JSON.parse(row.pb_state) : row.pb_state; } catch(e) {}
   if (!pb || !pb.weekData || !pb.weekData.length) { document.getElementById('root').innerHTML = '<div class="err">This program has no weeks yet. Ask your coach to re-send it.</div>'; return; }
-  PROG = { id: String(id), athlete: row.athlete, name: row.name, weekData: pb.weekData, startDate: pb.startDate || null, note: pb.pushNote || row.notes || '', messages: pb.messages || [], speed: pb.speedSummary || null };
+  PROG = { id: String(id), athlete: row.athlete, name: row.name, weekData: pb.weekData, startDate: pb.startDate || null, note: pb.pushNote || row.notes || '', messages: pb.messages || [], speed: pb.speedSummary || null,
+    ver: pb.structVer || 0, updatedAt: row.updated_at || null, lastChange: pb.lastChange || null, pb: pb };
   if (PROG.note && /^[a-z_]+ · \d+ weeks · /.test(PROG.note)) PROG.note = '';   // auto-generated summary, not a coach message
-  LOG = mergeLogs(loadLocalLog(), cloudLog);
-  try { localStorage.setItem(logKey(), JSON.stringify(LOG)); } catch(e) {}
+  var localVer = +(localStorage.getItem('clogv_' + PROG.id) || 0);
+  LOG = mergeLogs(TC.upgradeLog(loadLocalLog(), pb, localVer), cloudLog);
+  try { localStorage.setItem(logKey(), JSON.stringify(LOG)); localStorage.setItem('clogv_' + PROG.id, String(PROG.ver)); } catch(e) {}
 
   document.title = (PROG.athlete || 'Cubs S&C') + ' — ' + (PROG.name || 'Program');
   document.getElementById('root').innerHTML = '<div id="hero"></div><div class="nav"><div class="week-row" id="week-row"></div><div class="day-row" id="day-row"></div></div><div class="session" id="session"></div>';

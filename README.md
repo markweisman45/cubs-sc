@@ -13,6 +13,8 @@ Athlete Readiness & Performance Dashboard for Chicago Cubs Strength & Conditioni
 - Program Builder (single session, weekly, mesocycle), phase templates, exercise library with video links
 - Annual plan, calendar, Return to Performance protocols, workload planner
 - Team Summary, Daily Brief, PDF reports, coach notes per athlete
+- Speed readiness from HE runs: max-velocity exposure, effort-matched fatigue, sprint profile, RTP speed (`js/speed-intel.js`)
+- Live program edits: change one athlete's sent program (move/swap days, push the week back, add blocks or weeks) and it updates on his phone with a "coach updated" banner (`js/program-edit.js`)
 
 ## Files
 
@@ -20,6 +22,9 @@ Athlete Readiness & Performance Dashboard for Chicago Cubs Strength & Conditioni
 |---|---|
 | `index.html` | Coach dashboard (all app code) |
 | `data/oc-programs.js` | Program template library (loaded by `index.html`) |
+| `data/mw-templates.js` | Template library in Mark's style (Reload, Spring ramp, In-season by role) |
+| `js/training-core.js` | Shared program/log logic for both pages, including log remapping for live edits |
+| `js/coach-loop.js`, `js/speed-intel.js`, `js/program-edit.js` | Inbox, program checks, equipment/RTP prep, speed flags, live editing |
 | `program.html`, `sw.js`, `manifest.json`, icons | Athlete-facing program page (installable PWA) |
 
 ## Data
@@ -29,6 +34,7 @@ Athlete Readiness & Performance Dashboard for Chicago Cubs Strength & Conditioni
 - Sync is newest-wins per data key: a device only overwrites the cloud with changes newer than the cloud copy, and pulls newer cloud copies on load.
 - Game-log dates are stored as `YYYY-MM-DD`.
 - **Download Backup** saves a full JSON copy of this browser's data.
+- Every day and exercise in a sent program has a stable `uid`. When a program changes (live edit or re-send), logged sets are moved to follow their exercise; `pb_state.structVer` and `pb_state.remaps` let a phone that was offline upgrade its saved log. Logs for removed exercises are kept under `arch:` keys.
 
 ## Load-monitoring rules
 
