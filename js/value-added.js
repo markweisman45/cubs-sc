@@ -15,8 +15,8 @@ var VA_VIEWS = [
 function vaKeys(v) { return SV.M.filter(function (m) { return m.g.indexOf(v) >= 0; }).map(function (m) { return m.k; }); }
 function vaEsc(x) { return typeof escHtml === 'function' ? escHtml(String(x == null ? '' : x)) : String(x == null ? '' : x); }
 function vaM(k) { return SV.M.find(function (m) { return m.k === k; }); }
-function vaFmt(m, v) { if (v == null || isNaN(v)) return '—'; var s = (+v).toFixed(m.dec); if (m.k === 'xwoba') s = s.replace(/^0/, ''); return s; }
-function vaSigned(m, v) { if (v == null || isNaN(v)) return ''; var s = (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(m.dec === 0 ? 0 : Math.max(1, m.dec)); return m.k === 'xwoba' ? s.replace(/0\./, '.') : s; }
+function vaFmt(m, v) { if (v == null || isNaN(v)) return '—'; var s = (+v).toFixed(m.dec); if (/^-0(\.0+)?$/.test(s)) s = s.slice(1); if (m.k === 'xwoba') s = s.replace(/^0/, ''); return s; }
+function vaSigned(m, v) { if (v == null || isNaN(v)) return ''; var a = Math.abs(v).toFixed(m.dec === 0 ? 0 : Math.max(1, m.dec)); var s = (v >= 0 || /^0(\.0+)?$/.test(a) ? '+' : '−') + a; return m.k === 'xwoba' ? s.replace(/0\./, '.') : s; }
 function vaOrd(n) { var s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
 function vaRoster() {
   var names = Object.keys(typeof PLAYERS !== 'undefined' ? PLAYERS : {}).filter(function (n) { return !['SP', 'RP'].includes((PLAYERS[n] || {}).pos); });
