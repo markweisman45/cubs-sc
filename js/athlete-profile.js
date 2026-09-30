@@ -186,7 +186,7 @@ var AP = (function () {
     var d = collect(name);
     return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(name) + ' — Athlete Profile</title><style>' + CSS + '</style></head><body>'
       + '<div class="bar"><b style="margin-right:auto;">👤 ' + esc(name) + '</b><label><input type="checkbox" id="apn"' + (opts && opts.notes ? ' checked' : '') + ' onchange="window.opener&&window.opener.openAthleteProfile(' + JSON.stringify(name).replace(/"/g, '&quot;') + ',{notes:this.checked,win:window})"> Include coach notes</label><button onclick="window.print()">🖨 Print / Save PDF</button></div>'
-      + render(d, opts) + '</body></html>';
+      + (typeof AP !== 'undefined' ? AP.render : render)(d, opts) + '</body></html>';
   }
   return { collect: collect, render: render, doc: doc };
 })();
