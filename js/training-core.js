@@ -174,6 +174,152 @@ var TC = (function () {
   // ── Load completed on a day (for ACWR / workload) ──
   // Running: completed sets × reps × distance → feet. High-effort running
   // counts toward HE distance and total distance; tempo/ESD toward total only.
+
+  // ── Live edits: stable ids + log remapping ──
+  // Every day and exercise carries a uid. When a live program changes, old
+  // positions are matched to new ones (by uid, then by name on the same day)
+  // and completion_log keys are moved so logs stay with the right exercise.
+  var _uidN = 0;
+  function newUid() { return 'u' + Date.now().toString(36) + (++_uidN).toString(36) + Math.random().toString(36).slice(2, 6); }
+  function ensureUids(st) {
+    var seen = {};
+    (st.weekData || []).forEach(function (wk) {
+      (wk.days || []).forEach(function (day) {
+        if (!day.uid || seen[day.uid]) day.uid = newUid();
+        seen[day.uid] = 1;
+        (day.blocks || []).forEach(function (b) {
+          (b.exercises || []).forEach(function (ex) {
+            if (!ex) return;
+            if (!ex.uid || seen[ex.uid]) ex.uid = newUid();
+            seen[ex.uid] = 1;
+          });
+        });
+      });
+    });
+    return st;
+  }
+  function indexState(st) {
+    var days = [], exs = [];
+    (st.weekData || []).forEach(function (wk, wi) {
+      (wk.days || []).forEach(function (day, di) {
+        days.push({ pos: wi + '-' + di, wi: wi, di: di, uid: day.uid, day: day });
+        (day.blocks || []).forEach(function (b, bi) {
+          namedExs(b).forEach(function (ex, ei) {
+            exs.push({ pos: wi + '-' + di + '-' + bi + '-' + ei, wi: wi, di: di, bi: bi, ei: ei, uid: ex.uid, dayUid: day.uid, name: String(ex.name).toLowerCase().trim(), ex: ex, block: b });
+          });
+        });
+      });
+    });
+    return { days: days, exs: exs };
+  }
+  function rxText(ex) {
+    var sr = ex.sets && ex.reps ? ex.sets + '×' + ex.reps : (ex.sets ? ex.sets + ' sets' : ex.reps || '');
+    return [sr, ex.load || '', ex.distance && String(ex.reps || '').indexOf(ex.distance) < 0 ? ex.distance : ''].filter(Boolean).join(' ');
+  }
+  function dayName(st, wi, di) { var d = ((st.weekData[wi] || {}).days || [])[di]; return 'Wk ' + (wi + 1) + ' ' + (d ? d.day : ''); }
+  // Returns { dayMap, exMap, changes }. Maps hold only positions that moved or
+  // were removed (value null); anything not listed stays where it is.
+  function buildRemap(oldSt, newSt) {
+    var O = indexState(oldSt), N = indexState(newSt);
+    var dayMap = {}, exMap = {}, changes = [];
+    var newDayByUid = {}; N.days.forEach(function (d) { if (d.uid) newDayByUid[d.uid] = d; });
+    var newDayPos = {}; N.days.forEach(function (d) { newDayPos[d.pos] = d; });
+    var dayTo = {};   // old pos -> new day entry
+    var claimedDay = {};
+    O.days.forEach(function (d) { var n = d.uid && newDayByUid[d.uid]; if (n) { dayTo[d.pos] = n; claimedDay[n.pos] = 1; } });
+    O.days.forEach(function (d) { if (!dayTo[d.pos] && newDayPos[d.pos] && !claimedDay[d.pos]) { dayTo[d.pos] = newDayPos[d.pos]; claimedDay[d.pos] = 1; } });
+    O.days.forEach(function (d) { var n = dayTo[d.pos]; if (!n) dayMap[d.pos] = null; else if (n.pos !== d.pos) dayMap[d.pos] = n.pos; });
+    // Exercises
+    var newExByUid = {}; N.exs.forEach(function (e) { if (e.uid) newExByUid[e.uid] = e; });
+    var claimed = {}, exTo = {};
+    O.exs.forEach(function (e) { var n = e.uid && newExByUid[e.uid]; if (n && !claimed[n.pos]) { exTo[e.pos] = n; claimed[n.pos] = 1; } });
+    var oldUids = {}; O.exs.forEach(function (e) { if (e.uid) oldUids[e.uid] = 1; });
+    O.exs.forEach(function (e) {
+      if (exTo[e.pos]) return;
+      var nd = dayTo[e.wi + '-' + e.di]; if (!nd) return;
+      var cand = N.exs.find(function (n) { return !claimed[n.pos] && n.wi === nd.wi && n.di === nd.di && n.name === e.name && !(n.uid && oldUids[n.uid]); });
+      if (cand) { exTo[e.pos] = cand; claimed[cand.pos] = 1; }
+    });
+    O.exs.forEach(function (e) { var n = exTo[e.pos]; if (!n) exMap[e.pos] = null; else if (n.pos !== e.pos) exMap[e.pos] = n.pos; });
+    // Plain-language change list (positions are the NEW program's)
+    var per = {};
+    function add(wi, di, t) { var k = wi + '-' + di; (per[k] = per[k] || { wi: wi, di: di, list: [] }).list.push(t); }
+    // Whole weeks that shifted (a week inserted/removed before them) are reported once, not day by day
+    var weekTo = {};
+    (oldSt.weekData || []).forEach(function (wk, w) {
+      var tgt = null, same = true;
+      (wk.days || []).forEach(function (d, i) { var n = dayTo[w + '-' + i]; if (!n || n.di !== i) { same = false; return; } if (tgt === null) tgt = n.wi; else if (tgt !== n.wi) same = false; });
+      if (same && tgt !== null && tgt !== w) weekTo[w] = tgt;
+    });
+    var newWeekHasOld = {}; O.days.forEach(function (d) { var n = dayTo[d.pos]; if (n) newWeekHasOld[n.wi] = 1; });
+    var shifted = Object.keys(weekTo);
+    if (shifted.length) {
+      var ws = shifted.map(Number).sort(function (x, y) { return x - y; });
+      changes.push({ wi: null, di: null, text: ws.length === 1 ? 'Week ' + (ws[0] + 1) + ' is now Week ' + (weekTo[ws[0]] + 1) : 'Weeks ' + (ws[0] + 1) + '–' + (ws[ws.length - 1] + 1) + ' moved ' + (weekTo[ws[0]] > ws[0] ? 'back ' : 'up ') + Math.abs(weekTo[ws[0]] - ws[0]) + ' week' + (Math.abs(weekTo[ws[0]] - ws[0]) === 1 ? '' : 's') });
+    }
+    (newSt.weekData || []).forEach(function (wk, w) {
+      if (newWeekHasOld[w]) return;
+      var ss = (wk.days || []).filter(dayHasWork).map(function (d) { return d.day + (d.label ? ' ' + d.label : ''); });
+      changes.push({ wi: null, di: null, text: 'New Week ' + (w + 1) + (ss.length ? ': ' + ss.join(', ') : ' (rest week)') });
+    });
+    var isNewWeek = function (wi) { return !newWeekHasOld[wi]; };
+    O.days.forEach(function (d) {
+      var n = dayTo[d.pos];
+      var had = dayHasWork(d.day);
+      if (n && n.pos !== d.pos && had && weekTo[d.wi] === undefined) add(n.wi, n.di, 'moved from ' + (n.wi !== d.wi ? 'Wk ' + (d.wi + 1) + ' ' : '') + d.day.day);
+      if (n && had && !dayHasWork(n.day)) add(n.wi, n.di, 'now a rest day');
+    });
+    N.days.forEach(function (n) {
+      if (isNewWeek(n.wi)) return;
+      var wasFrom = O.days.find(function (d) { return dayTo[d.pos] === n; });
+      if (dayHasWork(n.day) && (!wasFrom || !dayHasWork(wasFrom.day))) add(n.wi, n.di, 'new session' + (n.day.label ? ' — ' + n.day.label : ''));
+    });
+    var addedBy = {}, removedBy = {};
+    N.exs.forEach(function (n) {
+      if (isNewWeek(n.wi)) return;
+      var src = O.exs.find(function (e) { return exTo[e.pos] === n; });
+      var nd = n.wi + '-' + n.di;
+      if (!src) { if ((per[nd] || { list: [] }).list.some(function (t) { return /^new session/.test(t); })) return; (addedBy[nd] = addedBy[nd] || []).push(n.ex.name); return; }
+      var a = rxText(src.ex), b = rxText(n.ex);
+      if (a !== b && b) add(n.wi, n.di, n.ex.name + ' ' + (a || '—') + ' → ' + b);
+    });
+    O.exs.forEach(function (e) {
+      if (exTo[e.pos]) return;
+      var nd = dayTo[e.wi + '-' + e.di]; if (!nd || !dayHasWork(nd.day)) return;
+      var k = nd.wi + '-' + nd.di; (removedBy[k] = removedBy[k] || []).push(e.ex.name);
+    });
+    Object.keys(addedBy).forEach(function (k) { var p = k.split('-'); add(+p[0], +p[1], 'added ' + addedBy[k].join(', ')); });
+    Object.keys(removedBy).forEach(function (k) { var p = k.split('-'); add(+p[0], +p[1], 'removed ' + removedBy[k].join(', ')); });
+    var ow = (oldSt.weekData || []).length, nw = (newSt.weekData || []).length;
+    var dayLines = [];
+    Object.keys(per).sort(function (a, b) { var x = a.split('-'), y = b.split('-'); return (+x[0] - +y[0]) || (+x[1] - +y[1]); }).forEach(function (k) {
+      var g = per[k]; dayLines.push({ wi: g.wi, di: g.di, text: dayName(newSt, g.wi, g.di) + ': ' + g.list.slice(0, 4).join('; ') + (g.list.length > 4 ? ' +' + (g.list.length - 4) + ' more' : '') });
+    });
+    changes = dayLines.concat(changes);
+    if (nw < ow) changes.push({ wi: null, di: null, text: 'Program is now ' + nw + ' week' + (nw === 1 ? '' : 's') });
+    return { dayMap: dayMap, exMap: exMap, changes: changes };
+  }
+  // Move log keys per a remap. Removed items go to "arch:<ver>:<old key>".
+  function applyRemap(log, rm, ver) {
+    if (!log) return log;
+    var out = {};
+    Object.keys(log).forEach(function (k) {
+      var m, nk = k;
+      if ((m = k.match(/^(\d+-\d+-\d+-\d+)-(\d+)$/))) { if (m[1] in rm.exMap) nk = rm.exMap[m[1]] === null ? null : rm.exMap[m[1]] + '-' + m[2]; }
+      else if ((m = k.match(/^n:(\d+-\d+-\d+-\d+)$/))) { if (m[1] in rm.exMap) nk = rm.exMap[m[1]] === null ? null : 'n:' + rm.exMap[m[1]]; }
+      else if ((m = k.match(/^(day|ready):(\d+-\d+)$/))) { if (m[2] in rm.dayMap) nk = rm.dayMap[m[2]] === null ? null : m[1] + ':' + rm.dayMap[m[2]]; }
+      if (nk === null) nk = 'arch:' + ver + ':' + k;
+      out[nk] = log[k];
+    });
+    return out;
+  }
+  // Bring a log saved under structure version `fromVer` up to the program's current version
+  function upgradeLog(log, pb, fromVer) {
+    var v = +fromVer || 0;
+    (pb.remaps || []).filter(function (r) { return r.v > v; }).sort(function (a, b) { return a.v - b.v; }).forEach(function (r) { log = applyRemap(log, r, r.v); });
+    return log;
+  }
+
   function dayLoad(pb, log, wi, di) {
     var day = pb.weekData[wi].days[di], he = 0, td = 0, liftSets = 0, tonnage = 0;
     (day.blocks || []).forEach(function (b, bi) {
@@ -216,6 +362,7 @@ var TC = (function () {
     isRunEx: isRunEx, isHighEffort: isHighEffort, dayDate: dayDate, dayHasWork: dayHasWork,
     epley: epley, liftId: liftId, liftSessions: liftSessions, working1RM: working1RM, autoLoad: autoLoad, sessionMisses: sessionMisses,
     readiness: readiness, readinessAdjust: readinessAdjust, bestJump: bestJump,
-    dayLoad: dayLoad, plannedDayLoad: plannedDayLoad
+    dayLoad: dayLoad, plannedDayLoad: plannedDayLoad,
+    newUid: newUid, ensureUids: ensureUids, buildRemap: buildRemap, applyRemap: applyRemap, upgradeLog: upgradeLog, rxText: rxText
   };
 })();

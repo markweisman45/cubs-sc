@@ -277,7 +277,7 @@ function applyRTPLimits(st, athlete) {
       (day.blocks || []).forEach(function (b) {
         if (b.blockType === 'session-header') return;
         (b.exercises || []).forEach(function (ex) {
-          if (!ex || !ex.name || ex.rtpSkip) return;
+          if (!ex || !ex.name || ex.rtpSkip || ex.rtpNote) return;   // already limited (e.g. a live edit re-saves his copy)
           var nm = String(ex.name).toLowerCase();
           if (allowed[nm]) return;
           var run = TC.isRunEx(b, ex) || b.blockType === 'speed';
@@ -518,6 +518,7 @@ function renderInbox() {
       + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
       + (i.type === 'strength' ? '<button onclick="inboxAccept1RM(\'' + jsq(i.id) + '\')" style="padding:6px 10px;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.4);border-radius:6px;color:#60a5fa;font-size:11px;cursor:pointer;">Save as 1RM</button>' : '')
       + (i.type === 'speed' ? '<button onclick="siOpenHE(\'' + jsq(i.athlete) + '\')" style="padding:6px 10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f59e0b;font-size:11px;cursor:pointer;">HE Runs</button>' : '')
+      + (i.rowId ? '<button onclick="peOpenLive(\'' + jsq(i.rowId) + '\')" title="Change his program — updates on his phone" style="padding:6px 10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f59e0b;font-size:11px;cursor:pointer;">✏️ Edit</button>' : '')
       + (i.rowId ? '<button onclick="inboxReply(\'' + jsq(i.id) + '\')" style="padding:6px 10px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);border-radius:6px;color:#a5b4fc;font-size:11px;cursor:pointer;">' + (i.type === 'speed' ? 'Message' : 'Reply') + '</button>'
       + '<a href="' + PUSH_BASE_URL + encodeURIComponent(i.rowId) + '" target="_blank" style="padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;text-decoration:none;">Open</a>' : '')
       + '<button onclick="inboxToggleDone(\'' + jsq(i.id) + '\')" style="padding:6px 10px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);border-radius:6px;color:var(--green);font-size:11px;cursor:pointer;">' + (INBOX_DONE[i.id] ? 'Reopen' : '✓ Done') + '</button>'
