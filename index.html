@@ -713,7 +713,8 @@ body {
       <button class="tab-btn" onclick="switchDashTab('heruns', this)" style="color:#f59e0b;">⚡ HE Runs</button>
       <button class="tab-btn" onclick="switchDashTab('maxstrength', this)" style="color:#22c55e;">💪 1RM</button>
       <button class="tab-btn" onclick="switchDashTab('programs', this)">📋 Programs</button>
-      <button onclick="exportPlayerPDF()" style="margin-left:auto;padding:5px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#f87171;font-size:10px;font-weight:600;cursor:pointer;">📄 PDF Report</button>
+      <button onclick="openAthleteProfile(currentPlayer)" title="One-page profile across seasons — print or save as PDF to share" style="margin-left:auto;padding:5px 12px;background:rgba(14,51,134,0.25);border:1px solid rgba(96,165,250,0.45);border-radius:6px;color:#93c5fd;font-size:10px;font-weight:600;cursor:pointer;">👤 Profile</button>
+      <button onclick="exportPlayerPDF()" style="padding:5px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#f87171;font-size:10px;font-weight:600;cursor:pointer;">📄 PDF Report</button>
       <button onclick="exportAllData()" style="padding:5px 12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:#4ADE80;font-size:10px;font-weight:600;cursor:pointer;" title="Export all data to move to another browser">📤 Export Data</button>
       <button onclick="importAllData()" style="padding:5px 12px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:10px;font-weight:600;cursor:pointer;" title="Import data from another browser">📥 Import Data</button>
     </div>
@@ -8600,6 +8601,7 @@ function showPushProgramModal(progId) {
           }
           var r = await db.from('athlete_programs').upsert(row, { onConflict: 'id' });
           if (r.error) throw r.error;
+          if (typeof phRecord === 'function') { try { await phRecord(db, id, athState, 'push', ['Sent "' + (prog.name || 'program') + '" · Week 1 starts ' + startDate], note, player); } catch (e) { console.warn('[history]', e); } }
         }
       } catch(e) { err = e.message || String(e); }
       results.push({ athlete: player, id: id, url: PUSH_BASE_URL + encodeURIComponent(id), err: err, updated: !!prev });
@@ -21001,7 +21003,7 @@ async function _initWithSupabase() {
     // Library's videos, Annual Plan, RTP protocols, mesocycles, workload,
     // and Program Builder presets were never being pulled down on a new
     // device/browser even though they were being pushed up fine).
-    const { data: rows, error: rowsErr } = await db.from('cubs_sc_data').select('key,value');
+    const { data: rows, error: rowsErr } = await db.from('cubs_sc_data').select('key,value').not('key', 'like', 'hist:*');
     if (rowsErr) throw rowsErr;
     let replaced = 0;
     if (rows && rows.length) {
@@ -21017,7 +21019,7 @@ async function _initWithSupabase() {
       _syncMetaSuppress = true;
       try {
         rows.forEach(function(row) {
-          if (!row || !row.key || !row.value || row.key === SYNC_CLOUD_META_ROW) return;
+          if (!row || !row.key || !row.value || row.key === SYNC_CLOUD_META_ROW || row.key.indexOf('hist:') === 0) return;
           const local = localStorage.getItem(row.key);
           const cloudTs = cloudMeta[row.key] || 0;
           const localTs = meta.modified[row.key] || 0;
@@ -24284,5 +24286,7 @@ try {
 <script src="js/coach-loop.js?v=5"></script>
 <script src="js/speed-intel.js?v=1"></script>
 <script src="js/program-edit.js?v=1"></script>
+<script src="js/program-history.js?v=1"></script>
+<script src="js/athlete-profile.js?v=1"></script>
 </body>
 </html>

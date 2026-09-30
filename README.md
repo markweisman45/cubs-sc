@@ -15,6 +15,8 @@ Athlete Readiness & Performance Dashboard for Chicago Cubs Strength & Conditioni
 - Team Summary, Daily Brief, PDF reports, coach notes per athlete
 - Speed readiness from HE runs: max-velocity exposure, effort-matched fatigue, sprint profile, RTP speed (`js/speed-intel.js`)
 - Live program edits: change one athlete's sent program (move/swap days, push the week back, add blocks or weeks) and it updates on his phone with a "coach updated" banner (`js/program-edit.js`)
+- Program history: every send, re-send, live edit and restore is saved as a version you can view or restore (`js/program-history.js`; stored in the cloud only, key `hist:<program id>`)
+- One-page athlete profile across seasons — speed, jump, bat/arm, injuries & RTP, programs & consistency — printable to PDF (`js/athlete-profile.js`)
 
 ## Files
 
