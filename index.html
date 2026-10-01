@@ -679,8 +679,6 @@ body {
     <button class="nav-btn" onclick="switchTab('programs', this)">📁 My Programs</button>
     <button class="nav-btn" onclick="switchTab('calendar', this)">📆 Calendar</button>
     <button class="nav-btn" onclick="switchTab('inbox', this)">📥 Inbox<span id="inbox-badge" style="display:none;"></span></button>
-    <button class="nav-btn" onclick="switchTab('value', this)">📈 Value Added</button>
-    <button class="nav-btn" onclick="switchTab('jumps', this)">🦘 Jump Profile</button>
     <button class="nav-btn" onclick="switchTab('brief', this)">📋 Daily Brief</button>
     <button class="nav-btn" onclick="switchTab('team', this)">👥 Team Summary</button>
     <button class="nav-btn" onclick="switchTab('import', this)">📥 Data Import</button>
@@ -715,6 +713,8 @@ body {
       <button class="tab-btn" onclick="switchDashTab('heruns', this)" style="color:#f59e0b;">⚡ HE Runs</button>
       <button class="tab-btn" onclick="switchDashTab('maxstrength', this)" style="color:#22c55e;">💪 1RM</button>
       <button class="tab-btn" onclick="switchDashTab('programs', this)">📋 Programs</button>
+      <button class="tab-btn" onclick="switchDashTab('jumps', this)" style="color:#fb923c;">🦘 Jump Profile</button>
+      <button class="tab-btn" onclick="switchDashTab('value', this)" style="color:#93c5fd;">📈 Value Added</button>
       <button onclick="openAthleteProfile(currentPlayer)" title="One-page profile across seasons — print or save as PDF to share" style="margin-left:auto;padding:5px 12px;background:rgba(14,51,134,0.25);border:1px solid rgba(96,165,250,0.45);border-radius:6px;color:#93c5fd;font-size:10px;font-weight:600;cursor:pointer;">👤 Profile</button>
       <button onclick="exportPlayerPDF()" style="padding:5px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#f87171;font-size:10px;font-weight:600;cursor:pointer;">📄 PDF Report</button>
       <button onclick="exportAllData()" style="padding:5px 12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:#4ADE80;font-size:10px;font-weight:600;cursor:pointer;" title="Export all data to move to another browser">📤 Export Data</button>
@@ -1100,6 +1100,33 @@ body {
       </div>
 
     
+
+      <!-- JUMP PROFILE TAB -->
+<div id="dash-jumps" class="page" style="display:none;">
+  <div style="max-width:1400px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">🦘 Jump Profile</div>
+      <div style="font-size:12px;color:var(--text3);">ForceDecks CMJ &amp; ABCMJ from VALD Hub · best of all trials per session</div></div>
+      <button onclick="JP.data=null;renderJumpProfile()" title="Reload the latest synced VALD data" style="padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;cursor:pointer;">↻ Reload</button>
+    </div>
+    <div id="jp-body"></div>
+  </div>
+</div>
+
+      <!-- VALUE ADDED TAB -->
+<div id="dash-value" class="page" style="display:none;">
+  <div style="max-width:1400px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">📈 Value Added</div>
+      <div style="font-size:12px;color:var(--text3);">On-field tools and value from Baseball Savant &amp; FanGraphs · <span id="va-stamp">loading…</span></div></div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <button onclick="vaRefresh()" title="Pull the latest from Baseball Savant and FanGraphs" style="padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;cursor:pointer;">↻ Refresh</button>
+        <button onclick="vaPrint()" style="padding:6px 10px;background:rgba(14,51,134,.3);border:1px solid rgba(96,165,250,.45);border-radius:6px;color:#93c5fd;font-size:11px;cursor:pointer;">🖨 Print / PDF</button>
+      </div>
+    </div>
+    <div id="va-body"></div>
+  </div>
+</div>
 </div><!-- /page-dashboard -->
 
 <div id="page-program" class="page">
@@ -3072,31 +3099,6 @@ body {
     </div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5;">Pain reports, red check-ins, missed sessions, missed reps, strength changes and notes from every athlete's program. Replies show on the athlete's program page.</div>
     <div id="inbox-body"></div>
-  </div>
-</div>
-
-<div id="page-jumps" class="page">
-  <div style="max-width:1400px;margin:0 auto;">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
-      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">🦘 Jump Profile</div>
-      <div style="font-size:12px;color:var(--text3);">ForceDecks CMJ &amp; ABCMJ from VALD Hub · best of all trials per session</div></div>
-      <button onclick="JP.data=null;renderJumpProfile()" title="Reload the latest synced VALD data" style="padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;cursor:pointer;">↻ Reload</button>
-    </div>
-    <div id="jp-body"></div>
-  </div>
-</div>
-
-<div id="page-value" class="page">
-  <div style="max-width:1400px;margin:0 auto;">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
-      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">📈 Value Added</div>
-      <div style="font-size:12px;color:var(--text3);">On-field tools and value from Baseball Savant &amp; FanGraphs · <span id="va-stamp">loading…</span></div></div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-        <button onclick="vaRefresh()" title="Pull the latest from Baseball Savant and FanGraphs" style="padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;cursor:pointer;">↻ Refresh</button>
-        <button onclick="vaPrint()" style="padding:6px 10px;background:rgba(14,51,134,.3);border:1px solid rgba(96,165,250,.45);border-radius:6px;color:#93c5fd;font-size:11px;cursor:pointer;">🖨 Print / PDF</button>
-      </div>
-    </div>
-    <div id="va-body"></div>
   </div>
 </div>
 
@@ -6400,8 +6402,11 @@ function enterApp(page) {
   // Reuse switchTab entirely rather than duplicate its logic — it needs the
   // real button element (for active-state styling), so find the sidebar's
   // own button for this page instead of reimplementing the switch.
+  var dashSub = (page === 'jumps' || page === 'value') ? page : null;   // these are Dashboard tabs now
+  if (dashSub) page = 'dashboard';
   var realBtn = document.querySelector('.nav-btn[onclick*="\'' + page + '\'"]');
   if (realBtn) switchTab(page, realBtn);
+  if (dashSub) { var tb = document.querySelector('#dashTabs .tab-btn[onclick*="\'' + dashSub + '\'"]'); if (tb) switchDashTab(dashSub, tb); }
 }
 
 renderLandingGrid();
@@ -6410,7 +6415,7 @@ function switchTab(page, btn) {
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['dashboard','program','programs','calendar','brief','team','import','inbox','value','jumps'].forEach(p => {
+  ['dashboard','program','programs','calendar','brief','team','import','inbox'].forEach(p => {
     const el = document.getElementById('page-'+p);
     if (!el) return;
     el.classList.toggle('page',   p !== page);
@@ -6432,11 +6437,29 @@ function switchTab(page, btn) {
   if (page === 'dashboard') renderDashboard();
 }
 
+// Picking an athlete in the roster updates Jump Profile / Value Added when that tab is open
+(function () {
+  var hook = function () {
+    if (typeof selectPlayer !== 'function' || selectPlayer.__jpva) return;
+    var _sp = selectPlayer;
+    selectPlayer = function (name) {
+      var x = _sp.apply(this, arguments);
+      try {
+        if (currentDashTab === 'jumps' && typeof JP !== 'undefined') { JP.sel = name; renderJumpProfile(); }
+        if (currentDashTab === 'value' && typeof VA !== 'undefined') { VA.sel = (typeof vaRoster !== 'function' || vaRoster().indexOf(name) >= 0) ? name : null; renderValueAdded(); }
+      } catch (e) { console.error(e); }
+      return x;
+    };
+    selectPlayer.__jpva = 1;
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else setTimeout(hook, 0);
+})();
+
 function switchDashTab(tab, btn) {
   currentDashTab = tab;
   document.querySelectorAll('#dashTabs .tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['overview','performance','cmj','wellness','workload','heruns','maxstrength','programs'].forEach(t => {
+  ['overview','performance','cmj','wellness','workload','heruns','maxstrength','programs','jumps','value'].forEach(t => {
     const el = document.getElementById('dash-'+t);
     if(el) { el.classList.remove('active'); el.classList.add('page'); el.style.display = 'none'; }
   });
@@ -6445,6 +6468,11 @@ function switchDashTab(tab, btn) {
   try {
     if (tab === 'heruns') {
       if (typeof renderHERuns === 'function') renderHERuns();
+    } else if (tab === 'jumps') {
+      // Open on the athlete selected in the roster; "← All athletes" goes to the team view
+      if (typeof JP !== 'undefined') { JP.sel = currentPlayer || null; if (typeof renderJumpProfile === 'function') renderJumpProfile(); }
+    } else if (tab === 'value') {
+      if (typeof VA !== 'undefined') { VA.sel = (currentPlayer && (typeof vaRoster !== 'function' || vaRoster().indexOf(currentPlayer) >= 0)) ? currentPlayer : null; if (typeof renderValueAdded === 'function') renderValueAdded(); }
     } else if (tab === 'maxstrength') {
       loadORM(); renderORMDashboard();
     } else if (tab === 'programs') {
@@ -24321,6 +24349,6 @@ try {
 <script src="js/value-added.js?v=3"></script>
 <script src="js/vald-sync.js?v=3"></script>
 <script src="js/jump-profile.js?v=5"></script>
-<script src="js/jump-kpi.js?v=3"></script>
+<script src="js/jump-kpi.js?v=4"></script>
 </body>
 </html>
