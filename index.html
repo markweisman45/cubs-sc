@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<script>try { if (window.Chart && window['chartjs-plugin-annotation']) Chart.register(window['chartjs-plugin-annotation']); } catch (e) {}</script>
 <style>
 :root {
   --cubs-blue: #0E3386;
@@ -712,13 +714,12 @@ body {
     <div class="tab-bar" id="dashTabs">
       <button class="tab-btn active" onclick="switchDashTab('overview', this)">Overview</button>
       <button class="tab-btn" onclick="switchDashTab('performance', this)">Performance</button>
-      <button class="tab-btn" onclick="switchDashTab('cmj', this)">CMJ Trends</button>
+      <button class="tab-btn" onclick="switchDashTab('jumps', this)" style="color:#fb923c;">🦘 Jumps</button>
 
       <button class="tab-btn" onclick="switchDashTab('workload', this)">Workload</button>
       <button class="tab-btn" onclick="switchDashTab('heruns', this)" style="color:#f59e0b;">⚡ HE Runs</button>
       <button class="tab-btn" onclick="switchDashTab('maxstrength', this)" style="color:#22c55e;">💪 1RM</button>
       <button class="tab-btn" onclick="switchDashTab('programs', this)">📋 Programs</button>
-      <button class="tab-btn" onclick="switchDashTab('jumps', this)" style="color:#fb923c;">🦘 Jump Profile</button>
       <button class="tab-btn" onclick="switchDashTab('value', this)" style="color:#93c5fd;">📈 Value Added</button>
       <button onclick="openAthleteProfile(currentPlayer)" title="One-page profile across seasons — print or save as PDF to share" style="margin-left:auto;padding:5px 12px;background:rgba(14,51,134,0.25);border:1px solid rgba(96,165,250,0.45);border-radius:6px;color:#93c5fd;font-size:10px;font-weight:600;cursor:pointer;">👤 Profile</button>
       <button onclick="exportPlayerPDF()" style="padding:5px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#f87171;font-size:10px;font-weight:600;cursor:pointer;">📄 PDF Report</button>
@@ -938,8 +939,63 @@ body {
 
         </div>
 
-      <!-- ── WELLNESS TAB ── -->
-      <div id="dash-cmj" class="page">
+      <div id="dash-workload" class="page">
+        <!-- Swing Workload Logger -->
+        <div class="card" style="margin-bottom:16px;padding:14px;">
+          <div class="card-title" style="margin-bottom:10px;">⚾ Log Daily Swing Workload</div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <input type="date" id="swingDateInput" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:\'DM Mono\',monospace;">
+            <div style="display:flex;gap:6px;">
+              <button onclick="logSwingWorkload('low')"    style="padding:6px 14px;border-radius:6px;border:1px solid var(--blue);background:rgba(59,130,246,0.15);color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;">📉 Low</button>
+              <button onclick="logSwingWorkload('normal')" style="padding:6px 14px;border-radius:6px;border:1px solid var(--green);background:rgba(34,197,94,0.15);color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">⚾ Normal</button>
+              <button onclick="logSwingWorkload('high')"   style="padding:6px 14px;border-radius:6px;border:1px solid var(--yellow);background:rgba(245,158,11,0.15);color:var(--yellow);font-size:12px;font-weight:600;cursor:pointer;">📈 High</button>
+              <button onclick="logSwingWorkload('extreme')" style="padding:6px 14px;border-radius:6px;border:1px solid var(--red);background:rgba(239,68,68,0.15);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">🔥 Extreme</button>
+            </div>
+            <span id="swingLogMsg" style="font-size:11px;color:var(--green);"></span>
+          </div>
+        </div>
+
+        <div class="card section-mb">
+          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (EWMA 7:28)</div>
+          <div class="chart-wrap xl"><canvas id="acwrChart"></canvas></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">Top Speed Trend</div>
+            <div class="chart-wrap xl"><canvas id="speedChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">High-Effort Distance Per Game</div>
+            <div class="chart-wrap xl"><canvas id="heChart"></canvas></div>
+          </div>
+        </div>
+        <div class="card section-mb" style="margin-top:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+            <div class="card-title" style="margin:0;">⚾ Swing Workload — 30-Day Trend</div>
+            <div style="display:flex;gap:10px;font-size:10px;font-family:\'DM Mono\',monospace;color:var(--text3);">
+              <span style="color:#3B7AC4;">📉 Low</span>
+              <span style="color:#22c55e;">⚾ Normal</span>
+              <span style="color:#f59e0b;">📈 High</span>
+              <span style="color:#ef4444;">🔥 Extreme</span>
+            </div>
+          </div>
+          <div class="chart-wrap xl"><canvas id="swingWorkloadChart"></canvas></div>
+        </div>
+      </div>
+
+    
+
+      <!-- JUMP PROFILE TAB -->
+<div id="dash-jumps" class="page" style="display:none;">
+  <div style="max-width:1400px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">🦘 Jumps</div>
+      <div style="font-size:12px;color:var(--text3);">ForceDecks CMJ &amp; ABCMJ · profile, session trends and MLB position norms</div></div>
+      <button onclick="JP.data=null;renderJumpProfile()" title="Reload the latest synced VALD data" style="padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;cursor:pointer;">↻ Reload</button>
+    </div>
+    <div id="jp-body"></div>
+    <div id="jp-trends" style="display:none;">
+      <div style="display:flex;align-items:baseline;gap:8px;margin:22px 0 10px;padding-bottom:8px;border-bottom:2px solid rgba(96,165,250,.35);"><span style="font-size:14px;font-weight:800;color:#fff;">📈 Session trends</span><span style="font-size:11px;color:var(--text3);">from ForceDecks imports · ★ = PR · dashed white = his average</span></div>
         <!-- CMJ filter bar -->
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
           <div id="cmjFilterBar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
@@ -953,7 +1009,8 @@ body {
               <input type="date" id="cmj-range-to" onchange="cmjSetCustomRange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-size:11px;">
             </div>
           </div>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text3);margin-left:auto;">
+          <div id="jp-norm-legend" style="display:flex;align-items:center;gap:6px;font-size:10.5px;color:#fdba74;margin-left:auto;"><span style="display:inline-block;width:18px;height:9px;border-radius:2px;background:rgba(249,115,22,.25);border:1px solid rgba(249,115,22,.5);"></span>MLB 25th–75th · <span style="display:inline-block;width:16px;border-top:2px dashed #fb923c;"></span> MLB median <span style="color:var(--text3);">(VALD 2025, CMJ only)</span></div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text3);">
             <input type="checkbox" id="cmjShowPR" checked onchange="rebuildCMJTrends()"> Show PRs
           </label>
         </div>
@@ -962,23 +1019,21 @@ body {
         <div class="card section-mb">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
             <div class="card-title" style="margin:0;">📊 Compare Metrics — Overlay</div>
-            <div style="display:flex;gap:4px;">
-              <button onclick="cmjSetOverlayType('CMJ')" id="cmj-overlay-type-CMJ" style="padding:4px 10px;border-radius:5px;border:1px solid rgba(59,122,196,0.4);background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);font-size:10px;font-weight:700;cursor:pointer;">No Arm Swing</button>
-              <button onclick="cmjSetOverlayType('ABCMJ')" id="cmj-overlay-type-ABCMJ" style="padding:4px 10px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--text3);font-size:10px;cursor:pointer;">Arm Swing</button>
-            </div>
+            <div style="font-size:10px;color:var(--text3);">follows the CMJ / ABCMJ toggle above</div>
           </div>
           <div id="cmj-overlay-metric-picker" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
           <div style="font-size:9px;color:var(--text3);margin-bottom:8px;">Each metric is normalized to % of its own peak in the selected range, so different units (cm, W/kg, m/s, N/m) can be compared on one chart — hover a point for the real value.</div>
           <div class="chart-wrap xl"><canvas id="cmjOverlayChart"></canvas></div>
         </div>
 
+<div id="jp-trends-cmj">
         <!-- ── CMJ (No Arm Swing) ── -->
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--cubs-blue);">
           <div style="font-size:14px;font-weight:700;color:var(--cubs-light-blue);">CMJ — No Arm Swing</div>
           <div id="cmjExcludeCount" style="font-size:11px;color:var(--text3);"></div>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:16px;">
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">Jump Height (cm)</div>
@@ -1030,12 +1085,14 @@ body {
           </div>
         </div>
 
+</div>
+<div id="jp-trends-ab" style="display:none;">
         <!-- ── ABCMJ (Arm-Swing) ── -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--cubs-red);margin-top:32px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--cubs-red);">
           <div style="font-size:14px;font-weight:700;color:rgba(239,68,68,0.9);">ABCMJ — With Arm Swing</div>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:16px;">
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div class="card-title" style="margin:0;">Jump Height (cm)</div>
@@ -1060,61 +1117,8 @@ body {
         </div>
       </div>
 
-      <div id="dash-workload" class="page">
-        <!-- Swing Workload Logger -->
-        <div class="card" style="margin-bottom:16px;padding:14px;">
-          <div class="card-title" style="margin-bottom:10px;">⚾ Log Daily Swing Workload</div>
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            <input type="date" id="swingDateInput" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:\'DM Mono\',monospace;">
-            <div style="display:flex;gap:6px;">
-              <button onclick="logSwingWorkload('low')"    style="padding:6px 14px;border-radius:6px;border:1px solid var(--blue);background:rgba(59,130,246,0.15);color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;">📉 Low</button>
-              <button onclick="logSwingWorkload('normal')" style="padding:6px 14px;border-radius:6px;border:1px solid var(--green);background:rgba(34,197,94,0.15);color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">⚾ Normal</button>
-              <button onclick="logSwingWorkload('high')"   style="padding:6px 14px;border-radius:6px;border:1px solid var(--yellow);background:rgba(245,158,11,0.15);color:var(--yellow);font-size:12px;font-weight:600;cursor:pointer;">📈 High</button>
-              <button onclick="logSwingWorkload('extreme')" style="padding:6px 14px;border-radius:6px;border:1px solid var(--red);background:rgba(239,68,68,0.15);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">🔥 Extreme</button>
-            </div>
-            <span id="swingLogMsg" style="font-size:11px;color:var(--green);"></span>
-          </div>
-        </div>
-
-        <div class="card section-mb">
-          <div class="card-title">ACWR — Acute:Chronic Workload Ratio (EWMA 7:28)</div>
-          <div class="chart-wrap xl"><canvas id="acwrChart"></canvas></div>
-        </div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title">Top Speed Trend</div>
-            <div class="chart-wrap xl"><canvas id="speedChart"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-title">High-Effort Distance Per Game</div>
-            <div class="chart-wrap xl"><canvas id="heChart"></canvas></div>
-          </div>
-        </div>
-        <div class="card section-mb" style="margin-top:16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-            <div class="card-title" style="margin:0;">⚾ Swing Workload — 30-Day Trend</div>
-            <div style="display:flex;gap:10px;font-size:10px;font-family:\'DM Mono\',monospace;color:var(--text3);">
-              <span style="color:#3B7AC4;">📉 Low</span>
-              <span style="color:#22c55e;">⚾ Normal</span>
-              <span style="color:#f59e0b;">📈 High</span>
-              <span style="color:#ef4444;">🔥 Extreme</span>
-            </div>
-          </div>
-          <div class="chart-wrap xl"><canvas id="swingWorkloadChart"></canvas></div>
-        </div>
-      </div>
-
-    
-
-      <!-- JUMP PROFILE TAB -->
-<div id="dash-jumps" class="page" style="display:none;">
-  <div style="max-width:1400px;margin:0 auto;">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
-      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">🦘 Jump Profile</div>
-      <div style="font-size:12px;color:var(--text3);">ForceDecks CMJ &amp; ABCMJ from VALD Hub · best of all trials per session</div></div>
-      <button onclick="JP.data=null;renderJumpProfile()" title="Reload the latest synced VALD data" style="padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;cursor:pointer;">↻ Reload</button>
     </div>
-    <div id="jp-body"></div>
+    <div id="jp-detail"></div>
   </div>
 </div>
 
@@ -6374,7 +6378,7 @@ var LANDING_CARDS = [
   { page:'program',   icon:'💪', title:'Program Builder', desc:'Build, edit, and AI-generate training programs', color:'#7c3aed' },
   { page:'programs',  icon:'📁', title:'My Programs', desc:'Saved programs, drafts, and templates', color:'#22c55e' },
   { page:'calendar',  icon:'📆', title:'Calendar', desc:'Scheduled sessions across the roster', color:'#f59e0b' },
-  { page:'jumps',     icon:'🦘', title:'Jump Profile', desc:'CMJ and ABCMJ from VALD — best of all trials per session: output, strategy, braking, asymmetry', color:'#f97316' },
+  { page:'jumps',     icon:'🦘', title:'Jumps', desc:'CMJ and ABCMJ from VALD — profile, session trends and MLB position norms in one place', color:'#f97316' },
   { page:'value',     icon:'📈', title:'Value Added', desc:'Tools, defense, baserunning and WAR from Savant & FanGraphs vs age curve and league average', color:'#0E3386' },
   { page:'inbox',     icon:'📥', title:'Inbox', desc:'Pain reports, missed sessions, strength changes and athlete notes', color:'#6366f1' },
   { page:'brief',     icon:'📋', title:'Daily Brief', desc:"Today's readiness and status across every athlete", color:'#06b6d4' },
@@ -6475,7 +6479,7 @@ function switchDashTab(tab, btn) {
       if (typeof renderHERuns === 'function') renderHERuns();
     } else if (tab === 'jumps') {
       // Open on the athlete selected in the roster; "← All athletes" goes to the team view
-      if (typeof JP !== 'undefined') { JP.sel = currentPlayer || null; if (typeof renderJumpProfile === 'function') renderJumpProfile(); }
+      if (typeof JP !== 'undefined') { JP.sel = currentPlayer || null; JP._chartsFor = null; if (typeof renderJumpProfile === 'function') renderJumpProfile(); }
     } else if (tab === 'value') {
       if (typeof VA !== 'undefined') { VA.sel = (currentPlayer && (typeof vaRoster !== 'function' || vaRoster().indexOf(currentPlayer) >= 0)) ? currentPlayer : null; if (typeof renderValueAdded === 'function') renderValueAdded(); }
     } else if (tab === 'maxstrength') {
@@ -8189,6 +8193,8 @@ function renderAllCharts(p) {
               backgroundColor: 'transparent', padding: 2,
             }
           },
+          // MLB position-group norm band (VALD 2025 report) — js/mlb-norms.js
+          ...(opts.norm && typeof mlbChartAnnotations === 'function' ? mlbChartAnnotations(opts.norm, currentPlayer) : {}),
         }}
       },
       scales: {
@@ -8226,13 +8232,14 @@ function renderAllCharts(p) {
       statsEl.innerHTML =
         `<span style="color:var(--text2);">latest <strong style="color:${isPR?'#f59e0b':color};">${latest?.toFixed(1)||'—'}</strong>${isPR?' ★':''}</span>` +
         `<span>avg <strong style="color:rgba(255,255,255,0.4);">${avg.toFixed(1)}</strong></span>` +
-        `<span style="color:#f59e0b;">PR <strong>${pr.toFixed(1)}</strong></span>`;
+        `<span style="color:#f59e0b;">PR <strong>${pr.toFixed(1)}</strong></span>` +
+        (opts.norm && typeof mlbPill === 'function' ? mlbPill(opts.norm, latest, mlbGroup(currentPlayer)) : '');
     }
   };
 
   // ── CMJ charts
-  mkCMJChart('cmjJumpChart',  clStd, cmjStd.map(c=>c.jump),       {color:C.blue,   colorRgb:'59,122,196'});
-  mkCMJChart('cmjPPBMChart',  clStd, cmjStd.map(c=>c.ppbm),       {color:C.green,  colorRgb:'34,197,94'});
+  mkCMJChart('cmjJumpChart',  clStd, cmjStd.map(c=>c.jump),       {color:C.blue,   colorRgb:'59,122,196', norm:'jh'});
+  mkCMJChart('cmjPPBMChart',  clStd, cmjStd.map(c=>c.ppbm),       {color:C.green,  colorRgb:'34,197,94', norm:'ppbm'});
   mkCMJChart('cmjVTOChart',   clStd, cmjStd.map(c=>c.vto||null),  {color:C.cyan,   colorRgb:'6,182,212'});
   mkCMJChart('cmjConcChart',  clStd, cmjStd.map(c=>c.conc),       {color:C.yellow, colorRgb:'245,158,11'});
   mkCMJChart('cmjStiffChart', clStd, cmjStd.map(c=>c.stiff),      {color:C.purple, colorRgb:'168,85,247'});
@@ -8272,14 +8279,14 @@ function renderAllCharts(p) {
   // ── RSI-Modified
   const hasRsi = true;
   if (hasRsi) {
-    mkCMJChart('cmjRsiChart', clStd, cmjStd.map(c=>c.rsiMod||null), {color:'#06b6d4', colorRgb:'6,182,212'});
+    mkCMJChart('cmjRsiChart', clStd, cmjStd.map(c=>c.rsiMod||null), {color:'#06b6d4', colorRgb:'6,182,212', norm:'rsi'});
     const rsiVals = cmjStd.map(c=>c.rsiMod).filter(Boolean);
     const rsiStats = document.getElementById('cmjRsiStats');
     if (rsiStats && rsiVals.length) {
       const lat = rsiVals[rsiVals.length-1];
       const avg = rsiVals.reduce((a,b)=>a+b,0)/rsiVals.length;
       const pr  = Math.max(...rsiVals);
-      rsiStats.innerHTML = `<span style="color:var(--text2);">latest <strong style="color:#06b6d4;">${lat.toFixed(2)}</strong></span> <span>avg <strong style="color:rgba(255,255,255,0.4);">${avg.toFixed(2)}</strong></span> <span style="color:#f59e0b;">PR <strong>${pr.toFixed(2)}</strong></span>`;
+      rsiStats.innerHTML = `<span style="color:var(--text2);">latest <strong style="color:#06b6d4;">${lat.toFixed(2)}</strong></span> <span>avg <strong style="color:rgba(255,255,255,0.4);">${avg.toFixed(2)}</strong></span> <span style="color:#f59e0b;">PR <strong>${pr.toFixed(2)}</strong></span> ` + (typeof mlbPill === 'function' ? mlbPill('rsi', lat, mlbGroup(currentPlayer)) : '');
     }
   }
 
@@ -24353,7 +24360,8 @@ try {
 <script src="js/savant.js?v=2"></script>
 <script src="js/value-added.js?v=3"></script>
 <script src="js/vald-sync.js?v=3"></script>
-<script src="js/jump-profile.js?v=5"></script>
-<script src="js/jump-kpi.js?v=4"></script>
+<script src="js/jump-profile.js?v=6"></script>
+<script src="js/mlb-norms.js?v=1"></script>
+<script src="js/jump-kpi.js?v=5"></script>
 </body>
 </html>
