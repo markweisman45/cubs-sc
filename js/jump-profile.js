@@ -252,7 +252,7 @@ function jpAthleteHTML(name) {
     if (diffs.length) secs.push('<div class="card" style="padding:14px 16px;border-radius:12px;"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px;"><span style="font-size:15px;">💪</span><span style="font-size:13px;font-weight:800;color:#fff;">Arm-swing contribution</span><span style="font-size:10.5px;color:var(--text3);">ABCMJ minus CMJ jump height, same day</span></div><div style="display:flex;align-items:center;gap:16px;"><div style="font-size:26px;font-weight:800;color:#fff;font-family:\'DM Mono\',monospace;">+' + jpMed(diffs.map(function (x) { return x.v; })).toFixed(1) + ' cm</div><div style="font-size:11px;color:var(--text2);line-height:1.5;">median over ' + diffs.length + ' days tested both ways<br>latest ' + jpSigned(jpM('jh'), diffs[diffs.length - 1].v) + ' cm (' + jpFd(diffs[diffs.length - 1].d) + ')</div></div></div>');
   }
   // Head (nav, hero, vs MLB) sits above the session trend charts; the metric breakdown sits below them
-  return nav + hero + (typeof mlbCardHTML === 'function' ? mlbCardHTML(r) : '') + JP_SPLIT
+  return nav + hero + (typeof jlAthleteCard === 'function' ? jlAthleteCard(r) : '') + (typeof mlbCardHTML === 'function' ? mlbCardHTML(r) : '') + JP_SPLIT
     + '<div style="display:flex;align-items:baseline;gap:8px;margin:22px 0 10px;padding-bottom:8px;border-bottom:2px solid rgba(96,165,250,.35);"><span style="font-size:14px;font-weight:800;color:#fff;">📋 Metric breakdown</span><span style="font-size:11px;color:var(--text3);">team rank, his norm, year over year, asymmetry</span></div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(560px,1fr));gap:14px;">' + secs.join('') + '</div>';
 }

@@ -186,8 +186,9 @@ function jkAthleteCard(name) {
     var el = document.getElementById('jp-body');
     if (!el || JP.sel || !JP.data || JP.err || !JP.rows || !JP.rows.length) return _render.apply(this, arguments);
     var tabs = '<div style="display:flex;gap:4px;background:rgba(255,255,255,.04);padding:3px;border-radius:9px;width:max-content;margin-bottom:14px;">'
-      + [['athletes', '👥 Athletes'], ['kpi', '🔗 KPI links']].map(function (t) { var on = JK.view === t[0]; return '<button onclick="JK.view=\'' + t[0] + '\';renderJumpProfile()" style="padding:6px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:' + (on ? '#0E3386' : 'transparent') + ';color:' + (on ? '#fff' : 'var(--text2)') + ';">' + t[1] + '</button>'; }).join('') + '</div>';
+      + [['athletes', '👥 Athletes'], ['lma', '📊 Latest · Max · Avg'], ['kpi', '🔗 KPI links']].map(function (t) { var on = JK.view === t[0]; return '<button onclick="JK.view=\'' + t[0] + '\';renderJumpProfile()" style="padding:6px 16px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:' + (on ? '#0E3386' : 'transparent') + ';color:' + (on ? '#fff' : 'var(--text2)') + ';">' + t[1] + '</button>'; }).join('') + '</div>';
     if (JK.view === 'kpi') { el.innerHTML = tabs + jkHTML() + jpHowTo(); return; }
+    if (JK.view === 'lma' && typeof jlTeamHTML === 'function') { el.innerHTML = tabs + jlTeamHTML() + jpHowTo(); return; }
     _render.apply(this, arguments);
     el.insertAdjacentHTML('afterbegin', tabs);
   };
