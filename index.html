@@ -680,6 +680,7 @@ body {
     <button class="nav-btn" onclick="switchTab('calendar', this)">📆 Calendar</button>
     <button class="nav-btn" onclick="switchTab('inbox', this)">📥 Inbox<span id="inbox-badge" style="display:none;"></span></button>
     <button class="nav-btn" onclick="switchTab('value', this)">📈 Value Added</button>
+    <button class="nav-btn" onclick="switchTab('jumps', this)">🦘 Jump Profile</button>
     <button class="nav-btn" onclick="switchTab('brief', this)">📋 Daily Brief</button>
     <button class="nav-btn" onclick="switchTab('team', this)">👥 Team Summary</button>
     <button class="nav-btn" onclick="switchTab('import', this)">📥 Data Import</button>
@@ -3071,6 +3072,17 @@ body {
     </div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5;">Pain reports, red check-ins, missed sessions, missed reps, strength changes and notes from every athlete's program. Replies show on the athlete's program page.</div>
     <div id="inbox-body"></div>
+  </div>
+</div>
+
+<div id="page-jumps" class="page">
+  <div style="max-width:1400px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">🦘 Jump Profile</div>
+      <div style="font-size:12px;color:var(--text3);">ForceDecks CMJ &amp; ABCMJ from VALD Hub · best trial per session</div></div>
+      <button onclick="JP.data=null;renderJumpProfile()" title="Reload the latest synced VALD data" style="padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;cursor:pointer;">↻ Reload</button>
+    </div>
+    <div id="jp-body"></div>
   </div>
 </div>
 
@@ -6355,6 +6367,7 @@ var LANDING_CARDS = [
   { page:'program',   icon:'💪', title:'Program Builder', desc:'Build, edit, and AI-generate training programs', color:'#7c3aed' },
   { page:'programs',  icon:'📁', title:'My Programs', desc:'Saved programs, drafts, and templates', color:'#22c55e' },
   { page:'calendar',  icon:'📆', title:'Calendar', desc:'Scheduled sessions across the roster', color:'#f59e0b' },
+  { page:'jumps',     icon:'🦘', title:'Jump Profile', desc:'CMJ and ABCMJ from VALD — best trial per session: output, strategy, braking, asymmetry', color:'#f97316' },
   { page:'value',     icon:'📈', title:'Value Added', desc:'Tools, defense, baserunning and WAR from Savant & FanGraphs vs age curve and league average', color:'#0E3386' },
   { page:'inbox',     icon:'📥', title:'Inbox', desc:'Pain reports, missed sessions, strength changes and athlete notes', color:'#6366f1' },
   { page:'brief',     icon:'📋', title:'Daily Brief', desc:"Today's readiness and status across every athlete", color:'#06b6d4' },
@@ -6397,7 +6410,7 @@ function switchTab(page, btn) {
   currentPage = page;
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['dashboard','program','programs','calendar','brief','team','import','inbox','value'].forEach(p => {
+  ['dashboard','program','programs','calendar','brief','team','import','inbox','value','jumps'].forEach(p => {
     const el = document.getElementById('page-'+p);
     if (!el) return;
     el.classList.toggle('page',   p !== page);
@@ -24306,5 +24319,7 @@ try {
 <script src="js/athlete-profile.js?v=2"></script>
 <script src="js/savant.js?v=2"></script>
 <script src="js/value-added.js?v=3"></script>
+<script src="js/vald-sync.js?v=1"></script>
+<script src="js/jump-profile.js?v=1"></script>
 </body>
 </html>
