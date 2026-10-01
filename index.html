@@ -712,8 +712,8 @@ body {
       </div>
     </div>
     <div class="tab-bar" id="dashTabs">
-      <button class="tab-btn active" onclick="switchDashTab('overview', this)">Overview</button>
-      <button class="tab-btn" onclick="switchDashTab('performance', this)">Performance</button>
+      <button class="tab-btn active" onclick="switchDashTab('review', this)" style="color:#facc15;">📅 Year in Review</button>
+      <button class="tab-btn" onclick="switchDashTab('overview', this)">⚾ In-Season</button>
       <button class="tab-btn" onclick="switchDashTab('jumps', this)" style="color:#fb923c;">🦘 Jumps</button>
 
       <button class="tab-btn" onclick="switchDashTab('workload', this)">Workload</button>
@@ -735,8 +735,17 @@ body {
 <div id="page-dashboard">
 
 
-      <!-- OVERVIEW TAB -->
-      <div id="dash-overview" class="page active">
+      <!-- YEAR IN REVIEW / OFF-SEASON TAB (player landing page) -->
+      <div id="dash-review" class="page active">
+        <div style="max-width:1400px;margin:0 auto;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">📅 <span id="review-year"></span> Year in Review · Off-Season</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">Season recap and off-season plan for <span id="review-player" style="color:var(--text2);"></span></div>
+          <div id="review-body" class="card" style="padding:28px;text-align:center;color:var(--text3);font-size:13px;">Layout to be decided — this is the player landing page.</div>
+        </div>
+      </div>
+
+      <!-- IN-SEASON TAB (was Overview + Performance) -->
+      <div id="dash-overview" class="page">
 
         <!-- Program Compliance — real completion data pulled from the shared program link -->
         <div class="card section-mb" id="compliance-card" style="display:none;">
@@ -839,9 +848,8 @@ body {
         <!-- PITCHER PANEL -->
         <div id="pitcherPanel" style="display:none;"></div>
 
-      </div>
-      <!-- PERFORMANCE TAB -->
-      <div id="dash-performance" class="page">
+        <!-- ── Performance (merged from the old Performance tab) ── -->
+        <div style="display:flex;align-items:baseline;gap:8px;margin:26px 0 12px;padding-bottom:8px;border-bottom:2px solid rgba(96,165,250,.35);"><span style="font-size:14px;font-weight:800;color:#fff;">⚾ Performance</span><span style="font-size:11px;color:var(--text3);">recent games, bat / exit / throw velo, leaderboard, distance</span></div>
         <div class="card section-mb">
           <div class="card-title">Recent Performance — Last 14 Days</div>
           <div style="overflow-x:auto;">
@@ -937,7 +945,6 @@ body {
           </div>
         </div>
 
-        </div>
 
       <div id="dash-workload" class="page">
         <!-- Swing Workload Logger -->
@@ -6371,7 +6378,8 @@ function perioApplyToGrid() {
 
 // ══════════════════════════════════════════════
 // NAVIGATION — kept at top so always loads
-// ══════════════════════════════════════════════let currentDashTab = "overview";
+// ══════════════════════════════════════════════
+var currentDashTab = "review";   // Year in Review is the player landing tab
 
 var LANDING_CARDS = [
   { page:'dashboard', icon:'📊', title:'Dashboard', desc:'Athlete performance, strain, ACWR, and status at a glance', color:'#1E4FCC' },
@@ -6464,11 +6472,18 @@ function switchTab(page, btn) {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else setTimeout(hook, 0);
 })();
 
+// Year in Review / Off-Season — player landing page (content to be built out)
+function renderYearInReview() {
+  var y = document.getElementById('review-year'), n = document.getElementById('review-player');
+  if (y) y.textContent = new Date().getFullYear();
+  if (n) n.textContent = currentPlayer || '';
+}
+
 function switchDashTab(tab, btn) {
   currentDashTab = tab;
   document.querySelectorAll('#dashTabs .tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['overview','performance','cmj','wellness','workload','heruns','maxstrength','programs','jumps','value'].forEach(t => {
+  ['review','overview','performance','cmj','wellness','workload','heruns','maxstrength','programs','jumps','value'].forEach(t => {
     const el = document.getElementById('dash-'+t);
     if(el) { el.classList.remove('active'); el.classList.add('page'); el.style.display = 'none'; }
   });
@@ -6486,7 +6501,9 @@ function switchDashTab(tab, btn) {
       loadORM(); renderORMDashboard();
     } else if (tab === 'programs') {
       renderAthletePrograms();
-    } else if (tab === 'performance') {
+    } else if (tab === 'review') {
+      renderYearInReview();
+    } else if (tab === 'overview' || tab === 'performance') {
       renderPerfTable(PLAYERS[currentPlayer]);
       renderVeloLeaderboard();
       setTimeout(() => renderAllCharts(PLAYERS[currentPlayer]), 50);
@@ -7032,7 +7049,8 @@ function selectPlayer(name) {
   if (typeof renderHERuns === 'function' && document.getElementById('dash-heruns') && document.getElementById('dash-heruns').classList.contains('active')) renderHERuns();
   // 1RM tab: redraw for the newly picked athlete (it kept showing the previous athlete's maxes)
   if (typeof renderORMDashboard === 'function' && document.getElementById('dash-maxstrength') && document.getElementById('dash-maxstrength').classList.contains('active')) renderORMDashboard();
-  if (document.getElementById('dash-performance') && document.getElementById('dash-performance').classList.contains('active')) {
+  if (typeof renderYearInReview === 'function' && document.getElementById('dash-review') && document.getElementById('dash-review').classList.contains('active')) renderYearInReview();
+  if (document.getElementById('dash-overview') && document.getElementById('dash-overview').classList.contains('active')) {
     renderPerfTable(p);
     renderVeloLeaderboard();
   }
