@@ -125,7 +125,7 @@ function jkHTML() {
         + '<div style="text-align:right;font-family:\'DM Mono\',monospace;font-size:11px;color:var(--text3);">' + (a.rw != null ? a.rw.toFixed(2) : '—') + '</div></div>';
     }).join('') + '<div style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.5;">↓ = lower is better, so a negative r is the "good" direction there. With ' + A.n + ' athletes, |r| ≥ ' + jkRcrit(A.n).toFixed(2) + ' is needed for p &lt; .05.</div></div>';
   // Right: scatter + read
-  var read = (A.k === 'depth' ? 'A deeper countermovement' : 'Higher ' + m.label) + ' goes with ' + (A.r >= 0 ? 'higher' : 'lower') + ' ' + K.label.toLowerCase() + ' — ' + jkStrength(A.r) + ' relationship (r = ' + A.r.toFixed(2) + ', ' + A.n + ' athletes' + (A.sig ? ', unlikely to be chance' : ', could be chance at this sample size') + ').'
+  var read = (A.k === 'depth' ? 'A deeper countermovement' : 'Higher ' + (/^[A-Z][a-z]/.test(m.label) ? m.label.charAt(0).toLowerCase() + m.label.slice(1) : m.label)) + ' goes with ' + (A.r >= 0 ? 'higher' : 'lower') + ' ' + K.label.toLowerCase() + ' — ' + jkStrength(A.r) + ' relationship (r = ' + A.r.toFixed(2) + ', ' + A.n + ' athletes' + (A.sig ? ', unlikely to be chance' : ', could be chance at this sample size') + ').'
     + (A.line && Math.abs(A.r) >= 0.3 ? ' Each +' + (m.step) + ' ' + (m.unit || '') + ' ≈ ' + (A.line.b * m.step >= 0 ? '+' : '−') + Math.abs(A.line.b * m.step).toFixed(2) + ' ' + K.unit + '.' : '')
     + (A.rw != null ? ' Within his own seasons: r = ' + A.rw.toFixed(2) + ' (' + A.nW + ' athletes with 2+ seasons).' : '');
   var chart = '<div class="card" style="padding:14px 16px;border-radius:12px;">'
@@ -146,7 +146,7 @@ function jkHTML() {
           + '<div style="font-size:12px;color:#e2e8f0;font-weight:600;">' + jpEsc(r.name) + '</div>'
           + '<div style="text-align:right;font-family:\'DM Mono\',monospace;font-size:12px;color:var(--text2);">' + jpFmt(m, r.x) + '</div>'
           + '<div style="text-align:right;font-family:\'DM Mono\',monospace;font-size:12px;color:var(--text2);">' + r.pred.toFixed(K.dec) + '</div>'
-          + '<div style="text-align:right;font-family:\'DM Mono\',monospace;font-size:13px;font-weight:800;color:#fff;">' + r.y.toFixed(K.dec) + ' <span style="font-size:10.5px;font-weight:700;color:' + JP_COL[t] + ';">' + (r.d >= 0 ? '+' : '−') + Math.abs(r.d).toFixed(K.dec) + '</span></div>'
+          + '<div style="text-align:right;font-family:\'DM Mono\',monospace;font-size:13px;font-weight:800;color:#fff;">' + r.y.toFixed(K.dec) + ' <span style="font-size:10.5px;font-weight:700;color:' + JP_COL[t] + ';">' + (Math.abs(r.d) < Math.pow(10, -K.dec) / 2 ? '±' : r.d >= 0 ? '+' : '−') + Math.abs(r.d).toFixed(K.dec) + '</span></div>'
           + '<div style="font-size:11px;color:' + (t === 'flat' ? 'var(--text3)' : JP_COL[t]) + ';">' + txt + '</div></div>';
       }).join('') + '</div>';
   } else {
