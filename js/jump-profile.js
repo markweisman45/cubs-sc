@@ -5,7 +5,7 @@
 // Data: cloud key "cache:vald-jumps" in cubs_sc_data (written by the VALD sync,
 // never pulled into localStorage).
 // ═══════════════════════════════════════════════════════════════════════════
-var JP = { sel: null, type: 'CMJ', data: null, err: null };
+var JP = { sel: null, type: 'CMJ', data: null, err: null, cmp: null };
 // dir: 1 higher is better, -1 lower is better, 0 context only. step = meaningful change.
 var JP_M = [
   { k: 'jh', label: 'Jump height', unit: 'cm', dec: 1, dir: 1, step: 1.5, sec: 'out', hero: 1 },
@@ -51,6 +51,9 @@ function jpM(k) { return JP_M.find(function (m) { return m.k === k; }); }
 function jpEsc(x) { return typeof escHtml === 'function' ? escHtml(String(x == null ? '' : x)) : String(x == null ? '' : x); }
 function jpFmt(m, v) { if (v == null || isNaN(v)) return '—'; var s = (+v).toFixed(m.dec); return /^-0(\.0+)?$/.test(s) ? s.slice(1) : s; }
 function jpSigned(m, v, pct) { if (v == null || isNaN(v)) return ''; var a = Math.abs(v).toFixed(pct ? 1 : m.dec === 0 ? 0 : Math.max(1, m.dec)); return ((v >= 0 || /^0(\.0+)?$/.test(a)) ? '+' : '−') + a + (pct ? '%' : ''); }
+// Percentile with linear interpolation (p in 0..1)
+function jpPctl(a, p) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); }
+var JP_P90_MIN = 5;   // tests needed in a season before a 90th percentile is shown
 function jpMed(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }); var h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; }
 function jpMean(a) { return a.length ? a.reduce(function (t, x) { return t + x; }, 0) / a.length : null; }
 function jpSd(a) { var m = jpMean(a); return a.length > 2 ? Math.sqrt(a.reduce(function (t, x) { return t + (x - m) * (x - m); }, 0) / (a.length - 1)) : null; }
@@ -83,9 +86,13 @@ function jpBuild(D) {
       JP_M.forEach(function (m) {
         var pts = T.filter(function (t) { return t.v[m.k] != null; }).map(function (t) { return { d: t.d, v: t.v[m.k] }; });
         if (!pts.length) return;
-        var season = {}; ys.forEach(function (y) {
+        var season = {}, stats = {}; ys.forEach(function (y) {
           var vs = pts.filter(function (p) { return p.d.slice(0, 4) === y; }).map(function (p) { return p.v; });
-          if (vs.length) season[y] = m.dir === -1 ? Math.min.apply(null, vs) : m.dir === 1 ? Math.max.apply(null, vs) : jpMed(vs);
+          if (vs.length) {
+            season[y] = m.dir === -1 ? Math.min.apply(null, vs) : m.dir === 1 ? Math.max.apply(null, vs) : jpMed(vs);
+            // 90th percentile of HIS performance: the 10th percentile value when lower is better
+            stats[y] = { best: season[y], avg: jpMean(vs), p90: vs.length >= JP_P90_MIN && m.dir ? jpPctl(vs, m.dir === -1 ? 0.1 : 0.9) : null, n: vs.length };
+          }
         });
         var lp = pts[pts.length - 1];
         // His norm: tests in the 90 days before the latest one
@@ -93,7 +100,7 @@ function jpBuild(D) {
         var bm = base.length >= 3 ? jpMean(base) : null, bsd = base.length >= 5 ? jpSd(base) : null;
         var bestP = pts.reduce(function (a, b) { return m.dir === -1 ? (b.v < a.v ? b : a) : (b.v > a.v ? b : a); });
         var sy = Object.keys(season).sort(), y1 = sy[sy.length - 1], y0 = sy.length > 1 ? sy[sy.length - 2] : null;
-        res.metrics[m.k] = { pts: pts, season: season, latest: lp, best: bestP, base: bm, z: bm != null && bsd ? (lp.v - bm) / bsd : null,
+        res.metrics[m.k] = { pts: pts, season: season, stats: stats, latest: lp, best: bestP, base: bm, z: bm != null && bsd ? (lp.v - bm) / bsd : null,
           vsNorm: bm ? (lp.v - bm) / Math.abs(bm) * 100 * (m.dir || 1) : null,
           yoy: y0 ? (season[y1] - season[y0]) * (m.dir || 1) : null, yoyPct: y0 && season[y0] ? (season[y1] - season[y0]) / Math.abs(season[y0]) * 100 * (m.dir || 1) : null, y0: y0, y1: y1 };
       });
@@ -181,6 +188,36 @@ function jpHero(r, k, label) {
     + '<div style="display:flex;align-items:center;gap:10px;margin-top:3px;"><div style="font-size:24px;font-weight:800;color:#fff;font-family:\'DM Mono\',monospace;">' + jpFmt(m, x.season[x.y1]) + '</div>' + jpSpark(x.pts, m, 56, 24) + '</div>'
     + '<div style="font-size:10.5px;margin-top:2px;color:' + JP_COL[t] + ';">' + (x.yoyPct != null ? (t === 'up' ? '▲ ' : t === 'down' ? '▼ ' : '') + jpSigned(m, x.yoyPct, true) + ' vs ' + x.y0 : m.unit) + '</div></div>';
 }
+// Year over year: Best, Average and 90th percentile for each season, side by side
+var JP_YOY_STATS = [
+  { k: 'best', label: 'Best', tip: 'his single best session that year' },
+  { k: 'avg', label: 'Average', tip: 'average of all his sessions that year' },
+  { k: 'p90', label: '90th percentile', tip: 'what he hits on a good day: better than 90% of his sessions that year (needs ' + JP_P90_MIN + '+ tests)' }
+];
+function jpChg(m, a, b) { return a != null && b != null && a !== 0 ? (b - a) / Math.abs(a) * 100 * (m.dir || 1) : null; }
+function jpYoyCard(r, keys) {
+  var ys = (r.metrics.jh ? Object.keys(r.metrics.jh.stats) : r.years).sort();
+  if (ys.length < 2) return '<div class="card" style="padding:14px 16px;border-radius:12px;grid-column:1/-1;"><div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:15px;">📅</span><span style="font-size:13px;font-weight:800;color:#fff;">Year over year</span><span style="font-size:10.5px;color:var(--text3);">needs ' + r.type + ' tests in two different years</span></div></div>';
+  var y1 = ys[ys.length - 1], y0 = (JP.cmp && JP.cmp !== y1 && ys.indexOf(JP.cmp) >= 0) ? JP.cmp : ys[ys.length - 2];
+  var n0 = r.metrics.jh && r.metrics.jh.stats[y0] ? r.metrics.jh.stats[y0].n : 0, n1 = r.metrics.jh && r.metrics.jh.stats[y1] ? r.metrics.jh.stats[y1].n : 0;
+  var G = '150px repeat(3,minmax(150px,1fr))';
+  var sel = '<select onchange="JP.cmp=this.value;renderJumpProfile()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:3px 8px;color:var(--text);font-size:11px;">' + ys.filter(function (y) { return y !== y1; }).reverse().map(function (y) { return '<option value="' + y + '"' + (y === y0 ? ' selected' : '') + '>' + y1 + ' vs ' + y + '</option>'; }).join('') + '</select>';
+  var head = '<div style="display:grid;grid-template-columns:' + G + ';gap:12px;padding:4px 0 6px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;"><div></div>'
+    + JP_YOY_STATS.map(function (st) { return '<div title="' + jpEsc(st.tip) + '" style="cursor:help;">' + st.label + ' <span style="text-transform:none;letter-spacing:0;opacity:.8;">' + y0 + ' → ' + y1 + '</span></div>'; }).join('') + '</div>';
+  var rows = keys.filter(function (k) { var m = jpM(k); return m.dir && r.metrics[k] && r.metrics[k].stats[y1] && r.metrics[k].stats[y0]; }).map(function (k) {
+    var m = jpM(k), S = r.metrics[k].stats;
+    return '<div style="display:grid;grid-template-columns:' + G + ';gap:12px;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.05);">'
+      + '<div><div style="font-size:12px;color:#e2e8f0;font-weight:600;line-height:1.2;">' + jpEsc(m.label) + '</div><div style="font-size:10px;color:var(--text3);">' + (m.unit || '&nbsp;') + (m.dir === -1 ? ' · lower is better' : '') + '</div></div>'
+      + JP_YOY_STATS.map(function (st) {
+        var a = S[y0][st.k], b = S[y1][st.k];
+        if (a == null || b == null) return '<div style="font-size:10px;color:var(--text3);">' + (st.k === 'p90' ? 'needs ' + JP_P90_MIN + '+ tests each year' : '—') + '</div>';
+        return '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-family:\'DM Mono\',monospace;font-size:12px;color:var(--text3);">' + jpFmt(m, a) + '</span><span style="color:var(--text3);font-size:10px;">→</span><span style="font-family:\'DM Mono\',monospace;font-size:14px;font-weight:800;color:#fff;">' + jpFmt(m, b) + '</span>' + jpPill(m, jpChg(m, a, b), '', true) + '</div>';
+      }).join('') + '</div>';
+  });
+  return '<div class="card" style="padding:14px 16px;border-radius:12px;grid-column:1/-1;overflow-x:auto;">'
+    + '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:2px;"><span style="font-size:15px;">📅</span><span style="font-size:13px;font-weight:800;color:#fff;">Year over year</span><span style="font-size:10.5px;color:var(--text3);">' + y0 + ': ' + n0 + ' sessions · ' + y1 + ': ' + n1 + ' sessions · Best = top session · Average = typical session · 90th = a good day</span><span style="margin-left:auto;">' + sel + '</span></div>'
+    + head + rows.join('') + '</div>';
+}
 function jpAthleteHTML(name) {
   var R = JP.rows.filter(function (r) { return r.name === name; }), r = R.find(function (x) { return x.type === JP.type; }) || R[0];
   var names = jpNames(), i = names.indexOf(name), q = function (n) { return n.replace(/'/g, "\\'"); };
@@ -199,11 +236,12 @@ function jpAthleteHTML(name) {
     + '<div style="width:58px;height:58px;border-radius:50%;background:#0E3386;border:2px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;">' + jpEsc(initials) + '</div>'
     + '<div style="flex:1;min-width:180px;"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;letter-spacing:.03em;color:#fff;line-height:1;">' + jpEsc(name) + '</div>'
     + '<div style="font-size:12px;color:#bfdbfe;margin-top:4px;">' + r.type + ' · ' + r.n + ' sessions · ' + jpFd(r.first) + ' – ' + jpFd(r.last) + (bw ? ' · ' + jpFmt(jpM('bw'), bw.latest.v) + ' lb' : '') + '</div>'
-    + '<div style="font-size:11px;color:#93c5fd;margin-top:6px;">Best trial per session · latest test ' + jpFd(r.last) + '</div></div>'
+    + '<div style="font-size:11px;color:#93c5fd;margin-top:6px;">Best of all trials per session · latest test ' + jpFd(r.last) + '</div></div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + jpHero(r, 'jh', 'Jump height') + jpHero(r, 'rsi', 'RSI-mod') + jpHero(r, 'ppbm', 'Peak power/BM') + (r.type === 'CMJ' ? jpHero(r, 'edrfd', 'Ecc decel RFD/BM') : '') + '</div>'
     + '</div></div>';
   var keys = (r.type === 'ABCMJ' ? JP_AB : JP_M.map(function (m) { return m.k; })).filter(function (k) { return k !== 'bw'; });
   var secs = JP_SECTIONS.map(function (s) { return jpSection(r, s, keys); }).filter(Boolean);
+  secs.unshift(jpYoyCard(r, keys));
   if (r.type === 'CMJ') secs.push(jpAsymCard(r));
   // Arm-swing contribution: ABCMJ minus CMJ jump height on the same days
   var cm = JP.rows.find(function (x) { return x.name === name && x.type === 'CMJ'; }), ab = JP.rows.find(function (x) { return x.name === name && x.type === 'ABCMJ'; });
@@ -265,7 +303,7 @@ function renderJumpProfile() {
 function jpHowTo() {
   return '<details style="margin-top:14px;font-size:11px;color:var(--text3);line-height:1.6;"><summary style="cursor:pointer;">How to read this · how to update</summary><div style="padding:6px 2px;">'
     + '<b>One number per session (Max):</b> each metric is his best value across all jumps that day, so jump height, RSI-mod, power, etc. can come from different jumps (lowest for contraction time and braking duration; smallest imbalance for asymmetry; depth and body weight from his highest jump). CMJ and ABCMJ (arm swing) are never mixed. '
-    + '<b>vs his 90-day norm</b> = latest test vs the average of his tests in the 90 days before it. <b>Season vs season</b> compares season bests (season lows for contraction time and braking duration, where lower is better). <b>Team rank</b> = where his season best sits among Cubs athletes tested this season. Asymmetry is the median of his last 5 tests (concentric and eccentric-decel impulse: 10% watch, 15% flag; landing force is noisier: 25% / 35%).<br>'
+    + '<b>vs his 90-day norm</b> = latest test vs the average of his tests in the 90 days before it. <b>Season vs season</b> on each metric row compares season bests (season lows for contraction time and braking duration, where lower is better). <b>Year over year</b> compares three things per season: <b>Best</b> (top session), <b>Average</b> (all sessions) and <b>90th percentile</b> (better than 90% of his sessions that year; needs ' + JP_P90_MIN + '+ tests). Seasons are calendar years. <b>Team rank</b> = where his season best sits among Cubs athletes tested this season. Asymmetry is the median of his last 5 tests (concentric and eccentric-decel impulse: 10% watch, 15% flag; landing force is noisier: 25% / 35%).<br>'
     + '<b>To update:</b> drag this button to your bookmarks bar once: ' + jpBookmarkHTML() + ' Then, whenever you want fresh data, open VALD Hub (logged in), go to VALD Systems → ForceDecks, and click the bookmark. It pulls every CMJ/ABCMJ since 2023 for the roster using your VALD session and saves it here — reload this page afterwards.</div></details>';
 }
 function jpBookmarkHTML() {
