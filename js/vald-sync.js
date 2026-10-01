@@ -30,6 +30,12 @@ async function cubsValdSync(CFG) {
     var KEYS = { bw: 655387, jh: 6553611, ppbm: 6553604, vto: 6553655, rsi: 6553733, ct: 6553643, ftct: 6553660, depth: 6553603, ebrfd: 6553679, edrfd: 6553683, epf: 6553688, bpd: 6553664, cimp: 6553712, cmf: 6553720, cpf: 6553686, p1: 6553676, p2: 6553677, edimp: 6553704, plf: 6553628, pp: 6553633 };
     var ASYM = ['cimp', 'edimp', 'plf', 'p1', 'p2'], LOWER = ['ct', 'bpd'], CTX = ['depth', 'bw'], byId = {}; Object.keys(KEYS).forEach(function (k) { byId[KEYS[k]] = k; });
     var defs = await (await fetch('https://use-api-forcedecks-gateway.prd.vald.com/api/v1/resultdefinitions', { headers: H })).json();
+    // Metrics we only know by name: look their result ids up in VALD's definitions
+    var BYNAME = { cppbm: /^concentric peak power\s*\/\s*bm$/i }, found = [];
+    Object.keys(BYNAME).forEach(function (k) {
+      var d = (defs || []).find(function (x) { return [x.resultName, x.name, x.resultDescription, x.description].some(function (s) { return s && BYNAME[k].test(String(s).trim()); }); });
+      if (d && d.resultId != null) { KEYS[k] = d.resultId; byId[d.resultId] = k; found.push(k); }
+    });
     var SCALE = {}; (defs || []).forEach(function (d) { if (byId[d.resultId] && d.resultUnitScaleFactor && d.resultUnitScaleFactor !== 1) SCALE[byId[d.resultId]] = d.resultUnitScaleFactor; });
     var out = { at: new Date().toISOString(), keys: KEYS, scaled: true, agg: 'max', players: {} }, missing = [];
     for (var i = 0; i < CFG.roster.length; i++) {
@@ -68,7 +74,7 @@ async function cubsValdSync(CFG) {
     var u = await fetch(CFG.supaUrl + '/rest/v1/cubs_sc_data?on_conflict=key', { method: 'POST', headers: { apikey: CFG.supaKey, Authorization: 'Bearer ' + CFG.supaKey, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ key: 'cache:vald-jumps', value: JSON.stringify(out) }) });
     if (!u.ok) throw new Error('Saving failed (' + u.status + ')');
     var tests = Object.keys(out.players).reduce(function (t, k) { return t + out.players[k].length; }, 0);
-    say('✅ Done — ' + tests + ' sessions for ' + Object.keys(out.players).length + ' athletes.' + (missing.length ? '<br><span style="color:#fbbf24;">Not found in VALD: ' + missing.join(', ') + '</span>' : '') + '<br>Reload the dashboard\'s Jump Profile.');
+    say('✅ Done — ' + tests + ' sessions for ' + Object.keys(out.players).length + ' athletes.' + (missing.length ? '<br><span style="color:#fbbf24;">Not found in VALD: ' + missing.join(', ') + '</span>' : '') + (found.indexOf('cppbm') < 0 ? '<br><span style="color:#fbbf24;">Concentric peak power / BM not found in VALD definitions.</span>' : '') + '<br>Reload the dashboard\'s Jump Profile.');
   } catch (e) { say('<span style="color:#fca5a5;">' + (e.message || e) + '</span>'); }
   setTimeout(function () { box.remove(); }, 15000);
 }

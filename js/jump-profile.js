@@ -23,6 +23,7 @@ var JP_M = [
   { k: 'cimp', label: 'Concentric impulse', unit: 'N·s', dec: 0, dir: 1, step: 8, sec: 'con' },
   { k: 'cmf', label: 'Concentric mean force / BM', unit: 'N/kg', dec: 1, dir: 1, step: 0.8, sec: 'con' },
   { k: 'cpf', label: 'Concentric peak force / BM', unit: 'N/kg', dec: 1, dir: 1, step: 1, sec: 'con' },
+  { k: 'cppbm', label: 'Concentric peak power / BM', unit: 'W/kg', dec: 1, dir: 1, step: 2, sec: 'con' },
   { k: 'p1', label: 'P1 concentric impulse', unit: 'N·s', dec: 0, dir: 1, step: 6, sec: 'con' },
   { k: 'p2', label: 'P2 concentric impulse', unit: 'N·s', dec: 0, dir: 1, step: 6, sec: 'con' },
   { k: 'bw', label: 'Body weight', unit: 'lb', dec: 1, dir: 0, step: 4, sec: 'bw' }

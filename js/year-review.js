@@ -146,7 +146,7 @@ function yrBuild(name) {
       hitRow('throwV', 'avg', 'Throw velo — avg', 'mph'), hitRow('throwV', 'p90', 'Throw velo — 90th', 'mph'),
       savRow('oaa', 'Outs above average'), isC ? savRow('pop', 'Pop time to 2B') : null] },
     { icon: '🦘', title: 'Jump (CMJ)', sub: 'season average of best trial per session · vs MLB at his position (VALD 2025)', rows: [
-      cmjRow('jh'), cmjRow('ppbm'), cmjRow('rsi'), cmjRow('ftct'), cmjRow('cpf'), cmjRow('edrfd', true), bw] }
+      cmjRow('jh'), cmjRow('ppbm'), cmjRow('cppbm', true), cmjRow('rsi'), cmjRow('ftct'), cmjRow('cpf'), cmjRow('edrfd', true), bw] }
   ];
   sections.forEach(function (s) { s.rows = s.rows.filter(function (r) { return r && Object.keys(r.cells).length; }); });
   return { ys: ys, sections: sections.filter(function (s) { return s.rows.length; }), sv: sv };
