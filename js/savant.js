@@ -32,6 +32,7 @@ var SV = (function () {
     { k: 'maxev', src: 'ev', col: 'max_hit_speed', label: 'Max exit velo', unit: 'mph', dec: 1, tool: 1, g: ['tools'], q: ['attempts', 100] },
     { k: 'hh', src: 'ev', col: 'ev95percent', label: 'Hard-hit %', unit: '%', dec: 1, tool: 1, g: ['tools'], q: ['attempts', 100] },
     { k: 'arm', src: 'arm', col: 'arm_overall', label: 'Arm strength', unit: 'mph', dec: 1, tool: 1, g: ['tools', 'def'], q: ['total_throws', 50] },
+    { k: 'armmax', src: 'arm', col: 'max_arm_strength', label: 'Max arm strength', unit: 'mph', dec: 1, g: [], q: ['total_throws', 50] },
     { k: 'pop', src: 'pop', col: 'pop_2b_sba', label: 'Pop time to 2B', unit: 's', dec: 2, tool: 1, lower: 1, g: ['tools', 'def'], q: ['pop_2b_sba_count', 10] },
     { k: 'war', src: 'fg', col: 'WAR', label: 'WAR (FanGraphs)', unit: '', dec: 1, g: ['off'], q: ['PA', 300] },
     { k: 'off', src: 'fg', col: 'Offense', label: 'Offense runs', unit: 'runs', dec: 1, g: ['off'], q: ['PA', 300] },
