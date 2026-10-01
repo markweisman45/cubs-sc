@@ -27,11 +27,19 @@ var JP_M = [
   { k: 'p2', label: 'P2 concentric impulse', unit: 'N·s', dec: 0, dir: 1, step: 6, sec: 'con' },
   { k: 'bw', label: 'Body weight', unit: 'lb', dec: 1, dir: 0, step: 4, sec: 'bw' }
 ];
+// Asymmetry thresholds (watch / flag). Landing force is naturally noisy, so it gets wider bands.
 var JP_ASYM = [
-  { k: 'cimp', label: 'Concentric impulse' },
-  { k: 'edimp', label: 'Eccentric decel impulse' },
-  { k: 'plf', label: 'Peak landing force' }
+  { k: 'cimp', label: 'Concentric impulse', watch: 10, flag: 15 },
+  { k: 'edimp', label: 'Eccentric decel impulse', watch: 10, flag: 15 },
+  { k: 'plf', label: 'Peak landing force', watch: 25, flag: 35, noisy: 1 }
 ];
+// VALD stores some results in base units; multiply to display units (syncs from now on arrive scaled)
+var JP_SCALE = { bw: 2.20462, rsi: 0.01, ct: 1000, bpd: 1000 };
+function jpScale(D) {
+  if (!D || D.scaled) return D;
+  Object.keys(D.players || {}).forEach(function (n) { (D.players[n] || []).forEach(function (t) { Object.keys(JP_SCALE).forEach(function (k) { if (t.v && t.v[k] != null) t.v[k] = t.v[k] * JP_SCALE[k]; }); }); });
+  D.scaled = true; return D;
+}
 var JP_SECTIONS = [
   { s: 'out', icon: '🚀', title: 'Output', sub: 'how high and how powerful' },
   { s: 'strat', icon: '⏱', title: 'Explosiveness & strategy', sub: 'how fast he gets there' },
@@ -56,7 +64,7 @@ async function jpLoad() {
     if (!db) throw new Error('Cloud not connected');
     var r = await db.from('cubs_sc_data').select('value').eq('key', 'cache:vald-jumps').maybeSingle();
     if (r.error) throw r.error;
-    JP.data = r.data && r.data.value ? JSON.parse(r.data.value) : { players: {} };
+    JP.data = jpScale(r.data && r.data.value ? JSON.parse(r.data.value) : { players: {}, scaled: true });
     JP.rows = jpBuild(JP.data);
   } catch (e) { JP.err = e.message || String(e); }
   return JP.data;
@@ -157,11 +165,11 @@ function jpSection(r, sec, keys) {
 function jpAsymCard(r) {
   var ks = JP_ASYM.filter(function (a) { return r.asym[a.k]; });
   if (!ks.length) return '';
-  return '<div class="card" style="padding:14px 16px;border-radius:12px;"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;"><span style="font-size:15px;">⚖️</span><span style="font-size:13px;font-weight:800;color:#fff;">Left / right asymmetry</span><span style="font-size:10.5px;color:var(--text3);">median of his last 5 tests · 10%+ watch, 15%+ flag</span></div>'
+  return '<div class="card" style="padding:14px 16px;border-radius:12px;"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;"><span style="font-size:15px;">⚖️</span><span style="font-size:13px;font-weight:800;color:#fff;">Left / right asymmetry</span><span style="font-size:10.5px;color:var(--text3);">median of his last 5 tests</span></div>'
     + ks.map(function (a) {
-      var x = r.asym[a.k], c = x.med >= 15 ? '#f87171' : x.med >= 10 ? '#fbbf24' : '#22c55e', w = Math.min(100, x.med / 25 * 100);
-      return '<div style="display:grid;grid-template-columns:150px 1fr 60px;gap:12px;align-items:center;padding:7px 0;border-top:1px solid rgba(255,255,255,.05);"><div style="font-size:12px;color:#e2e8f0;font-weight:600;">' + a.label + '</div>'
-        + '<div style="position:relative;height:8px;border-radius:4px;background:rgba(255,255,255,.07);"><div style="position:absolute;left:40%;top:-2px;bottom:-2px;width:1px;background:rgba(251,191,36,.5);"></div><div style="position:absolute;left:60%;top:-2px;bottom:-2px;width:1px;background:rgba(248,113,113,.5);"></div><div style="position:absolute;left:0;top:0;bottom:0;width:' + Math.max(3, w) + '%;border-radius:4px;background:' + c + ';"></div></div>'
+      var x = r.asym[a.k], c = x.med >= a.flag ? '#f87171' : x.med >= a.watch ? '#fbbf24' : '#22c55e', scale = a.flag / 0.6, w = Math.min(100, x.med / scale * 100);
+      return '<div style="display:grid;grid-template-columns:150px 1fr 60px;gap:12px;align-items:center;padding:7px 0;border-top:1px solid rgba(255,255,255,.05);"><div><div style="font-size:12px;color:#e2e8f0;font-weight:600;">' + a.label + '</div><div style="font-size:9.5px;color:var(--text3);">watch ' + a.watch + '% · flag ' + a.flag + '%' + (a.noisy ? ' · noisy metric' : '') + '</div></div>'
+        + '<div style="position:relative;height:8px;border-radius:4px;background:rgba(255,255,255,.07);"><div style="position:absolute;left:' + (a.watch / scale * 100) + '%;top:-2px;bottom:-2px;width:1px;background:rgba(251,191,36,.5);"></div><div style="position:absolute;left:60%;top:-2px;bottom:-2px;width:1px;background:rgba(248,113,113,.5);"></div><div style="position:absolute;left:0;top:0;bottom:0;width:' + Math.max(3, w) + '%;border-radius:4px;background:' + c + ';"></div></div>'
         + '<div style="text-align:right;font-size:14px;font-weight:800;color:' + c + ';font-family:\'DM Mono\',monospace;">' + x.med.toFixed(1) + '%</div></div>';
     }).join('') + '</div>';
 }
@@ -213,8 +221,8 @@ function jpCardHTML(name) {
   var q = name.replace(/'/g, "\\'"), jh = r.metrics.jh, m = jpM('jh');
   var tags = [];
   if (jh && jh.vsNorm != null && jh.vsNorm <= -5) tags.push(['down', 'Latest jump ' + jpSigned(m, jh.vsNorm, true) + ' vs his norm']);
-  var asy = Object.keys(r.asym).map(function (k) { return [k, r.asym[k].med]; }).sort(function (a, b) { return b[1] - a[1]; })[0];
-  if (asy && asy[1] >= 10) tags.push([asy[1] >= 15 ? 'down' : 'warn', JP_ASYM.find(function (a) { return a.k === asy[0]; }).label + ' asym ' + asy[1].toFixed(0) + '%']);
+  var asy = JP_ASYM.filter(function (a) { return r.asym[a.k] && r.asym[a.k].med >= a.watch; }).sort(function (a, b) { return r.asym[b.k].med / b.flag - r.asym[a.k].med / a.flag; })[0];
+  if (asy) tags.push([r.asym[asy.k].med >= asy.flag ? 'down' : 'warn', asy.label + ' asym ' + r.asym[asy.k].med.toFixed(0) + '%']);
   var bestYoy = ['jh', 'rsi', 'ppbm', 'edrfd'].map(function (k) { var x = r.metrics[k]; return x && x.yoyPct != null ? [k, x.yoyPct] : null; }).filter(Boolean).sort(function (a, b) { return b[1] - a[1]; });
   if (bestYoy.length && bestYoy[0][1] >= 3) tags.push(['up', jpM(bestYoy[0][0]).label + ' ' + jpSigned(jpM(bestYoy[0][0]), bestYoy[0][1], true) + ' vs ' + r.metrics[bestYoy[0][0]].y0]);
   var mini = ['rsi', 'ppbm', 'edrfd', 'cimp'].map(function (k) {
@@ -236,12 +244,12 @@ function jpTeamHTML() {
   var R = names.map(function (n) { return JP.rows.find(function (r) { return r.name === n && r.type === 'CMJ'; }); });
   var recent = R.filter(function (r) { return r.last >= jpAddDays(new Date().toISOString().slice(0, 10), -14); }).length;
   var down = R.filter(function (r) { return r.metrics.jh && r.metrics.jh.vsNorm != null && r.metrics.jh.vsNorm <= -5; });
-  var asym = R.filter(function (r) { return Object.keys(r.asym).some(function (k) { return r.asym[k].med >= 15; }); });
+  var asym = R.filter(function (r) { return JP_ASYM.some(function (a) { return r.asym[a.k] && r.asym[a.k].med >= a.flag; }); });
   var tile = function (label, big, sub) { return '<div class="card" style="padding:14px 16px;border-radius:12px;"><div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;">' + label + '</div><div style="font-size:26px;font-weight:800;color:#fff;font-family:\'DM Mono\',monospace;margin-top:4px;">' + big + '</div><div style="font-size:10.5px;color:var(--text2);margin-top:2px;line-height:1.4;">' + sub + '</div></div>'; };
   var tiles = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;">'
     + tile('Athletes with CMJ data', names.length, recent + ' tested in the last 14 days')
     + tile('Below their jump norm', down.length, down.length ? down.map(function (r) { return r.name.split(' ').slice(-1)[0]; }).join(', ') : 'latest CMJ within 5% of norm for everyone')
-    + tile('Asymmetry 15%+', asym.length, asym.length ? asym.map(function (r) { return r.name.split(' ').slice(-1)[0]; }).join(', ') : 'none flagged')
+    + tile('Asymmetry flags', asym.length, asym.length ? asym.map(function (r) { return r.name.split(' ').slice(-1)[0]; }).join(', ') : 'none flagged')
     + tile('Last VALD sync', JP.data && JP.data.at ? new Date(JP.data.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—', 'best trial per session · since 2023')
     + '</div>';
   return tiles + '<div style="font-size:11px;color:var(--text3);margin:0 2px 8px;">Sorted by this season\'s best CMJ height · bars = rank among Cubs athletes tested this season (100 = best) · click an athlete</div>'
@@ -257,7 +265,7 @@ function renderJumpProfile() {
 function jpHowTo() {
   return '<details style="margin-top:14px;font-size:11px;color:var(--text3);line-height:1.6;"><summary style="cursor:pointer;">How to read this · how to update</summary><div style="padding:6px 2px;">'
     + '<b>One number per session:</b> the trial with the highest jump height (Imp-Mom); every other metric comes from that same trial, so they belong together. CMJ and ABCMJ (arm swing) are never mixed. '
-    + '<b>vs his 90-day norm</b> = latest test vs the average of his tests in the 90 days before it. <b>Season vs season</b> compares season bests (season lows for contraction time and braking duration, where lower is better). <b>Team rank</b> = where his season best sits among Cubs athletes tested this season. Asymmetry is the median of his last 5 tests (10%+ watch, 15%+ flag).<br>'
+    + '<b>vs his 90-day norm</b> = latest test vs the average of his tests in the 90 days before it. <b>Season vs season</b> compares season bests (season lows for contraction time and braking duration, where lower is better). <b>Team rank</b> = where his season best sits among Cubs athletes tested this season. Asymmetry is the median of his last 5 tests (concentric and eccentric-decel impulse: 10% watch, 15% flag; landing force is noisier: 25% / 35%).<br>'
     + '<b>To update:</b> drag this button to your bookmarks bar once: ' + jpBookmarkHTML() + ' Then, whenever you want fresh data, open VALD Hub (logged in), go to VALD Systems → ForceDecks, and click the bookmark. It pulls every CMJ/ABCMJ since 2023 for the roster using your VALD session and saves it here — reload this page afterwards.</div></details>';
 }
 function jpBookmarkHTML() {

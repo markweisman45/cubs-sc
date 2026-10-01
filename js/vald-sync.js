@@ -29,7 +29,9 @@ async function cubsValdSync(CFG) {
     var byName = {}; (Array.isArray(A) ? A : A.athletes || []).forEach(function (a) { var k = norm(a.fullName || (a.givenName + ' ' + a.familyName)); (byName[k] = byName[k] || []).push(a.id); });
     var KEYS = { bw: 655387, jh: 6553611, ppbm: 6553604, vto: 6553655, rsi: 6553733, ct: 6553643, ftct: 6553660, depth: 6553603, ebrfd: 6553679, edrfd: 6553683, epf: 6553688, bpd: 6553664, cimp: 6553712, cmf: 6553720, cpf: 6553686, p1: 6553676, p2: 6553677, edimp: 6553704, plf: 6553628, pp: 6553633 };
     var ASYM = ['cimp', 'edimp', 'plf', 'p1', 'p2'], byId = {}; Object.keys(KEYS).forEach(function (k) { byId[KEYS[k]] = k; });
-    var out = { at: new Date().toISOString(), keys: KEYS, players: {} }, missing = [];
+    var defs = await (await fetch('https://use-api-forcedecks-gateway.prd.vald.com/api/v1/resultdefinitions', { headers: H })).json();
+    var SCALE = {}; (defs || []).forEach(function (d) { if (byId[d.resultId] && d.resultUnitScaleFactor && d.resultUnitScaleFactor !== 1) SCALE[byId[d.resultId]] = d.resultUnitScaleFactor; });
+    var out = { at: new Date().toISOString(), keys: KEYS, scaled: true, players: {} }, missing = [];
     for (var i = 0; i < CFG.roster.length; i++) {
       var n = CFG.roster[i], ids = byName[norm(n)] || [];
       if (!ids.length) { missing.push(n); continue; }
@@ -43,7 +45,7 @@ async function cubsValdSync(CFG) {
         (test.trials || []).forEach(function (tr) { var j = (tr.results || []).find(function (x) { return x.resultId === KEYS.jh && !x.limb; }); if (j && j.value > bj) { bj = j.value; best = tr; } });
         if (!best) return null;
         var v = {}, a = {};
-        best.results.forEach(function (x) { var k = byId[x.resultId]; if (!k) return; if (!x.limb || x.limb === 'Trial') v[k] = Math.round(x.value * 1000) / 1000; else if (x.limb === 'Asym' && ASYM.indexOf(k) >= 0) a[k] = Math.round(x.value * 10) / 10; });
+        best.results.forEach(function (x) { var k = byId[x.resultId]; if (!k) return; if (!x.limb || x.limb === 'Trial') v[k] = Math.round(x.value * (SCALE[k] || 1) * 1000) / 1000; else if (x.limb === 'Asym' && ASYM.indexOf(k) >= 0) a[k] = Math.round(x.value * 10) / 10; });
         return { d: test.recorded.slice(0, 10), t: test.testType, n: test.trials.length, v: v, a: a };
       }).filter(Boolean).sort(function (x, y) { return x.d < y.d ? -1 : 1; });
     }
