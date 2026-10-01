@@ -5,7 +5,7 @@
 // Data: cloud key "cache:vald-jumps" in cubs_sc_data (written by the VALD sync,
 // never pulled into localStorage).
 // ═══════════════════════════════════════════════════════════════════════════
-var JP = { sel: null, type: 'CMJ', data: null, err: null, cmp: null };
+var JP = { sel: null, type: 'CMJ', data: null, err: null, cmp: null, normGrp: null };
 // dir: 1 higher is better, -1 lower is better, 0 context only. step = meaningful change.
 var JP_M = [
   { k: 'jh', label: 'Jump height', unit: 'cm', dec: 1, dir: 1, step: 1.5, sec: 'out', hero: 1 },
@@ -156,7 +156,7 @@ function jpRow(r, k) {
   var m = jpM(k), x = r.metrics[k]; if (!x) return '';
   return '<div style="display:grid;grid-template-columns:' + JP_GRID + ';gap:12px;align-items:center;padding:9px 0;border-top:1px solid rgba(255,255,255,.05);">'
     + '<div><div style="font-size:12px;color:#e2e8f0;font-weight:600;line-height:1.2;">' + jpEsc(m.label) + '</div><div style="font-size:10px;color:var(--text3);">' + (m.unit || '&nbsp;') + (m.dir === -1 ? ' · lower is better' : '') + '</div></div>'
-    + '<div style="padding:0 6px;">' + (m.dir ? jpBar(x.teamPct) : '<div style="font-size:10px;color:var(--text3);">context</div>') + '</div>'
+    + '<div style="padding:0 6px;">' + (m.dir ? jpBar(x.teamPct) : '<div style="font-size:10px;color:var(--text3);">context</div>') + (r.type === 'CMJ' && typeof mlbPill === 'function' && MLB_NORMS[k] ? '<div style="margin-top:7px;">' + mlbPill(k, x.latest.v, mlbGroup(r.name), 1) + '</div>' : '') + '</div>'
     + '<div style="text-align:right;"><div style="font-size:15px;font-weight:800;color:#fff;font-family:\'DM Mono\',monospace;line-height:1;">' + jpFmt(m, x.latest.v) + '</div><div style="font-size:9.5px;color:var(--text3);margin-top:2px;">' + x.latest.d.slice(5).replace('-', '/') + '</div></div>'
     + '<div title="Monthly best · best ever ' + jpFmt(m, x.best.v) + ' on ' + jpFd(x.best.d) + '">' + (jpSpark(x.pts, m) || '<div style="font-size:10px;color:var(--text3);">1 month</div>') + '<div style="font-size:9.5px;color:var(--text3);margin-top:2px;">best ' + jpFmt(m, x.best.v) + '</div></div>'
     + '<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start;">' + jpPill(m, x.vsNorm, 'vs his norm', true) + (x.yoyPct != null ? jpPill(m, x.yoyPct, x.y1 + ' vs ' + x.y0, true) : '') + '</div></div>';
@@ -166,7 +166,7 @@ function jpSection(r, sec, keys) {
   if (!rows.length) return '';
   return '<div class="card" style="padding:14px 16px;border-radius:12px;">'
     + '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;"><span style="font-size:15px;">' + sec.icon + '</span><span style="font-size:13px;font-weight:800;color:#fff;">' + sec.title + '</span><span style="font-size:10.5px;color:var(--text3);">' + sec.sub + '</span></div>'
-    + '<div style="display:grid;grid-template-columns:' + JP_GRID + ';gap:12px;padding:2px 0 4px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;"><div></div><div style="padding:0 6px;">Team rank this season</div><div style="text-align:right;">Latest</div><div>Monthly best</div><div></div></div>'
+    + '<div style="display:grid;grid-template-columns:' + JP_GRID + ';gap:12px;padding:2px 0 4px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;"><div></div><div style="padding:0 6px;">Team rank this season' + (r.type === 'CMJ' ? ' · MLB %ile (latest)' : '') + '</div><div style="text-align:right;">Latest</div><div>Monthly best</div><div></div></div>'
     + rows.join('') + '</div>';
 }
 function jpAsymCard(r) {
@@ -186,7 +186,8 @@ function jpHero(r, k, label) {
   return '<div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);min-width:132px;">'
     + '<div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;">' + label + ' · ' + (x.y1 || '') + ' best</div>'
     + '<div style="display:flex;align-items:center;gap:10px;margin-top:3px;"><div style="font-size:24px;font-weight:800;color:#fff;font-family:\'DM Mono\',monospace;">' + jpFmt(m, x.season[x.y1]) + '</div>' + jpSpark(x.pts, m, 56, 24) + '</div>'
-    + '<div style="font-size:10.5px;margin-top:2px;color:' + JP_COL[t] + ';">' + (x.yoyPct != null ? (t === 'up' ? '▲ ' : t === 'down' ? '▼ ' : '') + jpSigned(m, x.yoyPct, true) + ' vs ' + x.y0 : m.unit) + '</div></div>';
+    + '<div style="font-size:10.5px;margin-top:2px;color:' + JP_COL[t] + ';">' + (x.yoyPct != null ? (t === 'up' ? '▲ ' : t === 'down' ? '▼ ' : '') + jpSigned(m, x.yoyPct, true) + ' vs ' + x.y0 : m.unit) + '</div>'
+    + (r.type === 'CMJ' && typeof mlbPill === 'function' && MLB_NORMS[k] ? '<div style="margin-top:5px;">' + mlbPill(k, x.season[x.y1], mlbGroup(r.name), 1) + '</div>' : '') + '</div>';
 }
 // Year over year: Best, Average and 90th percentile for each season, side by side
 var JP_YOY_STATS = [
@@ -250,8 +251,12 @@ function jpAthleteHTML(name) {
     var diffs = ab.metrics.jh.pts.filter(function (p) { return byD[p.d] != null; }).map(function (p) { return { d: p.d, v: p.v - byD[p.d] }; });
     if (diffs.length) secs.push('<div class="card" style="padding:14px 16px;border-radius:12px;"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px;"><span style="font-size:15px;">💪</span><span style="font-size:13px;font-weight:800;color:#fff;">Arm-swing contribution</span><span style="font-size:10.5px;color:var(--text3);">ABCMJ minus CMJ jump height, same day</span></div><div style="display:flex;align-items:center;gap:16px;"><div style="font-size:26px;font-weight:800;color:#fff;font-family:\'DM Mono\',monospace;">+' + jpMed(diffs.map(function (x) { return x.v; })).toFixed(1) + ' cm</div><div style="font-size:11px;color:var(--text2);line-height:1.5;">median over ' + diffs.length + ' days tested both ways<br>latest ' + jpSigned(jpM('jh'), diffs[diffs.length - 1].v) + ' cm (' + jpFd(diffs[diffs.length - 1].d) + ')</div></div></div>');
   }
-  return nav + hero + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(560px,1fr));gap:14px;">' + secs.join('') + '</div>';
+  // Head (nav, hero, vs MLB) sits above the session trend charts; the metric breakdown sits below them
+  return nav + hero + (typeof mlbCardHTML === 'function' ? mlbCardHTML(r) : '') + JP_SPLIT
+    + '<div style="display:flex;align-items:baseline;gap:8px;margin:22px 0 10px;padding-bottom:8px;border-bottom:2px solid rgba(96,165,250,.35);"><span style="font-size:14px;font-weight:800;color:#fff;">📋 Metric breakdown</span><span style="font-size:11px;color:var(--text3);">team rank, his norm, year over year, asymmetry</span></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(560px,1fr));gap:14px;">' + secs.join('') + '</div>';
 }
+var JP_SPLIT = '<!--jp-split-->';
 function jpNames() { var o = {}; (JP.rows || []).forEach(function (r) { o[r.name] = 1; }); return Object.keys(o).sort(); }
 function jpCardHTML(name) {
   var r = JP.rows.find(function (x) { return x.name === name && x.type === 'CMJ'; }) || JP.rows.find(function (x) { return x.name === name; });
@@ -298,7 +303,32 @@ function renderJumpProfile() {
   if (!JP.data && !JP.err) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);">Loading VALD jump data…</div>'; jpLoad().then(renderJumpProfile); return; }
   if (JP.err) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);">Couldn\'t load jump data (' + jpEsc(JP.err) + ').</div>'; return; }
   if (!JP.rows.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);">No VALD jump data yet — run the VALD sync from VALD Hub (see "How to update").</div>' + jpHowTo(); return; }
-  el.innerHTML = (JP.sel ? jpAthleteHTML(JP.sel) : jpTeamHTML()) + jpHowTo();
+  if (!JP.sel) { el.innerHTML = jpTeamHTML() + jpHowTo(); jpShowTrends(false); return; }
+  var h = jpAthleteHTML(JP.sel), i = h.indexOf(JP_SPLIT);
+  el.innerHTML = i >= 0 ? h.slice(0, i) : h;
+  var det = document.getElementById('jp-detail'); if (det) det.innerHTML = (i >= 0 ? h.slice(i + JP_SPLIT.length) : '') + jpHowTo();
+  jpShowTrends(true);
+}
+// Session trend charts (index.html, from ForceDecks CSV imports) live between the head and the breakdown.
+// They follow the athlete and the CMJ / ABCMJ toggle picked here.
+function jpShowTrends(on) {
+  var tr = document.getElementById('jp-trends'), det = document.getElementById('jp-detail');
+  if (!on && det) det.innerHTML = '';
+  if (!tr) return;
+  var inRoster = on && typeof PLAYERS !== 'undefined' && PLAYERS[JP.sel];
+  var wasHidden = tr.style.display === 'none';
+  tr.style.display = inRoster ? '' : 'none';
+  if (!inRoster) return;
+  var c = document.getElementById('jp-trends-cmj'), a = document.getElementById('jp-trends-ab');
+  if (c) c.style.display = JP.type === 'ABCMJ' ? 'none' : '';
+  if (a) a.style.display = JP.type === 'ABCMJ' ? '' : 'none';
+  var typeChanged = typeof CMJ_OVERLAY_TYPE !== 'undefined' && CMJ_OVERLAY_TYPE !== JP.type;
+  if (typeChanged) CMJ_OVERLAY_TYPE = JP.type;
+  if (JP.sel !== currentPlayer && typeof selectPlayer === 'function') { JP._chartsFor = JP.sel + JP.type; selectPlayer(JP.sel); return; }   // re-renders charts for him
+  if ((wasHidden || typeChanged || JP._chartsFor !== JP.sel + JP.type) && typeof renderAllCharts === 'function') {
+    JP._chartsFor = JP.sel + JP.type;
+    setTimeout(function () { renderAllCharts(PLAYERS[currentPlayer]); }, 30);
+  }
 }
 function jpHowTo() {
   return '<details style="margin-top:14px;font-size:11px;color:var(--text3);line-height:1.6;"><summary style="cursor:pointer;">How to read this · how to update</summary><div style="padding:6px 2px;">'
