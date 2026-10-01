@@ -98,12 +98,12 @@ function yrSugHTML(name) {
   var S = yrSuggest(name); YR._sug = S;
   if (!S.length) return '<div style="font-size:11px;color:var(--text3);margin-top:8px;">No goal suggestions — not enough ' + yrYears()[2] + ' data.</div>';
   var inp = 'background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;color:var(--text);font-size:12px;min-width:0;';
-  return '<div style="margin-top:10px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Suggested goals · edit any field, then ＋ to add it (pick 2–3)</div>'
+  return '<div style="margin-top:10px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Suggested goals · edit any field, then ＋ to add it (up to 10 targets)</div>'
     + S.map(function (s, i) {
       var tgt = s.txt + (s.m.unit !== '%' ? ' ' + s.m.unit : '');
       return '<div style="display:grid;grid-template-columns:78px 1fr auto;gap:10px;align-items:center;padding:8px 10px;margin-bottom:6px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);">'
         + '<span style="font-size:10px;font-weight:800;color:' + YG_COL[s.type] + ';text-transform:uppercase;letter-spacing:.5px;">' + s.type + '</span>'
-        + '<div><div style="display:grid;grid-template-columns:2fr 1.2fr 1fr;gap:6px;">'
+        + '<div><div style="display:grid;grid-template-columns:2fr 1.2fr 1.4fr;gap:6px;">'
         + '<input id="yg-g' + i + '" value="' + yrEsc(s.m.label) + '" title="Goal" style="' + inp + 'font-weight:700;">'
         + '<input id="yg-t' + i + '" value="' + yrEsc(tgt) + '" title="Target" style="' + inp + 'font-family:\'DM Mono\',monospace;color:' + YG_COL[s.type] + ';font-weight:700;">'
         + '<input id="yg-b' + i + '" value="' + yrEsc(s.m.by) + '" title="By" style="' + inp + '"></div>'
@@ -116,12 +116,13 @@ function yrSugHTML(name) {
 function yrUseSug(i) {
   var v = function (id) { var e = document.getElementById(id); return e ? e.value : ''; };
   var goal = v('yg-g' + i), tgt = v('yg-t' + i), by = v('yg-b' + i); if (!goal && !tgt) return;
-  for (var r = 0; r < 3; r++) {
+  for (var r = 0; r < 10; r++) {
     var g = document.getElementById('yr-g' + r); if (!g || g.value.trim()) continue;
+    var row = g.closest('.yr-trow'); if (row && row.style.display === 'none') { row.style.display = 'grid'; var b = document.getElementById('yr-addrow'); if (b && !document.querySelector('.yr-trow[style*="display:none"], .yr-trow[style*="display: none"]')) b.style.display = 'none'; }
     g.value = goal; document.getElementById('yr-t' + r).value = tgt; document.getElementById('yr-b' + r).value = by;
     g.focus(); return;
   }
-  alert('All three target rows are full — clear one first.');
+  alert('All 10 target rows are full — clear one first.');
 }
 // Show suggestions inside the note editor, under the target rows
 (function () {

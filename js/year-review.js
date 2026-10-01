@@ -229,7 +229,8 @@ function yrShape(name, ys) {
 // Coach note + off-season targets: draft privately, publish to show on the page
 function yrNote(name, y) {
   var st = yrStore(), rec = (st[name] && st[name][y]) || {}, pub = rec.pub, dr = rec.draft || pub || { text: '', targets: [] };
-  var tg = (dr.targets || []).concat([{}, {}, {}]).slice(0, 3);
+  var YR_MAXT = 10, tg = (dr.targets || []).slice(0, YR_MAXT); while (tg.length < YR_MAXT) tg.push({});
+  var shown = Math.max(3, Math.min(YR_MAXT, (dr.targets || []).length + 1));   // filled rows + one empty, at least 3
   var pubHTML = pub && (pub.text || (pub.targets || []).some(function (t) { return t.goal; }))
     ? '<div style="font-size:13px;color:#e2e8f0;line-height:1.65;white-space:pre-wrap;">' + yrEsc(pub.text) + '</div>'
       + ((pub.targets || []).filter(function (t) { return t.goal; }).length ? '<div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;">' + pub.targets.filter(function (t) { return t.goal; }).map(function (t) { return '<div style="padding:10px 12px;border-radius:9px;background:rgba(250,204,21,.07);border:1px solid rgba(250,204,21,.25);"><div style="font-size:12px;font-weight:700;color:#fff;">🎯 ' + yrEsc(t.goal) + '</div><div style="font-size:11px;color:#fde68a;margin-top:2px;">' + yrEsc(t.target || '') + (t.by ? ' · by ' + yrEsc(t.by) : '') + '</div></div>'; }).join('') + '</div>' : '')
@@ -240,14 +241,24 @@ function yrNote(name, y) {
   var editor = '<details id="yr-editor"' + (YR.edit ? ' open' : '') + ' ontoggle="YR.edit=this.open" style="margin-top:12px;border-top:1px solid rgba(255,255,255,.08);padding-top:10px;" class="yr-noprint"><summary style="cursor:pointer;font-size:12px;color:#93c5fd;font-weight:700;">✏️ Write / edit note' + (changed ? ' <span style="color:#fbbf24;font-weight:600;">· unpublished changes</span>' : '') + '</summary>'
     + '<textarea id="yr-text" rows="6" placeholder="Season recap, what we saw, what we\'re building this off-season…" style="' + inp + 'width:100%;box-sizing:border-box;margin-top:10px;line-height:1.5;">' + yrEsc(dr.text || '') + '</textarea>'
     + '<div style="font-size:10px;color:var(--text3);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px;">Off-season targets</div>'
-    + tg.map(function (t, i) { return '<div style="display:grid;grid-template-columns:2fr 1.2fr 1fr;gap:6px;margin-bottom:6px;"><input id="yr-g' + i + '" value="' + yrEsc(t.goal || '') + '" placeholder="Goal (e.g. CMJ jump height)" style="' + inp + '"><input id="yr-t' + i + '" value="' + yrEsc(t.target || '') + '" placeholder="Target (e.g. 55+ cm)" style="' + inp + '"><input id="yr-b' + i + '" value="' + yrEsc(t.by || '') + '" placeholder="By (e.g. Spring Training)" style="' + inp + '"></div>'; }).join('')
+    + tg.map(function (t, i) { return '<div class="yr-trow" data-i="' + i + '" style="display:' + (i < shown ? 'grid' : 'none') + ';grid-template-columns:2fr 1.2fr 1.4fr;gap:6px;margin-bottom:6px;"><input id="yr-g' + i + '" value="' + yrEsc(t.goal || '') + '" placeholder="Goal (e.g. CMJ jump height)" style="' + inp + '"><input id="yr-t' + i + '" value="' + yrEsc(t.target || '') + '" placeholder="Target (e.g. 55+ cm)" style="' + inp + '"><input id="yr-b' + i + '" value="' + yrEsc(t.by || '') + '" placeholder="By (e.g. Spring Training)" style="' + inp + '"></div>'; }).join('')
+    + '<button id="yr-addrow" onclick="yrAddRow()" style="display:' + (shown < YR_MAXT ? 'inline-block' : 'none') + ';padding:4px 10px;margin:2px 0 4px;border-radius:7px;border:1px dashed var(--border2);background:transparent;color:var(--text2);font-size:11px;cursor:pointer;">＋ Add target <span style="color:var(--text3);">(up to ' + YR_MAXT + ')</span></button>'
     + '<div style="display:flex;gap:8px;margin-top:8px;align-items:center;"><button onclick="yrSaveNote(false)" style="padding:7px 14px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;">Save draft</button>'
     + '<button onclick="yrSaveNote(true)" style="padding:7px 16px;border-radius:7px;border:none;background:#0E3386;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📣 Publish to page</button><span id="yr-msg" style="font-size:11px;color:#22c55e;"></span></div></details>';
   return '<div class="card" style="padding:16px 18px;border-radius:12px;margin-bottom:14px;border:1px solid rgba(250,204,21,.3);"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;"><span style="font-size:15px;">📝</span><span style="font-size:14px;font-weight:800;color:#fff;">Coach\'s note · ' + y + ' off-season</span></div>' + pubHTML + editor + '</div>';
 }
+// Reveal the next hidden target row (returns its index, or -1 when all 10 are showing)
+function yrAddRow() {
+  var rows = document.querySelectorAll('.yr-trow'), i = -1;
+  for (var k = 0; k < rows.length; k++) if (rows[k].style.display === 'none') { rows[k].style.display = 'grid'; i = k; break; }
+  var more = Array.prototype.some.call(rows, function (r) { return r.style.display === 'none'; }), b = document.getElementById('yr-addrow');
+  if (b) b.style.display = more ? 'inline-block' : 'none';
+  if (i >= 0) { var g = document.getElementById('yr-g' + i); if (g) g.focus(); }
+  return i;
+}
 function yrSaveNote(publish) {
   var name = currentPlayer, y = yrYears()[2], st = yrStore();
-  var d = { text: (document.getElementById('yr-text') || {}).value || '', targets: [0, 1, 2].map(function (i) { return { goal: (document.getElementById('yr-g' + i) || {}).value || '', target: (document.getElementById('yr-t' + i) || {}).value || '', by: (document.getElementById('yr-b' + i) || {}).value || '' }; }).filter(function (t) { return t.goal || t.target || t.by; }) };
+  var d = { text: (document.getElementById('yr-text') || {}).value || '', targets: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(function (i) { return { goal: (document.getElementById('yr-g' + i) || {}).value || '', target: (document.getElementById('yr-t' + i) || {}).value || '', by: (document.getElementById('yr-b' + i) || {}).value || '' }; }).filter(function (t) { return t.goal || t.target || t.by; }) };
   st[name] = st[name] || {}; var rec = st[name][y] = st[name][y] || {};
   rec.draft = d;
   if (publish) rec.pub = { text: d.text, targets: d.targets, at: new Date().toISOString() };
