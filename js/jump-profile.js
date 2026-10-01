@@ -84,7 +84,7 @@ function jpBuild(D) {
       var ys = Object.keys(years).sort();
       var last = T[T.length - 1], res = { name: name, type: type, n: T.length, first: T[0].d, last: last.d, years: ys, metrics: {}, asym: {} };
       JP_M.forEach(function (m) {
-        var pts = T.filter(function (t) { return t.v[m.k] != null; }).map(function (t) { return { d: t.d, v: t.v[m.k] }; });
+        var pts = T.filter(function (t) { return t.v[m.k] != null; }).map(function (t) { return { d: t.d, v: m.k === 'depth' ? Math.abs(t.v[m.k]) : t.v[m.k] }; });   // VALD reports depth as negative; show how deep
         if (!pts.length) return;
         var season = {}, stats = {}; ys.forEach(function (y) {
           var vs = pts.filter(function (p) { return p.d.slice(0, 4) === y; }).map(function (p) { return p.v; });

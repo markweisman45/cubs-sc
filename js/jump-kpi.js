@@ -69,7 +69,7 @@ function jkNice(lo, hi, n) {
   var t = [], s = Math.ceil(lo / step) * step; for (var v = s; v <= hi + 1e-9; v += step) t.push(+v.toFixed(10)); return t;
 }
 function jkScatter(A, m, K) {
-  var W = 620, H = 340, L = 54, R = 16, T = 14, B = 44;
+  var W = 520, H = 320, L = 50, R = 14, T = 12, B = 42;
   var xs = A.pts.map(function (p) { return p.x; }), ys = A.pts.map(function (p) { return p.y; });
   var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
   var px = (x1 - x0) * 0.1 || 1, py = (y1 - y0) * 0.12 || 0.5; x0 -= px; x1 += px; y0 -= py; y1 += py;
@@ -86,7 +86,7 @@ function jkScatter(A, m, K) {
     g += '<g class="jk-pt" style="cursor:pointer;" onclick="JP.sel=\'' + p.name.replace(/'/g, "\\'") + '\';JP.type=\'CMJ\';renderJumpProfile();window.scrollTo({top:0})"><title>' + jpEsc(tip) + '</title><circle cx="' + cx + '" cy="' + cy + '" r="14" fill="transparent"/><circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#60a5fa" stroke="#0f172a" stroke-width="2"/>'
       + '<text x="' + (+cx + (right ? 10 : -10)) + '" y="' + (+cy + 4) + '" text-anchor="' + (right ? 'start' : 'end') + '" font-size="11" fill="#e2e8f0">' + jpEsc(last) + '</text></g>';
   });
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;" role="img" aria-label="' + jpEsc(m.label + ' vs ' + K.label) + '"><defs><clipPath id="jkclip"><rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - T - B) + '"/></clipPath></defs>' + g + '</svg>';
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:760px;height:auto;display:block;margin:0 auto;" role="img" aria-label="' + jpEsc(m.label + ' vs ' + K.label) + '"><defs><clipPath id="jkclip"><rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - T - B) + '"/></clipPath></defs>' + g + '</svg>';
 }
 function jkRbar(r, sig) {
   if (r == null) return '<span style="font-size:10px;color:var(--text3);">—</span>';
@@ -104,7 +104,7 @@ function jkHTML() {
   var res = keys.map(function (k) { return jkAnalyze(S, k, jpM(k).dir === 0 ? 'avg' : JK.stat); }).filter(function (a) { return a.r != null; });
   res.sort(function (a, b) { return Math.abs(b.r) - Math.abs(a.r); });
   if (!res.length) return '<div class="card" style="padding:30px;text-align:center;color:var(--text3);">Not enough athletes with both CMJ (' + JK_MIN_CMJ + '+ tests in a season) and ' + K.label.toLowerCase() + ' yet.</div>';
-  if (!JK.metric || !res.some(function (a) { return a.k === JK.metric; })) JK.metric = res[0].k;
+  if (!JK.metric || !res.some(function (a) { return a.k === JK.metric; })) JK.metric = (res.find(function (a) { return jpM(a.k).dir; }) || res[0]).k;
   var A = res.find(function (a) { return a.k === JK.metric; }), m = jpM(A.k);
   var seasons = S.length, players = {}; S.forEach(function (s) { players[s.name] = 1; });
   var btn = function (on, js, label) { return '<button onclick="' + js + '" style="padding:6px 14px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:' + (on ? '#0E3386' : 'transparent') + ';color:' + (on ? '#fff' : 'var(--text2)') + ';">' + label + '</button>'; };
@@ -125,7 +125,7 @@ function jkHTML() {
         + '<div style="text-align:right;font-family:\'DM Mono\',monospace;font-size:11px;color:var(--text3);">' + (a.rw != null ? a.rw.toFixed(2) : '—') + '</div></div>';
     }).join('') + '<div style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.5;">↓ = lower is better, so a negative r is the "good" direction there. With ' + A.n + ' athletes, |r| ≥ ' + jkRcrit(A.n).toFixed(2) + ' is needed for p &lt; .05.</div></div>';
   // Right: scatter + read
-  var read = (A.r >= 0 ? 'Higher ' : 'Higher ') + m.label.toLowerCase() + ' goes with ' + (A.r >= 0 ? 'higher' : 'lower') + ' ' + K.label.toLowerCase() + ' — ' + jkStrength(A.r) + ' relationship (r = ' + A.r.toFixed(2) + ', ' + A.n + ' athletes' + (A.sig ? ', unlikely to be chance' : ', could be chance at this sample size') + ').'
+  var read = (A.k === 'depth' ? 'A deeper countermovement' : 'Higher ' + m.label) + ' goes with ' + (A.r >= 0 ? 'higher' : 'lower') + ' ' + K.label.toLowerCase() + ' — ' + jkStrength(A.r) + ' relationship (r = ' + A.r.toFixed(2) + ', ' + A.n + ' athletes' + (A.sig ? ', unlikely to be chance' : ', could be chance at this sample size') + ').'
     + (A.line && Math.abs(A.r) >= 0.3 ? ' Each +' + (m.step) + ' ' + (m.unit || '') + ' ≈ ' + (A.line.b * m.step >= 0 ? '+' : '−') + Math.abs(A.line.b * m.step).toFixed(2) + ' ' + K.unit + '.' : '')
     + (A.rw != null ? ' Within his own seasons: r = ' + A.rw.toFixed(2) + ' (' + A.nW + ' athletes with 2+ seasons).' : '');
   var chart = '<div class="card" style="padding:14px 16px;border-radius:12px;">'
@@ -134,7 +134,7 @@ function jkHTML() {
     + '<div style="font-size:12px;color:#cbd5e1;line-height:1.55;">' + jpEsc(read) + '</div></div>';
   // Ahead / behind the line
   var gaps = '';
-  if (A.line && Math.abs(A.r) >= 0.4) {
+  if (A.line && Math.abs(A.r) >= 0.4 && m.dir) {
     var rs = A.pts.map(function (p) { var pred = A.line.a + A.line.b * p.x; return { name: p.name, x: p.x, y: p.y, pred: pred, d: p.y - pred }; }).sort(function (a, b) { return b.d - a.d; });
     gaps = '<div class="card" style="padding:14px 16px;border-radius:12px;grid-column:1/-1;">'
       + '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px;"><span style="font-size:13px;font-weight:800;color:#fff;">Who\'s ahead of / behind his jump</span><span style="font-size:10.5px;color:var(--text3);">actual ' + K.label.toLowerCase() + ' vs what his ' + jpEsc(m.label.toLowerCase()) + ' predicts · ±' + K.gap + ' ' + K.unit + ' = meaningful</span></div>'
@@ -150,7 +150,7 @@ function jkHTML() {
           + '<div style="font-size:11px;color:' + (t === 'flat' ? 'var(--text3)' : JP_COL[t]) + ';">' + txt + '</div></div>';
       }).join('') + '</div>';
   } else {
-    gaps = '<div class="card" style="padding:12px 16px;border-radius:12px;grid-column:1/-1;font-size:11.5px;color:var(--text3);">The link between ' + jpEsc(m.label.toLowerCase()) + ' and ' + K.label.toLowerCase() + ' is too weak (|r| &lt; 0.4) to predict anyone\'s ' + K.label.toLowerCase() + ' from his jump, so there\'s no ahead/behind list for this metric. ' + (JK.kpi === 'bat' ? 'For bat speed, absolute peak power (W) and bodyweight carry more than jump height or power per kg — bigger engines swing harder — and rotational / upper-body tests will likely say more.' : '') + '</div>';
+    gaps = !m.dir && A.line && Math.abs(A.r) >= 0.4 ? '<div class="card" style="padding:12px 16px;border-radius:12px;grid-column:1/-1;font-size:11.5px;color:var(--text3);">' + jpEsc(m.label) + ' describes how he jumps rather than how well, so there\'s no ahead/behind list for it. Pick a performance metric on the left to see who\'s ahead of or behind his jump.</div>' : '<div class="card" style="padding:12px 16px;border-radius:12px;grid-column:1/-1;font-size:11.5px;color:var(--text3);">The link between ' + jpEsc(m.label.toLowerCase()) + ' and ' + K.label.toLowerCase() + ' is too weak (|r| &lt; 0.4) to predict anyone\'s ' + K.label.toLowerCase() + ' from his jump, so there\'s no ahead/behind list for this metric. ' + (JK.kpi === 'bat' ? 'For bat speed, absolute peak power (W) and bodyweight carry more than jump height or power per kg — bigger engines swing harder — and rotational / upper-body tests will likely say more.' : '') + '</div>';
   }
   return controls + '<div style="display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:14px;" class="jk-grid">' + list + chart + gaps + '</div>'
     + '<div style="font-size:10.5px;color:var(--text3);margin-top:10px;line-height:1.6;">Small sample: these are pointers, not proof. A season counts when he had ' + JK_MIN_CMJ + '+ CMJs that calendar year and ' + JK_MIN_VOL + '+ ' + (JK.kpi === 'sprint' ? 'sprint opportunities' : 'competitive swings') + '. Between athletes compares people; "his own yrs" asks whether the same athlete is faster in the years he jumps better — the more useful question for training.</div>';
@@ -201,7 +201,7 @@ function jkAthleteCard(name) {
   };
   if (typeof document !== 'undefined' && !document.getElementById('jk-style')) {
     var st = document.createElement('style'); st.id = 'jk-style';
-    st.textContent = '.jk-pt:hover circle:nth-of-type(2){r:8;fill:#93c5fd}@media (max-width:900px){.jk-grid{grid-template-columns:1fr !important}}';
+    st.textContent = '.jk-pt:hover circle:nth-of-type(2){r:8;fill:#93c5fd}@media (max-width:1280px){.jk-grid{grid-template-columns:1fr !important}}';
     document.head.appendChild(st);
   }
 })();
