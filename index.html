@@ -2734,7 +2734,7 @@ body {
 
         <!-- Input panel -->
         <div class="card" style="padding:16px;">
-          <div class="card-title" style="margin-bottom:12px;">💪 LOG NEW MAX</div>
+          <div class="card-title" style="margin-bottom:12px;">💪 LOG NEW MAX — <span id="orm-athlete" style="color:#22c55e;"></span></div>
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div>
               <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Date</label>
@@ -7030,6 +7030,8 @@ function selectPlayer(name) {
   renderDashboard();
   if (typeof renderProgramCompliance === 'function') renderProgramCompliance();
   if (typeof renderHERuns === 'function' && document.getElementById('dash-heruns') && document.getElementById('dash-heruns').classList.contains('active')) renderHERuns();
+  // 1RM tab: redraw for the newly picked athlete (it kept showing the previous athlete's maxes)
+  if (typeof renderORMDashboard === 'function' && document.getElementById('dash-maxstrength') && document.getElementById('dash-maxstrength').classList.contains('active')) renderORMDashboard();
   if (document.getElementById('dash-performance') && document.getElementById('dash-performance').classList.contains('active')) {
     renderPerfTable(p);
     renderVeloLeaderboard();
@@ -9742,6 +9744,7 @@ function deleteORM(idx){if(!ormData[currentPlayer])return;ormData[currentPlayer]
 
 function renderORMDashboard(){
   var entries=ormData[currentPlayer]||[];
+  var athEl=document.getElementById('orm-athlete');if(athEl)athEl.textContent=currentPlayer||'';
   var dateEl=document.getElementById('orm-date');
   if(dateEl&&!dateEl.value)dateEl.value=localISODate();
   var exercises=[...new Set(entries.map(function(e){return e.exercise;}))].sort();
