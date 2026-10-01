@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Cubs VALD sync — runs on hub.valdperformance.com (as a bookmark) while you're
 // logged in. Pulls every CMJ and ABCMJ test since 2023 for the dashboard roster,
-// keeps the best trial per session, and saves it to the dashboard's cloud
+// keeps each metric's best value across all trials in a session (Max), and saves it to the dashboard's cloud
 // (cubs_sc_data key "cache:vald-jumps"). Uses your existing VALD Hub session;
 // nothing is stored except the jump results.
 // The dashboard builds the bookmark with VALD_SYNC_CFG = { supaUrl, supaKey, roster }.
@@ -28,10 +28,10 @@ async function cubsValdSync(CFG) {
     var norm = function (s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\b(jr|sr|ii|iii)\b\.?/g, '').replace(/[^a-z]/g, ''); };
     var byName = {}; (Array.isArray(A) ? A : A.athletes || []).forEach(function (a) { var k = norm(a.fullName || (a.givenName + ' ' + a.familyName)); (byName[k] = byName[k] || []).push(a.id); });
     var KEYS = { bw: 655387, jh: 6553611, ppbm: 6553604, vto: 6553655, rsi: 6553733, ct: 6553643, ftct: 6553660, depth: 6553603, ebrfd: 6553679, edrfd: 6553683, epf: 6553688, bpd: 6553664, cimp: 6553712, cmf: 6553720, cpf: 6553686, p1: 6553676, p2: 6553677, edimp: 6553704, plf: 6553628, pp: 6553633 };
-    var ASYM = ['cimp', 'edimp', 'plf', 'p1', 'p2'], byId = {}; Object.keys(KEYS).forEach(function (k) { byId[KEYS[k]] = k; });
+    var ASYM = ['cimp', 'edimp', 'plf', 'p1', 'p2'], LOWER = ['ct', 'bpd'], CTX = ['depth', 'bw'], byId = {}; Object.keys(KEYS).forEach(function (k) { byId[KEYS[k]] = k; });
     var defs = await (await fetch('https://use-api-forcedecks-gateway.prd.vald.com/api/v1/resultdefinitions', { headers: H })).json();
     var SCALE = {}; (defs || []).forEach(function (d) { if (byId[d.resultId] && d.resultUnitScaleFactor && d.resultUnitScaleFactor !== 1) SCALE[byId[d.resultId]] = d.resultUnitScaleFactor; });
-    var out = { at: new Date().toISOString(), keys: KEYS, scaled: true, players: {} }, missing = [];
+    var out = { at: new Date().toISOString(), keys: KEYS, scaled: true, agg: 'max', players: {} }, missing = [];
     for (var i = 0; i < CFG.roster.length; i++) {
       var n = CFG.roster[i], ids = byName[norm(n)] || [];
       if (!ids.length) { missing.push(n); continue; }
@@ -40,12 +40,27 @@ async function cubsValdSync(CFG) {
       var r = await fetch('https://use-api-forcedecks-gateway.prd.vald.com/api/v1/tests/query', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: JSON.stringify(body) });
       if (!r.ok) throw new Error('VALD returned ' + r.status + ' for ' + n);
       var q = await r.json();
+      // "Max" filter: each metric takes its best value across ALL trials in the session (mix and match).
+      // Lower is better for contraction time and braking phase duration; asymmetry keeps the smallest
+      // imbalance; depth and body weight come from the highest jump (context, not "better or worse").
       out.players[n] = q.map(function (test) {
-        var best = null, bj = -1;
-        (test.trials || []).forEach(function (tr) { var j = (tr.results || []).find(function (x) { return x.resultId === KEYS.jh && !x.limb; }); if (j && j.value > bj) { bj = j.value; best = tr; } });
+        var best = null, bj = -1, v = {}, a = {}, ctx = {};
+        (test.trials || []).forEach(function (tr) {
+          var j = (tr.results || []).find(function (x) { return x.resultId === KEYS.jh && !x.limb; }); if (j && j.value > bj) { bj = j.value; best = tr; }
+          (tr.results || []).forEach(function (x) {
+            var k = byId[x.resultId]; if (!k || x.value == null || isNaN(x.value)) return;
+            if (!x.limb || x.limb === 'Trial') {
+              if (CTX.indexOf(k) >= 0) return;
+              var val = Math.round(x.value * (SCALE[k] || 1) * 1000) / 1000;
+              if (v[k] == null || (LOWER.indexOf(k) >= 0 ? val < v[k] : val > v[k])) v[k] = val;
+            } else if (x.limb === 'Asym' && ASYM.indexOf(k) >= 0) {
+              var av = Math.round(x.value * 10) / 10;
+              if (a[k] == null || Math.abs(av) < Math.abs(a[k])) a[k] = av;
+            }
+          });
+        });
         if (!best) return null;
-        var v = {}, a = {};
-        best.results.forEach(function (x) { var k = byId[x.resultId]; if (!k) return; if (!x.limb || x.limb === 'Trial') v[k] = Math.round(x.value * (SCALE[k] || 1) * 1000) / 1000; else if (x.limb === 'Asym' && ASYM.indexOf(k) >= 0) a[k] = Math.round(x.value * 10) / 10; });
+        best.results.forEach(function (x) { var k = byId[x.resultId]; if (k && CTX.indexOf(k) >= 0 && (!x.limb || x.limb === 'Trial')) v[k] = Math.round(x.value * (SCALE[k] || 1) * 1000) / 1000; });
         return { d: test.recorded.slice(0, 10), t: test.testType, n: test.trials.length, v: v, a: a };
       }).filter(Boolean).sort(function (x, y) { return x.d < y.d ? -1 : 1; });
     }

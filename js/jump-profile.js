@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Jump Profile — ForceDecks CMJ and ABCMJ from VALD Hub, one view per athlete.
-// Each test session keeps only the BEST trial (highest jump height, Imp-Mom);
-// every metric comes from that same trial. CMJ and ABCMJ are kept separate.
+// Each test session uses VALD's "Max" logic: every metric is its best value across
+// all trials that day (lowest for contraction time / braking duration). CMJ and ABCMJ are kept separate.
 // Data: cloud key "cache:vald-jumps" in cubs_sc_data (written by the VALD sync,
 // never pulled into localStorage).
 // ═══════════════════════════════════════════════════════════════════════════
@@ -250,7 +250,7 @@ function jpTeamHTML() {
     + tile('Athletes with CMJ data', names.length, recent + ' tested in the last 14 days')
     + tile('Below their jump norm', down.length, down.length ? down.map(function (r) { return r.name.split(' ').slice(-1)[0]; }).join(', ') : 'latest CMJ within 5% of norm for everyone')
     + tile('Asymmetry flags', asym.length, asym.length ? asym.map(function (r) { return r.name.split(' ').slice(-1)[0]; }).join(', ') : 'none flagged')
-    + tile('Last VALD sync', JP.data && JP.data.at ? new Date(JP.data.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—', 'best trial per session · since 2023')
+    + tile('Last VALD sync', JP.data && JP.data.at ? new Date(JP.data.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—', 'best of all trials per session · since 2023')
     + '</div>';
   return tiles + '<div style="font-size:11px;color:var(--text3);margin:0 2px 8px;">Sorted by this season\'s best CMJ height · bars = rank among Cubs athletes tested this season (100 = best) · click an athlete</div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">' + names.map(jpCardHTML).join('') + '</div>';
@@ -264,7 +264,7 @@ function renderJumpProfile() {
 }
 function jpHowTo() {
   return '<details style="margin-top:14px;font-size:11px;color:var(--text3);line-height:1.6;"><summary style="cursor:pointer;">How to read this · how to update</summary><div style="padding:6px 2px;">'
-    + '<b>One number per session:</b> the trial with the highest jump height (Imp-Mom); every other metric comes from that same trial, so they belong together. CMJ and ABCMJ (arm swing) are never mixed. '
+    + '<b>One number per session (Max):</b> each metric is his best value across all jumps that day, so jump height, RSI-mod, power, etc. can come from different jumps (lowest for contraction time and braking duration; smallest imbalance for asymmetry; depth and body weight from his highest jump). CMJ and ABCMJ (arm swing) are never mixed. '
     + '<b>vs his 90-day norm</b> = latest test vs the average of his tests in the 90 days before it. <b>Season vs season</b> compares season bests (season lows for contraction time and braking duration, where lower is better). <b>Team rank</b> = where his season best sits among Cubs athletes tested this season. Asymmetry is the median of his last 5 tests (concentric and eccentric-decel impulse: 10% watch, 15% flag; landing force is noisier: 25% / 35%).<br>'
     + '<b>To update:</b> drag this button to your bookmarks bar once: ' + jpBookmarkHTML() + ' Then, whenever you want fresh data, open VALD Hub (logged in), go to VALD Systems → ForceDecks, and click the bookmark. It pulls every CMJ/ABCMJ since 2023 for the roster using your VALD session and saves it here — reload this page afterwards.</div></details>';
 }
