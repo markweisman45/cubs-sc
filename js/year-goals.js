@@ -97,21 +97,28 @@ function yrSuggest(name) {
 function yrSugHTML(name) {
   var S = yrSuggest(name); YR._sug = S;
   if (!S.length) return '<div style="font-size:11px;color:var(--text3);margin-top:8px;">No goal suggestions — not enough ' + yrYears()[2] + ' data.</div>';
-  return '<div style="margin-top:10px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Suggested goals · tap ＋ to use one (pick 2–3)</div>'
+  var inp = 'background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;color:var(--text);font-size:12px;min-width:0;';
+  return '<div style="margin-top:10px;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Suggested goals · edit any field, then ＋ to add it (pick 2–3)</div>'
     + S.map(function (s, i) {
+      var tgt = s.txt + (s.m.unit !== '%' ? ' ' + s.m.unit : '');
       return '<div style="display:grid;grid-template-columns:78px 1fr auto;gap:10px;align-items:center;padding:8px 10px;margin-bottom:6px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);">'
         + '<span style="font-size:10px;font-weight:800;color:' + YG_COL[s.type] + ';text-transform:uppercase;letter-spacing:.5px;">' + s.type + '</span>'
-        + '<div><div style="font-size:12.5px;color:#fff;font-weight:700;">' + yrEsc(s.m.label) + ' <span style="font-family:\'DM Mono\',monospace;color:' + YG_COL[s.type] + ';">' + yrEsc(s.txt) + (s.m.unit !== '%' ? ' ' + s.m.unit : '') + '</span></div>'
-        + '<div style="font-size:10.5px;color:var(--text2);margin-top:2px;">' + yrEsc(s.why) + '</div>'
+        + '<div><div style="display:grid;grid-template-columns:2fr 1.2fr 1fr;gap:6px;">'
+        + '<input id="yg-g' + i + '" value="' + yrEsc(s.m.label) + '" title="Goal" style="' + inp + 'font-weight:700;">'
+        + '<input id="yg-t' + i + '" value="' + yrEsc(tgt) + '" title="Target" style="' + inp + 'font-family:\'DM Mono\',monospace;color:' + YG_COL[s.type] + ';font-weight:700;">'
+        + '<input id="yg-b' + i + '" value="' + yrEsc(s.m.by) + '" title="By" style="' + inp + '"></div>'
+        + '<div style="font-size:10.5px;color:var(--text2);margin-top:4px;">' + yrEsc(s.why) + '</div>'
         + '<div style="font-size:9.5px;color:var(--text3);margin-top:2px;">' + yrEsc(s.hist) + ' · test: ' + yrEsc(s.m.test) + '</div></div>'
         + '<button onclick="yrUseSug(' + i + ')" title="Add to off-season targets" style="padding:5px 10px;border-radius:7px;border:1px solid rgba(96,165,250,.45);background:rgba(14,51,134,.35);color:#bfdbfe;font-size:12px;font-weight:700;cursor:pointer;">＋</button></div>';
     }).join('') + '</div>';
 }
+// Copies the (possibly edited) suggestion into the next empty target row — those rows stay editable too
 function yrUseSug(i) {
-  var s = YR._sug && YR._sug[i]; if (!s) return;
+  var v = function (id) { var e = document.getElementById(id); return e ? e.value : ''; };
+  var goal = v('yg-g' + i), tgt = v('yg-t' + i), by = v('yg-b' + i); if (!goal && !tgt) return;
   for (var r = 0; r < 3; r++) {
     var g = document.getElementById('yr-g' + r); if (!g || g.value.trim()) continue;
-    g.value = s.m.label; document.getElementById('yr-t' + r).value = s.txt + (s.m.unit !== '%' ? ' ' + s.m.unit : ''); document.getElementById('yr-b' + r).value = s.m.by;
+    g.value = goal; document.getElementById('yr-t' + r).value = tgt; document.getElementById('yr-b' + r).value = by;
     g.focus(); return;
   }
   alert('All three target rows are full — clear one first.');
