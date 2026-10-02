@@ -294,3 +294,15 @@ async function renderYearInReview() {
   draw();
   if (id && !mlb) { mlb = await yrMLB(id); draw(); }
 }
+
+// Year in Review is the default tab, but the first player is picked before this
+// script loads — draw it whenever the Dashboard opens on this tab.
+(function () {
+  if (typeof document === 'undefined') return;
+  var draw = function () {
+    var el = document.getElementById('dash-review');
+    if (el && el.classList.contains('active') && typeof currentPlayer !== 'undefined' && currentPlayer) renderYearInReview();
+  };
+  if (typeof switchTab === 'function') { var _st = switchTab; switchTab = function (page) { var x = _st.apply(this, arguments); if (page === 'dashboard') setTimeout(draw, 0); return x; }; }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(draw, 0); }); else setTimeout(draw, 0);
+})();
