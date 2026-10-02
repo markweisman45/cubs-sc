@@ -120,6 +120,10 @@ body {
 .pb-more div button:hover { background: rgba(255,255,255,0.06) !important; }
 #pb-session-editor[style*="display: block"] ~ #pb-empty-hint, #pb-session-editor[style*="display:block"] ~ #pb-empty-hint { display:none; }
 .status-dot.nodata { background: var(--text3); opacity: .6; }
+/* Off-season: no Statcast / game load coming in, so hide the roster status colors */
+body.offseason #playerList .status-dot { display: none; }
+.season-toggle { margin-left:auto; font-size:9.5px; letter-spacing:.3px; text-transform:none; padding:2px 8px; border-radius:10px; border:1px solid var(--border2); background:transparent; color:var(--text3); cursor:pointer; }
+body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45); }
 .readiness-hero.nodata-status::before { background: linear-gradient(90deg, var(--text3), transparent); }
 .status-badge.nodata { background: rgba(255,255,255,0.06); color: var(--text3); }
 .readiness-score.nodata { color: var(--text3); }
@@ -676,7 +680,7 @@ body {
   </div>
 
   <div class="sidebar-section">
-    <div class="sidebar-label">Roster</div>
+    <div class="sidebar-label" style="display:flex;align-items:center;">Roster<button class="season-toggle" id="seasonToggle" onclick="toggleSeasonMode()" title="Off-season hides the roster status colors (no Statcast or game load coming in)"></button></div>
     <div id="playerList"></div>
   </div>
 
@@ -6898,6 +6902,27 @@ function init() {
 } // end init
 
 function nameToId(name) { return name.replace(/[^a-zA-Z0-9]/g, '-'); }
+
+// Season mode — 'off' hides roster status colors. Saved (and synced) once you pick;
+// until then Oct 1 – Feb 14 counts as off-season.
+var SEASON_KEY = 'cubs_sc_season_mode';
+function isOffseason() {
+  var v = null; try { v = localStorage.getItem(SEASON_KEY); } catch (e) {}
+  if (v === 'off') return true; if (v === 'in') return false;
+  var d = new Date(), m = d.getMonth() + 1, day = d.getDate();
+  return m >= 10 || m === 1 || (m === 2 && day < 15);
+}
+function applySeasonMode() {
+  var off = isOffseason();
+  document.body.classList.toggle('offseason', off);
+  var b = document.getElementById('seasonToggle'); if (b) b.textContent = off ? '🌙 Off-season' : '⚾ In-season';
+}
+function toggleSeasonMode() {
+  try { localStorage.setItem(SEASON_KEY, isOffseason() ? 'in' : 'off'); } catch (e) {}
+  applySeasonMode();
+  if (typeof syncToSupabase === 'function') setTimeout(syncToSupabase, 800);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applySeasonMode); else setTimeout(applySeasonMode, 0);
 
 function buildPlayerList() {
   const el = document.getElementById('playerList');
