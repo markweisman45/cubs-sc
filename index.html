@@ -3798,7 +3798,32 @@ function renderAthletePrograms() {
     (p.phase||'').toLowerCase().includes(search)
   ) : all;
 
-  if (!progs.length) {
+  // Programs built in Program Builder and assigned to this athlete live in My Programs (SAVED_PROGRAMS)
+  const savedAll = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : []).filter(p => p && !p.isTemplate && p.athlete === currentPlayer);
+  const saved = search ? savedAll.filter(p => ((p.name||'') + ' ' + (p.notes||'') + ' ' + (p.mesoLabel||p.meso||'')).toLowerCase().includes(search)) : savedAll;
+  const savedHTML = saved.map(p => {
+    const dt = p.created ? new Date(p.created).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    const wk = p.pbState && p.pbState.weekData ? p.pbState.weekData.length + ' wk' : '';
+    return `<div class="program-block" style="margin-bottom:12px;">
+      <div class="block-header" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(p.name||'Untitled')}</div>
+          <div style="font-size:11px;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;">
+            <span style="color:var(--green);font-weight:600;">Program Builder</span>
+            <span style="color:var(--purple);">${escHtml(p.mesoLabel||p.meso||'')}</span>
+            <span style="color:rgba(255,255,255,0.4);">${wk}${wk&&dt?' · ':''}${dt}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button onclick="openProgram(${p.id})" style="background:rgba(59,122,196,0.2);border:1px solid rgba(59,122,196,0.4);border-radius:5px;padding:4px 10px;color:var(--blue);font-size:11px;cursor:pointer;">Open</button>
+          <button onclick="showPushProgramModal(${p.id})" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:5px;padding:4px 10px;color:var(--green);font-size:11px;cursor:pointer;">📤 Send</button>
+          <button onclick="deleteProgram(${p.id});setTimeout(renderAthletePrograms,300)" title="Delete" style="background:rgba(204,52,51,0.15);border:1px solid rgba(204,52,51,0.3);border-radius:5px;padding:4px 8px;color:var(--red);font-size:11px;cursor:pointer;">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  if (!progs.length && !saved.length) {
     container.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text3);font-family:\'DM Mono\',monospace;font-size:13px;">
       No programs yet for ${currentPlayer.split(' ')[0]}.<br>
       <span style="font-size:11px;opacity:.6;">Generate a program in the builder and drop it here, or click ＋ Drop Program above.</span>
@@ -3810,7 +3835,7 @@ function renderAthletePrograms() {
   const PHASE_COLOR = {'In-Season':'var(--red)','Pre-Season':'var(--yellow)','Off-Season':'var(--cyan)',
     Hypertrophy:'var(--blue)',Strength:'var(--green)',Power:'var(--yellow)',Restoration:'var(--text2)'};
 
-  container.innerHTML = progs.map(p => {
+  container.innerHTML = savedHTML + progs.map(p => {
     const dt = new Date(p.created).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     const tc = TYPE_COLOR[p.type] || 'var(--text2)';
     const pc = PHASE_COLOR[p.phase] || 'var(--text2)';
@@ -3828,7 +3853,7 @@ function renderAthletePrograms() {
           </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
-          <button onclick="event.stopPropagation();scheduleProgram('${p.id}','${jsq(athlete)}')" title="Add to Calendar"
+          <button onclick="event.stopPropagation();scheduleProgram('${p.id}','${jsq(currentPlayer)}')" title="Add to Calendar"
             style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:5px;padding:4px 10px;color:var(--green);font-size:11px;cursor:pointer;">📅 Schedule</button>
           <button onclick="event.stopPropagation();loadProgToBuilder('${p.id}')" title="Load to Builder"
             style="background:rgba(59,122,196,0.2);border:1px solid rgba(59,122,196,0.4);border-radius:5px;padding:4px 10px;color:var(--blue);font-size:11px;cursor:pointer;">Load</button>
