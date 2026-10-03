@@ -34,8 +34,12 @@ async function yrMLB(id) {
   var ys = yrYears(), out = { seasons: {}, il: [], err: null };
   try {
     var j = await (await fetch('https://statsapi.mlb.com/api/v1/people/' + id + '/stats?stats=yearByYear&group=hitting&gameType=R')).json();
-    ((j.stats && j.stats[0] && j.stats[0].splits) || []).forEach(function (s) {
-      if (ys.indexOf(String(s.season)) < 0 || !s.sport || s.sport.id !== 1) return;
+    // Traded mid-season → API returns one row per team PLUS a combined row (no team, numTeams > 1).
+    // Use the combined row when it exists; otherwise sum the team rows.
+    var sp = ((j.stats && j.stats[0] && j.stats[0].splits) || []).filter(function (s) { return ys.indexOf(String(s.season)) >= 0 && s.sport && s.sport.id === 1; });
+    var tot = {}; sp.forEach(function (s) { if (!s.team) tot[s.season] = s; });
+    sp.forEach(function (s) {
+      if (tot[s.season] && s !== tot[s.season]) return;
       var S = out.seasons[s.season] = out.seasons[s.season] || { g: 0, pa: 0, sb: 0, cs: 0 };
       S.g += s.stat.gamesPlayed || 0; S.pa += s.stat.plateAppearances || 0; S.sb += s.stat.stolenBases || 0; S.cs += s.stat.caughtStealing || 0;
     });
