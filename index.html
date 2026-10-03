@@ -3799,7 +3799,11 @@ function renderAthletePrograms() {
   ) : all;
 
   // Programs built in Program Builder and assigned to this athlete live in My Programs (SAVED_PROGRAMS)
-  const savedAll = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : []).filter(p => p && !p.isTemplate && p.athlete === currentPlayer);
+  const mine = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : []).filter(p => p && !p.isTemplate && p.athlete === currentPlayer);
+  // A draft that's been sent to him shows once — as the sent copy
+  const sentSrc = mine.filter(p => p.isAssigned).map(p => String(p.sourceProgramId));
+  const savedAll = mine.filter(p => p.isAssigned || sentSrc.indexOf(String(p.id)) < 0)
+    .sort((a, b) => (b.isAssigned ? 1 : 0) - (a.isAssigned ? 1 : 0) || String(b.assignedDate || b.created || '').localeCompare(String(a.assignedDate || a.created || '')));
   const saved = search ? savedAll.filter(p => ((p.name||'') + ' ' + (p.notes||'') + ' ' + (p.mesoLabel||p.meso||'')).toLowerCase().includes(search)) : savedAll;
   const savedHTML = saved.map(p => {
     const dt = p.created ? new Date(p.created).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
@@ -3809,14 +3813,16 @@ function renderAthletePrograms() {
         <div style="flex:1;min-width:0;">
           <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(p.name||'Untitled')}</div>
           <div style="font-size:11px;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;">
-            <span style="color:var(--green);font-weight:600;">Program Builder</span>
+            ${p.isAssigned ? `<span style="color:var(--green);font-weight:600;">● Sent${p.assignedDate ? ' · Week 1 ' + (typeof fmtDate === 'function' ? fmtDate(p.assignedDate) : p.assignedDate) : ''}</span>` : `<span style="color:#f59e0b;font-weight:600;">Draft</span>`}
+            ${(typeof alBlocksForProgram === 'function' ? alBlocksForProgram(p) : []).map(x => `<span onclick="alOpenBlock('${jsq(x.key)}','${jsq(x.b.id)}')" title="Open in Annual Plan" style="color:#60a5fa;cursor:pointer;text-decoration:underline dotted;">📅 ${escHtml(alBlockLabel(x))}</span>`).join('')}
             <span style="color:var(--purple);">${escHtml(p.mesoLabel||p.meso||'')}</span>
             <span style="color:rgba(255,255,255,0.4);">${wk}${wk&&dt?' · ':''}${dt}</span>
           </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
-          <button onclick="openProgram(${p.id})" style="background:rgba(59,122,196,0.2);border:1px solid rgba(59,122,196,0.4);border-radius:5px;padding:4px 10px;color:var(--blue);font-size:11px;cursor:pointer;">Open</button>
-          <button onclick="showPushProgramModal(${p.id})" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:5px;padding:4px 10px;color:var(--green);font-size:11px;cursor:pointer;">📤 Send</button>
+          ${p.isAssigned && typeof peOpenLive === 'function' ? `<button onclick="peOpenLive('${p.id}')" title="Edit what he has on his phone" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:5px;padding:4px 10px;color:#f59e0b;font-size:11px;cursor:pointer;">✏️ Live edit</button>` : ''}
+          <button onclick="openProgram(${p.isAssigned && p.sourceProgramId && SAVED_PROGRAMS.some(x => String(x.id) === String(p.sourceProgramId)) ? p.sourceProgramId : p.id})" style="background:rgba(59,122,196,0.2);border:1px solid rgba(59,122,196,0.4);border-radius:5px;padding:4px 10px;color:var(--blue);font-size:11px;cursor:pointer;">Open</button>
+          <button onclick="showPushProgramModal(${p.isAssigned && p.sourceProgramId && SAVED_PROGRAMS.some(x => String(x.id) === String(p.sourceProgramId)) ? p.sourceProgramId : p.id})" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:5px;padding:4px 10px;color:var(--green);font-size:11px;cursor:pointer;">📤 Send</button>
           <button onclick="deleteProgram(${p.id});setTimeout(renderAthletePrograms,300)" title="Delete" style="background:rgba(204,52,51,0.15);border:1px solid rgba(204,52,51,0.3);border-radius:5px;padding:4px 8px;color:var(--red);font-size:11px;cursor:pointer;">✕</button>
         </div>
       </div>
@@ -16131,8 +16137,9 @@ function renderAnnualPlan() {
     var b = getBlockForWeek(w);
     if (!b) return '<td style="border:1px solid rgba(255,255,255,0.03);min-width:'+cellW+'px;max-width:'+cellW+'px;padding:2px;"></td>';
     var linked = !!b.linkedProgramId;
-    return '<td onclick="annualLinkProgramModal(\''+b.id+'\')" style="border:1px solid rgba(255,255,255,0.06);min-width:'+cellW+'px;max-width:'+cellW+'px;padding:2px;text-align:center;cursor:pointer;font-size:9px;" title="'+(linked?('Linked: '+(b.linkedProgramName||'')+' — click to change'):'No program linked — click to link one')+'">'
-      +(linked?'🔗':'<span style="color:#333;">＋</span>')+'</td>';
+    var stale = linked && typeof alIsStale === 'function' && alIsStale(b, (document.getElementById('annual-athlete')||{}).value||'');
+    return '<td onclick="annualLinkProgramModal(\''+b.id+'\')" style="border:1px solid rgba(255,255,255,0.06);min-width:'+cellW+'px;max-width:'+cellW+'px;padding:2px;text-align:center;cursor:pointer;font-size:9px;" title="'+(stale?('“'+(b.linkedProgramName||'Program')+'” was deleted — click to relink'):linked?('Linked: '+(b.linkedProgramName||'')+' — click to change'):'No program linked — click to link one')+'">'
+      +(stale?'⚠️':linked?'🔗':'<span style="color:#333;">＋</span>')+'</td>';
   }).join('');
 
   // Row 4: Training Method
@@ -16149,7 +16156,7 @@ function renderAnnualPlan() {
     var b = getBlockForWeek(w);
     if (!b) return '<td '+CELL+' style="color:#333;min-width:'+cellW+'px;max-width:'+cellW+'px;border:1px solid rgba(255,255,255,0.03);">—</td>';
     var wkInBlock = Math.floor((w - new Date(b.startDate))/(7*86400000))+1;
-    var real = annualGetLinkedWeekMetrics(b, wkInBlock);
+    var real = annualGetLinkedWeekMetrics(b, wkInBlock, w);
     var sets, reps, isReal = false;
     if (real) {
       sets = real.sets; reps = real.reps; isReal = true;
@@ -16171,7 +16178,7 @@ function renderAnnualPlan() {
     var b = getBlockForWeek(w);
     if (!b) return '<td '+CELL+' style="color:#333;min-width:'+cellW+'px;max-width:'+cellW+'px;border:1px solid rgba(255,255,255,0.03);">—</td>';
     var wkInBlock = Math.floor((w - new Date(b.startDate))/(7*86400000))+1;
-    var real = annualGetLinkedWeekMetrics(b, wkInBlock);
+    var real = annualGetLinkedWeekMetrics(b, wkInBlock, w);
     var load, isReal = false;
     if (real && real.load !== null) {
       load = real.load; isReal = true;
@@ -16321,7 +16328,7 @@ function annualShowBlockModal(existing, startDateStr) {
     +'</div>'
     +(isEdit ? (
       '<div style="margin-bottom:12px;padding:10px;border-radius:6px;background:'+(existing.linkedProgramId?'rgba(34,197,94,0.08)':'rgba(255,255,255,0.03)')+';border:1px solid '+(existing.linkedProgramId?'rgba(34,197,94,0.25)':'rgba(255,255,255,0.08)')+';display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-      +'<div style="font-size:11px;color:'+(existing.linkedProgramId?'#4ade80':'var(--text3)')+';">'+(existing.linkedProgramId?('🔗 Linked: '+existing.linkedProgramName):'No program linked — this block shows a generic projection')+'</div>'
+      +'<div style="font-size:11px;color:'+(existing.linkedProgramId?'#4ade80':'var(--text3)')+';">'+(existing.linkedProgramId?((typeof alIsStale==='function'&&alIsStale(existing,(document.getElementById('annual-athlete')||{}).value||''))?('⚠️ "'+existing.linkedProgramName+'" was deleted — relink'):('🔗 Linked: '+existing.linkedProgramName)):'No program linked — this block shows a generic projection')+'</div>'
       +'<button onclick="annualLinkProgramModal(\''+existing.id+'\')" style="padding:5px 10px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);border-radius:5px;color:#60a5fa;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">'+(existing.linkedProgramId?'Change':'Link Program')+'</button>'
       +'</div>'
       +(existing.linkedProgramId ? '' :
@@ -24421,6 +24428,7 @@ try {
 <script src="js/speed-intel.js?v=1"></script>
 <script src="js/program-edit.js?v=1"></script>
 <script src="js/program-history.js?v=1"></script>
+<script src="js/annual-link.js?v=1"></script>
 <script src="js/athlete-profile.js?v=2"></script>
 <script src="js/savant.js?v=3"></script>
 <script src="js/value-added.js?v=3"></script>
@@ -24430,7 +24438,7 @@ try {
 <script src="js/jump-kpi.js?v=6"></script>
 <script src="js/jump-lma.js?v=1"></script>
 <script src="js/data-fixes.js?v=1"></script>
-<script src="js/year-review.js?v=4"></script>
+<script src="js/year-review.js?v=5"></script>
 <script src="js/year-goals.js?v=3"></script>
 <script src="js/year-writeup.js?v=1"></script>
 </body>
