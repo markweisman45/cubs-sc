@@ -348,6 +348,8 @@ function siOpenHE(name) {
 
 // ── Inbox items ──
 function speedInboxItems() {
+  // In-season metrics (HE game runs) only notify in-season — the ⚾/🌙 roster toggle controls it
+  if (typeof isOffseason === 'function' && isOffseason()) return [];
   var c = siAll(), items = [], today = siToday();
   Object.keys(c.all).forEach(function (n) {
     var a = c.all[n], row = siLatestRow(n);
@@ -459,3 +461,14 @@ async function siPushSummaries(manual) {
   if (he && he.classList.contains('active')) try { renderSpeedIntel(); } catch (e) {}
 })();
 if (typeof module !== 'undefined') module.exports = SI;
+
+// Flipping the season toggle updates the Inbox right away
+(function () {
+  if (typeof toggleSeasonMode !== 'function') return;
+  var _t = toggleSeasonMode;
+  toggleSeasonMode = function () {
+    var r = _t.apply(this, arguments);
+    try { if (typeof updateInboxBadge === 'function') updateInboxBadge(); if (typeof currentPage !== 'undefined' && currentPage === 'inbox' && typeof renderInbox === 'function') renderInbox(); } catch (e) {}
+    return r;
+  };
+})();
