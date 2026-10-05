@@ -64,6 +64,16 @@ function llAthleteView(id) {
   var base = typeof PUSH_BASE_URL !== 'undefined' ? PUSH_BASE_URL : 'https://markweisman45.github.io/cubs-sc/program.html?id=';
   window.open(base + encodeURIComponent(String(id)) + '&preview=1', '_blank');
 }
+// Printable PDF (landscape, up to 4 weeks per page). Drafts sync to the cloud first.
+function llPrint(id) {
+  var base = typeof PUSH_BASE_URL !== 'undefined' ? PUSH_BASE_URL : 'https://markweisman45.github.io/cubs-sc/program.html?id=';
+  var url = base + encodeURIComponent(String(id)) + '&preview=1&print=1';
+  var p = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : []).find(function (x) { return String(x.id) === String(id); });
+  if (p && !p.isAssigned && typeof syncProgramsToSupabase === 'function') {
+    var w = window.open('about:blank', '_blank');
+    syncProgramsToSupabase().then(function () { if (w) w.location = url; else window.open(url, '_blank'); });
+  } else window.open(url, '_blank');
+}
 function llTakeDownAll(athlete) { return llTakeDown(llOrphans(athlete).map(function (r) { return r.id; })); }
 
 function llRefreshViews() {
@@ -79,6 +89,7 @@ function llRowsHTML(rows, showAthlete) {
     return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border-top:1px solid rgba(255,255,255,0.06);">'
       + '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (showAthlete ? llEsc(r.athlete) + ' — ' : '') + llEsc(r.name || 'Untitled') + '</div>'
       + '<div style="font-size:10px;color:var(--text3);">Sent ' + llFmt(r.created) + (r.logged ? ' · last logged ' + llFmt(r.logged) : ' · nothing logged') + '</div></div>'
+      + '<button onclick="llPrint(\'' + r.id + '\')" title="Print or save as PDF" style="' + b + 'background:rgba(255,255,255,0.05);border:1px solid var(--border2);color:var(--text2);">🖨 PDF</button>'
       + '<button onclick="llAthleteView(\'' + r.id + '\')" title="See it exactly as he does" style="' + b + 'background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);color:#60a5fa;">📱 Athlete view</button>'
       + (typeof peOpenLive === 'function' ? '<button onclick="peOpenLive(\'' + r.id + '\')" style="' + b + 'background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#f59e0b;">✏️ Live edit</button>' : '')
       + '<button onclick="llTakeDown(\'' + r.id + '\')" style="' + b + 'background:rgba(204,52,51,0.15);border:1px solid rgba(204,52,51,0.4);color:var(--red);font-weight:700;">⛔ Take down</button>'
@@ -107,6 +118,13 @@ function llPanel(rows, athlete) {
         if (!host) { host = document.createElement('div'); host.id = 'll-lib-panel'; grid.parentNode.insertBefore(host, grid); }
         var ath = (document.getElementById('prog-lib-athlete') || {}).value || '';
         host.innerHTML = llPanel(llOrphans(ath), '');
+        // 🖨 PDF on every program card that has weeks
+        grid.querySelectorAll('button[onclick^="openProgram("]').forEach(function (btn) {
+          var id = (btn.getAttribute('onclick').match(/openProgram\(([^)]+)\)/) || [])[1]; if (!id) return;
+          var pr = SAVED_PROGRAMS.find(function (x) { return String(x.id) === String(id).replace(/['"]/g, ''); });
+          if (!pr || !pr.pbState || !pr.pbState.weekData || !pr.pbState.weekData.length || btn.parentNode.querySelector('.ll-pdf')) return;
+          btn.insertAdjacentHTML('afterend', '<button class="ll-pdf" onclick="llPrint(\'' + pr.id + '\')" title="Print or save as PDF" style="' + btn.getAttribute('style') + '">🖨 PDF</button>');
+        });
         if (LL_ROWS === null) llLoad().then(function () { if (LL_ROWS) renderProgramLibrary(); });
       } catch (e) { console.warn('[live-links]', e); }
       return r;
