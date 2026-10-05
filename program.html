@@ -279,6 +279,7 @@ var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
   function showInstallBanner(mode) {
     if (isStandalone) return;
+    if (/[?&]preview=1/.test(location.search)) return;   // coach preview
     if (localStorage.getItem('cubs_sc_install_dismissed')) return;
     if (document.getElementById('installBanner')) return;
 
@@ -456,7 +457,17 @@ function setSync(state){
   el.className = 'sync' + (state === 'ok' ? ' ok' : state === 'off' ? ' off' : '');
   el.textContent = state === 'ok' ? '✓ Saved' : state === 'off' ? 'Offline · saved on phone' : state === 'saving' ? 'Saving…' : '';
 }
+// Coach preview (?preview=1): exactly what the athlete sees, but nothing you
+// tap is saved to his log or to this device.
+var PREVIEW = /[?&]preview=1/.test(location.search);
+if (PREVIEW) document.addEventListener('DOMContentLoaded', function(){
+  var b = document.createElement('div');
+  b.style.cssText = 'position:sticky;top:0;z-index:50;background:#f59e0b;color:#000;font:700 12px/1.3 system-ui,sans-serif;text-align:center;padding:7px 10px;';
+  b.textContent = '👁 Coach preview — this is his exact view. Nothing you tap is saved.';
+  document.body.insertBefore(b, document.body.firstChild);
+});
 function saveLog(){
+  if (PREVIEW) { setSync(''); return; }
   try { localStorage.setItem(logKey(), JSON.stringify(LOG)); localStorage.setItem('clogv_' + PROG.id, String(PROG.ver || 0)); } catch(e) {}
   _dirty = true;
   setSync('saving');
@@ -464,6 +475,7 @@ function saveLog(){
   _saveTimer = setTimeout(pushLog, 1200);
 }
 async function pushLog(){
+  if (PREVIEW) return;
   if (!SUPA || !_dirty) return;
   if (!navigator.onLine) { setSync('off'); return; }
   try {
