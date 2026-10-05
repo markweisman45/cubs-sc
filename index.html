@@ -19890,6 +19890,8 @@ function renderMonthView() {
           title="${e.data.homeaway} vs ${e.data.opponent} · ${e.data.time||''}"
           style="display:flex;align-items:center;gap:3px;cursor:grab;"
           >${renderGameChip(e.data, true)}</div>`;
+      } else if (e.type === 'program') {
+        evHTML += `<div class="cal-event lift" onclick="event.stopPropagation();showDayDetail('${dk}')" title="${escHtml(e.data.athlete + ' · ' + e.data.name)}" style="cursor:pointer;">${escHtml(e.label)}</div>`;
       } else {
         const wi = WORKOUT_SCHEDULE.findIndex(w => w.id===e.data.id);
         evHTML += `<div class="cal-event ${e.color}"
@@ -20010,6 +20012,8 @@ function showDayDetail(dk) {
             <button onclick="removeGame('${dk}','${(e.data.opponent||'').replace(/'/g,"\\'")}');showDayDetail('${dk}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;padding:5px 10px;">✕ Remove</button>
           </div>
         </div>`;
+      } else if (e.type==='program') {
+        html += (typeof pcalCardHTML === 'function' ? pcalCardHTML(e.data) : '');
       } else if (e.type==='workout') {
         const dt2 = DAY_TYPES[e.data.sessionType]||{};
         const prog = e.data.programId ? SAVED_PROGRAMS.find(p=>p.id===e.data.programId) : null;
@@ -24461,6 +24465,7 @@ try {
 <script src="js/program-history.js?v=1"></script>
 <script src="js/annual-link.js?v=1"></script>
 <script src="js/live-links.js?v=3"></script>
+<script src="js/program-calendar.js?v=1"></script>
 <script src="js/athlete-profile.js?v=2"></script>
 <script src="js/savant.js?v=3"></script>
 <script src="js/value-added.js?v=3"></script>
