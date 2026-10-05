@@ -14293,9 +14293,37 @@ function pbInit() {
         sel.appendChild(o);
       });
   }
+  // Picking a different athlete retargets the program in progress
+  if (sel) sel.addEventListener('change', pbAthleteChanged);
   // Default to sandbox mode
   pbSetMode('sandbox');
   pbPhaseChange();
+}
+
+// Keep PB_STATE.athlete in step with the Athlete dropdown. Before this, the
+// athlete was only read when the program was built, so switching the dropdown
+// afterwards (e.g. Nico → Michael Busch) still saved it to the first athlete.
+function pbAthleteChanged() {
+  if (pbMode === 'sandbox') return;
+  var sel = document.getElementById('pb-athlete'); if (!sel) return;
+  if (typeof PE_LIVE !== 'undefined' && PE_LIVE) {
+    if (sel.value !== PE_LIVE.athlete) { sel.value = PE_LIVE.athlete; showStatus('✏️ Live-editing ' + PE_LIVE.athlete + '\'s program — close it first to build for someone else'); }
+    return;
+  }
+  var prev = PB_STATE.athlete, next = sel.value;
+  if (!next || next === prev) return;
+  PB_STATE.athlete = next;
+  // If this program was already saved for another athlete, saving now makes a
+  // new program for the new athlete instead of moving the old one.
+  var forked = false;
+  if (PB_STATE._savedProgId) {
+    var sp = SAVED_PROGRAMS.find(function(p){ return String(p.id) === String(PB_STATE._savedProgId); });
+    if (sp && sp.athlete && sp.athlete !== '(Sandbox)' && sp.athlete !== next) { delete PB_STATE._savedProgId; PB_LOADED_PROGRAM_ID = null; forked = true; }
+  }
+  var nameEl = document.getElementById('pb-program-name');
+  if (nameEl && prev && nameEl.value.indexOf(prev) >= 0) nameEl.value = nameEl.value.split(prev).join(next);
+  if (PB_STATE.weekData && PB_STATE.weekData.length) pbCollapseSetup();
+  showStatus('👤 Program now for ' + next + (forked ? ' — saving creates a new program; ' + prev + '\'s stays as is' : ''));
 }
 
 function pbPhaseChange() {
@@ -15832,6 +15860,7 @@ function pbConfirmSaveAsTemplate(btn, name) {
 
 function pbSave(silent) {
   if (!PB_STATE.weekData.length) { alert('Build a program first'); return null; }
+  pbAthleteChanged();   // save to whoever is selected in the Athlete dropdown
   var nameEl = document.getElementById('pb-program-name');
   var name = ((nameEl && nameEl.value) || '').trim() || (PB_STATE.athlete + ' ' + PB_STATE.phase + ' ' + PB_STATE.weeks + 'wk');
   var existing = PB_STATE._savedProgId ? SAVED_PROGRAMS.find(function(p){ return String(p.id) === String(PB_STATE._savedProgId) && !p.isAssigned; }) : null;
