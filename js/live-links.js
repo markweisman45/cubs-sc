@@ -59,6 +59,11 @@ async function llTakeDown(ids, skipConfirm) {
   if (typeof showStatus === 'function') showStatus('⛔ Took down ' + ids.length + ' live program' + (ids.length === 1 ? '' : 's'));
   return true;
 }
+// Open a sent program exactly as the athlete sees it (read-only coach preview)
+function llAthleteView(id) {
+  var base = typeof PUSH_BASE_URL !== 'undefined' ? PUSH_BASE_URL : 'https://markweisman45.github.io/cubs-sc/program.html?id=';
+  window.open(base + encodeURIComponent(String(id)) + '&preview=1', '_blank');
+}
 function llTakeDownAll(athlete) { return llTakeDown(llOrphans(athlete).map(function (r) { return r.id; })); }
 
 function llRefreshViews() {
@@ -74,6 +79,7 @@ function llRowsHTML(rows, showAthlete) {
     return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border-top:1px solid rgba(255,255,255,0.06);">'
       + '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (showAthlete ? llEsc(r.athlete) + ' — ' : '') + llEsc(r.name || 'Untitled') + '</div>'
       + '<div style="font-size:10px;color:var(--text3);">Sent ' + llFmt(r.created) + (r.logged ? ' · last logged ' + llFmt(r.logged) : ' · nothing logged') + '</div></div>'
+      + '<button onclick="llAthleteView(\'' + r.id + '\')" title="See it exactly as he does" style="' + b + 'background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);color:#60a5fa;">📱 Athlete view</button>'
       + (typeof peOpenLive === 'function' ? '<button onclick="peOpenLive(\'' + r.id + '\')" style="' + b + 'background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#f59e0b;">✏️ Live edit</button>' : '')
       + '<button onclick="llTakeDown(\'' + r.id + '\')" style="' + b + 'background:rgba(204,52,51,0.15);border:1px solid rgba(204,52,51,0.4);color:var(--red);font-weight:700;">⛔ Take down</button>'
       + '</div>';
