@@ -528,6 +528,13 @@ function findToday(){
   }
   return null;
 }
+// Weight he used for this set the last time he did this exercise — fills the
+// box when there's no % target, and is what ✓ logs on an empty set.
+function lastWeight(ex, wi, di, s){
+  var last = lastTime(ex.name, wi, di); if (!last) return null;
+  var e = last.sets[Math.min(s, last.sets.length - 1)];
+  return e && e.weight ? String(e.weight) : null;
+}
 // Most recent earlier log of the same exercise (by name), for "Last time"
 function lastTime(name, beforeWi, beforeDi){
   var target = String(name).toLowerCase(), best = null;
@@ -713,7 +720,7 @@ function exHTML(wi, di, bi, ei, block, ex, tag){
     } else if (simple) {
       h += '<div class="set-rx">' + esc([ex.reps, ex.distance].filter(Boolean).join(' · ') || 'Set ' + (s + 1)) + '</div>';
     } else {
-      if (showLoad) h += '<div class="fld"><input data-f="weight" type="number" inputmode="decimal" placeholder="' + (tl || '—') + '" value="' + esc(e.weight || '') + '" oninput="setVal(\'' + k + '\',\'weight\',this.value)"><span class="u">lbs</span></div>';
+      if (showLoad) h += '<div class="fld"><input data-f="weight" type="number" inputmode="decimal" placeholder="' + esc(tl || lastWeight(ex, wi, di, s) || '—') + '" value="' + esc(e.weight || '') + '" oninput="setVal(\'' + k + '\',\'weight\',this.value)"><span class="u">lbs</span></div>';
       else h += '<div class="set-rx">' + (isBodyweight(ex) ? 'Bodyweight' : esc(ex.distance || '—')) + '</div>';
       if (repsField) h += '<div class="fld"><input data-f="actual_reps" type="number" inputmode="numeric" placeholder="' + tr + '" value="' + esc(e.actual_reps || '') + '" oninput="setVal(\'' + k + '\',\'actual_reps\',this.value)"><span class="u">reps' + repsSuffix(ex) + '</span></div>';
       else h += '<div class="set-rx">' + esc(ex.reps || ex.distance || '—') + '</div>';
@@ -856,7 +863,8 @@ function toggleSet(wi, di, bi, ei, s){
     // Tapping ✓ on an empty set logs it as written
     var blk = PROG.weekData[wi].days[di].blocks[bi];
     var tl = targetLoadAt(wi, di, ex), tr = TC.isRunEx(blk, ex) ? null : targetReps(ex, s);
-    if (!e.weight && tl && hasLoadField(blk, ex, wi, di)) e.weight = String(tl);
+    var tw = tl || lastWeight(ex, wi, di, s);
+    if (!e.weight && tw && hasLoadField(blk, ex, wi, di)) e.weight = String(tw);
     if (!e.actual_reps && tr !== null) e.actual_reps = String(tr);
     if (navigator.vibrate) navigator.vibrate(12);
   }
@@ -970,7 +978,8 @@ function saveFinish(){
           if (!e.done) {
             e.done = true; e.t = Date.now();
             var tl = targetLoadAt(wi, di, ex), tr = TC.isRunEx(b, ex) ? null : targetReps(ex, s);
-            if (!e.weight && tl && hasLoadField(b, ex, wi, di)) e.weight = String(tl);
+            var tw = tl || lastWeight(ex, wi, di, s);
+            if (!e.weight && tw && hasLoadField(b, ex, wi, di)) e.weight = String(tw);
             if (!e.actual_reps && tr !== null) e.actual_reps = String(tr);
           }
         }
