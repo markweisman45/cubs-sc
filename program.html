@@ -181,39 +181,44 @@ input,textarea{font-family:inherit;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .err{margin:24px 16px;padding:20px;border-radius:14px;text-align:center;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);color:#FCA5A5;font-size:14px;line-height:1.7;}
 
-/* ── Print / PDF — classic workout sheet ── */
+/* ── Print / PDF — weeks side by side ── */
 .print-btn{background:transparent;border:1px solid rgba(255,255,255,0.18);color:#cbd5e1;border-radius:8px;padding:5px 9px;font-size:13px;cursor:pointer;margin-right:8px;}
 #print-root{display:none;}
 @media print{
-  @page{size:letter portrait;margin:0.4in 0.4in 0.45in;}
+  @page{size:letter landscape;margin:0.35in 0.35in 0.4in;}
   html,body{background:#fff !important;}
   body > *:not(#print-root){display:none !important;}
-  #print-root{display:block;color:#111;font:9.5px/1.3 -apple-system,'Segoe UI',Roboto,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  .ws-hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #0e3386;padding-bottom:5px;margin-bottom:8px;}
-  .ws-hd .t{font-size:18px;font-weight:800;color:#0e3386;}
-  .ws-hd .s{font-size:11px;color:#333;margin-top:2px;}
-  .ws-hd .r{text-align:right;font-size:9px;color:#555;line-height:1.4;}
-  .ws-msg{border-left:3px solid #cc3433;background:#fbf3f3;padding:5px 8px;margin:0 0 8px;font-size:9.5px;}
-  .ws-wk{font-size:13px;font-weight:800;color:#fff;background:#0e3386;padding:4px 8px;margin:10px 0 5px;border-radius:3px;break-after:avoid;page-break-after:avoid;}
-  .ws-wk span{font-weight:500;font-size:10px;opacity:.9;margin-left:6px;}
-  .ws-day{break-inside:avoid;page-break-inside:avoid;margin-bottom:7px;}
-  .ws-dh{display:flex;justify-content:space-between;font-weight:800;font-size:10.5px;color:#0e3386;border-bottom:1px solid #0e3386;padding:2px 0;margin-bottom:2px;}
-  .ws-dh span{color:#555;font-weight:600;}
-  .ws-off{font-size:9px;color:#666;padding:2px 0 4px;border-bottom:1px dashed #ccc;margin-bottom:5px;}
-  .ws-day table{width:100%;border-collapse:collapse;table-layout:fixed;}
-  .ws-day th{background:#eef2fb;color:#0e3386;font-size:8px;text-transform:uppercase;letter-spacing:.03em;text-align:center;padding:2px 3px;border:1px solid #c9d3ea;}
-  .ws-day th.l{text-align:left;}
-  .ws-day td{border:1px solid #d6dbe6;padding:3px 4px;vertical-align:middle;text-align:center;}
-  .ws-day td.tag{font-weight:800;color:#0e3386;}
-  .ws-day td.ex{text-align:left;}
-  .ws-day td.ex b{font-size:9.5px;}
-  .ws-day .cue{display:block;color:#666;font-size:7.5px;line-height:1.25;margin-top:1px;}
-  .ws-day tr.blk td{background:#f5f6f8;text-align:left;font-weight:700;font-size:8px;color:#333;text-transform:uppercase;letter-spacing:.04em;padding:2px 4px;}
-  .ws-day tr.pg td{border-top:1.5px solid #9fb0d6;}
-  .ws-day td.bx{white-space:nowrap;text-align:left;}
-  .ws-day .box{display:inline-block;width:30px;height:15px;border:1px solid #9aa3b5;border-radius:2px;margin-right:3px;vertical-align:middle;}
-  .ws-day tr{break-inside:avoid;page-break-inside:avoid;}
-  .ws-ft{margin-top:8px;font-size:7.5px;color:#888;text-align:right;}
+  #print-root{display:block;color:#111;font:10px/1.25 -apple-system,'Segoe UI',Roboto,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .sb-pg{break-after:page;page-break-after:always;}
+  .sb-pg:last-child{break-after:auto;page-break-after:auto;}
+  .sb-hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #0e3386;padding-bottom:5px;margin-bottom:8px;}
+  .sb-hd .t{font-size:19px;font-weight:800;color:#0e3386;}
+  .sb-hd .s{font-size:11.5px;color:#333;margin-top:2px;}
+  .sb-hd .r{text-align:right;font-size:9.5px;color:#555;line-height:1.4;}
+  .sb-msg{border-left:3px solid #cc3433;background:#fbf3f3;padding:5px 9px;margin:0 0 8px;font-size:10.5px;}
+  .sb-day{break-inside:avoid;page-break-inside:avoid;margin-bottom:8px;}
+  .sb-dh{display:flex;justify-content:space-between;align-items:center;background:#0e3386;color:#fff;font-weight:800;font-size:12px;padding:4px 8px;border-radius:3px 3px 0 0;}
+  .sb-dh span{font-weight:600;font-size:10.5px;opacity:.9;}
+  .sb-day table{width:100%;border-collapse:collapse;table-layout:fixed;}
+  .sb-day th{background:#eef2fb;color:#0e3386;font-size:9px;text-transform:uppercase;letter-spacing:.03em;padding:2px 5px;border:1px solid #c9d3ea;text-align:center;}
+  .sb-day th.l{text-align:left;}
+  .sb-day th .dl{display:block;font-weight:600;text-transform:none;letter-spacing:0;color:#555;font-size:8.5px;}
+  .sb-day td{border:1px solid #d6dbe6;padding:2px 6px;vertical-align:top;text-align:center;}
+  .sb-day td.tag{font-weight:800;color:#0e3386;font-size:11px;vertical-align:middle;}
+  .sb-day td.ex{text-align:left;}
+  .sb-day td.ex b{font-size:11px;}
+  .sb-day .cue{display:block;color:#666;font-size:8px;line-height:1.2;margin-top:0;}
+  .sb-day td.mid{vertical-align:middle;font-weight:600;}
+  .sb-day td.wk{text-align:left;}
+  .sb-day td.wk b{font-size:11px;}
+  .sb-day .ld{color:#0e3386;font-weight:700;}
+  .sb-day .alt{display:block;color:#b45309;font-style:italic;font-size:9px;}
+  .sb-day .chg{display:block;color:#555;font-size:8.5px;}
+  .sb-day .wl{display:block;margin-top:2px;border-bottom:1px solid #9aa3b5;height:9px;}
+  .sb-day tr.blk td{background:#f5f6f8;text-align:left;font-weight:700;font-size:9px;color:#333;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;}
+  .sb-day tr{break-inside:avoid;page-break-inside:avoid;}
+  .sb-day td.na{background:#fafafa;}
+  .sb-ft{margin-top:6px;font-size:8.5px;color:#888;text-align:right;}
 }
 </style>
 <link rel="manifest" id="pwa-manifest">
@@ -1087,54 +1092,69 @@ async function init(){
     if (er.data && er.data.length) renderSession();
   } catch(e) {}
 }
-// ── Print / PDF — classic workout sheet ─────────────────────────────────────
-// Portrait. Each week is a section; each day is a table with Sets, Reps, Load,
-// Tempo and Rest columns plus one box per set to write the weight used.
+// ── Print / PDF — weeks side by side ──────────────────────────────────────────
+// Landscape. One table per training day: exercise, tempo and rest down the left,
+// then up to 4 weeks across (sets × reps @ load) with a line to write the weight.
 function printProgram(){
   if (!PROG || !PROG.weekData) return;
-  var W = PROG.weekData;
+  var W = PROG.weekData, per = 4, pages = [];
+  var nDays = Math.max.apply(null, W.map(function(w){ return (w.days || []).length; }));
   function fmt(d){ return d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; }
-  function cell(v){ return v ? esc(String(v)) : '<span style="color:#bbb;">—</span>'; }
-  var h = '<div class="ws-hd"><div><div class="t">' + esc(PROG.athlete || '') + '</div><div class="s">' + esc(PROG.name || '') + ' · ' + W.length + ' week' + (W.length === 1 ? '' : 's') + '</div></div>'
-    + '<div class="r">CUBS STRENGTH &amp; CONDITIONING' + (PROG.startDate ? '<br>Week 1 starts ' + fmt(parseISO(PROG.startDate)) : '') + '</div></div>';
-  if (PROG.note) h += '<div class="ws-msg"><b>Coach:</b> ' + esc(PROG.note) + '</div>';
-  W.forEach(function(wk, wi){
-    var d0 = null; (wk.days || []).some(function(d, di){ d0 = dayDate(wi, di); return !!d0; });
-    h += '<div class="ws-wk">Week ' + (wi + 1) + '<span>' + (d0 ? 'Week of ' + fmt(d0) : '') + (wk.isDeload ? ' · Deload' : '') + (wk.label && !/^week\s*\d+$/i.test(wk.label) ? ' · ' + esc(wk.label) : '') + '</span></div>';
-    (wk.days || []).forEach(function(day, di){
-      var dd = dayDate(wi, di);
-      if (!dayHasWork(day)) { h += '<div class="ws-off"><b>' + esc(day.day || '') + '</b>' + (dd ? ' ' + fmt(dd) : '') + ' · ' + esc(day.label || 'Off') + '</div>'; return; }
-      var maxSets = 1;
-      (day.blocks || []).forEach(function(b){ namedExs(b).forEach(function(ex){ maxSets = Math.max(maxSets, parseInt(ex.sets) || 1); }); });
-      maxSets = Math.min(maxSets, 6);
-      var t = '<div class="ws-day"><div class="ws-dh">' + esc(day.label || day.day) + '<span>' + esc(day.day || '') + (dd ? ' · ' + fmt(dd) : '') + '</span></div><table>'
-        + '<colgroup><col style="width:24px"><col><col style="width:32px"><col style="width:42px"><col style="width:54px"><col style="width:42px"><col style="width:38px"><col style="width:' + (maxSets * 34 + 8) + 'px"></colgroup>'
-        + '<tr><th></th><th class="l">Exercise</th><th>Sets</th><th>Reps</th><th>Load</th><th>Tempo</th><th>Rest</th><th class="l">Weight used</th></tr>';
-      (day.blocks || []).forEach(function(block, bi){
-        if (block.blockType === 'session-header') { t += '<tr class="blk"><td colspan="8">' + esc(block.label || 'Session') + '</td></tr>'; return; }
-        var exs = namedExs(block); if (!exs.length) return;
-        t += '<tr class="blk"><td colspan="8">' + esc(block.label || (block.blockType === 'speed' ? 'Speed' : 'Lift')) + '</td></tr>';
-        var counts = {}, prevPair = null;
-        exs.forEach(function(ex){
-          var tag = ex.pair ? (counts[ex.pair] = (counts[ex.pair] || 0) + 1, ex.pair + counts[ex.pair]) : '';
-          var newPair = ex.pair && ex.pair !== prevPair && prevPair !== null; prevPair = ex.pair || '';
-          var ei = namedExs(block).indexOf(ex);
-          var li = TC.autoLoad(pbObj(), LOG, ex, wi, di, sessCache());
-          var load = li && li.lbs ? li.lbs + ' lb' : (isBodyweight(ex) ? 'BW' : (ex.load || ''));
-          var reps = [ex.reps, ex.distance].filter(Boolean).join(' · ');
-          var tempo = ex.tempo && ex.tempo !== 'Tempo' ? ex.tempo : '';
-          var cue = ex.rtpNote || (ex.notes && ex.notes !== ex.name ? ex.notes : '');
-          var n = Math.min(6, Math.max(1, parseInt(ex.sets) || 1));
-          var boxes = (TC.isRunEx(block, ex) || isBodyweight(ex) || block.blockType === 'mobility' || block.blockType === 'prep') ? '' : new Array(n + 1).join('<span class="box"></span>');
-          t += '<tr' + (newPair ? ' class="pg"' : '') + '><td class="tag">' + esc(tag) + '</td><td class="ex"><b>' + esc(ex.name) + '</b>' + (cue ? '<span class="cue">' + esc(cue) + '</span>' : '') + '</td>'
-            + '<td>' + cell(ex.sets) + '</td><td>' + cell(reps) + '</td><td>' + cell(load) + '</td><td>' + cell(tempo) + '</td><td>' + cell(ex.rest) + '</td><td class="bx">' + boxes + '</td></tr>';
-        });
-      });
-      h += t + '</table></div>';
-    });
-  });
-  h += '<div class="ws-ft">Write the weight you used in a box for each set.</div>';
-  document.getElementById('print-root').innerHTML = h;
+  function tempoOf(e){ return e && e.tempo && e.tempo !== 'Tempo' ? e.tempo : ''; }
+  function exAtW(wi, di, bi, ei){ var d = (W[wi].days || [])[di], b = d && (d.blocks || [])[bi]; return b ? namedExs(b)[ei] : null; }
+  for (var c = 0; c < W.length; c += per) {
+    var wks = []; for (var w = c; w < Math.min(W.length, c + per); w++) wks.push(w);
+    var range = wks.length > 1 ? 'Weeks ' + (wks[0] + 1) + '–' + (wks[wks.length - 1] + 1) : 'Week ' + (wks[0] + 1);
+    var pg = '<div class="sb-pg"><div class="sb-hd"><div><div class="t">' + esc(PROG.athlete || '') + '</div><div class="s">' + esc(PROG.name || '') + ' · ' + range + ' of ' + W.length + '</div></div>'
+      + '<div class="r">CUBS STRENGTH &amp; CONDITIONING' + (PROG.startDate ? '<br>Week 1 starts ' + fmt(parseISO(PROG.startDate)) : '') + '</div></div>';
+    if (c === 0 && PROG.note) pg += '<div class="sb-msg"><b>Coach:</b> ' + esc(PROG.note) + '</div>';
+    var wkW = Math.floor(58 / wks.length);
+    for (var di = 0; di < nDays; di++) {
+      var live = wks.filter(function(wi){ var d = (W[wi].days || [])[di]; return d && dayHasWork(d); });
+      if (!live.length) continue;
+      var ref = W[live[0]].days[di];
+      var t = '<div class="sb-day"><div class="sb-dh">' + esc(ref.label || ref.day) + '<span>' + esc(ref.day || '') + '</span></div><table>'
+        + '<colgroup><col style="width:3.5%"><col style="width:23%"><col style="width:7%"><col style="width:6%">' + wks.map(function(){ return '<col style="width:' + wkW + '%">'; }).join('') + '</colgroup>'
+        + '<tr><th></th><th class="l">Exercise</th><th>Tempo</th><th>Rest</th>' + wks.map(function(wi){
+            var dd = dayDate(wi, di);
+            return '<th>Week ' + (wi + 1) + (W[wi].isDeload ? ' · Deload' : '') + '<span class="dl">' + (dd ? fmt(dd) : '&nbsp;') + '</span></th>';
+          }).join('') + '</tr>';
+      var nb = Math.max.apply(null, live.map(function(wi){ return (W[wi].days[di].blocks || []).length; }));
+      for (var bi = 0; bi < nb; bi++) {
+        var rb = null; live.some(function(wi){ rb = (W[wi].days[di].blocks || [])[bi]; return rb && (rb.blockType === 'session-header' || namedExs(rb).length); });
+        if (!rb) continue;
+        var cols = wks.length + 4;
+        if (rb.blockType === 'session-header') { t += '<tr class="blk"><td colspan="' + cols + '">' + esc(rb.label || 'Session') + '</td></tr>'; continue; }
+        var ne = Math.max.apply(null, live.map(function(wi){ var b = (W[wi].days[di].blocks || [])[bi]; return b ? namedExs(b).length : 0; }));
+        if (!ne) continue;
+        t += '<tr class="blk"><td colspan="' + cols + '">' + esc(rb.label || (rb.blockType === 'speed' ? 'Speed' : 'Lift')) + '</td></tr>';
+        var counts = {};
+        for (var ei = 0; ei < ne; ei++) {
+          var rx = null, rbk = rb;
+          live.some(function(wi){ var e = exAtW(wi, di, bi, ei); if (e) { rx = e; rbk = W[wi].days[di].blocks[bi]; } return !!e; });
+          if (!rx) continue;
+          var tag = rx.pair ? (counts[rx.pair] = (counts[rx.pair] || 0) + 1, rx.pair + counts[rx.pair]) : '';
+          var cue = rx.rtpNote || (rx.notes && rx.notes !== rx.name ? rx.notes : '');
+          t += '<tr><td class="tag">' + esc(tag) + '</td><td class="ex"><b>' + esc(rx.name) + '</b>' + (cue ? '<span class="cue">' + esc(cue) + '</span>' : '') + '</td>'
+            + '<td class="mid">' + (esc(tempoOf(rx)) || '—') + '</td><td class="mid">' + (esc(rx.rest || '') || '—') + '</td>'
+            + wks.map(function(wi){
+                var d = (W[wi].days || [])[di], b = d && (d.blocks || [])[bi], e = exAtW(wi, di, bi, ei);
+                if (!e || !dayHasWork(d)) return '<td class="na"></td>';
+                var li = TC.autoLoad(pbObj(), LOG, e, wi, di, sessCache());
+                var sr = [e.sets && e.reps ? e.sets + ' × ' + e.reps : (e.sets ? e.sets + ' sets' : e.reps || ''), e.distance || ''].filter(Boolean).join(' · ');
+                var load = li && li.lbs ? li.lbs + ' lb' : (isBodyweight(e) ? 'BW' : (e.load || ''));
+                var alt = e.name !== rx.name ? '<span class="alt">' + esc(e.name) + '</span>' : '';
+                var chg = [tempoOf(e) && tempoOf(e) !== tempoOf(rx) ? 'Tempo ' + tempoOf(e) : '', e.rest && e.rest !== rx.rest ? 'Rest ' + e.rest : ''].filter(Boolean).join(' · ');
+                var showW = !TC.isRunEx(b, e) && !isBodyweight(e) && b.blockType !== 'mobility' && b.blockType !== 'prep';
+                return '<td class="wk">' + alt + '<b>' + (esc(sr) || '—') + '</b>' + (load ? ' <span class="ld">@ ' + esc(load) + '</span>' : '') + (chg ? '<span class="chg">' + esc(chg) + '</span>' : '') + (showW ? '<span class="wl"></span>' : '') + '</td>';
+              }).join('') + '</tr>';
+        }
+      }
+      pg += t + '</table></div>';
+    }
+    pages.push(pg + '<div class="sb-ft">Write the weight you used on the line under each week.</div></div>');
+  }
+  document.getElementById('print-root').innerHTML = pages.join('');
   var tt = document.title; document.title = (PROG.athlete || 'Program') + ' — ' + (PROG.name || 'Program');
   setTimeout(function(){ window.print(); document.title = tt; }, 150);
 }
