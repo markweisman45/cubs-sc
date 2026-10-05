@@ -3820,6 +3820,7 @@ function renderAthletePrograms() {
           </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
+          ${p.pbState && p.pbState.weekData && p.pbState.weekData.length ? `<button onclick="llPrint('${p.id}')" title="Print or save as PDF — up to 4 weeks per page" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:5px;padding:4px 10px;color:var(--text2);font-size:11px;cursor:pointer;">🖨 PDF</button>` : ''}
           ${p.isAssigned ? `<button onclick="llAthleteView('${p.id}')" title="See it exactly as he does" style="background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);border-radius:5px;padding:4px 10px;color:#60a5fa;font-size:11px;cursor:pointer;">📱 Athlete view</button>` : ''}
           ${p.isAssigned && typeof peOpenLive === 'function' ? `<button onclick="peOpenLive('${p.id}')" title="Edit what he has on his phone" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:5px;padding:4px 10px;color:#f59e0b;font-size:11px;cursor:pointer;">✏️ Live edit</button>` : ''}
           <button onclick="openProgram(${p.isAssigned && p.sourceProgramId && SAVED_PROGRAMS.some(x => String(x.id) === String(p.sourceProgramId)) ? p.sourceProgramId : p.id})" style="background:rgba(59,122,196,0.2);border:1px solid rgba(59,122,196,0.4);border-radius:5px;padding:4px 10px;color:var(--blue);font-size:11px;cursor:pointer;">Open</button>
@@ -24459,7 +24460,7 @@ try {
 <script src="js/program-edit.js?v=1"></script>
 <script src="js/program-history.js?v=1"></script>
 <script src="js/annual-link.js?v=1"></script>
-<script src="js/live-links.js?v=2"></script>
+<script src="js/live-links.js?v=3"></script>
 <script src="js/athlete-profile.js?v=2"></script>
 <script src="js/savant.js?v=3"></script>
 <script src="js/value-added.js?v=3"></script>

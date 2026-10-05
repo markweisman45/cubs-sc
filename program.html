@@ -180,6 +180,36 @@ input,textarea{font-family:inherit;}
 .spin{width:28px;height:28px;border:2px solid rgba(255,255,255,0.08);border-top-color:var(--blue-l);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .err{margin:24px 16px;padding:20px;border-radius:14px;text-align:center;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);color:#FCA5A5;font-size:14px;line-height:1.7;}
+
+/* ── Print / PDF (multiple weeks per page) ── */
+.print-btn{background:transparent;border:1px solid rgba(255,255,255,0.18);color:#cbd5e1;border-radius:8px;padding:5px 9px;font-size:13px;cursor:pointer;margin-right:8px;}
+#print-root{display:none;}
+@media print{
+  @page{size:letter landscape;margin:0.35in;}
+  html,body{background:#fff !important;}
+  body > *:not(#print-root){display:none !important;}
+  #print-root{display:block;color:#111;font:9px/1.25 -apple-system,'Segoe UI',Roboto,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .pp{page-break-after:always;break-after:page;}
+  .pp:last-child{page-break-after:auto;break-after:auto;}
+  .pp-hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #0e3386;padding-bottom:4px;margin-bottom:6px;}
+  .pp-hd .t{font-size:15px;font-weight:800;color:#0e3386;letter-spacing:.02em;}
+  .pp-hd .s{font-size:10px;color:#444;margin-top:1px;}
+  .pp-hd .r{text-align:right;font-size:9px;color:#555;}
+  .pp-day{font-size:11px;font-weight:800;color:#fff;background:#0e3386;padding:3px 7px;margin:7px 0 0;border-radius:3px 3px 0 0;display:flex;justify-content:space-between;}
+  .pp table{width:100%;border-collapse:collapse;table-layout:fixed;}
+  .pp th{background:#eef2fb;color:#0e3386;font-size:8.5px;text-align:left;padding:2px 4px;border:1px solid #c9d3ea;}
+  .pp td{border:1px solid #d6dbe6;padding:2px 4px;vertical-align:top;}
+  .pp td.tag{width:22px;text-align:center;font-weight:800;color:#0e3386;}
+  .pp td.ex{width:22%;}
+  .pp td.ex b{font-size:9px;}
+  .pp .meta{color:#666;font-size:7.5px;}
+  .pp .alt{color:#b45309;font-style:italic;font-size:8px;}
+  .pp .wl{display:block;margin-top:2px;border-bottom:1px solid #bbb;height:9px;}
+  .pp tr.sec td{background:#f5f6f8;font-weight:700;font-size:8px;color:#333;text-transform:uppercase;letter-spacing:.04em;}
+  .pp tr{page-break-inside:avoid;break-inside:avoid;}
+  .pp-day-wrap{page-break-inside:avoid;break-inside:avoid;}
+  .pp-ft{margin-top:6px;font-size:7.5px;color:#888;text-align:right;}
+}
 </style>
 <link rel="manifest" id="pwa-manifest">
 <meta name="theme-color" content="#0E2355">
@@ -196,6 +226,7 @@ input,textarea{font-family:inherit;}
     <div class="brand-text"><div class="t1">CUBS S&amp;C</div><div class="t2">Training Program</div></div>
   </div>
   <div class="top-right">
+    <button class="print-btn" onclick="printProgram()" title="Print or save as PDF">🖨</button>
     <div class="sync" id="sync"></div>
     <svg class="ring-svg" width="34" height="34" viewBox="0 0 34 34">
       <circle class="ring-track" cx="17" cy="17" r="13"/>
@@ -204,6 +235,7 @@ input,textarea{font-family:inherit;}
   </div>
 </div>
 
+<div id="print-root"></div>
 <div id="root"><div class="loading"><div class="spin"></div>Loading your program…</div></div>
 
 <div class="bottom" id="bottom" style="display:none;">
@@ -1042,6 +1074,7 @@ async function init(){
   }
   renderAll();
   setSync(navigator.onLine ? '' : 'off');
+  if (/[?&]print=1/.test(location.search)) setTimeout(printProgram, 400);   // opened from the dashboard's 🖨 PDF
 
   try {
     var er = await SUPA.from('exercises').select('name,mechanism_text,sport_transfer,video').not('mechanism_text', 'is', null);
@@ -1049,6 +1082,64 @@ async function init(){
     if (er.data && er.data.length) renderSession();
   } catch(e) {}
 }
+// ── Print / PDF ──────────────────────────────────────────────────────────────
+// Landscape pages, up to 4 weeks side by side: one table per training day,
+// rows = exercises (A1, A2…), columns = weeks, with a write-in line per week.
+function printProgram(){
+  if (!PROG || !PROG.weekData) return;
+  var W = PROG.weekData, per = 4, pages = [];
+  var nDays = Math.max.apply(null, W.map(function(w){ return (w.days || []).length; }));
+  function fmt(d){ return d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; }
+  for (var c = 0; c < W.length; c += per) {
+    var wks = []; for (var w = c; w < Math.min(W.length, c + per); w++) wks.push(w);
+    var daysHTML = '';
+    for (var di = 0; di < nDays; di++) {
+      var live = wks.filter(function(wi){ var d = (W[wi].days || [])[di]; return d && dayHasWork(d); });
+      if (!live.length) continue;
+      var ref = W[live[0]].days[di];
+      var nb = Math.max.apply(null, live.map(function(wi){ return (W[wi].days[di].blocks || []).length; }));
+      var head = '<tr><th style="width:22px;"></th><th class="exh" style="width:22%;">Exercise</th>' + wks.map(function(wi){
+        var d = (W[wi].days || [])[di], dd = dayDate(wi, di);
+        return '<th>Week ' + (wi + 1) + (dd ? ' · ' + fmt(dd) : '') + (d && W[wi].isDeload ? ' · Deload' : '') + '</th>';
+      }).join('') + '</tr>';
+      var rows = '';
+      for (var bi = 0; bi < nb; bi++) {
+        var rb = null; live.some(function(wi){ rb = (W[wi].days[di].blocks || [])[bi]; return rb && namedExs(rb).length; });
+        if (!rb) continue;
+        if (rb.blockType === 'session-header') { rows += '<tr class="sec"><td colspan="' + (wks.length + 2) + '">' + esc(rb.label || 'Session') + '</td></tr>'; continue; }
+        var ne = Math.max.apply(null, live.map(function(wi){ var b = (W[wi].days[di].blocks || [])[bi]; return b ? namedExs(b).length : 0; }));
+        if (!ne) continue;
+        rows += '<tr class="sec"><td colspan="' + (wks.length + 2) + '">' + blockIcon(rb.blockType) + ' ' + esc(rb.label || (rb.blockType === 'speed' ? 'Speed' : 'Lift')) + '</td></tr>';
+        var counts = {};
+        for (var ei = 0; ei < ne; ei++) {
+          var rx = null, rwi = live[0];
+          live.some(function(wi){ var b = (W[wi].days[di].blocks || [])[bi]; var e = b && namedExs(b)[ei]; if (e) { rx = e; rwi = wi; } return !!e; });
+          if (!rx) continue;
+          var tag = rx.pair ? (counts[rx.pair] = (counts[rx.pair] || 0) + 1, rx.pair + counts[rx.pair]) : '';
+          var meta = [rx.tempo && rx.tempo !== 'Tempo' ? 'Tempo ' + rx.tempo : '', rx.rest ? 'Rest ' + rx.rest : ''].filter(Boolean).join(' · ');
+          rows += '<tr><td class="tag">' + esc(tag) + '</td><td class="ex"><b>' + esc(rx.name) + '</b>' + (meta ? '<div class="meta">' + esc(meta) + '</div>' : '') + '</td>'
+            + wks.map(function(wi){
+                var d = (W[wi].days || [])[di], b = d && (d.blocks || [])[bi], e = b && namedExs(b)[ei];
+                if (!e || !dayHasWork(d)) return '<td style="background:#fafafa;"></td>';
+                var li = TC.autoLoad(pbObj(), LOG, e, wi, di, sessCache());
+                var alt = e.name !== rx.name ? '<div class="alt">' + esc(e.name) + '</div>' : '';
+                var showW = !TC.isRunEx(b, e) && !isBodyweight(e) && !(e.distance && !e.load);
+                return '<td>' + alt + (rxLine(b, e, li) || '—') + (showW ? '<span class="wl"></span>' : '') + '</td>';
+              }).join('') + '</tr>';
+        }
+      }
+      daysHTML += '<div class="pp-day-wrap"><div class="pp-day"><span>' + esc(ref.label || ref.day) + '</span><span>' + esc(ref.day || '') + '</span></div><table>' + head + rows + '</table></div>';
+    }
+    var range = 'Weeks ' + (wks[0] + 1) + (wks.length > 1 ? '–' + (wks[wks.length - 1] + 1) : '') + ' of ' + W.length;
+    pages.push('<div class="pp"><div class="pp-hd"><div><div class="t">' + esc(PROG.athlete || '') + '</div><div class="s">' + esc(PROG.name || '') + ' · ' + range + '</div></div>'
+      + '<div class="r">CUBS STRENGTH &amp; CONDITIONING' + (PROG.startDate ? '<br>Week 1 starts ' + fmt(parseISO(PROG.startDate)) : '') + '</div></div>' + daysHTML
+      + '<div class="pp-ft">Write the weight you used on the line under each week.</div></div>');
+  }
+  document.getElementById('print-root').innerHTML = pages.join('');
+  var t = document.title; document.title = (PROG.athlete || 'Program') + ' — ' + (PROG.name || 'Program');
+  setTimeout(function(){ window.print(); document.title = t; }, 150);
+}
+
 init();
 </script>
 </body>
