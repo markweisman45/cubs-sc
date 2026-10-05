@@ -757,14 +757,12 @@ function readinessHTML(wi, di){
     + '<div class="q">Sleep last night</div>' + opts('sleep', ['<6','6-7','7-8','8+'], ['Under 6 hrs','6–7','7–8','8+'])
     + '<div class="q">Soreness</div>' + opts('sore', [1,2,3,4,5], ['1 None','2','3','4','5 Very'])
     + '<div class="q">Energy</div>' + opts('energy', [1,2,3,4,5], ['1 Drained','2','3','4','5 Great'])
-    + '<div class="q">Broad jump <span style="color:var(--text3);font-weight:500;">(optional, inches' + (best ? ' · your best ' + best : '') + ')</span></div>'
-    + '<div class="fld" style="max-width:160px;"><input type="number" inputmode="decimal" id="rq-jump" value="' + esc(RQ.jump || '') + '" oninput="RQ.jump=this.value"><span class="u">in</span></div>'
     + '<div class="actions" style="margin-top:14px;"><button class="btn-ghost" onclick="skipReady()">Skip</button><button class="btn-main" onclick="saveReady()">Start session</button></div></div>';
 }
 function startReady(){ var r = readyOf(S.week, S.day) || {}; RQ = { key: S.week + '-' + S.day, sleep: r.sleep || null, sore: r.sore || null, energy: r.energy || null, jump: r.jump || '' }; renderSession(); }
 function skipReady(){ LOG['ready:' + S.week + '-' + S.day] = { skipped: true, date: localISO(), t: Date.now() }; RQ = null; saveLog(); renderSession(); }
 function saveReady(){
-  if (!RQ.sleep || !RQ.sore || !RQ.energy) { alert('Answer sleep, soreness and energy (jump is optional).'); return; }
+  if (!RQ.sleep || !RQ.sore || !RQ.energy) { alert('Answer sleep, soreness and energy.'); return; }
   var best = TC.bestJump(LOG);
   var res = TC.readiness(RQ, best);
   LOG['ready:' + S.week + '-' + S.day] = { sleep: RQ.sleep, sore: RQ.sore, energy: RQ.energy, jump: RQ.jump || null, level: res.level, points: res.points, why: res.why, date: localISO(), t: Date.now() };
