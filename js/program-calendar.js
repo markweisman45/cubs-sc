@@ -68,6 +68,7 @@ function pcalCardHTML(p) {
     + '<div style="font-size:20px;">🏋️</div><div style="flex:1;min-width:160px;"><div style="font-weight:600;">' + escHtml(p.athlete) + ' · ' + escHtml(p.label) + '</div>'
     + '<div style="font-size:11px;color:var(--text2);">' + escHtml(p.name || 'Program') + ' · Week ' + (p.wi + 1) + ' · ' + st + '</div></div>'
     + '<div style="display:flex;gap:6px;">'
+    + (typeof llShare === 'function' ? '<button onclick="llShare(\'' + p.rowId + '\')" style="' + b + 'background:#22c55e;border:none;color:#000;font-weight:700;">📲 Send</button>' : '')
     + (typeof llAthleteView === 'function' ? '<button onclick="llAthleteView(\'' + p.rowId + '\')" style="' + b + 'background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);color:#60a5fa;">📱 Athlete view</button>' : '')
     + (typeof peOpenLive === 'function' ? '<button onclick="peOpenLive(\'' + p.rowId + '\')" style="' + b + 'background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#f59e0b;">✏️ Live edit</button>' : '')
     + '</div></div>';

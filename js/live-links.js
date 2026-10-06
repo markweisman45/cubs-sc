@@ -59,6 +59,56 @@ async function llTakeDown(ids, skipConfirm) {
   if (typeof showStatus === 'function') showStatus('⛔ Took down ' + ids.length + ' live program' + (ids.length === 1 ? '' : 's'));
   return true;
 }
+// ── 📲 Share a program link: text it, email it to yourself, copy, or scan the QR ──
+var LL_COACH_EMAIL = 'markweisman45@gmail.com';
+function llLinkOf(id) { return (typeof PUSH_BASE_URL !== 'undefined' ? PUSH_BASE_URL : 'https://markweisman45.github.io/cubs-sc/program.html?id=') + encodeURIComponent(String(id)); }
+function llLoadQR(cb) {
+  if (window.QRious) return cb();
+  var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js';
+  s.onload = cb; s.onerror = function () {}; document.head.appendChild(s);
+}
+function llShare(id) {
+  var row = (LL_ROWS || []).find(function (r) { return r.id === String(id); }) || {};
+  var p = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : []).find(function (x) { return String(x.id) === String(id); }) || {};
+  var athlete = row.athlete || p.athlete || '', name = row.name || p.name || 'program';
+  var first = String(athlete).split(' ')[0] || '';
+  var url = llLinkOf(id);
+  var start = p.assignedDate || (p.pbState && p.pbState.startDate) || '';
+  var msg = 'Hey ' + first + ' — your new program is ready' + (start ? ' (Week 1 starts ' + (typeof fmtDate === 'function' ? fmtDate(start) : start) + ')' : '') + '. Tap to open, then "Add to Home Screen" so it\'s one tap next time:\n' + url;
+  document.querySelectorAll('.ll-share').forEach(function (m) { m.remove(); });
+  var m = document.createElement('div'); m.className = 'll-share';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  var b = 'display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;';
+  m.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:18px;width:460px;max-width:100%;max-height:90vh;overflow:auto;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><div><div style="font-size:15px;font-weight:700;color:#fff;">📲 Send to ' + llEsc(athlete) + '</div>'
+    + '<div style="font-size:11px;color:var(--text3);">' + llEsc(name) + '</div></div><button data-x style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;">✕</button></div>'
+    + '<textarea id="ll-msg" rows="4" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;padding:8px;resize:vertical;">' + llEsc(msg) + '</textarea>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">'
+    + '<a id="ll-sms" style="' + b + 'background:#22c55e;color:#000;">💬 Text it</a>'
+    + '<a id="ll-mail" style="' + b + 'background:#6366f1;color:#fff;">📧 Email to me</a>'
+    + '<button id="ll-copy" style="' + b + 'background:rgba(255,255,255,.06);border:1px solid var(--border2);color:var(--text2);">📋 Copy message</button>'
+    + '<button id="ll-copyl" style="' + b + 'background:rgba(255,255,255,.06);border:1px solid var(--border2);color:var(--text2);">🔗 Copy link only</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:12px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">'
+    + '<canvas id="ll-qr" width="120" height="120" style="background:#fff;border-radius:8px;padding:6px;flex-shrink:0;"></canvas>'
+    + '<div style="font-size:11px;color:var(--text2);line-height:1.5;"><b style="color:#fff;">Scan with your phone camera</b> to open his program on your phone, then use Share → Messages to text it to him.<br><span style="color:var(--text3);">💬 Text it opens Messages on an iPhone or a Mac. 📧 Email to me opens your email app addressed to ' + llEsc(LL_COACH_EMAIL) + ' — change the "To" to email him directly.</span></div></div>'
+    + '</div>';
+  document.body.appendChild(m);
+  function cur() { return document.getElementById('ll-msg').value; }
+  function refresh() {
+    document.getElementById('ll-sms').href = 'sms:?&body=' + encodeURIComponent(cur());
+    document.getElementById('ll-mail').href = 'mailto:' + LL_COACH_EMAIL + '?subject=' + encodeURIComponent('Program link — ' + athlete + ' · ' + name) + '&body=' + encodeURIComponent(cur());
+  }
+  function copy(btn, txt) {
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { var o = btn.textContent; btn.textContent = '✓ Copied'; setTimeout(function () { btn.textContent = o; }, 1500); }).catch(function () { window.prompt('Copy this:', txt); });
+  }
+  refresh();
+  document.getElementById('ll-msg').addEventListener('input', refresh);
+  document.getElementById('ll-copy').onclick = function () { copy(this, cur()); };
+  document.getElementById('ll-copyl').onclick = function () { copy(this, url); };
+  m.addEventListener('click', function (e) { if (e.target === m || e.target.hasAttribute('data-x')) m.remove(); });
+  llLoadQR(function () { try { new QRious({ element: document.getElementById('ll-qr'), value: url, size: 120, level: 'M' }); } catch (e) {} });
+}
 // Open a sent program exactly as the athlete sees it (read-only coach preview)
 function llAthleteView(id) {
   var base = typeof PUSH_BASE_URL !== 'undefined' ? PUSH_BASE_URL : 'https://markweisman45.github.io/cubs-sc/program.html?id=';
@@ -89,6 +139,7 @@ function llRowsHTML(rows, showAthlete) {
     return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border-top:1px solid rgba(255,255,255,0.06);">'
       + '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (showAthlete ? llEsc(r.athlete) + ' — ' : '') + llEsc(r.name || 'Untitled') + '</div>'
       + '<div style="font-size:10px;color:var(--text3);">Sent ' + llFmt(r.created) + (r.logged ? ' · last logged ' + llFmt(r.logged) : ' · nothing logged') + '</div></div>'
+      + '<button onclick="llShare(\'' + r.id + '\')" style="' + b + 'background:#22c55e;border:none;color:#000;font-weight:700;">📲 Send</button>'
       + '<button onclick="llPrint(\'' + r.id + '\')" title="Print or save as PDF" style="' + b + 'background:rgba(255,255,255,0.05);border:1px solid var(--border2);color:var(--text2);">🖨 PDF</button>'
       + '<button onclick="llAthleteView(\'' + r.id + '\')" title="See it exactly as he does" style="' + b + 'background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);color:#60a5fa;">📱 Athlete view</button>'
       + (typeof peOpenLive === 'function' ? '<button onclick="peOpenLive(\'' + r.id + '\')" style="' + b + 'background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#f59e0b;">✏️ Live edit</button>' : '')
