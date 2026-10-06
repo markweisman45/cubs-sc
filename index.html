@@ -3823,6 +3823,7 @@ function renderAthletePrograms() {
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
           ${p.pbState && p.pbState.weekData && p.pbState.weekData.length ? `<button onclick="llPrint('${p.id}')" title="Print or save as PDF — up to 4 weeks per page" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:5px;padding:4px 10px;color:var(--text2);font-size:11px;cursor:pointer;">🖨 PDF</button>` : ''}
+          ${p.isAssigned ? `<button onclick="llShare('${p.id}')" title="Text it, email it to yourself, or scan the QR" style="background:#22c55e;border:none;border-radius:5px;padding:4px 10px;color:#000;font-size:11px;font-weight:700;cursor:pointer;">📲 Send link</button>` : ''}
           ${p.isAssigned ? `<button onclick="llAthleteView('${p.id}')" title="See it exactly as he does" style="background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.4);border-radius:5px;padding:4px 10px;color:#60a5fa;font-size:11px;cursor:pointer;">📱 Athlete view</button>` : ''}
           ${p.isAssigned && typeof peOpenLive === 'function' ? `<button onclick="peOpenLive('${p.id}')" title="Edit what he has on his phone" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:5px;padding:4px 10px;color:#f59e0b;font-size:11px;cursor:pointer;">✏️ Live edit</button>` : ''}
           <button onclick="openProgram(${p.isAssigned && p.sourceProgramId && SAVED_PROGRAMS.some(x => String(x.id) === String(p.sourceProgramId)) ? p.sourceProgramId : p.id})" style="background:rgba(59,122,196,0.2);border:1px solid rgba(59,122,196,0.4);border-radius:5px;padding:4px 10px;color:var(--blue);font-size:11px;cursor:pointer;">Open</button>
@@ -8774,6 +8775,7 @@ function showPushProgramModal(progId) {
             + '<div style="font-size:13px;color:#fff;font-weight:600;">' + escHtml(r.athlete) + (r.err ? '' : ' <span style="font-size:10px;color:' + (r.updated ? '#60a5fa' : '#4ADE80') + ';font-weight:500;">' + (r.updated ? 'updated — same link' : 'new link') + '</span>') + '</div>'
             + (r.err ? '<span style="font-size:11px;color:#f87171;">' + escHtml(r.err) + '</span>'
               : '<div style="display:flex;gap:6px;">'
+                + (typeof llShare === 'function' ? '<button onclick="llShare(\'' + r.id + '\')" style="padding:6px 10px;background:#22c55e;border:none;border-radius:6px;color:#000;font-size:11px;font-weight:700;cursor:pointer;">📲 Send</button>' : '')
                 + '<button data-copy="' + escHtml(r.url) + '" style="padding:6px 10px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">Copy link</button>'
                 + '<a href="sms:&body=' + encodeURIComponent(msg) + '" style="padding:6px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#cbd5e1;font-size:11px;text-decoration:none;">Text</a>'
                 + '<a href="' + escHtml(r.url) + '" target="_blank" style="padding:6px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#cbd5e1;font-size:11px;text-decoration:none;">Open</a>'
@@ -24466,8 +24468,8 @@ try {
 <script src="js/program-edit.js?v=1"></script>
 <script src="js/program-history.js?v=1"></script>
 <script src="js/annual-link.js?v=1"></script>
-<script src="js/live-links.js?v=3"></script>
-<script src="js/program-calendar.js?v=2"></script>
+<script src="js/live-links.js?v=4"></script>
+<script src="js/program-calendar.js?v=3"></script>
 <script src="js/athlete-profile.js?v=2"></script>
 <script src="js/savant.js?v=3"></script>
 <script src="js/value-added.js?v=3"></script>
