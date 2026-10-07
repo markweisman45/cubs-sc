@@ -8,7 +8,7 @@
 var PH_MAX = 20;
 var PH_BY = { push: '📤 Sent', resend: '🔁 Re-sent from master', edit: '✏️ Live edit', restore: '↩️ Restored', baseline: '📌 Before history started' };
 function phKey(rowId) { return 'hist:' + rowId; }
-function phStrip(st) { var s = JSON.parse(JSON.stringify(st)); ['messages', 'speedSummary', 'remaps', 'lastChange', 'activeWeek'].forEach(function (k) { delete s[k]; }); return s; }
+function phStrip(st) { var s = JSON.parse(JSON.stringify(st)); ['messages', 'speedSummary', 'profile', 'remaps', 'lastChange', 'activeWeek'].forEach(function (k) { delete s[k]; }); return s; }
 async function phLoad(db, rowId) {
   var r = await db.from('cubs_sc_data').select('value').eq('key', phKey(rowId)).maybeSingle();
   if (r.error) throw r.error;

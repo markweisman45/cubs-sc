@@ -117,6 +117,7 @@ async function peWriteProgram(db, rowId, newSt, opts) {
   if (cloud) {   // keep what lives on the athlete's copy
     newSt.messages = cloud.messages || [];
     if (cloud.speedSummary) newSt.speedSummary = cloud.speedSummary;
+    if (cloud.profile) newSt.profile = cloud.profile;
   }
   var changes = (opts.extraChanges || []).concat(rm.changes);
   if (cloud && cloud.startDate && newSt.startDate && cloud.startDate !== newSt.startDate) changes.unshift({ wi: null, di: null, text: 'Schedule moved — Week 1 now starts ' + (typeof fmtDate === 'function' ? fmtDate(newSt.startDate) : newSt.startDate) });
