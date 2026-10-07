@@ -600,6 +600,33 @@ function lastTime(name, beforeWi, beforeDi){
 }
 
 // ── Rendering ───────────────────────────────────────────────────────────────
+// Profile: his KPIs + off-season goals (written by the coach dashboard)
+function profileCardHTML(){
+  var pf = PROG.profile; if (!pf || (!(pf.kpis || []).length && !(pf.goals || []).length)) return '';
+  var open = true; try { open = localStorage.getItem('cprof_open_' + PROG.id) !== '0'; } catch(e) {}
+  var col = function(p){ return p == null ? 'var(--text2)' : p >= 75 ? '#4ade80' : p >= 50 ? 'var(--blue-xl)' : p >= 25 ? '#fbbf24' : '#f87171'; };
+  var tiles = (pf.kpis || []).map(function(k){
+    return '<div style="padding:9px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);">'
+      + '<div style="font-size:9.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;line-height:1.2;">' + esc(k.label) + '</div>'
+      + '<div style="font-size:19px;font-weight:800;color:#fff;margin-top:3px;line-height:1.1;">' + esc((+k.v).toFixed(k.dec || 0)) + (k.unit ? ' <span style="font-size:10px;font-weight:600;color:var(--text2);">' + esc(k.unit) + '</span>' : '') + '</div>'
+      + (k.ctx ? '<div style="font-size:9.5px;font-weight:700;margin-top:2px;color:' + col(k.pct) + ';">' + esc(k.ctx) + '</div>' : '')
+      + '</div>';
+  }).join('');
+  var goals = (pf.goals || []).map(function(g){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);">'
+      + '<div style="font-size:15px;">🎯</div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#fff;">' + esc(g.goal) + '</div>'
+      + '<div style="font-size:10.5px;color:var(--text2);">' + (g.now ? 'Now ' + esc(g.now) + ' · ' : '') + (g.by ? 'by ' + esc(g.by) : '') + '</div></div>'
+      + '<div style="font-family:\'DM Mono\',monospace;font-size:13px;font-weight:700;color:#4ade80;white-space:nowrap;">' + esc(g.target) + '</div></div>';
+  }).join('');
+  return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:rgba(91,140,245,0.07);border:1px solid rgba(91,140,245,0.25);">'
+    + '<div onclick="toggleProfile()" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;">'
+    + '<div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--blue-xl);">📊 YOUR PROFILE · ' + esc(pf.season || '') + ' SEASON</div>'
+    + '<div style="font-size:11px;color:var(--text2);">' + (open ? 'Hide ▲' : 'Show ▼') + '</div></div>'
+    + (open ? (tiles ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:7px;margin-top:10px;">' + tiles + '</div>' : '')
+      + (goals ? '<div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#4ade80;margin:14px 0 2px;">🎯 OFF-SEASON GOALS</div>' + goals : '') : '')
+    + '</div>';
+}
+function toggleProfile(){ var k = 'cprof_open_' + PROG.id, open = true; try { open = localStorage.getItem(k) !== '0'; localStorage.setItem(k, open ? '0' : '1'); } catch(e) {} renderHero(); }
 // Weekly sprint summary from game data (written by the coach dashboard)
 function speedCardHTML(){
   var sp = PROG.speed; if (!sp || !sp.lastRun) return '';
@@ -652,7 +679,7 @@ async function refreshProgram(){
       var newVer = pb.structVer || 0;
       if (newVer > (PROG.ver || 0)) { LOG = TC.upgradeLog(LOG, pb, PROG.ver || 0); RQ = null; }
       LOG = mergeLogs(LOG, row.completion_log || {});
-      PROG.weekData = pb.weekData; PROG.startDate = pb.startDate || null; PROG.messages = pb.messages || []; PROG.speed = pb.speedSummary || null;
+      PROG.weekData = pb.weekData; PROG.startDate = pb.startDate || null; PROG.messages = pb.messages || []; PROG.speed = pb.speedSummary || null; PROG.profile = pb.profile || null;
       PROG.note = pb.pushNote || row.notes || ''; if (PROG.note && /^[a-z_]+ · \d+ weeks · /.test(PROG.note)) PROG.note = '';
       PROG.name = row.name; PROG.ver = newVer; PROG.updatedAt = row.updated_at || null; PROG.lastChange = pb.lastChange || null; PROG.pb = pb;
       try { var slim = Object.assign({}, row); delete slim.completion_log; localStorage.setItem('cprog_' + PROG.id, JSON.stringify(slim)); localStorage.setItem(logKey(), JSON.stringify(LOG)); localStorage.setItem('clogv_' + PROG.id, String(PROG.ver)); } catch(e) {}
@@ -698,6 +725,7 @@ function renderHero(){
     + '<span class="chip">' + doneDays + ' / ' + totalDays + ' sessions done</span></div>'
     + (d.note ? '<div class="coach-note"><b>Coach:</b> ' + esc(d.note) + '</div>' : '')
     + (PROG.messages || []).filter(function(m){ return !m.ref; }).slice(-3).reverse().map(function(m){ return '<div class="coach-note"><b>Coach' + (m.at ? ' · ' + esc(new Date(m.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : '') + ':</b> ' + esc(m.text) + '</div>'; }).join('')
+    + profileCardHTML()
     + speedCardHTML()
     + changeBannerHTML()
     + '</div>';
@@ -1062,6 +1090,7 @@ async function init(){
   PROG = { id: String(id), athlete: row.athlete, name: row.name, weekData: pb.weekData, startDate: pb.startDate || null, note: pb.pushNote || row.notes || '', messages: pb.messages || [], speed: pb.speedSummary || null,
     ver: pb.structVer || 0, updatedAt: row.updated_at || null, lastChange: pb.lastChange || null, pb: pb };
   if (PROG.note && /^[a-z_]+ · \d+ weeks · /.test(PROG.note)) PROG.note = '';   // auto-generated summary, not a coach message
+  PROG.profile = pb.profile || null;
   var localVer = +(localStorage.getItem('clogv_' + PROG.id) || 0);
   LOG = mergeLogs(TC.upgradeLog(loadLocalLog(), pb, localVer), cloudLog);
   try { localStorage.setItem(logKey(), JSON.stringify(LOG)); localStorage.setItem('clogv_' + PROG.id, String(PROG.ver)); } catch(e) {}
@@ -1108,6 +1137,7 @@ function printProgram(){
     var pg = '<div class="sb-pg"><div class="sb-hd"><div><div class="t">' + esc(PROG.athlete || '') + '</div><div class="s">' + esc(PROG.name || '') + ' · ' + range + ' of ' + W.length + '</div></div>'
       + '<div class="r">CUBS STRENGTH &amp; CONDITIONING' + (PROG.startDate ? '<br>Week 1 starts ' + fmt(parseISO(PROG.startDate)) : '') + '</div></div>';
     if (c === 0 && PROG.note) pg += '<div class="sb-msg"><b>Coach:</b> ' + esc(PROG.note) + '</div>';
+    if (c === 0 && PROG.profile && (PROG.profile.goals || []).length) pg += '<div class="sb-msg" style="border-left-color:#16a34a;background:#f1faf3;"><b>Off-season goals:</b> ' + PROG.profile.goals.map(function(g){ return esc(g.goal) + ' <b>' + esc(g.target) + '</b>'; }).join(' &nbsp;·&nbsp; ') + '</div>';
     var wkW = Math.floor(58 / wks.length);
     for (var di = 0; di < nDays; di++) {
       var live = wks.filter(function(wi){ var d = (W[wi].days || [])[di]; return d && dayHasWork(d); });
