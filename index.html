@@ -11785,7 +11785,7 @@ async function persistExerciseDBToSupabase() {
       mechanism_text: e.mechanism_text || null,
       program_gap:    e.program_gap    || null,
       sport_transfer: e.sport_transfer || null,
-      updated_at:     new Date().toISOString(),
+      // (no updated_at — the exercises table has no such column; sending it made every cloud save fail)
     }));
     const { error } = await _supaClient
       .from('exercises')
