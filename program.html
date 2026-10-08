@@ -277,8 +277,8 @@ var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
   // instead of back to their own program. Built dynamically per-visit rather
   // than as a static file for exactly this reason.
   var params = new URLSearchParams(window.location.search);
-  var pid = params.get('id') || '';
-  var startUrl = './program.html' + (pid ? ('?id=' + encodeURIComponent(pid)) : '');
+  var pid = params.get('id') || '', ptok = params.get('a') || '';
+  var startUrl = './program.html' + (ptok ? ('?a=' + encodeURIComponent(ptok)) : pid ? ('?id=' + encodeURIComponent(pid)) : '');
 
   var manifest = {
     name: 'Cubs S&C Training Program',
@@ -600,6 +600,99 @@ function lastTime(name, beforeWi, beforeDi){
 }
 
 // ── Rendering ───────────────────────────────────────────────────────────────
+
+// ── Permanent athlete link (?a=<token>) ─────────────────────────────────────
+// One link for the whole off-season: it looks up his programs and opens the one
+// running now (else the next upcoming, else the most recent). New blocks the
+// coach sends show up here automatically.
+var LINK_TOK = new URLSearchParams(window.location.search).get('a') || '';
+var NEXT_UP = null;
+function spanOf(pb){
+  if (!pb || !pb.startDate || !pb.weekData) return null;
+  var s = parseISO(pb.startDate); if (!s) return null;
+  var e = new Date(s); e.setDate(e.getDate() + pb.weekData.length * 7 - 1);
+  return { start: pb.startDate, end: localISO(e) };
+}
+async function resolveAthleteLink(tok){
+  var ck = 'alink_' + tok;
+  try {
+    if (!SUPA) SUPA = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    var m = await SUPA.from('cubs_sc_data').select('value').eq('key', 'alink:' + tok).maybeSingle();
+    if (m.error || !m.data) throw new Error(m.error ? m.error.message : 'link not found');
+    var who = JSON.parse(m.data.value).athlete;
+    var r = await SUPA.from('athlete_programs').select('id,name,pb_state,updated_at').eq('athlete', who);
+    if (r.error) throw r.error;
+    var t = localISO(), rows = (r.data || []).map(function(x){ var pb = null; try { pb = typeof x.pb_state === 'string' ? JSON.parse(x.pb_state) : x.pb_state; } catch(e) {} return { id: String(x.id), name: x.name, s: spanOf(pb), u: x.updated_at }; }).filter(function(x){ return x.s; });
+    var act = rows.filter(function(x){ return x.s.start <= t && x.s.end >= t; }).sort(function(a, b){ return a.s.start < b.s.start ? 1 : a.s.start > b.s.start ? -1 : (a.u < b.u ? 1 : -1); });
+    var up = rows.filter(function(x){ return x.s.start > t; }).sort(function(a, b){ return a.s.start < b.s.start ? -1 : 1; });
+    var past = rows.filter(function(x){ return x.s.end < t; }).sort(function(a, b){ return a.s.end < b.s.end ? 1 : -1; });
+    var pick = act[0] || up[0] || past[0];
+    if (!pick) return null;
+    NEXT_UP = up.find(function(x){ return x.id !== pick.id && x.s.start > pick.s.start; }) || null;
+    try { localStorage.setItem(ck, JSON.stringify({ id: pick.id, next: NEXT_UP })); } catch(e) {}
+    return pick.id;
+  } catch(err) {
+    console.warn('[link] offline or not found, using last program:', err);
+    try { var c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c) { NEXT_UP = c.next || null; return c.id; } } catch(e) {}
+    return null;
+  }
+}
+// On a permanent link, re-check every 10 min (and when the page comes back) — a new block takes over when it starts
+var _lastResolve = Date.now();
+async function recheckLink(){
+  if (!LINK_TOK || !PROG || Date.now() - _lastResolve < 10 * 60000) return;
+  _lastResolve = Date.now();
+  var id = await resolveAthleteLink(LINK_TOK);
+  if (id && id !== PROG.id) location.reload(); else if (typeof renderHero === 'function') renderHero();
+}
+function nextUpHTML(){
+  if (!NEXT_UP || !NEXT_UP.s) return '';
+  var d = parseISO(NEXT_UP.s.start);
+  return '<div class="coach-note" style="border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.07);color:#bbf7d0;"><b>Next up:</b> ' + esc(NEXT_UP.name || 'New block') + ' starts ' + esc(d ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : NEXT_UP.s.start) + ' — it will open here automatically.</div>';
+}
+
+// ── At-home tests: he logs hand/app-timed sprints and body weight ───────────
+function testsList(){
+  return Object.keys(LOG).filter(function(k){ return k.indexOf('test:') === 0 && LOG[k]; }).sort().reverse().map(function(k){ return Object.assign({ date: k.slice(5) }, LOG[k]); });
+}
+function testsHTML(){
+  var T = testsList().slice(0, 3);
+  var rows = T.map(function(t){
+    var d = parseISO(t.date), parts = [t.t10 ? '10 yd <b>' + esc(t.t10) + 's</b>' : '', t.t30 ? '30 yd <b>' + esc(t.t30) + 's</b>' : '', t.bw ? '<b>' + esc(t.bw) + '</b> lb' : ''].filter(Boolean).join(' · ');
+    return '<div style="font-size:12px;color:var(--text);padding:3px 0;">' + esc(d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : t.date) + ' — ' + parts + '</div>';
+  }).join('');
+  return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.22);">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#4ade80;">📏 HOME TESTS</div>'
+    + '<button onclick="openTest()" style="padding:6px 12px;border-radius:8px;border:none;background:#22c55e;color:#000;font-weight:800;font-size:12px;cursor:pointer;">+ Log a test</button></div>'
+    + (rows ? '<div style="margin-top:6px;">' + rows + '</div>' : '<div style="font-size:11.5px;color:var(--text2);margin-top:6px;line-height:1.45;">Time a 10-yd sprint (hand or app timed, same way every time) and weigh in every couple of weeks so your coach can track progress.</div>')
+    + '</div>';
+}
+function openTest(){
+  var t = LOG['test:' + localISO()] || {};
+  var inp = 'width:100%;box-sizing:border-box;background:#0d1426;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px;color:#fff;font-size:16px;';
+  var lab = 'display:block;font-size:11px;color:var(--text2);margin:10px 0 4px;';
+  var m = document.createElement('div'); m.id = 'test-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:flex-end;justify-content:center;';
+  m.innerHTML = '<div style="background:#111a2e;width:100%;max-width:480px;border-radius:16px 16px 0 0;padding:18px 18px 26px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:16px;font-weight:800;color:#fff;">📏 Log a test · today</div><button onclick="closeTest()" style="background:none;border:none;color:var(--text2);font-size:20px;">✕</button></div>'
+    + '<label style="' + lab + '">10-yd sprint (seconds)</label><input id="t-10" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 1.62" value="' + esc(t.t10 || '') + '" style="' + inp + '">'
+    + '<label style="' + lab + '">30-yd sprint (seconds, optional)</label><input id="t-30" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 3.95" value="' + esc(t.t30 || '') + '" style="' + inp + '">'
+    + '<label style="' + lab + '">Body weight (lb, optional)</label><input id="t-bw" type="number" step="0.1" inputmode="decimal" placeholder="e.g. 212" value="' + esc(t.bw || '') + '" style="' + inp + '">'
+    + '<label style="' + lab + '">How was it timed?</label><select id="t-how" style="' + inp + '">' + ['Hand timed', 'App (phone video)', 'Laser / timing gates'].map(function(o){ return '<option' + (t.how === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>'
+    + '<label style="' + lab + '">Note (optional)</label><input id="t-note" placeholder="Surface, wind, how you felt…" value="' + esc(t.note || '') + '" style="' + inp + '">'
+    + '<button onclick="saveTest()" style="margin-top:16px;width:100%;padding:13px;border:none;border-radius:10px;background:#22c55e;color:#000;font-weight:800;font-size:15px;">Save test</button></div>';
+  document.body.appendChild(m);
+  m.addEventListener('click', function(e){ if (e.target === m) closeTest(); });
+}
+function closeTest(){ var m = document.getElementById('test-modal'); if (m) m.remove(); }
+function saveTest(){
+  var v = function(id){ var e = document.getElementById(id); return e ? String(e.value).trim() : ''; };
+  var t10 = v('t-10'), t30 = v('t-30'), bw = v('t-bw');
+  if (!t10 && !t30 && !bw) { alert('Enter at least one result.'); return; }
+  if (t10 && (+t10 < 1 || +t10 > 3)) { if (!confirm('10-yd time of ' + t10 + 's looks off (most are 1.5–2.0s). Save anyway?')) return; }
+  LOG['test:' + localISO()] = { t10: t10, t30: t30, bw: bw, how: v('t-how'), note: v('t-note'), date: localISO(), t: Date.now() };
+  saveLog(); closeTest(); renderHero();
+}
 // Profile: his KPIs + off-season goals (written by the coach dashboard)
 function profileCardHTML(){
   var pf = PROG.profile; if (!pf || (!(pf.kpis || []).length && !(pf.goals || []).length)) return '';
@@ -698,10 +791,10 @@ async function checkForUpdate(){
   if (!SUPA || !PROG || !navigator.onLine) return;
   try { var r = await SUPA.from('athlete_programs').select('updated_at').eq('id', PROG.id).single(); if (!r.error && r.data && r.data.updated_at && r.data.updated_at !== PROG.updatedAt) await refreshProgram(); } catch(e) {}
 }
-document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') checkForUpdate(); });
+document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') { checkForUpdate(); recheckLink(); } });
 window.addEventListener('focus', checkForUpdate);
 window.addEventListener('online', checkForUpdate);
-setInterval(function(){ if (document.visibilityState === 'visible') checkForUpdate(); }, 60000);
+setInterval(function(){ if (document.visibilityState === 'visible') { checkForUpdate(); recheckLink(); } }, 60000);
 (function(){ var st = document.createElement('style'); st.textContent = '.upd-dot{position:absolute;top:5px;left:6px;width:7px;height:7px;border-radius:50%;background:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.25);}'
   + '.chg-banner{margin-top:12px;padding:12px;border-radius:12px;background:rgba(245,158,11,0.09);border:1px solid rgba(245,158,11,0.35);}'
   + '.chg-h{font-size:10px;font-weight:800;letter-spacing:.12em;color:#f59e0b;margin-bottom:6px;}'
@@ -725,7 +818,9 @@ function renderHero(){
     + '<span class="chip">' + doneDays + ' / ' + totalDays + ' sessions done</span></div>'
     + (d.note ? '<div class="coach-note"><b>Coach:</b> ' + esc(d.note) + '</div>' : '')
     + (PROG.messages || []).filter(function(m){ return !m.ref; }).slice(-3).reverse().map(function(m){ return '<div class="coach-note"><b>Coach' + (m.at ? ' · ' + esc(new Date(m.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : '') + ':</b> ' + esc(m.text) + '</div>'; }).join('')
+    + nextUpHTML()
     + profileCardHTML()
+    + testsHTML()
     + speedCardHTML()
     + changeBannerHTML()
     + '</div>';
@@ -1070,7 +1165,8 @@ function saveFinish(){
 // ── Load ────────────────────────────────────────────────────────────────────
 async function init(){
   var id = new URLSearchParams(window.location.search).get('id');
-  if (!id) { document.getElementById('root').innerHTML = '<div class="err">No program ID in this link.</div>'; return; }
+  if (!id && LINK_TOK) id = await resolveAthleteLink(LINK_TOK);
+  if (!id) { document.getElementById('root').innerHTML = '<div class="err">' + (LINK_TOK ? 'No program here yet — your coach will send it to this link. Check back soon.' : 'No program ID in this link.') + '</div>'; return; }
   var cacheKey = 'cprog_' + id, row = null, cloudLog = null;
   try {
     SUPA = window.supabase.createClient(SUPA_URL, SUPA_KEY);
