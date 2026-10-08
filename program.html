@@ -521,8 +521,8 @@ async function pushLog(){
   if (!SUPA || !_dirty) return;
   if (!navigator.onLine) { setSync('off'); return; }
   try {
-    try { var chk = await SUPA.from('athlete_programs').select('updated_at').eq('id', PROG.id).single(); if (chk.data && chk.data.updated_at && chk.data.updated_at !== PROG.updatedAt) await refreshProgram(); } catch(e) {}
-    var r = await SUPA.from('athlete_programs').update({ completion_log: LOG, completion_updated_at: new Date().toISOString() }).eq('id', PROG.id);
+    try { var chk = await dbStamp(PROG.id); if (chk.data && chk.data.updated_at && chk.data.updated_at !== PROG.updatedAt) await refreshProgram(); } catch(e) {}
+    var r = await dbSaveLog(PROG.id, LOG);
     if (r.error) throw r.error;
     _dirty = false; setSync('ok');
   } catch(e) { console.warn('[log push] failed:', e); setSync('off'); }
@@ -601,6 +601,36 @@ function lastTime(name, beforeWi, beforeDi){
 
 // ── Rendering ───────────────────────────────────────────────────────────────
 
+// ── Data access ─────────────────────────────────────────────────────────────
+// With a permanent link (?a=) the page talks to the database only through
+// locked-down functions that return/update this athlete's programs and nothing
+// else. Plain ?id= links (coach preview) read the table directly, which works
+// for a signed-in coach once security is on. Until the functions are installed,
+// everything falls back to the direct table calls.
+var RPC_READY = null;
+function rpcMissing(err){ return !!err && (err.code === 'PGRST202' || err.code === '42883' || /function|schema cache/i.test(err.message || '')); }
+async function rpcTry(fn, args){
+  if (!LINK_TOK || RPC_READY === false) return null;
+  var r = await SUPA.rpc(fn, Object.assign({ tok: LINK_TOK }, args || {}));
+  if (r.error && rpcMissing(r.error)) { RPC_READY = false; return null; }
+  RPC_READY = true; return r;
+}
+async function dbProgram(id){
+  var r = await rpcTry('athlete_get_program', { pid: String(id) });
+  if (r) return r.error ? r : (r.data ? r : { data: null, error: { message: 'Program not found for this link' } });
+  return await SUPA.from('athlete_programs').select('*').eq('id', id).single();
+}
+async function dbStamp(id){
+  var r = await rpcTry('athlete_program_stamp', { pid: String(id) });
+  if (r) return r;
+  return await SUPA.from('athlete_programs').select('updated_at').eq('id', id).single();
+}
+async function dbSaveLog(id, log){
+  var r = await rpcTry('athlete_save_log', { pid: String(id), log: log });
+  if (r) return r;
+  return await SUPA.from('athlete_programs').update({ completion_log: log, completion_updated_at: new Date().toISOString() }).eq('id', id);
+}
+
 // ── Permanent athlete link (?a=<token>) ─────────────────────────────────────
 // One link for the whole off-season: it looks up his programs and opens the one
 // running now (else the next upcoming, else the most recent). New blocks the
@@ -617,11 +647,15 @@ async function resolveAthleteLink(tok){
   var ck = 'alink_' + tok;
   try {
     if (!SUPA) SUPA = window.supabase.createClient(SUPA_URL, SUPA_KEY);
-    var m = await SUPA.from('cubs_sc_data').select('value').eq('key', 'alink:' + tok).maybeSingle();
-    if (m.error || !m.data) throw new Error(m.error ? m.error.message : 'link not found');
-    var who = JSON.parse(m.data.value).athlete;
-    var r = await SUPA.from('athlete_programs').select('id,name,pb_state,updated_at').eq('athlete', who);
-    if (r.error) throw r.error;
+    var r = await rpcTry('athlete_link_programs', {});
+    if (r && r.error) throw r.error;
+    if (!r) {   // functions not installed yet → direct reads
+      var m = await SUPA.from('cubs_sc_data').select('value').eq('key', 'alink:' + tok).maybeSingle();
+      if (m.error || !m.data) throw new Error(m.error ? m.error.message : 'link not found');
+      var who = JSON.parse(m.data.value).athlete;
+      r = await SUPA.from('athlete_programs').select('id,name,pb_state,updated_at').eq('athlete', who);
+      if (r.error) throw r.error;
+    }
     var t = localISO(), rows = (r.data || []).map(function(x){ var pb = null; try { pb = typeof x.pb_state === 'string' ? JSON.parse(x.pb_state) : x.pb_state; } catch(e) {} return { id: String(x.id), name: x.name, s: spanOf(pb), u: x.updated_at }; }).filter(function(x){ return x.s; });
     var act = rows.filter(function(x){ return x.s.start <= t && x.s.end >= t; }).sort(function(a, b){ return a.s.start < b.s.start ? 1 : a.s.start > b.s.start ? -1 : (a.u < b.u ? 1 : -1); });
     var up = rows.filter(function(x){ return x.s.start > t; }).sort(function(a, b){ return a.s.start < b.s.start ? -1 : 1; });
@@ -763,7 +797,7 @@ async function refreshProgram(){
   if (_refreshing) return _refreshing;
   _refreshing = (async function(){
     try {
-      var res = await SUPA.from('athlete_programs').select('*').eq('id', PROG.id).single();
+      var res = await dbProgram(PROG.id);
       if (res.error || !res.data) return;
       var row = res.data, pb = null;
       try { pb = typeof row.pb_state === 'string' ? JSON.parse(row.pb_state) : row.pb_state; } catch(e) {}
@@ -789,7 +823,7 @@ async function refreshProgram(){
 }
 async function checkForUpdate(){
   if (!SUPA || !PROG || !navigator.onLine) return;
-  try { var r = await SUPA.from('athlete_programs').select('updated_at').eq('id', PROG.id).single(); if (!r.error && r.data && r.data.updated_at && r.data.updated_at !== PROG.updatedAt) await refreshProgram(); } catch(e) {}
+  try { var r = await dbStamp(PROG.id); if (!r.error && r.data && r.data.updated_at && r.data.updated_at !== PROG.updatedAt) await refreshProgram(); } catch(e) {}
 }
 document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') { checkForUpdate(); recheckLink(); } });
 window.addEventListener('focus', checkForUpdate);
@@ -1170,7 +1204,7 @@ async function init(){
   var cacheKey = 'cprog_' + id, row = null, cloudLog = null;
   try {
     SUPA = window.supabase.createClient(SUPA_URL, SUPA_KEY);
-    var res = await SUPA.from('athlete_programs').select('*').eq('id', id).single();
+    var res = await dbProgram(id);
     if (res.error) throw new Error(res.error.message);
     row = res.data;
     cloudLog = row.completion_log || null;
