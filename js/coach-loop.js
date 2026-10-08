@@ -507,7 +507,7 @@ function renderInbox() {
   var el = document.getElementById('inbox-body'); if (!el) return;
   var all = inboxItems();
   var list = all.filter(function (i) { return INBOX_FILTER === 'all' ? true : INBOX_FILTER === 'done' ? INBOX_DONE[i.id] : !INBOX_DONE[i.id]; });
-  var colors = { pain: '#f87171', ready: '#f87171', missed: '#fbbf24', reps: '#fbbf24', strength: '#60a5fa', note: '#cbd5e1', speed: '#f59e0b' };
+  var colors = { pain: '#f87171', ready: '#f87171', missed: '#fbbf24', reps: '#fbbf24', strength: '#60a5fa', note: '#cbd5e1', speed: '#f59e0b', block: '#f59e0b', test: '#4ade80' };
   document.getElementById('inbox-counts').textContent = all.filter(function (i) { return !INBOX_DONE[i.id]; }).length + ' open · ' + PROGRAM_ROWS.length + ' programs';
   el.innerHTML = list.length ? list.map(function (i) {
     return '<div class="card" style="padding:12px 14px;margin-bottom:8px;border-left:3px solid ' + colors[i.type] + ';' + (INBOX_DONE[i.id] ? 'opacity:.55;' : '') + '">'
@@ -517,6 +517,7 @@ function renderInbox() {
       + '<div style="font-size:10px;color:var(--text3);margin-top:4px;">' + escHtml(i.program || '') + (i.date ? ' · ' + escHtml(fmtDate(i.date)) : '') + (i.replied ? ' · <span style="color:var(--green);">replied</span>' : '') + '</div></div>'
       + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
       + (i.type === 'strength' ? '<button onclick="inboxAccept1RM(\'' + jsq(i.id) + '\')" style="padding:6px 10px;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.4);border-radius:6px;color:#60a5fa;font-size:11px;cursor:pointer;">Save as 1RM</button>' : '')
+      + (i.type === 'block' && typeof ofNextBlock === 'function' ? '<button onclick="ofNextBlock(\'' + jsq(i.athlete) + '\')" style="padding:6px 10px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.45);border-radius:6px;color:#f59e0b;font-size:11px;font-weight:700;cursor:pointer;">⏭ Build next block</button>' : '')
       + (i.type === 'speed' ? '<button onclick="siOpenHE(\'' + jsq(i.athlete) + '\')" style="padding:6px 10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f59e0b;font-size:11px;cursor:pointer;">HE Runs</button>' : '')
       + (i.rowId ? '<button onclick="peOpenLive(\'' + jsq(i.rowId) + '\')" title="Change his program — updates on his phone" style="padding:6px 10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:6px;color:#f59e0b;font-size:11px;cursor:pointer;">✏️ Edit</button>' : '')
       + (i.rowId ? '<button onclick="inboxReply(\'' + jsq(i.id) + '\')" style="padding:6px 10px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.4);border-radius:6px;color:#a5b4fc;font-size:11px;cursor:pointer;">' + (i.type === 'speed' ? 'Message' : 'Reply') + '</button>'

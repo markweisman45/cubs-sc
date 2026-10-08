@@ -12,11 +12,18 @@ function apProfile(name) {
   var S = []; try { S = yrSuggest(name) || []; } catch (e) { S = []; }
   S.forEach(function (s) {
     var k = s.m.k; if (/^hold-/.test(k) || seen[k] || s.cur == null) return; seen[k] = 1;
-    var ctx = '';
-    if (s.pct != null) ctx = s.m.src === 'he' ? 'Team ' + yrOrd(s.pct) + ' pct' : 'MLB ' + yrOrd(s.pct) + ' pct' + (s.m.src === 'cmj' ? ' (position)' : '');
-    kpis.push({ k: k, label: s.m.label, v: +(+s.cur).toFixed(s.m.dec), unit: s.m.unit, dec: s.m.dec, ctx: ctx, pct: s.pct == null ? null : s.pct });
+    var ctx = '', pm = typeof ofPctMode === 'function' ? ofPctMode() : 'all';
+    if (s.pct != null && (pm === 'all' || (pm === '50' && s.pct >= 50))) ctx = s.m.src === 'he' ? 'Team ' + yrOrd(s.pct) + ' pct' : 'MLB ' + yrOrd(s.pct) + ' pct' + (s.m.src === 'cmj' ? ' (position)' : '');
+    kpis.push({ k: k, label: s.m.label, v: +(+s.cur).toFixed(s.m.dec), unit: s.m.unit, dec: s.m.dec, ctx: ctx, pct: ctx ? s.pct : null });
   });
   kpis.sort(function (a, b) { var i = AP_ORDER.indexOf(a.k), j = AP_ORDER.indexOf(b.k); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j); });
+  // At-home tests he logged on his page (latest wins; body weight replaces the VALD spring number)
+  if (typeof ofTests === 'function') {
+    var T = ofTests(name), t10 = ofLatest(T, 't10'), t30 = ofLatest(T, 't30'), hbw = ofLatest(T, 'bw');
+    if (t10) kpis.push({ k: 'home10', label: '10-yd (home)', v: +t10.v.toFixed(2), unit: 's', dec: 2, ctx: 'Logged ' + ofFmt(t10.date), pct: null });
+    if (t30) kpis.push({ k: 'home30', label: '30-yd (home)', v: +t30.v.toFixed(2), unit: 's', dec: 2, ctx: 'Logged ' + ofFmt(t30.date), pct: null });
+    if (hbw) { var bwk = kpis.find(function (q) { return q.k === 'bw'; }); var nb = { k: 'bw', label: 'Body weight', v: Math.round(hbw.v), unit: 'lb', dec: 0, ctx: 'Logged ' + ofFmt(hbw.date), pct: null }; if (bwk) Object.assign(bwk, nb); else kpis.push(nb); }
+  }
   // Strength: tested / estimated 1RMs on file
   var rm = (typeof ATHLETE_1RM !== 'undefined' && ATHLETE_1RM[name]) || {};
   Object.keys(rm).forEach(function (lift) { var v = +rm[lift]; if (v > 0 && kpis.length < 12) kpis.push({ k: 'rm:' + lift, label: lift + ' 1RM', v: v, unit: 'lb', dec: 0, ctx: '' }); });

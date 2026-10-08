@@ -72,9 +72,10 @@ function llShare(id) {
   var p = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : []).find(function (x) { return String(x.id) === String(id); }) || {};
   var athlete = row.athlete || p.athlete || '', name = row.name || p.name || 'program';
   var first = String(athlete).split(' ')[0] || '';
-  var url = llLinkOf(id);
+  var perm = athlete && athlete !== '(Sandbox)' && typeof ofAthleteURL === 'function';
+  var url = perm ? ofAthleteURL(athlete) : llLinkOf(id);
   var start = p.assignedDate || (p.pbState && p.pbState.startDate) || '';
-  var msg = 'Hey ' + first + ' — your new program is ready' + (start ? ' (Week 1 starts ' + (typeof fmtDate === 'function' ? fmtDate(start) : start) + ')' : '') + '. Tap to open, then "Add to Home Screen" so it\'s one tap next time:\n' + url;
+  var msg = 'Hey ' + first + ' — your new program is ready' + (start ? ' (Week 1 starts ' + (typeof fmtDate === 'function' ? fmtDate(start) : start) + ')' : '') + '. ' + (perm ? 'This is your training link for the whole off-season — every new block shows up here. ' : '') + 'Tap to open, then "Add to Home Screen" so it\'s one tap next time:\n' + url;
   document.querySelectorAll('.ll-share').forEach(function (m) { m.remove(); });
   var m = document.createElement('div'); m.className = 'll-share';
   m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
