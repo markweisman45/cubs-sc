@@ -19,7 +19,13 @@
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
 html,body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;overscroll-behavior-y:none;}
-body{padding-bottom:calc(96px + var(--safe-b));}
+body{padding-bottom:calc(150px + var(--safe-b));}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:310;display:flex;justify-content:center;padding:4px 12px calc(4px + var(--safe-b));background:rgba(6,8,16,0.98);border-top:1px solid var(--border);}
+.tabbar button{flex:1;max-width:220px;background:none;border:none;color:var(--text3);font-size:11px;font-weight:700;letter-spacing:.04em;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;cursor:pointer;}
+.tabbar button .ti{font-size:20px;line-height:1.1;filter:grayscale(1);opacity:.7;}
+.tabbar button.on{color:var(--blue-xl);}
+.tabbar button.on .ti{filter:none;opacity:1;}
+.tabbar .tdot{position:absolute;top:5px;left:calc(50% + 8px);width:8px;height:8px;border-radius:50%;background:#f87171;box-shadow:0 0 0 2px rgba(6,8,16,1);}
 button{font-family:inherit;}
 input,textarea{font-family:inherit;}
 
@@ -128,7 +134,7 @@ input,textarea{font-family:inherit;}
 .done-banner{margin:0 4px 14px;padding:12px 14px;border-radius:14px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);color:var(--green-l);font-size:13px;font-weight:600;}
 
 /* Bottom bar + rest timer */
-.bottom{position:fixed;left:0;right:0;bottom:0;z-index:300;padding:10px 12px calc(10px + var(--safe-b));background:rgba(6,8,16,0.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--border);}
+.bottom{position:fixed;left:0;right:0;bottom:calc(54px + var(--safe-b));z-index:300;padding:10px 12px 10px;background:rgba(6,8,16,0.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--border);}
 .bottom-inner{max-width:720px;margin:0 auto;display:flex;gap:10px;align-items:center;}
 .btn-main{flex:1;height:52px;border-radius:14px;border:none;background:var(--blue-l);color:#fff;font-size:16px;font-weight:700;cursor:pointer;}
 .btn-main.done{background:rgba(74,222,128,.18);color:var(--green-l);}
@@ -261,6 +267,10 @@ input,textarea{font-family:inherit;}
   </div>
 </div>
 
+<div class="tabbar" id="tabbar" style="display:none;">
+  <button id="tab-today" onclick="setTab('today')"><span class="ti">📋</span>TODAY</button>
+  <button id="tab-profile" onclick="setTab('profile')"><span class="ti">📊</span>PROFILE<span class="tdot" id="tdot" style="display:none;"></span></button>
+</div>
 <div class="sheet-bg" id="sheet-bg" onclick="closeFinish()"></div>
 <div class="sheet" id="sheet"><div class="sheet-in" id="sheet-in"></div></div>
 
@@ -728,9 +738,9 @@ function saveTest(){
   saveLog(); closeTest(); renderHero();
 }
 // Profile: his KPIs + off-season goals (written by the coach dashboard)
-function profileCardHTML(){
+function profileCardHTML(full){
   var pf = PROG.profile; if (!pf || (!(pf.kpis || []).length && !(pf.goals || []).length)) return '';
-  var open = true; try { open = localStorage.getItem('cprof_open_' + PROG.id) !== '0'; } catch(e) {}
+  var open = true; if (!full) { try { open = localStorage.getItem('cprof_open_' + PROG.id) !== '0'; } catch(e) {} }
   var col = function(p){ return p == null ? 'var(--text2)' : p >= 75 ? '#4ade80' : p >= 50 ? 'var(--blue-xl)' : p >= 25 ? '#fbbf24' : '#f87171'; };
   var tiles = (pf.kpis || []).map(function(k){
     return '<div style="padding:9px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);">'
@@ -746,9 +756,9 @@ function profileCardHTML(){
       + '<div style="font-family:\'DM Mono\',monospace;font-size:13px;font-weight:700;color:#4ade80;white-space:nowrap;">' + esc(g.target) + '</div></div>';
   }).join('');
   return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:rgba(91,140,245,0.07);border:1px solid rgba(91,140,245,0.25);">'
-    + '<div onclick="toggleProfile()" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;">'
-    + '<div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--blue-xl);">📊 YOUR PROFILE · ' + esc(pf.season || '') + ' SEASON</div>'
-    + '<div style="font-size:11px;color:var(--text2);">' + (open ? 'Hide ▲' : 'Show ▼') + '</div></div>'
+    + '<div' + (full ? '' : ' onclick="toggleProfile()"') + ' style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;">'
+    + '<div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--blue-xl);">' + (full ? '📊 KEY NUMBERS · ' : '📊 YOUR PROFILE · ') + esc(pf.season || '') + ' SEASON</div>'
+    + (full ? '' : '<div style="font-size:11px;color:var(--text2);">' + (open ? 'Hide ▲' : 'Show ▼') + '</div>') + '</div>'
     + (open ? (tiles ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:7px;margin-top:10px;">' + tiles + '</div>' : '')
       + (goals ? '<div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#4ade80;margin:14px 0 2px;">🎯 OFF-SEASON GOALS</div>' + goals : '') : '')
     + '</div>';
@@ -853,12 +863,53 @@ function renderHero(){
     + (d.note ? '<div class="coach-note"><b>Coach:</b> ' + esc(d.note) + '</div>' : '')
     + (PROG.messages || []).filter(function(m){ return !m.ref; }).slice(-3).reverse().map(function(m){ return '<div class="coach-note"><b>Coach' + (m.at ? ' · ' + esc(new Date(m.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : '') + ':</b> ' + esc(m.text) + '</div>'; }).join('')
     + nextUpHTML()
-    + profileCardHTML()
-    + testsHTML()
-    + speedCardHTML()
     + changeBannerHTML()
     + '</div>';
+  if (TAB === 'profile') h = profileViewHTML();
   document.getElementById('hero').innerHTML = h;
+  applyTab();
+}
+// ── Tabs: 📋 Today (training, default) · 📊 Profile (KPIs, goals, home tests, speed) ──
+var TAB = 'today'; try { TAB = localStorage.getItem('ctab') === 'profile' ? 'profile' : 'today'; } catch(e) {}
+function setTab(t){
+  TAB = t; try { localStorage.setItem('ctab', t); } catch(e) {}
+  if (t === 'profile') markProfileSeen();
+  renderAll(); window.scrollTo({ top: 0 });
+}
+function profileSig(){ var pf = PROG.profile; return pf ? JSON.stringify({ g: pf.goals || [], k: (pf.kpis || []).map(function(k){ return k.k + ':' + k.v; }) }) : ''; }
+function markProfileSeen(){ try { localStorage.setItem('cprof_seen_' + PROG.id, profileSig()); localStorage.setItem('cprof_day', localISO()); } catch(e) {} }
+function profileDot(){
+  try {
+    var sig = profileSig(), seen = localStorage.getItem('cprof_seen_' + PROG.id);
+    if (sig && seen !== null && seen !== sig) return true;           // coach published new goals / numbers
+    if (sig && seen === null) return true;                            // never opened his profile
+    var T = testsList(), last = T.length ? T[0].date : null, d14 = new Date(); d14.setDate(d14.getDate() - 14);
+    var due = !last || last < localISO(d14);
+    return due && localStorage.getItem('cprof_day') !== localISO();   // test due — nudge once a day
+  } catch(e) { return false; }
+}
+function applyTab(){
+  var prof = TAB === 'profile';
+  var nav = document.querySelector('.nav'), ses = document.getElementById('session'), bot = document.getElementById('bottom'), bar = document.getElementById('tabbar');
+  if (nav) nav.style.display = prof ? 'none' : '';
+  if (ses) ses.style.display = prof ? 'none' : '';
+  if (bot && prof) bot.style.display = 'none';
+  if (bar) bar.style.display = 'flex';
+  var a = document.getElementById('tab-today'), b = document.getElementById('tab-profile'), dot = document.getElementById('tdot');
+  if (a) a.className = prof ? '' : 'on';
+  if (b) b.className = prof ? 'on' : '';
+  if (dot) dot.style.display = !prof && profileDot() ? 'block' : 'none';
+}
+function profileViewHTML(){
+  var card = profileCardHTML(true);
+  return '<div class="hero">'
+    + '<div class="hero-date">📊 PROFILE</div>'
+    + '<div class="hero-name">' + esc(PROG.athlete || 'Athlete') + '</div>'
+    + '<div class="hero-prog">' + (PROG.profile && PROG.profile.season ? esc(PROG.profile.season) + ' season · your numbers and off-season goals' : 'Your numbers and off-season goals') + '</div>'
+    + (card || '<div class="coach-note" style="color:var(--text2);">Your coach hasn\'t published your profile yet — it will show up here.</div>')
+    + testsHTML()
+    + speedCardHTML()
+    + '</div>';
 }
 function renderNav(){
   document.getElementById('week-row').innerHTML = PROG.weekData.map(function(wk, wi){
@@ -1033,7 +1084,7 @@ function updateCounts(){
   document.getElementById('count').textContent = r.done + '/' + r.tot + ' sets';
   var btn = document.getElementById('btn-finish');
   var work = dayHasWork(PROG.weekData[S.week].days[S.day]);
-  document.getElementById('bottom').style.display = work ? 'block' : 'none';
+  document.getElementById('bottom').style.display = work && TAB !== 'profile' ? 'block' : 'none';
   if (dayDone(S.week, S.day)) { btn.textContent = '✓ Finished — edit'; btn.className = 'btn-main done'; }
   else { btn.textContent = 'Finish session'; btn.className = 'btn-main'; }
 }
