@@ -419,7 +419,7 @@ async function siPushSummaries(manual) {
     if (st) st.textContent = 'Updating…';
     for (var i = 0; i < PROGRAM_ROWS.length; i++) {
       var row = PROGRAM_ROWS[i], a = c.all[row.athlete];
-      if (!a) continue;
+      if (!a || (typeof apIsPitcher === 'function' && apIsPitcher(row.athlete))) continue;
       if (row.updatedAt && String(row.updatedAt).slice(0, 10) < cutoff && !(row.pb.startDate && row.pb.startDate >= cutoff)) continue;
       var sum = SI.athleteSummary(a); if (!sum) continue;
       if (JSON.stringify(row.pb.speedSummary || null) === JSON.stringify(sum)) continue;
