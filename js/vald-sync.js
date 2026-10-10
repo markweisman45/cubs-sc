@@ -72,8 +72,33 @@ async function cubsValdSync(CFG) {
     }
     say('Saving to the Cubs dashboard…');
     var u = await fetch(CFG.supaUrl + '/rest/v1/cubs_sc_data?on_conflict=key', { method: 'POST', headers: { apikey: CFG.supaKey, Authorization: 'Bearer ' + CFG.supaKey, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ key: 'cache:vald-jumps', value: JSON.stringify(out) }) });
-    if (!u.ok) throw new Error('Saving failed (' + u.status + ')');
     var tests = Object.keys(out.players).reduce(function (t, k) { return t + out.players[k].length; }, 0);
+    if (!u.ok && (u.status === 401 || u.status === 403)) {
+      // Cloud security is on: the bookmark can't write on its own. Hand the results to the
+      // dashboard (signed in as coach) and let it save them.
+      await new Promise(function (resolve, reject) {
+        say('Pulled ' + tests + ' sessions. One more click to save them with your coach sign-in:<br>'
+          + '<button id="cubs-vald-handoff" style="margin-top:8px;padding:7px 14px;border:none;border-radius:8px;background:#0E3386;color:#fff;font-weight:700;cursor:pointer;">Save to dashboard →</button>');
+        document.getElementById('cubs-vald-handoff').onclick = function () {
+          var dash = CFG.dashUrl || 'https://markweisman45.github.io/cubs-sc/';
+          var origin = new URL(dash).origin;
+          var w = window.open(dash, 'cubs-sc-dashboard');
+          if (!w) return say('<span style="color:#fca5a5;">Pop-up blocked — allow pop-ups for VALD Hub, then click the bookmark again.</span>');
+          say('Saving through the dashboard… (sign in there if it asks)');
+          var t0 = Date.now(), iv;
+          var onMsg = function (e) {
+            if (e.origin !== origin || !e.data || e.data.type !== 'cubs-vald-ack') return;
+            clearInterval(iv); window.removeEventListener('message', onMsg);
+            if (e.data.ok) resolve(); else reject(new Error('Dashboard save failed: ' + (e.data.error || 'unknown')));
+          };
+          window.addEventListener('message', onMsg);
+          iv = setInterval(function () {
+            if (Date.now() - t0 > 180000) { clearInterval(iv); window.removeEventListener('message', onMsg); return reject(new Error('The dashboard never confirmed the save. Open it, sign in, then click the bookmark again.')); }
+            try { w.postMessage({ type: 'cubs-vald-jumps', payload: out }, origin); } catch (e) {}
+          }, 1500);
+        };
+      });
+    } else if (!u.ok) throw new Error('Saving failed (' + u.status + ')');
     say('✅ Done — ' + tests + ' sessions for ' + Object.keys(out.players).length + ' athletes.' + (missing.length ? '<br><span style="color:#fbbf24;">Not found in VALD: ' + missing.join(', ') + '</span>' : '') + (found.indexOf('cppbm') < 0 ? '<br><span style="color:#fbbf24;">Concentric peak power / BM not found in VALD definitions.</span>' : '') + '<br>Reload the dashboard\'s Jump Profile.');
   } catch (e) { say('<span style="color:#fca5a5;">' + (e.message || e) + '</span>'); }
   setTimeout(function () { box.remove(); }, 15000);
