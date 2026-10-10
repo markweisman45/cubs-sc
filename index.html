@@ -1498,15 +1498,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
             <div class="control-group">
               <div class="control-label">Athlete</div>
               <select class="control-select" id="prog-athlete" onchange="onAthleteChange()">
-                <option>Nico Hoerner</option><option>Pete Crow-Armstrong</option>
-                <option>Dansby Swanson</option><option>Matt Shaw</option>
-                <option>Carson Kelly</option><option>Miguel Amaya</option>
-                <option>Michael Busch</option><option>Alex Bregman</option>
-                <option>Tyrone Taylor</option><option>Ian Happ</option>
-                <option>Colin Rea</option><option>Matt Boyd</option>
-                <option>Jameson Taillon</option><option>Shota Imanaga</option>
-                <option>Justin Steele</option><option>Daniel Palencia</option>
-                <option>Caleb Thielbar</option><option>Edward Cabrera</option>
+                <option>Nico Hoerner</option><option>Dansby Swanson</option><option>Ian Happ</option><option>Pete Crow-Armstrong</option><option>Matt Shaw</option><option>Carson Kelly</option><option>Miguel Amaya</option><option>Michael Busch</option><option>Alex Bregman</option><option>Tyrone Taylor</option><option>Seiya Suzuki</option><option>Michael Conforto</option><option>Pedro Ramirez</option><option>BJ Murray</option><option>James Triantos</option><option>Kevin Alcantara</option><option>Matthew Boyd</option><option>Colin Rea</option><option>Ben Brown</option><option>Daniel Palencia</option><option>Ryan Rolison</option>
               </select>
             </div>
             <div class="control-group">
@@ -4214,7 +4206,7 @@ function initGridBuilder() {
   // Populate athlete select
   const ath = document.getElementById('grid-athlete');
   if (ath && !ath.options.length) {
-    Object.keys(PLAYERS).filter(n=>!['SP','RP'].includes(PLAYERS[n].pos)).forEach(n=>{
+    Object.keys(PLAYERS).forEach(n=>{
       const o = document.createElement('option');
       o.value = n; o.textContent = n;
       ath.appendChild(o);
@@ -5550,7 +5542,7 @@ function initPeriodization() {
   // Athletes
   const athSel = document.getElementById('perio-athlete');
   if (athSel && !athSel.options.length) {
-    Object.keys(PLAYERS).filter(n => !['SP','RP'].includes(PLAYERS[n].pos)).forEach(n => {
+    Object.keys(PLAYERS).forEach(n => {
       const o = document.createElement('option');
       o.value = n; o.textContent = n; athSel.appendChild(o);
     });
@@ -6782,6 +6774,102 @@ const PLAYERS = {
     latestHE: 0, latestDist: 0,
     bests: {jump:0, ppbm:0, abJump:0, abPPBM:0, speed:0, bat:0, exit:0, throwV:0},
     recentGames: [], cmjTrends: [], acwrHistory: [], wellness: []
+  },
+
+  // ── BJ MURRAY ──
+  "BJ Murray": {
+    pos:"3B", number:"83",
+    readiness: 1.0, status: "GREEN",
+    daysSinceCMJ: 0, acwr: 1.0, heAcwr: 1.0, tdAcwr: 1.0,
+    latestJump: 0, latestPPBM: 0, latestSpeed: 0,
+    latestBat: 0, latestExit: 0, latestThrow: 0,
+    latestHE: 0, latestDist: 0,
+    bests: {jump:0, ppbm:0, abJump:0, abPPBM:0, speed:0, bat:0, exit:0, throwV:0},
+    recentGames: [], cmjTrends: [], acwrHistory: [], wellness: []
+  },
+
+  // ── JAMES TRIANTOS ──
+  "James Triantos": {
+    pos:"2B", number:"5",
+    readiness: 1.0, status: "GREEN",
+    daysSinceCMJ: 0, acwr: 1.0, heAcwr: 1.0, tdAcwr: 1.0,
+    latestJump: 0, latestPPBM: 0, latestSpeed: 0,
+    latestBat: 0, latestExit: 0, latestThrow: 0,
+    latestHE: 0, latestDist: 0,
+    bests: {jump:0, ppbm:0, abJump:0, abPPBM:0, speed:0, bat:0, exit:0, throwV:0},
+    recentGames: [], cmjTrends: [], acwrHistory: [], wellness: []
+  },
+
+  // ── KEVIN ALCANTARA ──
+  "Kevin Alcantara": {
+    pos:"OF", number:"13",
+    readiness: 1.0, status: "GREEN",
+    daysSinceCMJ: 0, acwr: 1.0, heAcwr: 1.0, tdAcwr: 1.0,
+    latestJump: 0, latestPPBM: 0, latestSpeed: 0,
+    latestBat: 0, latestExit: 0, latestThrow: 0,
+    latestHE: 0, latestDist: 0,
+    bests: {jump:0, ppbm:0, abJump:0, abPPBM:0, speed:0, bat:0, exit:0, throwV:0},
+    recentGames: [], cmjTrends: [], acwrHistory: [], wellness: []
+  },
+
+  // ── MATTHEW BOYD ──
+  "Matthew Boyd": {
+    pos:"SP", number:"16",
+    readiness: 1.0, status: "GREEN",
+    daysSinceCMJ: 0, acwr: 1.0, heAcwr: 1.0, tdAcwr: 1.0,
+    latestJump: 0, latestPPBM: 0, latestSpeed: 0,
+    latestBat: 0, latestExit: 0, latestThrow: 0,
+    latestHE: 0, latestDist: 0,
+    bests: {jump:0, ppbm:0, abJump:0, abPPBM:0, speed:0, bat:0, exit:0, throwV:0},
+    recentGames: [], cmjTrends: [], acwrHistory: [], wellness: []
+  },
+
+  // ── COLIN REA ──
+  "Colin Rea": {
+    pos:"SP", number:"53",
+    readiness: 1.0, status: "GREEN",
+    daysSinceCMJ: 0, acwr: 1.0, heAcwr: 1.0, tdAcwr: 1.0,
+    latestJump: 0, latestPPBM: 0, latestSpeed: 0,
+    latestBat: 0, latestExit: 0, latestThrow: 0,
+    latestHE: 0, latestDist: 0,
+    bests: {jump:0, ppbm:0, abJump:0, abPPBM:0, speed:0, bat:0, exit:0, throwV:0},
+    recentGames: [], cmjTrends: [], acwrHistory: [], wellness: []
+  },
+
+  // ── BEN BROWN ──
+  "Ben Brown": {
+    pos:"SP", number:"32",
+    readiness: 1.0, status: "GREEN",
+    daysSinceCMJ: 0, acwr: 1.0, heAcwr: 1.0, tdAcwr: 1.0,
+    latestJump: 0, latestPPBM: 0, latestSpeed: 0,
+    latestBat: 0, latestExit: 0, latestThrow: 0,
+    latestHE: 0, latestDist: 0,
+    bests: {jump:0, ppbm:0, abJump:0, abPPBM:0, speed:0, bat:0, exit:0, throwV:0},
+    recentGames: [], cmjTrends: [], acwrHistory: [], wellness: []
+  },
+
+  // ── DANIEL PALENCIA ──
+  "Daniel Palencia": {
+    pos:"RP", number:"48",
+    readiness: 1.0, status: "GREEN",
+    daysSinceCMJ: 0, acwr: 1.0, heAcwr: 1.0, tdAcwr: 1.0,
+    latestJump: 0, latestPPBM: 0, latestSpeed: 0,
+    latestBat: 0, latestExit: 0, latestThrow: 0,
+    latestHE: 0, latestDist: 0,
+    bests: {jump:0, ppbm:0, abJump:0, abPPBM:0, speed:0, bat:0, exit:0, throwV:0},
+    recentGames: [], cmjTrends: [], acwrHistory: [], wellness: []
+  },
+
+  // ── RYAN ROLISON ──
+  "Ryan Rolison": {
+    pos:"RP", number:"33",
+    readiness: 1.0, status: "GREEN",
+    daysSinceCMJ: 0, acwr: 1.0, heAcwr: 1.0, tdAcwr: 1.0,
+    latestJump: 0, latestPPBM: 0, latestSpeed: 0,
+    latestBat: 0, latestExit: 0, latestThrow: 0,
+    latestHE: 0, latestDist: 0,
+    bests: {jump:0, ppbm:0, abJump:0, abPPBM:0, speed:0, bat:0, exit:0, throwV:0},
+    recentGames: [], cmjTrends: [], acwrHistory: [], wellness: []
   }};
 
 // In-session wellness log (persists while page is open)
@@ -6961,18 +7049,35 @@ function toggleSeasonMode() {
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applySeasonMode); else setTimeout(applySeasonMode, 0);
 
+function isPitcherPos(pos) { return ['SP','RP','P','RHP','LHP'].includes(pos); }
+// Pitchers: jumps + programming only — hide the baseball-metric tabs
+var PITCHER_HIDDEN_TABS = ['review','overview','heruns','value'];
+function applyPitcherTabs(name) {
+  var pit = !!(PLAYERS[name] && isPitcherPos(PLAYERS[name].pos)), jumpsBtn = null;
+  document.querySelectorAll('#dashTabs .tab-btn').forEach(function(b) {
+    var m = (b.getAttribute('onclick') || '').match(/switchDashTab\('(\w+)'/); if (!m) return;
+    if (m[1] === 'jumps') jumpsBtn = b;
+    b.style.display = (pit && PITCHER_HIDDEN_TABS.indexOf(m[1]) >= 0) ? 'none' : '';
+  });
+  if (pit && PITCHER_HIDDEN_TABS.indexOf(currentDashTab) >= 0 && jumpsBtn) switchDashTab('jumps', jumpsBtn);
+}
+
 function buildPlayerList() {
   const el = document.getElementById('playerList');
   if (!el) return;
-  const posPlayers = Object.entries(PLAYERS).filter(([,p]) => !['SP','RP'].includes(p.pos));
+  // Position players first, then pitchers under their own label
+  const posPlayers = Object.entries(PLAYERS).filter(([,p]) => !isPitcherPos(p.pos))
+    .concat(Object.entries(PLAYERS).filter(([,p]) => isPitcherPos(p.pos)));
+  let pitcherHdr = false;
 
   el.innerHTML = posPlayers.map(([name, p]) => {
+    const hdr = (!pitcherHdr && isPitcherPos(p.pos)) ? (pitcherHdr = true, '<div class="sidebar-label" style="margin:10px 0 4px;">Pitchers</div>') : '';
     const init = name.split(' ').map(n=>n[0]).join('');
     // Single source of truth for status — matches Team Summary, Dashboard, Daily Brief
     const as = getAthleteStatus(name);
     const sc = athleteStatusClass(as.status);
     const reasonTitle = as.reasons && as.reasons.length ? as.reasons.join(', ') : 'Within normal range';
-    return `<button class="player-btn" id="pbtn-${nameToId(name)}" onclick="selectPlayer('${jsq(name)}')">
+    return hdr + `<button class="player-btn" id="pbtn-${nameToId(name)}" onclick="selectPlayer('${jsq(name)}')">
       <div class="player-avatar">${init}</div>
       <div class="player-info">
         <div class="player-name">${name}</div>
@@ -7101,6 +7206,7 @@ function selectPlayer(name) {
   document.getElementById('topbarMeta').innerHTML = `Chicago Cubs · ${escHtml(p.pos)} · #${escHtml(p.number)} · ` + (_ls.last !== null ? `Data through <span>${fmtDate(new Date(_ls.last))}</span>` : `<span>No load data</span>`);
   document.getElementById('prog-athlete').value = name;
   renderDashboard();
+  applyPitcherTabs(name);
   if (typeof renderProgramCompliance === 'function') renderProgramCompliance();
   if (typeof renderHERuns === 'function' && document.getElementById('dash-heruns') && document.getElementById('dash-heruns').classList.contains('active')) renderHERuns();
   // 1RM tab: redraw for the newly picked athlete (it kept showing the previous athlete's maxes)
@@ -13190,7 +13296,7 @@ function tmplSendToPeriodization() {
     if (athSel && athlete) {
       // Clear and repopulate if needed
       if (!Array.from(athSel.options).find(o => o.value === athlete)) {
-        Object.keys(PLAYERS).filter(n => !['SP','RP'].includes(PLAYERS[n].pos)).forEach(n => {
+        Object.keys(PLAYERS).forEach(n => {
           const o = document.createElement('option');
           o.value = n; o.textContent = n; athSel.appendChild(o);
         });
@@ -14293,7 +14399,7 @@ function pbInit() {
   // Populate athlete dropdown
   var sel = document.getElementById('pb-athlete');
   if (sel && sel.options.length === 0) {
-    Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); })
+    Object.keys(PLAYERS)
       .forEach(function(n) {
         var o = document.createElement('option');
         o.value = n; o.textContent = n;
@@ -15930,6 +16036,14 @@ var PLAYER_PHOTOS = {
   'Seiya Suzuki':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/673548/headshot/67/current',
   'Michael Conforto':    'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/605275/headshot/67/current',
   'Pedro Ramirez':       'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/699393/headshot/67/current',
+  'BJ Murray':           'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/681230/headshot/67/current',
+  'James Triantos':      'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/701649/headshot/67/current',
+  'Kevin Alcantara':     'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/682634/headshot/67/current',
+  'Matthew Boyd':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/571510/headshot/67/current',
+  'Colin Rea':           'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/607067/headshot/67/current',
+  'Ben Brown':           'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/676962/headshot/67/current',
+  'Daniel Palencia':     'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/694037/headshot/67/current',
+  'Ryan Rolison':        'https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/669020/headshot/67/current',
 };
 
 var ANNUAL_PLANS = {};
@@ -16073,7 +16187,7 @@ function initAnnualPlan() {
                 'Alex Bregman','Tyrone Taylor','Seiya Suzuki','Michael Conforto','Pedro Ramirez'];
   // Use PLAYERS if available, fallback to hardcoded roster
   var names = (typeof PLAYERS !== 'undefined' && Object.keys(PLAYERS).length)
-    ? Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); })
+    ? Object.keys(PLAYERS)
     : roster;
   names.forEach(function(n) {
     var o = document.createElement('option');
@@ -18890,7 +19004,7 @@ function renderPitcherDashboard(p) {
   if (hittingPanel) hittingPanel.style.display = isPitcher ? 'none' : 'block';
   if (!isPitcher) return;
 
-  const pitcherData = (importedData.pitcher[currentPlayer] || [])
+  const pitcherData = ((importedData.pitcher || {})[currentPlayer] || [])
     .slice().sort((a,b) => new Date(a.date) - new Date(b.date));
 
   if (!pitcherData.length) {
@@ -19562,7 +19676,7 @@ function sendMesoToPeriodization() {
   var athSelM = document.getElementById('perio-athlete');
   if (athSelM) {
     if (!athSelM.options.length) {
-      Object.keys(PLAYERS).filter(function(n){ return !['SP','RP'].includes(PLAYERS[n].pos); }).forEach(function(n) {
+      Object.keys(PLAYERS).forEach(function(n) {
         var o = document.createElement('option'); o.value=n; o.textContent=n; athSelM.appendChild(o);
       });
     }
@@ -19663,7 +19777,7 @@ function sendSessionToPeriodization() {
   var athSel = document.getElementById('perio-athlete');
   if (athSel) {
     if (!athSel.options.length) {
-      Object.keys(PLAYERS).filter(n => !['SP','RP'].includes(PLAYERS[n].pos)).forEach(n => {
+      Object.keys(PLAYERS).forEach(n => {
         var o = document.createElement('option'); o.value = n; o.textContent = n; athSel.appendChild(o);
       });
     }
@@ -20739,7 +20853,8 @@ var HITTING_NAME_MAP = {
   'Swanson, D':'Dansby Swanson','Shaw, M':'Matt Shaw','Kelly, C':'Carson Kelly',
   'Amaya, M':'Miguel Amaya','Busch, M':'Michael Busch','Bregman, A':'Alex Bregman',
   'Taylor, T':'Tyrone Taylor','Happ, I':'Ian Happ','Suzuki, S':'Seiya Suzuki',
-  'Conforto, M':'Michael Conforto','Ramirez, P':'Pedro Ramirez'
+  'Conforto, M':'Michael Conforto','Ramirez, P':'Pedro Ramirez',
+  'Murray, B':'BJ Murray','Triantos, J':'James Triantos','Alcantara, K':'Kevin Alcantara','Alcántara, K':'Kevin Alcantara'
 };
 // Resolve a raw name from any CSV format to a roster name.
 // Supports: full names, "Last, F" legacy format, and fuzzy matching via findRosterMatch.
