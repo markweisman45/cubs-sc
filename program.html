@@ -713,6 +713,7 @@ function nextUpHTML(){
 function testsList(){
   return Object.keys(LOG).filter(function(k){ return k.indexOf('test:') === 0 && LOG[k]; }).sort().reverse().map(function(k){ return Object.assign({ date: k.slice(5) }, LOG[k]); });
 }
+function isPit(){ return !!(PROG && PROG.profile && PROG.profile.pitcher); }
 function testsHTML(){
   var T = testsList().slice(0, 3);
   var rows = T.map(function(t){
@@ -733,10 +734,10 @@ function openTest(){
   m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:flex-end;justify-content:center;';
   m.innerHTML = '<div style="background:#111a2e;width:100%;max-width:480px;border-radius:16px 16px 0 0;padding:18px 18px 26px;">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:16px;font-weight:800;color:#fff;">📏 Log a test · today</div><button onclick="closeTest()" style="background:none;border:none;color:var(--text2);font-size:20px;">✕</button></div>'
-    + '<label style="' + lab + '">10-yd sprint (seconds)</label><input id="t-10" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 1.62" value="' + esc(t.t10 || '') + '" style="' + inp + '">'
-    + '<label style="' + lab + '">30-yd sprint (seconds, optional)</label><input id="t-30" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 3.95" value="' + esc(t.t30 || '') + '" style="' + inp + '">'
+    + (isPit() ? '<input id="t-10" type="hidden" value=""><input id="t-30" type="hidden" value="">' : '<label style="' + lab + '">10-yd sprint (seconds)</label><input id="t-10" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 1.62" value="' + esc(t.t10 || '') + '" style="' + inp + '">'
+    + '<label style="' + lab + '">30-yd sprint (seconds, optional)</label><input id="t-30" type="number" step="0.01" inputmode="decimal" placeholder="e.g. 3.95" value="' + esc(t.t30 || '') + '" style="' + inp + '">')
     + '<label style="' + lab + '">Body weight (lb, optional)</label><input id="t-bw" type="number" step="0.1" inputmode="decimal" placeholder="e.g. 212" value="' + esc(t.bw || '') + '" style="' + inp + '">'
-    + '<label style="' + lab + '">How was it timed?</label><select id="t-how" style="' + inp + '">' + ['Hand timed', 'App (phone video)', 'Laser / timing gates'].map(function(o){ return '<option' + (t.how === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>'
+    + (isPit() ? '<input id="t-how" type="hidden" value="">' : '<label style="' + lab + '">How was it timed?</label><select id="t-how" style="' + inp + '">' + ['Hand timed', 'App (phone video)', 'Laser / timing gates'].map(function(o){ return '<option' + (t.how === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>')
     + '<label style="' + lab + '">Note (optional)</label><input id="t-note" placeholder="Surface, wind, how you felt…" value="' + esc(t.note || '') + '" style="' + inp + '">'
     + '<button onclick="saveTest()" style="margin-top:16px;width:100%;padding:13px;border:none;border-radius:10px;background:#22c55e;color:#000;font-weight:800;font-size:15px;">Save test</button></div>';
   document.body.appendChild(m);
@@ -780,7 +781,7 @@ function profileCardHTML(full){
 function toggleProfile(){ var k = 'cprof_open_' + PROG.id, open = true; try { open = localStorage.getItem(k) !== '0'; localStorage.setItem(k, open ? '0' : '1'); } catch(e) {} renderHero(); }
 // Weekly sprint summary from game data (written by the coach dashboard)
 function speedCardHTML(){
-  var sp = PROG.speed; if (!sp || !sp.lastRun) return '';
+  var sp = PROG.speed; if (!sp || !sp.lastRun || (PROG.profile && PROG.profile.pitcher)) return '';
   var p = String(sp.lastRun).split('-'), last = new Date(+p[0], +p[1] - 1, +p[2]);
   if ((Date.now() - last) / 86400000 > 21) return '';
   var mph = function(x){ return (x * 0.681818).toFixed(1); };
