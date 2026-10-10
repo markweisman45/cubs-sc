@@ -39,7 +39,9 @@ async function cubsValdSync(CFG) {
     var SCALE = {}; (defs || []).forEach(function (d) { if (byId[d.resultId] && d.resultUnitScaleFactor && d.resultUnitScaleFactor !== 1) SCALE[byId[d.resultId]] = d.resultUnitScaleFactor; });
     var out = { at: new Date().toISOString(), keys: KEYS, scaled: true, agg: 'max', players: {} }, missing = [];
     for (var i = 0; i < CFG.roster.length; i++) {
-      var n = CFG.roster[i], ids = byName[norm(n)] || [];
+      // Roster name → name in VALD when they differ
+      var VALD_ALIAS = { 'Matthew Boyd': 'Matt Boyd' };
+      var n = CFG.roster[i], ids = byName[norm(n)] || byName[norm(VALD_ALIAS[n] || '')] || [];
       if (!ids.length) { missing.push(n); continue; }
       say('Pulling jumps ' + (i + 1) + '/' + CFG.roster.length + ' — ' + n);
       var body = { include: 'TrialsWithResults', recordedAfter: '2023-01-01T06:00:00.000Z', recordedBefore: new Date(Date.now() + 864e5).toISOString(), resultIds: Object.values(KEYS).map(String), testTypes: ['CMJ', 'ABCMJ'], aggregateFunctions: ['Max'], testAttributeValueIds: [], athleteIds: ids, topNPerAthlete: 0 };
