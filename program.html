@@ -723,7 +723,7 @@ function testsHTML(){
   return '<div style="margin-top:12px;padding:12px;border-radius:12px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.22);">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#4ade80;">📏 HOME TESTS</div>'
     + '<button onclick="openTest()" style="padding:6px 12px;border-radius:8px;border:none;background:#22c55e;color:#000;font-weight:800;font-size:12px;cursor:pointer;">+ Log a test</button></div>'
-    + (rows ? '<div style="margin-top:6px;">' + rows + '</div>' : '<div style="font-size:11.5px;color:var(--text2);margin-top:6px;line-height:1.45;">Time a 10-yd sprint (hand or app timed, same way every time) and weigh in every couple of weeks so your coach can track progress.</div>')
+    + (rows ? '<div style="margin-top:6px;">' + rows + '</div>' : '<div style="font-size:11.5px;color:var(--text2);margin-top:6px;line-height:1.45;">' + (isPit() ? 'Weigh in every couple of weeks so your coach can track progress.' : 'Time a 10-yd sprint (hand or app timed, same way every time) and weigh in every couple of weeks so your coach can track progress.') + '</div>')
     + '</div>';
 }
 function openTest(){
