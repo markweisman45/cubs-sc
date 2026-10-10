@@ -1258,6 +1258,15 @@ async function init(){
     var res = await dbProgram(id);
     if (res.error) throw new Error(res.error.message);
     row = res.data;
+    // Old one-program link (?id=) → hop to his permanent link (?a=) so new blocks show up on the link he already has.
+    // Skipped for coach preview and when the coach is signed in on this browser.
+    if (!LINK_TOK && !/[?&]preview=1/.test(location.search) && row.athlete
+        && !Object.keys(localStorage).some(function(k){ return /^sb-.*-auth-token$/.test(k); })) {
+      try {
+        var al = await SUPA.from('cubs_sc_data').select('key').like('key', 'alink:%').eq('value', JSON.stringify({ athlete: row.athlete })).limit(1);
+        if (al.data && al.data[0]) { location.replace('./program.html?a=' + encodeURIComponent(al.data[0].key.slice(6))); return; }
+      } catch(e) { console.warn('[link upgrade]', e); }
+    }
     cloudLog = row.completion_log || null;
     try { var slim = Object.assign({}, row); delete slim.completion_log; localStorage.setItem(cacheKey, JSON.stringify(slim)); } catch(e) {}
   } catch(err) {
