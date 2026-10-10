@@ -144,7 +144,7 @@ function renderRosterBoard() {
   var rows = Object.keys(names).map(ofStats).filter(Boolean);
   rows.forEach(function (s) { s.score = s.pain * 100 + s.missed * 10 + (s.dupes ? 5 : 0) + (!s.queued && s.daysLeft <= 7 ? 3 : 0); });
   rows.sort(function (a, b) { return b.score - a.score || a.athlete.localeCompare(b.athlete); });
-  var none = Object.keys(typeof PLAYERS !== 'undefined' ? PLAYERS : {}).filter(function (n) { return !names[n] && !['SP', 'RP'].includes((PLAYERS[n] || {}).pos); });
+  var none = Object.keys(typeof PLAYERS !== 'undefined' ? PLAYERS : {}).filter(function (n) { return !names[n]; });
   var th = 'padding:6px 8px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;text-align:left;white-space:nowrap;border-bottom:1px solid var(--border);';
   var td = 'padding:7px 8px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle;white-space:nowrap;';
   var btn = 'padding:4px 8px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:4px;';
