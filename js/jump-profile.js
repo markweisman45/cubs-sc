@@ -347,3 +347,30 @@ function jpBookmarkHTML() {
   if (typeof document === 'undefined') return;
   if (typeof switchTab === 'function') { var _s = switchTab; switchTab = function (page) { var x = _s.apply(this, arguments); if (page === 'jumps') renderJumpProfile(); return x; }; }
 })();
+
+// VALD sync hand-off: with cloud security on, the bookmark on VALD Hub can't write by itself,
+// so it posts its results here and the signed-in dashboard saves them.
+(function () {
+  if (typeof window === 'undefined') return;
+  var saving = false;
+  window.addEventListener('message', async function (e) {
+    if (!/^https:\/\/[a-z0-9-]+\.valdperformance\.com$/.test(e.origin)) return;
+    var d = e.data; if (!d || d.type !== 'cubs-vald-jumps' || saving) return;
+    var out = d.payload;
+    var reply = function (ok, error) { try { e.source.postMessage({ type: 'cubs-vald-ack', ok: ok, error: error || null }, e.origin); } catch (x) {} };
+    if (!out || typeof out !== 'object' || !out.players || typeof out.players !== 'object') return reply(false, 'Bad data');
+    var db = typeof getSupaClient === 'function' ? getSupaClient() : null;
+    if (!db) return;                                   // page still loading — the bookmark retries
+    var s = await db.auth.getSession();
+    if (!s || !s.data || !s.data.session) return;      // not signed in yet — wait for sign-in, the bookmark retries
+    saving = true;
+    try {
+      var r = await db.from('cubs_sc_data').upsert({ key: 'cache:vald-jumps', value: JSON.stringify(out) }, { onConflict: 'key' });
+      if (r.error) throw r.error;
+      reply(true);
+      try { if (typeof jpLoad === 'function') { await jpLoad(); if (typeof renderJumpProfile === 'function' && typeof currentDashTab !== 'undefined' && currentDashTab === 'jumps') renderJumpProfile(); } } catch (x) {}
+      if (typeof showToast === 'function') showToast('✅ VALD jumps updated');
+    } catch (err) { reply(false, err.message || String(err)); }
+    finally { setTimeout(function () { saving = false; }, 5000); }
+  });
+})();
