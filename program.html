@@ -511,13 +511,24 @@ function setSync(state){
 }
 // Coach preview (?preview=1): exactly what the athlete sees, but nothing you
 // tap is saved to his log or to this device.
-var PREVIEW = /[?&]preview=1/.test(location.search);
-if (PREVIEW) document.addEventListener('DOMContentLoaded', function(){
+// Athlete peek (?a=<token>&next=<id>): read-only look at his upcoming block.
+var PEEK_ID = new URLSearchParams(location.search).get('next') || '';
+var PREVIEW = /[?&]preview=1/.test(location.search) || !!PEEK_ID;
+function backToCurrentURL(){ return './program.html?a=' + encodeURIComponent(LINK_TOK); }
+function peekURL(id){ return './program.html?a=' + encodeURIComponent(LINK_TOK) + '&next=' + encodeURIComponent(id); }
+function showPreviewBanner(){
   var b = document.createElement('div');
-  b.style.cssText = 'position:sticky;top:0;z-index:50;background:#f59e0b;color:#000;font:700 12px/1.3 system-ui,sans-serif;text-align:center;padding:7px 10px;';
-  b.textContent = '👁 Coach preview — this is his exact view. Nothing you tap is saved.';
+  if (PEEK_ID) {
+    var d = PROG && PROG.startDate ? parseISO(PROG.startDate) : null;
+    b.style.cssText = 'position:sticky;top:0;z-index:50;background:#4ade80;color:#000;font:700 12px/1.3 system-ui,sans-serif;text-align:center;padding:7px 10px;';
+    b.innerHTML = '👁 Preview — starts ' + esc(d ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'soon') + '. Logging opens then. '
+      + '<a href="' + backToCurrentURL() + '" style="color:#000;text-decoration:underline;">← Back to current program</a>';
+  } else {
+    b.style.cssText = 'position:sticky;top:0;z-index:50;background:#f59e0b;color:#000;font:700 12px/1.3 system-ui,sans-serif;text-align:center;padding:7px 10px;';
+    b.textContent = '👁 Coach preview — this is his exact view. Nothing you tap is saved.';
+  }
   document.body.insertBefore(b, document.body.firstChild);
-});
+}
 function saveLog(){
   if (PREVIEW) { setSync(''); return; }
   try { localStorage.setItem(logKey(), JSON.stringify(LOG)); localStorage.setItem('clogv_' + PROG.id, String(PROG.ver || 0)); } catch(e) {}
@@ -646,7 +657,7 @@ async function dbSaveLog(id, log){
 // running now (else the next upcoming, else the most recent). New blocks the
 // coach sends show up here automatically.
 var LINK_TOK = new URLSearchParams(window.location.search).get('a') || '';
-var NEXT_UP = null;
+var NEXT_UP = null, UPCOMING = [];
 function spanOf(pb){
   if (!pb || !pb.startDate || !pb.weekData) return null;
   var s = parseISO(pb.startDate); if (!s) return null;
@@ -672,6 +683,7 @@ async function resolveAthleteLink(tok){
     var past = rows.filter(function(x){ return x.s.end < t; }).sort(function(a, b){ return a.s.end < b.s.end ? 1 : -1; });
     var pick = act[0] || up[0] || past[0];
     if (!pick) return null;
+    UPCOMING = up.map(function(x){ return x.id; });
     NEXT_UP = up.find(function(x){ return x.id !== pick.id && x.s.start > pick.s.start; }) || null;
     try { localStorage.setItem(ck, JSON.stringify({ id: pick.id, next: NEXT_UP })); } catch(e) {}
     return pick.id;
@@ -684,15 +696,17 @@ async function resolveAthleteLink(tok){
 // On a permanent link, re-check every 10 min (and when the page comes back) — a new block takes over when it starts
 var _lastResolve = Date.now();
 async function recheckLink(){
-  if (!LINK_TOK || !PROG || Date.now() - _lastResolve < 10 * 60000) return;
+  if (!LINK_TOK || !PROG || PEEK_ID || Date.now() - _lastResolve < 10 * 60000) return;
   _lastResolve = Date.now();
   var id = await resolveAthleteLink(LINK_TOK);
   if (id && id !== PROG.id) location.reload(); else if (typeof renderHero === 'function') renderHero();
 }
 function nextUpHTML(){
-  if (!NEXT_UP || !NEXT_UP.s) return '';
+  if (!NEXT_UP || !NEXT_UP.s || PEEK_ID || (PROG && NEXT_UP.id === PROG.id)) return '';
   var d = parseISO(NEXT_UP.s.start);
-  return '<div class="coach-note" style="border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.07);color:#bbf7d0;"><b>Next up:</b> ' + esc(NEXT_UP.name || 'New block') + ' starts ' + esc(d ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : NEXT_UP.s.start) + ' — it will open here automatically.</div>';
+  return '<div class="coach-note" style="border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.07);color:#bbf7d0;"><b>Next up:</b> ' + esc(NEXT_UP.name || 'New block') + ' starts ' + esc(d ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : NEXT_UP.s.start) + ' — it will open here automatically.'
+    + (LINK_TOK ? ' <a href="' + peekURL(NEXT_UP.id) + '" style="display:inline-block;margin-top:6px;padding:5px 12px;border-radius:8px;background:#4ade80;color:#000;font-weight:700;text-decoration:none;">👁 Preview it</a>' : '')
+    + '</div>';
 }
 
 // ── At-home tests: he logs hand/app-timed sprints and body weight ───────────
@@ -1251,6 +1265,7 @@ function saveFinish(){
 async function init(){
   var id = new URLSearchParams(window.location.search).get('id');
   if (!id && LINK_TOK) id = await resolveAthleteLink(LINK_TOK);
+  if (PEEK_ID) { if (LINK_TOK && UPCOMING.indexOf(String(PEEK_ID)) >= 0) id = PEEK_ID; else { location.replace(LINK_TOK ? backToCurrentURL() : './program.html'); return; } }
   if (!id) { document.getElementById('root').innerHTML = '<div class="err">' + (LINK_TOK ? 'No program here yet — your coach will send it to this link. Check back soon.' : 'No program ID in this link.') + '</div>'; return; }
   var cacheKey = 'cprog_' + id, row = null, cloudLog = null;
   try {
@@ -1283,7 +1298,8 @@ async function init(){
   PROG.profile = pb.profile || null;
   var localVer = +(localStorage.getItem('clogv_' + PROG.id) || 0);
   LOG = mergeLogs(TC.upgradeLog(loadLocalLog(), pb, localVer), cloudLog);
-  try { localStorage.setItem(logKey(), JSON.stringify(LOG)); localStorage.setItem('clogv_' + PROG.id, String(PROG.ver)); } catch(e) {}
+  if (!PREVIEW) try { localStorage.setItem(logKey(), JSON.stringify(LOG)); localStorage.setItem('clogv_' + PROG.id, String(PROG.ver)); } catch(e) {}
+  if (PREVIEW) showPreviewBanner();
 
   document.title = (PROG.athlete || 'Cubs S&C') + ' — ' + (PROG.name || 'Program');
   document.getElementById('root').innerHTML = '<div id="hero"></div><div class="nav"><div class="week-row" id="week-row"></div><div class="day-row" id="day-row"></div></div><div class="session" id="session"></div>';
