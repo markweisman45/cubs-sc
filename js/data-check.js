@@ -21,7 +21,13 @@ function dcPit(n) { return typeof isPitcherPos === 'function' && PLAYERS[n] && i
 function dcNorm(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\b(jr|sr|ii|iii)\b\.?/g, '').replace(/[^a-z ]/g, '').trim(); }
 function dcLast(s) { var p = dcNorm(s).split(' '); return p[p.length - 1]; }
 function dcObj(o) { return o && typeof o === 'object' ? o : {}; }
-function dcDate(r) { return String(r && (r.date || r.d || r.Date || '')).slice(0, 10); }
+function dcDate(r) {
+  var raw = r && (r.date || r.d || r.Date || r.game_date || ''); if (!raw) return '';
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return String(raw).slice(0, 10);
+  var d = typeof safeParseDate === 'function' ? safeParseDate(raw) : new Date(raw); if (!d || isNaN(d)) return '';
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function dcShort(iso) { var p = iso.split('-'); return (+p[1]) + '/' + (+p[2]) + '/' + p[0].slice(2); }
 function dcKpiSig(p) { return p && p.kpis ? p.kpis.filter(function (k) { return !/^home|^rm:/.test(k.k); }).map(function (k) { return k.k + '=' + k.v; }).sort().join(' ') : ''; }
 
 // Every source, as { label, pos: true if position-player-only data, get: name → array }
@@ -159,7 +165,7 @@ function dcRender() {
       var c = p.src[s.k];
       if (!c || !c.n) return '<td style="text-align:center;color:var(--text3);">—</td>';
       var bad = p.pit && s.pos;
-      return '<td style="text-align:center;font-size:11.5px;color:' + (bad ? '#f87171' : 'var(--text)') + ';" title="' + c.n + ' records' + (c.last ? ', last ' + c.last : '') + '">' + (bad ? '⛔ ' : '✓ ') + c.n + (c.last ? '<div style="font-size:9.5px;color:var(--text3);">' + c.last.slice(5) + '</div>' : '') + '</td>';
+      return '<td style="text-align:center;font-size:11.5px;color:' + (bad ? '#f87171' : 'var(--text)') + ';" title="' + c.n + ' records' + (c.last ? ', last ' + c.last : '') + '">' + (bad ? '⛔ ' : '✓ ') + c.n + (c.last ? '<div style="font-size:9.5px;color:var(--text3);">' + dcShort(c.last) + '</div>' : '') + '</td>';
     }).join('');
     var sav = p.pit ? '<span style="color:var(--text3);">n/a</span>' : p.savant ? '✓' + (dcNorm(p.savant) !== dcNorm(n) ? ' <span style="color:#fbbf24;">' + dcEsc(p.savant) + '</span>' : '') : '<span style="color:#fbbf24;">no match</span>';
     var pages = p.rows.length ? p.rows.length + ' live' : '<span style="color:var(--text3);">—</span>';
