@@ -139,7 +139,7 @@ var AP = (function () {
     function delta(a, b, dec, unit) { if (a == null || b == null) return ''; var x = a - b; return '<span class="' + (x >= 0 ? 'up' : 'down') + '">' + (x >= 0 ? '▲ +' : '▼ ') + Math.abs(x).toFixed(dec) + (unit || '') + ' vs ' + prev.y + '</span>'; }
     var lastBw = d.bw.length ? d.bw[d.bw.length - 1] : null;
     var h = '<div class="page">'
-      + '<header><div><div class="eyebrow">CHICAGO CUBS STRENGTH &amp; CONDITIONING · ATHLETE PROFILE</div><h1>' + esc(d.name) + '</h1>'
+      + '<header><div><div class="eyebrow">MARK WEISMAN STRENGTH &amp; CONDITIONING · ATHLETE PROFILE</div><h1>' + esc(d.name) + '</h1>'
       + '<div class="meta">' + esc([d.pos, d.number ? '#' + d.number : '', lastBw ? 'BW ' + lastBw.v.toFixed(1) + ' lb' : ''].filter(Boolean).join(' · ')) + ' · Generated ' + fd(d.today) + (now.lastData ? ' · Game data through ' + fd(iso(now.lastData)) : '') + '</div></div>'
       + '<div class="now">' + statusChip(now.status) + '<div class="muted">ACWR ' + f(now.acwr, 2) + (now.heAcwr ? ' · HE ' + f(now.heAcwr, 2) : '') + '</div></div></header>'
       + '<section class="tiles">'

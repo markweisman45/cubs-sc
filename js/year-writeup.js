@@ -68,7 +68,7 @@ function yrWriteup(name) {
   var sv = typeof VA !== 'undefined' && VA.data && VA.data.rows ? VA.data.rows.find(function (x) { return x.roster === name; }) : null;
   var mlb = sv && YR.mlb[sv.id];
   var fmt = function (m, v) { return (+v).toFixed(m.dec); };
-  var who = { sav: 'MLB', cmj: 'MLB ' + (typeof MLB_NORM_GROUPS !== 'undefined' ? MLB_NORM_GROUPS[mlbAutoGroup(name)].label : 'position'), he: 'Cubs roster' };
+  var who = { sav: 'MLB', cmj: 'MLB ' + (typeof MLB_NORM_GROUPS !== 'undefined' ? MLB_NORM_GROUPS[mlbAutoGroup(name)].label : 'position'), he: 'the roster' };
   var pos = [], imp = [], plan = [], seen = {};
   // Availability
   var avail = '';
@@ -85,7 +85,7 @@ function yrWriteup(name) {
     var yk = ys.filter(function (y) { return d.vals[y] != null; }), first = d.vals[yk[0]], pc = d.pct[cy];
     var better = function (a, b) { return m.lower ? a < b : a > b; };
     var bestY = yk.reduce(function (a, y) { return better(d.vals[y], d.vals[a]) ? y : a; }, yk[0]);
-    var ref = m.team || m.src === 'he' ? 'on the Cubs roster' : 'vs ' + who[m.src];
+    var ref = m.team || m.src === 'he' ? 'on the roster' : 'vs ' + who[m.src];
     var tag = pc != null ? yrOrd(pc) + ' percentile ' + ref : '';
     var dn = m.lower ? 'slower than' : 'down from', up = m.lower ? 'faster than' : 'up from';
     var trend = yk.length > 1 ? ' (' + yk[0] + '–' + cy + ': ' + yk.map(function (y) { return fmt(m, d.vals[y]); }).join(' → ') + ')' : '';

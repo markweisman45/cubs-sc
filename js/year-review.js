@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Year in Review · Off-Season — the player landing tab.
 // Last three seasons side by side for everything S&C touches, each vs the league
-// where public data exists (MLB percentile), otherwise vs the Cubs roster.
+// where public data exists (MLB percentile), otherwise vs the roster.
 //   Summary   games (of 162), PA, SB/CS, IL stints        MLB Stats API (public)
 //   Speed     sprint speed, home to 1st, bolts             Baseball Savant
 //             linear / curve / steal-attempt run speed     HE Runs (internal → team rank)
@@ -138,7 +138,7 @@ function yrBuild(name) {
   ys.forEach(function (y) { var T = yrVald(name, y).filter(function (t) { return t.v && t.v.bw && t.d >= y + '-02-01'; }); if (T.length >= 2) bw.cells[y] = { v: T[T.length - 1].v.bw, txt: Math.round(T[0].v.bw) + ' → ' + Math.round(T[T.length - 1].v.bw), tag: jpFd ? jpFd(T[0].d).replace(/, \d{4}/, '') + ' – ' + jpFd(T[T.length - 1].d).replace(/, \d{4}/, '') : '', col: 'var(--text3)' }; });
   var isC = /^C$/i.test((PLAYERS[name] || {}).pos || '');
   var sections = [
-    { icon: '💨', title: 'Speed', sub: 'Savant vs MLB · HE runs vs the Cubs roster', rows: [
+    { icon: '💨', title: 'Speed', sub: 'Savant vs MLB · HE runs vs the roster', rows: [
       savRow('sprint'), savRow('hp1b'), savRow('bolts', 'Bolts (30+ ft/s runs)'),
       runRow('str', 'top', 'Linear sprint — top'), runRow('str', 'p90', 'Linear sprint — 90th'),
       runRow('cur', 'top', 'Curve sprint — top'), runRow('cur', 'p90', 'Curve sprint — 90th'),
@@ -293,7 +293,7 @@ async function renderYearInReview() {
   var draw = function () {
     if (currentPlayer !== name) return;
     body.innerHTML = yrSummary(name, mlb, ys, B) + yrNote(name, ys[2]) + B.sections.map(function (s) { return yrSection(s, ys); }).join('') + yrShape(name, ys)
-      + '<div style="font-size:10px;color:var(--text3);margin:4px 2px 20px;line-height:1.6;">MLB percentile = where that season ranks among all MLB players (Baseball Savant) or, for CMJ, against MLB players at his position (VALD 2025 norms). Team # = rank on the current Cubs roster that season (internal data, no public league number). Change = first to latest season shown; green is better.</div>';
+      + '<div style="font-size:10px;color:var(--text3);margin:4px 2px 20px;line-height:1.6;">MLB percentile = where that season ranks among all MLB players (Baseball Savant) or, for CMJ, against MLB players at his position (VALD 2025 norms). Team # = rank on the current roster that season (internal data, no public league number). Change = first to latest season shown; green is better.</div>';
   };
   draw();
   if (id && !mlb) { mlb = await yrMLB(id); draw(); }

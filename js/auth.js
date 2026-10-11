@@ -21,7 +21,7 @@ function authOverlay(mode, msg, canSkip) {
       + '<div style="display:flex;justify-content:space-between;margin-top:12px;font-size:12px;"><a href="#" id="auth-forgot" style="color:#93c5fd;">Forgot password?</a>'
       + (canSkip ? '<a href="#" id="auth-skip" style="color:#94a3b8;" title="Only works until security is turned on">Skip for now</a>' : '') + '</div>';
   ov.innerHTML = '<div style="width:340px;max-width:100%;background:rgba(15,23,42,.92);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.5);">'
-    + '<div style="text-align:center;font-size:30px;">⚾</div><div style="text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:24px;letter-spacing:.06em;color:#fff;">CUBS STRENGTH &amp; CONDITIONING</div>'
+    + '<div style="text-align:center;font-size:30px;">⚾</div><div style="text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:24px;letter-spacing:.06em;color:#fff;">MARK WEISMAN STRENGTH &amp; CONDITIONING</div>'
     + '<div style="text-align:center;font-size:11px;color:#94a3b8;margin-bottom:16px;">Coach sign-in</div>' + body
     + '<div id="auth-msg" style="font-size:12px;margin-top:10px;min-height:16px;color:' + (msg && msg.ok ? '#4ade80' : '#f87171') + ';">' + (msg ? (msg.text || msg) : '') + '</div></div>';
   document.body.appendChild(ov);

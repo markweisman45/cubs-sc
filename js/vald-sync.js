@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// Cubs VALD sync — runs on hub.valdperformance.com (as a bookmark) while you're
+// VALD sync — runs on hub.valdperformance.com (as a bookmark) while you're
 // logged in. Pulls every CMJ and ABCMJ test since 2023 for the dashboard roster,
 // keeps each metric's best value across all trials in a session (Max), and saves it to the dashboard's cloud
 // (cubs_sc_data key "cache:vald-jumps"). Uses your existing VALD Hub session;
@@ -10,7 +10,7 @@ async function cubsValdSync(CFG) {
   var box = document.createElement('div');
   box.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:999999;background:#0f172a;color:#fff;padding:14px 16px;border-radius:12px;font:13px/1.5 -apple-system,Segoe UI,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.4);border:2px solid #0E3386;max-width:340px;';
   document.body.appendChild(box);
-  var say = function (t) { box.innerHTML = '<b style="color:#93c5fd;">Cubs VALD sync</b><br>' + t; };
+  var say = function (t) { box.innerHTML = '<b style="color:#93c5fd;">VALD sync</b><br>' + t; };
   try {
     if (!/valdperformance\.com/.test(location.host)) throw new Error('Open VALD Hub (hub.valdperformance.com) first, then click the bookmark.');
     say('Reading your VALD session…');
@@ -72,7 +72,7 @@ async function cubsValdSync(CFG) {
         return { d: test.recorded.slice(0, 10), t: test.testType, n: test.trials.length, v: v, a: a };
       }).filter(Boolean).sort(function (x, y) { return x.d < y.d ? -1 : 1; });
     }
-    say('Saving to the Cubs dashboard…');
+    say('Saving to the dashboard…');
     var u = await fetch(CFG.supaUrl + '/rest/v1/cubs_sc_data?on_conflict=key', { method: 'POST', headers: { apikey: CFG.supaKey, Authorization: 'Bearer ' + CFG.supaKey, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ key: 'cache:vald-jumps', value: JSON.stringify(out) }) });
     var tests = Object.keys(out.players).reduce(function (t, k) { return t + out.players[k].length; }, 0);
     if (!u.ok && (u.status === 401 || u.status === 403)) {
