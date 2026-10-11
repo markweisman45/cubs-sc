@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cubs S&C — Athlete Readiness Dashboard</title>
+<title>Mark Weisman S&C — Athlete Readiness Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -658,7 +658,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
   <div style="max-width:920px;width:100%;">
     <div style="text-align:center;margin-bottom:44px;">
       <div style="font-size:44px;margin-bottom:10px;">⚾</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:.04em;color:#fff;line-height:1;">CUBS STRENGTH &amp; CONDITIONING</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:.04em;color:#fff;line-height:1;">MARK WEISMAN STRENGTH &amp; CONDITIONING</div>
       <div style="font-size:13px;color:#8892AA;margin-top:8px;">Mark Weisman &middot; Select where you want to go</div>
     </div>
     <div id="landing-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;"></div>
@@ -712,7 +712,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
     <div class="topbar-left">
       <div>
         <div class="topbar-player" id="topbarPlayer">Nico Hoerner</div>
-        <div class="topbar-meta" id="topbarMeta">Chicago Cubs · Second Base · #2 · Updated <span>Today</span></div>
+        <div class="topbar-meta" id="topbarMeta">Second Base · #2 · Updated <span>Today</span></div>
       </div>
     </div>
     <div class="tab-bar" id="dashTabs">
@@ -744,7 +744,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
       <div id="dash-review" class="page active">
         <div style="max-width:1400px;margin:0 auto;">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">📅 <span id="review-year"></span> Year in Review · Off-Season</div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">Last three seasons for <span id="review-player" style="color:var(--text2);"></span> — vs MLB where the data is public, vs the Cubs roster where it isn't</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">Last three seasons for <span id="review-player" style="color:var(--text2);"></span> — vs MLB where the data is public, vs the roster where it isn't</div>
           <div id="review-body"></div>
         </div>
       </div>
@@ -4119,7 +4119,7 @@ function printAthleteProgram(id) {
   <div class="hdr">
     <div style="display:flex;align-items:center;gap:10px;">
       <div class="logo-icon">⚾</div>
-      <div><div class="org">Chicago Cubs</div><div class="dept">Strength &amp; Conditioning</div></div>
+      <div><div class="org">Mark Weisman</div><div class="dept">Strength &amp; Conditioning</div></div>
     </div>
     <div>
       <div class="aname">${currentPlayer}</div>
@@ -4138,7 +4138,7 @@ function printAthleteProgram(id) {
       : `<pre style="font-family:\'DM Mono\',monospace;font-size:12px;white-space:pre-wrap;">${prog.content}</pre>`}
   </div>
   <div class="footer">
-    <span>Chicago Cubs S&amp;C — Confidential</span>
+    <span>Mark Weisman S&amp;C — Confidential</span>
     <span>Created ${date}</span>
   </div>
   \x3Cscript>
@@ -7215,7 +7215,7 @@ function selectPlayer(name) {
   const p = PLAYERS[name];
   document.getElementById('topbarPlayer').textContent = name;
   const _ls = playerLoadSeries(name);
-  document.getElementById('topbarMeta').innerHTML = `Chicago Cubs · ${escHtml(p.pos)} · #${escHtml(p.number)} · ` + (_ls.last !== null ? `Data through <span>${fmtDate(new Date(_ls.last))}</span>` : `<span>No load data</span>`);
+  document.getElementById('topbarMeta').innerHTML = `${escHtml(p.pos)} · #${escHtml(p.number)} · ` + (_ls.last !== null ? `Data through <span>${fmtDate(new Date(_ls.last))}</span>` : `<span>No load data</span>`);
   document.getElementById('prog-athlete').value = name;
   renderDashboard();
   applyPitcherTabs(name);
@@ -9502,7 +9502,7 @@ function printBrief() {
     });
   }
 
-  body += '<div class="footer"><span>Cubs S&amp;C Dashboard</span><span>' + today + '</span></div>';
+  body += '<div class="footer"><span>Mark Weisman S&amp;C Dashboard</span><span>' + today + '</span></div>';
 
   var win = window.open('', '_blank', 'width=800,height=900');
   win.document.write('<!DOCTYPE html><html><head><title>Daily Brief — ' + today + '</title><style>' + css + '</style></head><body>' + body + '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"><\/script><script>window.addEventListener("load",function(){document.querySelectorAll("canvas[data-url]").forEach(function(c){new QRious({element:c,value:c.getAttribute("data-url"),size:104,backgroundAlpha:0,foreground:"#111",level:"M"});});setTimeout(function(){window.print();},600);});<\/script></body></html>');
@@ -10227,7 +10227,7 @@ function exportPlayerPDF(){
   w.document.write('<!DOCTYPE html><html><head><title>'+currentPlayer+' — S&C Report</title><style>'+css+'</style></head><body>');
   w.document.write('<div class="page-wrap">');
 
-  w.document.write('<div class="cover"><div class="cover-eyebrow">Chicago Cubs &middot; Strength &amp; Conditioning</div>');
+  w.document.write('<div class="cover"><div class="cover-eyebrow">Mark Weisman &middot; Strength &amp; Conditioning</div>');
   w.document.write('<h1>'+currentPlayer+'</h1>');
   w.document.write('<div class="sub">'+(p.pos||'')+' &middot; #'+(p.number||'')+'&nbsp;&nbsp;|&nbsp;&nbsp;Report generated '+date+'</div></div>');
 
@@ -10341,7 +10341,7 @@ function exportPlayerPDF(){
   });
   w.document.write('</tbody></table>');
   w.document.write('</div>'); // close .content
-  w.document.write('<div class="footer"><span>Cubs S&C Dashboard &mdash; Confidential</span><span>Generated '+date+'</span></div>');
+  w.document.write('<div class="footer"><span>Mark Weisman S&C Dashboard &mdash; Confidential</span><span>Generated '+date+'</span></div>');
   w.document.write('</div>'); // close .page-wrap
   w.document.write('</body></html>');
   w.document.close();
@@ -12074,7 +12074,7 @@ function exportExerciseLibrary() {
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url;
-  a.download = 'cubs_exercise_library_' + localISODate() + '.csv';
+  a.download = 'mw_exercise_library_' + localISODate() + '.csv';
   a.click();
   URL.revokeObjectURL(url);
   showStatus('✅ Exported ' + (rows.length-1) + ' exercises as CSV — open in Excel to edit');
@@ -16132,7 +16132,7 @@ var SPEED_COLORS = ['#f59e0b','#ef4444','#8b5cf6','#22c55e','#06b6d4'];
 var ESD_QUALS = ['Aerobic','Lactic','Alactic'];
 var ESD_COLORS = ['#22c55e','#f59e0b','#ef4444'];
 
-// Cubs season phases (Nov year → Oct year+1)
+// Season phases (Nov year → Oct year+1)
 function getSeasonPhases(year) {
   var y = parseInt(year);
   return [
@@ -18945,7 +18945,7 @@ function printSession() {
     <div class="print-logo">
       <div class="print-logo-icon">⚾</div>
       <div>
-        <div class="print-org">Chicago Cubs</div>
+        <div class="print-org">Mark Weisman</div>
         <div class="print-dept">Strength &amp; Conditioning · Sports Science</div>
       </div>
     </div>
@@ -18982,7 +18982,7 @@ function printSession() {
   <div id="print-content">${output.innerHTML}</div>
 
   <div class="print-footer">
-    <span>Chicago Cubs S&amp;C — Confidential</span>
+    <span>Mark Weisman S&amp;C — Confidential</span>
     <span>Generated ${date}</span>
   </div>
 
@@ -19917,7 +19917,7 @@ function getEventsForDate(dk) {
   const athleteFilter = document.getElementById('cal-athlete-filter')?.value || '';
   const events = [];
 
-  // Games — check both GAME_SCHEDULE (user-added) and built-in Cubs schedule
+  // Games — check both GAME_SCHEDULE (user-added) and built-in schedule
   const allGames = GAME_SCHEDULE.length > 0 ? GAME_SCHEDULE : CUBS_2026_SCHEDULE;
   allGames.forEach(g => {
     if (g.date === dk) events.push({ type:'game', label: g.opponent, data: g });
@@ -20138,7 +20138,7 @@ function showDayDetail(dk) {
         html += `<div style="background:${bgColor};border:1px solid ${borderColor};border-radius:var(--radius-sm);padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:14px;">
           ${logoUrl ? `<img src="${logoUrl}" style="width:48px;height:48px;object-fit:contain;flex-shrink:0;" onerror="this.style.display='none'">` : '<div style="font-size:32px;">⚾</div>'}
           <div style="flex:1;">
-            <div style="font-size:13px;color:var(--text3);margin-bottom:2px;">${isHome ? '🏠 Home · Wrigley Field' : '✈️ Away'}</div>
+            <div style="font-size:13px;color:var(--text3);margin-bottom:2px;">${isHome ? '🏠 Home' : '✈️ Away'}</div>
             <div style="font-weight:700;font-size:16px;margin-bottom:2px;">${isHome ? 'vs' : '@'} ${e.data.opponent}</div>
             <div style="font-size:12px;color:var(--text2);">⏰ ${e.data.time||'TBD'}</div>
           </div>
@@ -20232,7 +20232,7 @@ function resetToOfficialSchedule() {
   renderCalendar();
   closeModal('gameImportModal');
   const prev = document.getElementById('gameImportPreview');
-  if (prev) { prev.innerHTML = '<span style="color:var(--green);">✓ Reset to official 2026 Cubs schedule (162 games).</span>'; }
+  if (prev) { prev.innerHTML = '<span style="color:var(--green);">✓ Reset to official 2026 schedule (162 games).</span>'; }
 }
 
 function clearGames() {
@@ -20653,9 +20653,9 @@ function teamLogoUrl(teamName) {
 }
 
 // ══════════════════════════════════════════════
-// 2026 CUBS SCHEDULE — Source: Bleed Cubbie Blue + SI.com + ESPN
-// All times Central (home team local). Wrigley = CT.
-// Note: Wrigley typical starts: 1:20 PM (day), 6:40/7:05 PM (night)
+// 2026 SCHEDULE — Source: public team schedule (SI.com + ESPN)
+// All times Central (home team local). home park = CT.
+// Note: home park typical starts: 1:20 PM (day), 6:40/7:05 PM (night)
 // ══════════════════════════════════════════════
 const CUBS_2026_SCHEDULE = [
   // MARCH — Home vs Nationals, then Angels
@@ -21126,7 +21126,7 @@ function exportAllData(){
   var blob=new Blob([JSON.stringify(b)],{type:'application/json'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
-  a.href=url;a.download='cubs_sc_backup_'+localISODate()+'.json';
+  a.href=url;a.download='mw_sc_backup_'+localISODate()+'.json';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   URL.revokeObjectURL(url);
   if (typeof showStatus === 'function') showStatus('✅ Backup downloaded — ' + keys.length + ' data keys'); else alert('Backup saved');
@@ -21152,7 +21152,7 @@ function importAllData(input){
       var data=(backup && backup.version==='cubs_sc_backup_v1')?backup.keys:backup;
       var count=0;
       Object.keys(data).forEach(function(k){if(k.startsWith('cubs_sc')){localStorage.setItem(k,data[k]);count++;}});
-      if(!count){alert('No Cubs S&C data found in that file.');return;}
+      if(!count){alert('No S&C data found in that file.');return;}
       alert('Restored '+count+' data keys — reloading…');location.reload();
     }catch(err){alert('Import failed: '+err.message);}
   };
@@ -24594,7 +24594,7 @@ try {
     </div>
   </div>
 
-<script src="js/auth.js?v=1"></script>
+<script src="js/auth.js?v=2"></script>
 <script src="js/training-core.js?v=4"></script>
 <script src="js/coach-loop.js?v=6"></script>
 <script src="js/speed-intel.js?v=3"></script>
@@ -24603,20 +24603,20 @@ try {
 <script src="js/annual-link.js?v=1"></script>
 <script src="js/live-links.js?v=5"></script>
 <script src="js/program-calendar.js?v=3"></script>
-<script src="js/athlete-profile.js?v=2"></script>
+<script src="js/athlete-profile.js?v=3"></script>
 <script src="js/savant.js?v=3"></script>
-<script src="js/value-added.js?v=3"></script>
-<script src="js/vald-sync.js?v=5"></script>
-<script src="js/jump-profile.js?v=9"></script>
+<script src="js/value-added.js?v=4"></script>
+<script src="js/vald-sync.js?v=6"></script>
+<script src="js/jump-profile.js?v=10"></script>
 <script src="js/mlb-norms.js?v=1"></script>
 <script src="js/jump-kpi.js?v=6"></script>
 <script src="js/jump-lma.js?v=1"></script>
 <script src="js/data-fixes.js?v=1"></script>
-<script src="js/year-review.js?v=5"></script>
-<script src="js/year-goals.js?v=3"></script>
+<script src="js/year-review.js?v=6"></script>
+<script src="js/year-goals.js?v=4"></script>
 <script src="js/athlete-kpi.js?v=4"></script>
 <script src="js/data-check.js?v=1"></script>
 <script src="js/offseason.js?v=1"></script>
-<script src="js/year-writeup.js?v=1"></script>
+<script src="js/year-writeup.js?v=2"></script>
 </body>
 </html>

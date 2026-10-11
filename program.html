@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Cubs S&amp;C</title>
+<title>Mark Weisman S&amp;C</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script src="js/training-core.js?v=4"></script>
@@ -232,14 +232,14 @@ input,textarea{font-family:inherit;}
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Cubs S&amp;C">
+<meta name="apple-mobile-web-app-title" content="Weisman S&amp;C">
 </head>
 <body>
 
 <div class="topbar">
   <div class="brand">
     <div class="brand-logo">⚾</div>
-    <div class="brand-text"><div class="t1">CUBS S&amp;C</div><div class="t2">Training Program</div></div>
+    <div class="brand-text"><div class="t1">MARK WEISMAN S&amp;C</div><div class="t2">Training Program</div></div>
   </div>
   <div class="top-right">
     <button class="print-btn" onclick="printProgram()" title="Print or save as PDF">🖨</button>
@@ -291,8 +291,8 @@ var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
   var startUrl = './program.html' + (ptok ? ('?a=' + encodeURIComponent(ptok)) : pid ? ('?id=' + encodeURIComponent(pid)) : '');
 
   var manifest = {
-    name: 'Cubs S&C Training Program',
-    short_name: 'Cubs S&C',
+    name: 'Mark Weisman S&C Training Program',
+    short_name: 'Weisman S&C',
     description: 'Your strength & conditioning training program',
     start_url: startUrl,
     scope: './',
@@ -1302,7 +1302,7 @@ async function init(){
   if (!PREVIEW) try { localStorage.setItem(logKey(), JSON.stringify(LOG)); localStorage.setItem('clogv_' + PROG.id, String(PROG.ver)); } catch(e) {}
   if (PREVIEW) showPreviewBanner();
 
-  document.title = (PROG.athlete || 'Cubs S&C') + ' — ' + (PROG.name || 'Program');
+  document.title = (PROG.athlete || 'Mark Weisman S&C') + ' — ' + (PROG.name || 'Program');
   document.getElementById('root').innerHTML = '<div id="hero"></div><div class="nav"><div class="week-row" id="week-row"></div><div class="day-row" id="day-row"></div></div><div class="session" id="session"></div>';
 
   TODAY = findToday();
@@ -1342,7 +1342,7 @@ function printProgram(){
     var wks = []; for (var w = c; w < Math.min(W.length, c + per); w++) wks.push(w);
     var range = wks.length > 1 ? 'Weeks ' + (wks[0] + 1) + '–' + (wks[wks.length - 1] + 1) : 'Week ' + (wks[0] + 1);
     var pg = '<div class="sb-pg"><div class="sb-hd"><div><div class="t">' + esc(PROG.athlete || '') + '</div><div class="s">' + esc(PROG.name || '') + ' · ' + range + ' of ' + W.length + '</div></div>'
-      + '<div class="r">CUBS STRENGTH &amp; CONDITIONING' + (PROG.startDate ? '<br>Week 1 starts ' + fmt(parseISO(PROG.startDate)) : '') + '</div></div>';
+      + '<div class="r">MARK WEISMAN STRENGTH &amp; CONDITIONING' + (PROG.startDate ? '<br>Week 1 starts ' + fmt(parseISO(PROG.startDate)) : '') + '</div></div>';
     if (c === 0 && PROG.note) pg += '<div class="sb-msg"><b>Coach:</b> ' + esc(PROG.note) + '</div>';
     if (c === 0 && PROG.profile && (PROG.profile.goals || []).length) pg += '<div class="sb-msg" style="border-left-color:#16a34a;background:#f1faf3;"><b>Off-season goals:</b> ' + PROG.profile.goals.map(function(g){ return esc(g.goal) + ' <b>' + esc(g.target) + '</b>'; }).join(' &nbsp;·&nbsp; ') + '</div>';
     var wkW = Math.floor(58 / wks.length);

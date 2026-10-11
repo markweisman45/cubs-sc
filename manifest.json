@@ -1,6 +1,6 @@
 {
-  "name": "Cubs S&C Training Program",
-  "short_name": "Cubs S&C",
+  "name": "Mark Weisman S&C Training Program",
+  "short_name": "Weisman S&C",
   "description": "Your strength & conditioning training program",
   "start_url": "./program.html",
   "scope": "./",
