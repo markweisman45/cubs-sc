@@ -49,6 +49,7 @@ function apProfile(name) {
   } catch (e) {}
   if (!kpis.length && !goals.length) return null;
   var out = { season: cy, asOf: (typeof TC !== 'undefined' ? TC.localISO() : new Date().toISOString().slice(0, 10)), kpis: kpis, goals: goals };
+  out.athlete = name;   // who these numbers belong to — lets a page carrying someone else's profile be caught and replaced
   if (pit) out.pitcher = true;
   return out;
 }
@@ -68,7 +69,7 @@ async function apPushProfiles(onlyName, force) {
       if (!prof || apSame(prof, row.pb.profile)) continue;
       // Don't overwrite a fuller profile with a partial one while data is still loading
       var old = row.pb.profile;
-      if (!force && !prof.pitcher && old && (old.kpis || []).length > prof.kpis.length) continue;
+      if (!force && !prof.pitcher && old && old.athlete === row.athlete && (old.kpis || []).length > prof.kpis.length) continue;
       var r = await db.from('athlete_programs').select('pb_state').eq('id', row.id).maybeSingle();
       if (r.error || !r.data) continue;
       var pb = typeof r.data.pb_state === 'string' ? JSON.parse(r.data.pb_state) : r.data.pb_state;
