@@ -8842,6 +8842,8 @@ function showPushProgramModal(progId) {
       var prev = pushedTo[player];
       var id = prev ? String(prev.id) : String(nextId++);
       var athState = typeof prepareForAthlete === 'function' ? prepareForAthlete(prog.pbState, player).st : pbComputeLoadsForAthlete(prog.pbState, player);
+      // Never carry another athlete's page data (profile, speed card, replies) into this send
+      ['profile', 'speedSummary', 'messages', 'lastChange', 'remaps', 'structVer'].forEach(function(k){ delete athState[k]; });
       athState.athlete = player; athState.startDate = startDate; athState.pushNote = note;
       athState.sourceProgramId = String(prog.id);
       var now = new Date().toISOString();
@@ -24612,7 +24614,8 @@ try {
 <script src="js/data-fixes.js?v=1"></script>
 <script src="js/year-review.js?v=5"></script>
 <script src="js/year-goals.js?v=3"></script>
-<script src="js/athlete-kpi.js?v=3"></script>
+<script src="js/athlete-kpi.js?v=4"></script>
+<script src="js/data-check.js?v=1"></script>
 <script src="js/offseason.js?v=1"></script>
 <script src="js/year-writeup.js?v=1"></script>
 </body>
