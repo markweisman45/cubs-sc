@@ -44,17 +44,19 @@ async function dcRun() {
   roster.forEach(function (n) { per[n] = { name: n, pos: (PLAYERS[n] || {}).pos || '', pit: dcPit(n), src: {}, flags: [], rows: [] }; });
 
   // 1. Source coverage per player + names that aren't on the roster
-  var stray = [];
+  var stray = {};
   S.forEach(function (s) {
     Object.keys(s.map).forEach(function (name) {
       var arr = Array.isArray(s.map[name]) ? s.map[name] : [];
       if (per[name]) { var ds = arr.map(dcDate).filter(Boolean).sort(); per[name].src[s.k] = { n: arr.length, last: ds[ds.length - 1] || '' }; return; }
       if (!arr.length) return;
-      var guess = roster.filter(function (r) { return dcLast(r) === dcLast(name); });
-      stray.push({ name: name, src: s.label, n: arr.length, guess: guess.length === 1 ? guess[0] : null });
+      (stray[name] = stray[name] || []).push(arr.length + ' ' + s.label);
     });
   });
-  stray.forEach(function (x) { add('yellow', null, '<b>' + dcEsc(x.name) + '</b> has ' + x.n + ' ' + dcEsc(x.src) + ' record' + (x.n === 1 ? '' : 's') + ' but isn\'t on the roster' + (x.guess ? ' — probably <b>' + dcEsc(x.guess) + '</b> under a different name, so his ' + dcEsc(x.src) + ' isn\'t being used' : '') + '.'); });
+  Object.keys(stray).forEach(function (name) {
+    var guess = roster.filter(function (r) { return dcLast(r) === dcLast(name); }), g = guess.length === 1 ? guess[0] : null;
+    add('yellow', null, '<b>' + dcEsc(name) + '</b> isn\'t on the roster but has data (' + dcEsc(stray[name].join(', ')) + ')' + (g ? ' — probably <b>' + dcEsc(g) + '</b> under a different name' + (dcPit(g) ? '' : ', so it isn\'t being used') : ' — fine if he\'s off the roster') + '.');
+  });
 
   // 2. Savant match (position players)
   if (typeof VA !== 'undefined' && VA.data) {
