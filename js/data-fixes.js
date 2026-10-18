@@ -3,6 +3,7 @@
 // fresh VALD sync or CSV import can't bring bad data back.
 //  • noJumps: athletes whose CMJ / ABCMJ data is excluded everywhere
 //  • dropTests: single bad tests removed from every view
+//  • dropRuns: single bad HE runs removed from every speed view
 //  • bwLb: body weight to use for relative strength (overrides VALD)
 //  • Statcast speed typed without a decimal (2871 → 28.71) is corrected
 // ═══════════════════════════════════════════════════════════════════════════
@@ -10,6 +11,9 @@ var DATA_FIX = {
   noJumps: ['Dansby Swanson', 'Ian Happ'],
   dropTests: [
     { name: 'Miguel Amaya', d: '2026-07-21', t: 'CMJ', why: '56.5 cm logged as CMJ — arm-swing level; his CMJ average is ~39.5 cm' }
+  ],
+  dropRuns: [
+    { name: 'Ian Happ', d: '2025-04-01', s: 31.19, why: 'FB HR chase in LF — 31.19 is 1.2 ft/s over his next-best run (29.98)' }
   ],
   bwLb: { 'Nico Hoerner': 200, 'Dansby Swanson': 188, 'Ian Happ': 208 }
 };
@@ -41,6 +45,14 @@ function dfFixTrends() {
     if (p.cmjTrends && p.cmjTrends.length) p.cmjTrends = p.cmjTrends.filter(function (c) { return !dfDropped(n, dfIso(c.rawDate || c.date), c.type || 'CMJ'); });
   });
 }
+// HE runs (HE Runs tab tiles, leaderboard, zones, PDF, athlete profile)
+function dfFixRuns() {
+  if (typeof heRunsData === 'undefined' || !heRunsData) return;
+  DATA_FIX.dropRuns.forEach(function (x) {
+    var R = heRunsData[x.name]; if (!Array.isArray(R)) return;
+    heRunsData[x.name] = R.filter(function (r) { return !(dfIso(r.date) === x.d && Math.abs((parseFloat(r.speed) || 0) - x.s) < 0.005); });
+  });
+}
 // Speed entered without the decimal point
 function dfFixSpeed() {
   if (typeof PLAYERS === 'undefined') return;
@@ -62,5 +74,7 @@ function athleteBW(name) {
   if (typeof jpScale === 'function') { var _js = jpScale; jpScale = function (D) { return dfFixVald(_js.apply(this, arguments)); }; }
   if (typeof rebuildCMJTrends === 'function') { var _rb = rebuildCMJTrends; rebuildCMJTrends = function () { var x = _rb.apply(this, arguments); dfFixTrends(); return x; }; }
   if (typeof renderDashboard === 'function') { var _rd = renderDashboard; renderDashboard = function () { dfFixSpeed(); dfFixTrends(); return _rd.apply(this, arguments); }; }
-  dfFixSpeed(); dfFixTrends();
+  if (typeof loadHERuns === 'function') { var _lh = loadHERuns; loadHERuns = function () { var x = _lh.apply(this, arguments); dfFixRuns(); return x; }; }
+  if (typeof renderHERuns === 'function') { var _rh = renderHERuns; renderHERuns = function () { dfFixRuns(); return _rh.apply(this, arguments); }; }
+  dfFixSpeed(); dfFixTrends(); dfFixRuns();
 })();
