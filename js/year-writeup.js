@@ -53,7 +53,7 @@ function ywVals(name, m, ys) {
   // Team percentile for internal or team-ranked metrics
   var cy = ys[2];
   if ((m.src === 'he' || m.team) && vals[cy] != null) {
-    var team = Object.keys(PLAYERS).map(function (n) { return n === name ? vals[cy] : ywVals1(n, m, cy); }).filter(function (v) { return v != null; });
+    var team = Object.keys(PLAYERS).filter(isTeamAthlete).map(function (n) { return n === name ? vals[cy] : ywVals1(n, m, cy); }).filter(function (v) { return v != null; });
     if (team.length >= 4) pct[cy] = Math.round(100 * team.filter(function (v) { return v < vals[cy]; }).length / (team.length - 1));
   }
   return { vals: vals, pct: pct };

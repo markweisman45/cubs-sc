@@ -7,7 +7,7 @@
 var AP_ORDER = ['sprint', 'str', 'cur', 'jh', 'rsi', 'ppbm', 'cppbm', 'bw'];
 // Pitchers: jumps only — no sprint KPIs, sprint goals, speed card or sprint home tests
 var AP_PIT_KEYS = ['jh', 'rsi', 'ppbm', 'cppbm', 'bw'];
-function apIsPitcher(name) { return typeof PLAYERS !== 'undefined' && typeof isPitcherPos === 'function' && !!(PLAYERS[name] && isPitcherPos(PLAYERS[name].pos)); }
+function apIsPitcher(name) { return typeof PLAYERS !== 'undefined' && typeof isPitcherPos === 'function' && !!(PLAYERS[name] && (isPitcherPos(PLAYERS[name].pos) || isClientPos(PLAYERS[name].pos))); }
 if (typeof yrSuggest === 'function') {
   var _apYrSuggest = yrSuggest;
   yrSuggest = function (name) { var S = _apYrSuggest.apply(this, arguments) || []; return apIsPitcher(name) ? S.filter(function (s) { return s.m.src === 'cmj'; }) : S; };

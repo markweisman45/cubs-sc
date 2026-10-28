@@ -93,7 +93,7 @@ function yrVald(name, y, type) {
 }
 // Team rank for an internal stat (1 = best) among roster athletes with data that season
 function yrTeamRank(fn, name, y) {
-  var rows = Object.keys(PLAYERS).map(function (n) { var v = fn(n, y); return v == null ? null : { n: n, v: v }; }).filter(Boolean);
+  var rows = Object.keys(PLAYERS).filter(isTeamAthlete).map(function (n) { var v = fn(n, y); return v == null ? null : { n: n, v: v }; }).filter(Boolean);
   var me = rows.find(function (r) { return r.n === name; }); if (!me || rows.length < 3) return null;
   return { rank: rows.filter(function (r) { return r.v > me.v; }).length + 1, of: rows.length };
 }

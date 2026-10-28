@@ -17,7 +17,7 @@
 var DC = { last: null };
 
 function dcEsc(x) { return typeof escHtml === 'function' ? escHtml(String(x == null ? '' : x)) : String(x == null ? '' : x); }
-function dcPit(n) { return typeof isPitcherPos === 'function' && PLAYERS[n] && isPitcherPos(PLAYERS[n].pos); }
+function dcPit(n) { return typeof isPitcherPos === 'function' && PLAYERS[n] && (isPitcherPos(PLAYERS[n].pos) || isClientPos(PLAYERS[n].pos)); }
 function dcNorm(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\b(jr|sr|ii|iii)\b\.?/g, '').replace(/[^a-z ]/g, '').trim(); }
 function dcLast(s) { var p = dcNorm(s).split(' '); return p[p.length - 1]; }
 function dcObj(o) { return o && typeof o === 'object' ? o : {}; }

@@ -38,7 +38,7 @@ function yrSuggest(name) {
     var ly = yk[yk.length - 1], cur = vals[ly];
     if (m.src === 'cmj') { var pc = typeof mlbPct === 'function' ? mlbPct(m.k, cur, grp) : null; pct = pc ? pc.p : null; }
     else if (m.src === 'he') {   // no public league number → percentile within the roster that season
-      var team = Object.keys(PLAYERS).map(function (n) { var st = yrStats(yrRuns(n, ly, m.k)); return st && st.n >= 3 ? st.top : null; }).filter(function (v) { return v != null; });
+      var team = Object.keys(PLAYERS).filter(isTeamAthlete).map(function (n) { var st = yrStats(yrRuns(n, ly, m.k)); return st && st.n >= 3 ? st.top : null; }).filter(function (v) { return v != null; });
       pct = team.length >= 4 ? Math.round(100 * team.filter(function (v) { return v < cur; }).length / (team.length - 1)) : null;
     }
     else pct = sv.metrics[m.k].pcts[ly];
