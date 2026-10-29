@@ -7211,7 +7211,7 @@ function programCheckins(row) {
     Object.keys(log).forEach(function(nk) {
       if (nk.indexOf('n:' + m[0] + '-' + m[1] + '-') === 0 && log[nk] && log[nk].text) exNotes.push(log[nk].text);
     });
-    out.push({ athlete: row.athlete, program: row.name, at: d.at || '', date: d.date || '', week: d.week, day: d.day, label: d.dayLabel, note: d.note, pain: d.pain, exNotes: exNotes });
+    out.push({ athlete: row.athlete, program: row.name, at: d.at || '', date: d.date || '', week: d.week, day: d.day, label: d.dayLabel, note: d.note, pain: d.pain, rpe: d.rpe || null, min: d.min || null, exNotes: exNotes });
   });
   return out;
 }
@@ -7221,6 +7221,7 @@ function checkinHTML(c) {
   var notes = [c.note].concat(c.exNotes || []).filter(Boolean);
   return '<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:11px;">'
     + '<div style="display:flex;justify-content:space-between;gap:8px;"><span style="color:#fff;font-weight:600;">' + (c.athlete ? escHtml(c.athlete) + ' · ' : '') + escHtml(c.label || c.day || '') + ' <span style="color:var(--text3);font-weight:400;">Wk ' + escHtml(c.week || '') + '</span></span><span style="color:var(--text3);">' + escHtml(when) + '</span></div>'
+    + (c.rpe && c.min ? '<div style="color:#93c5fd;margin-top:2px;">RPE ' + c.rpe + ' × ' + c.min + ' min = ' + (c.rpe * c.min) + ' AU</div>' : '')
     + pain
     + notes.map(function(n){ return '<div style="color:var(--text2);margin-top:2px;">💬 ' + escHtml(n) + '</div>'; }).join('')
     + (!pain && !notes.length ? '<div style="color:var(--green);margin-top:2px;">✓ Finished · no issues</div>' : '')
@@ -24717,5 +24718,6 @@ try {
 <script src="js/offseason.js?v=1"></script>
 <script src="js/year-writeup.js?v=3"></script>
 <script src="js/roster.js?v=1"></script>
+<script src="js/srpe.js?v=1"></script>
 </body>
 </html>

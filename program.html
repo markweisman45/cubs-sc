@@ -165,6 +165,11 @@ input,textarea{font-family:inherit;}
 .scale{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;}
 .scale button{height:42px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-weight:700;font-size:14px;cursor:pointer;}
 .scale button.on{background:var(--red-l);border-color:var(--red-l);color:#2a0707;}
+.scale.rpe button.on{background:var(--blue-l);border-color:var(--blue-l);color:#06102a;}
+.rpe-lbl{font-size:12px;color:var(--blue-xl);margin-top:6px;min-height:16px;}
+.min-row{display:flex;align-items:center;gap:10px;}
+.min-row input{width:110px;height:46px;border-radius:12px;border:1px solid var(--border2);background:var(--surface2);color:#fff;font-size:18px;font-weight:700;padding:0 12px;}
+.min-row span{font-size:14px;color:var(--text2);}
 .sheet textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--border2);background:var(--surface2);color:#fff;font-size:15px;padding:10px 12px;}
 .toggle-row{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:14px;color:var(--text);}
 .toggle-row input{width:22px;height:22px;accent-color:var(--blue-l);}
@@ -1193,26 +1198,50 @@ var F = null;
 function openFinish(){
   var key = 'day:' + S.week + '-' + S.day;
   var prev = LOG[key] || {};
-  F = { pain: prev.pain ? true : (prev.done ? false : null), areas: prev.pain ? (prev.pain.areas || []) : [], level: prev.pain ? prev.pain.level : 0, painNote: prev.pain ? (prev.pain.note || '') : '', note: prev.note || '', markRest: true };
+  F = { rpe: prev.rpe || 0, min: prev.min || sessionMinutesGuess(S.week, S.day) || '', pain: prev.pain ? true : (prev.done ? false : null), areas: prev.pain ? (prev.pain.areas || []) : [], level: prev.pain ? prev.pain.level : 0, painNote: prev.pain ? (prev.pain.note || '') : '', note: prev.note || '', markRest: true };
   renderFinish();
   document.getElementById('sheet-bg').classList.add('open');
   document.getElementById('sheet').classList.add('open');
 }
+// Session RPE (CR-10) — session load = RPE × minutes (Foster)
+var RPE_LABELS = { 1:'Very easy', 2:'Easy', 3:'Moderate', 4:'Somewhat hard', 5:'Hard', 6:'Hard', 7:'Very hard', 8:'Very hard', 9:'Very, very hard', 10:'Max effort' };
+// Minutes from the first set logged today for this session until now
+function sessionMinutesGuess(wi, di) {
+  var first = null, pre = wi + '-' + di + '-', today = localISO();
+  Object.keys(LOG).forEach(function(k){
+    var e = LOG[k]; if (k.indexOf(pre) !== 0 || !e || !e.done || !e.t) return;
+    if (localISO(new Date(e.t)) !== today) return;
+    if (first === null || e.t < first) first = e.t;
+  });
+  if (first === null) return '';
+  var m = Math.round((Date.now() - first) / 60000) + 5; // + warm-up before the first set
+  return m >= 10 && m <= 180 ? m : '';
+}
+function keepFinishInputs(){
+  var pn = document.getElementById('f-pain-note'); if (pn) F.painNote = pn.value;
+  var n = document.getElementById('f-note'); if (n) F.note = n.value;
+  var mi = document.getElementById('f-min'); if (mi) F.min = mi.value;
+}
+function setRPE(n){ keepFinishInputs(); F.rpe = n; renderFinish(); }
 function closeFinish(){ document.getElementById('sheet-bg').classList.remove('open'); document.getElementById('sheet').classList.remove('open'); }
 function renderFinish(){
   var r = countDone(S.week, S.day), left = r.tot - r.done;
   var day = PROG.weekData[S.week].days[S.day];
   var h = '<h3>Finish ' + esc(day.label || 'session') + '</h3><div class="sub">' + r.done + ' of ' + r.tot + ' sets logged</div>';
+  h += '<div class="q">How hard was today\'s session overall?</div><div class="scale rpe">' + [1,2,3,4,5,6,7,8,9,10].map(function(n){
+    return '<button class="' + (F.rpe === n ? 'on' : '') + '" onclick="setRPE(' + n + ')">' + n + '</button>';
+  }).join('') + '</div><div class="rpe-lbl">' + (F.rpe ? F.rpe + ' — ' + RPE_LABELS[F.rpe] : '1 = very easy · 10 = max effort') + '</div>';
+  h += '<div class="q">How long did it take?</div><div class="min-row"><input id="f-min" type="number" inputmode="numeric" min="1" max="300" value="' + esc(String(F.min || '')) + '" placeholder="60"><span>minutes, warm-up included</span></div>';
   h += '<div class="q">Anything hurt or feel off today?</div><div class="opts">'
-    + '<button class="opt' + (F.pain === false ? ' on' : '') + '" onclick="F.pain=false;renderFinish()">No, all good</button>'
-    + '<button class="opt bad' + (F.pain === true ? ' on' : '') + '" onclick="F.pain=true;renderFinish()">Yes</button></div>';
+    + '<button class="opt' + (F.pain === false ? ' on' : '') + '" onclick="keepFinishInputs();F.pain=false;renderFinish()">No, all good</button>'
+    + '<button class="opt bad' + (F.pain === true ? ' on' : '') + '" onclick="keepFinishInputs();F.pain=true;renderFinish()">Yes</button></div>';
   if (F.pain) {
     h += '<div class="q">Where?</div><div class="opts">' + PAIN_AREAS.map(function(a){
       var on = F.areas.indexOf(a) >= 0;
       return '<button class="opt bad' + (on ? ' on' : '') + '" onclick="toggleArea(\'' + a.replace(/'/g, "\\'") + '\')">' + esc(a) + '</button>';
     }).join('') + '</div>';
     h += '<div class="q">How bad? (1 = barely, 10 = can\'t train)</div><div class="scale">' + [1,2,3,4,5,6,7,8,9,10].map(function(n){
-      return '<button class="' + (F.level === n ? 'on' : '') + '" onclick="F.level=' + n + ';renderFinish()">' + n + '</button>';
+      return '<button class="' + (F.level === n ? 'on' : '') + '" onclick="keepFinishInputs();F.level=' + n + ';renderFinish()">' + n + '</button>';
     }).join('') + '</div>';
     h += '<div class="q">What happened?</div><textarea id="f-pain-note" placeholder="e.g. Tight right hamstring on the 3rd sprint, eased off after">' + esc(F.painNote) + '</textarea>';
   }
@@ -1222,14 +1251,15 @@ function renderFinish(){
   document.getElementById('sheet-in').innerHTML = h;
 }
 function toggleArea(a){
-  var pn = document.getElementById('f-pain-note'); if (pn) F.painNote = pn.value;
-  var n = document.getElementById('f-note'); if (n) F.note = n.value;
+  keepFinishInputs();
   var i = F.areas.indexOf(a); if (i >= 0) F.areas.splice(i, 1); else F.areas.push(a);
   renderFinish();
 }
 function saveFinish(){
-  var pn = document.getElementById('f-pain-note'); if (pn) F.painNote = pn.value;
-  var n = document.getElementById('f-note'); if (n) F.note = n.value;
+  keepFinishInputs();
+  var mins = Math.round(parseFloat(F.min) || 0);
+  if (!F.rpe) { alert('Rate how hard the session was (1–10).'); return; }
+  if (!(mins >= 1 && mins <= 300)) { alert('Enter how many minutes the session took.'); return; }
   if (F.pain === null) { alert('Let your coach know: did anything hurt today?'); return; }
   if (F.pain && !F.areas.length) { alert('Pick where it hurt.'); return; }
   var wi = S.week, di = S.day, day = PROG.weekData[wi].days[di];
@@ -1255,6 +1285,7 @@ function saveFinish(){
     done: true, at: new Date().toISOString(), date: localISO(), t: Date.now(),
     week: wi + 1, day: day.day, dayLabel: day.label || '',
     note: (F.note || '').trim(),
+    rpe: F.rpe, min: mins,
     pain: F.pain ? { areas: F.areas.slice(), level: F.level || null, note: (F.painNote || '').trim() } : null
   };
   saveLog(); pushLog();
