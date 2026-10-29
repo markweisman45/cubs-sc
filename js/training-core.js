@@ -240,7 +240,13 @@ var TC = (function () {
       var cand = N.exs.find(function (n) { return !claimed[n.pos] && n.wi === nd.wi && n.di === nd.di && n.name === e.name && !(n.uid && oldUids[n.uid]); });
       if (cand) { exTo[e.pos] = cand; claimed[cand.pos] = 1; }
     });
-    O.exs.forEach(function (e) { var n = exTo[e.pos]; if (!n) exMap[e.pos] = null; else if (n.pos !== e.pos) exMap[e.pos] = n.pos; });
+    // Same slot, different movement (swapped in the builder or with "Swap Exercise
+    // Everywhere"): the old movement's logged sets don't belong to the new one —
+    // archive them and start the new exercise clean.
+    var exKey = function (x) { return String((x && x.name) || '').trim().toLowerCase(); };
+    var swapped = {};
+    O.exs.forEach(function (e) { var n = exTo[e.pos]; if (n && exKey(n.ex) !== exKey(e.ex)) swapped[e.pos] = 1; });
+    O.exs.forEach(function (e) { var n = exTo[e.pos]; if (!n || swapped[e.pos]) exMap[e.pos] = null; else if (n.pos !== e.pos) exMap[e.pos] = n.pos; });
     // Plain-language change list (positions are the NEW program's)
     var per = {};
     function add(wi, di, t) { var k = wi + '-' + di; (per[k] = per[k] || { wi: wi, di: di, list: [] }).list.push(t); }
@@ -281,6 +287,7 @@ var TC = (function () {
       var nd = n.wi + '-' + n.di;
       if (!src) { if ((per[nd] || { list: [] }).list.some(function (t) { return /^new session/.test(t); })) return; (addedBy[nd] = addedBy[nd] || []).push(n.ex.name); return; }
       var a = rxText(src.ex), b = rxText(n.ex);
+      if (swapped[src.pos]) { add(n.wi, n.di, src.ex.name + ' → ' + n.ex.name + (a !== b && b ? ' (' + b + ')' : '')); return; }
       if (a !== b && b) add(n.wi, n.di, n.ex.name + ' ' + (a || '—') + ' → ' + b);
     });
     O.exs.forEach(function (e) {
