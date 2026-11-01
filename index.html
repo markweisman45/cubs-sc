@@ -3487,6 +3487,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
 </div><!-- /app -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="js/lz-string.min.js"></script>
 <script src="data/oc-programs.js"></script>
 <script>
 
@@ -3504,6 +3505,48 @@ var _syncMetaSuppress = false;
 // migrations) are not user edits and must not beat a newer cloud copy, so
 // tracking starts only once the initial cloud pull has finished.
 var _syncBooting = true;
+// ── STORAGE COMPRESSION ────────────────────────────────────────────────────
+// The browser gives this site ~5MB of localStorage. The dashboard's data
+// outgrew it, so new saves (e.g. templates) were silently failing and
+// vanishing on reload. Large cubs_sc_* values are now stored LZ-compressed
+// (typically 5–10x smaller) and decompressed transparently on read, so every
+// existing getItem/setItem call keeps working unchanged.
+(function(){
+  if (typeof LZString === 'undefined') return;
+  var MARK = '\u0001LZ1:', MIN = 8000;
+  var rawSet = Storage.prototype.setItem, rawGet = Storage.prototype.getItem;
+  var cache = {};
+  function eligible(st, k) { return st === window.localStorage && typeof k === 'string' && k.indexOf('cubs_sc') === 0; }
+  Storage.prototype.setItem = function(k, v) {
+    v = String(v);
+    if (eligible(this, k) && v.length > MIN) {
+      var c = MARK + LZString.compressToUTF16(v);
+      rawSet.call(this, k, c);
+      cache[k] = { raw: c, val: v };
+      return;
+    }
+    delete cache[k];
+    rawSet.call(this, k, v);
+  };
+  Storage.prototype.getItem = function(k) {
+    var raw = rawGet.call(this, k);
+    if (raw == null || this !== window.localStorage || raw.indexOf(MARK) !== 0) return raw;
+    var hit = cache[k];
+    if (hit && hit.raw === raw) return hit.val;
+    var val = LZString.decompressFromUTF16(raw.slice(MARK.length));
+    cache[k] = { raw: raw, val: val };
+    return val;
+  };
+  // One-time: compress the big values that were saved before this existed.
+  try {
+    Object.keys(localStorage).forEach(function(k) {
+      if (!eligible(localStorage, k)) return;
+      var raw = rawGet.call(localStorage, k);
+      if (raw && raw.length > MIN && raw.indexOf(MARK) !== 0) localStorage.setItem(k, raw);
+    });
+  } catch(e) { console.warn('[storage] compression migration failed', e); }
+})();
+
 var _origLSSet = Storage.prototype.setItem;
 function syncMetaRead() {
   try { var m = JSON.parse(localStorage.getItem(SYNC_META_KEY) || '{}'); m.modified = m.modified || {}; m.pushed = m.pushed || {}; return m; }
@@ -19408,7 +19451,7 @@ let SAVED_PROGRAMS = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 let GAME_SCHEDULE  = []; // always starts empty, populated by loadCubsSchedule()
 let WORKOUT_SCHEDULE = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '[]');
 
-function persistPrograms()  { try { localStorage.setItem(STORAGE_KEY,  JSON.stringify(SAVED_PROGRAMS));   } catch(e){} }
+function persistPrograms()  { try { localStorage.setItem(STORAGE_KEY,  JSON.stringify(SAVED_PROGRAMS));   } catch(e){ console.error('[persistPrograms]', e); alert('Could not save programs/templates — browser storage is full. Your last change will be lost on reload.'); } }
 function persistGames()     { try { localStorage.setItem(GAMES_KEY,    JSON.stringify(GAME_SCHEDULE));    } catch(e){} }
 function persistSchedule()  { try { localStorage.setItem(SCHEDULE_KEY, JSON.stringify(WORKOUT_SCHEDULE)); } catch(e){} }
 
