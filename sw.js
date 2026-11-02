@@ -2,7 +2,7 @@
 // Caches the page shell (HTML/fonts/icons) for offline access. Live program
 // data always goes to the network first — an athlete's actual workout data
 // should never be served stale from cache when a connection is available.
-const CACHE_NAME = 'cubs-sc-program-v3';
+const CACHE_NAME = 'cubs-sc-program-v4';
 const SHELL_ASSETS = [
   './program.html',
   './manifest.json',

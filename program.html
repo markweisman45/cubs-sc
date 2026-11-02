@@ -1086,8 +1086,10 @@ function renderSession(){
       });
       h += '<div class="group">';
       if (g.pair && g.items.length > 1) {
-        var rest = exs[g.items[g.items.length - 1]].rest;
-        h += '<div class="group-head"><span class="gl" style="background:' + pairColor(g.pair) + ';">' + esc(g.pair) + '</span>Alternate ' + tags.join(' → ') + (rest ? ' · rest ' + esc(rest) + ' after ' + tags[tags.length - 1] : '') + '</div>';
+        var rests = g.items.map(function(ei){ return exs[ei].rest || ''; });
+        var restTxt = rests.every(function(r){ return r && r === rests[0]; }) ? ' · rest ' + esc(rests[0]) + ' after each'
+          : rests.map(function(r, i){ return r ? 'rest ' + esc(r) + ' after ' + tags[i] : ''; }).filter(Boolean).map(function(x){ return ' · ' + x; }).join('');
+        h += '<div class="group-head"><span class="gl" style="background:' + pairColor(g.pair) + ';">' + esc(g.pair) + '</span>Alternate ' + tags.join(' → ') + restTxt + '</div>';
       }
       g.items.forEach(function(ei, i){ h += exHTML(wi, di, bi, ei, block, exs[ei], tags[i]); });
       h += '</div>';
@@ -1147,17 +1149,17 @@ function toggleSet(wi, di, bi, ei, s){
   }
   updateCounts();
   if (e.done) {
-    // Rest: inside a pair, rest after the last exercise of the pair; otherwise after each set
+    // Rest: every exercise uses its own prescribed rest — including between A1 and A2 inside a pair
     var exs = namedExs(PROG.weekData[wi].days[di].blocks[bi]);
-    var next = exs[ei + 1];
-    var inPairNotLast = ex.pair && next && next.pair === ex.pair && !next.rtpSkip;
-    var secs = restSeconds(inPairNotLast ? '' : ex.rest);
+    var secs = restSeconds(ex.rest);
     if (secs > 0) timerStart(secs, 'Rest · next: ' + nextUp(exs, ei, s));
   }
 }
 function nextUp(exs, ei, s){
   var ex = exs[ei];
   if (ex.pair) {
+    var nx = exs[ei + 1];
+    if (nx && nx.pair === ex.pair && !nx.rtpSkip) return nx.name + ' · set ' + (s + 1);
     var first = ei; while (first > 0 && exs[first - 1].pair === ex.pair) first--;
     var n = Math.max(1, parseInt(ex.sets) || 1);
     if (s + 1 < n) return exs[first].name + ' · set ' + (s + 2);
