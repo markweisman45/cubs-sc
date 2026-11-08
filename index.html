@@ -15594,12 +15594,15 @@ function pbOpenSyncModal(bi, ei) {
           + '<input type="checkbox" class="pb-sync-field" value="'+f+'" checked> '+(PB_SYNC_FIELD_LABELS[f]||f)+' <span style="color:var(--text3);font-size:10px;">('+ex[f]+')</span></label>'
           + (isProg ? '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);white-space:nowrap;">'
               + '<input type="number" class="pb-sync-delta" data-field="'+f+'" value="0" step="any" style="width:48px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-size:11px;text-align:center;"> /wk</span>' : '')
+          + (f === 'load' ? '<select class="pb-sync-loadmode" title="Weekly load increase (no 1RM needed)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 4px;color:var(--text);font-size:10px;margin-left:4px;">'
+              + '<option value="">Ramp…</option><option value="lb5">+5 lb/wk</option><option value="lb10">+10 lb/wk</option>'
+              + '<option value="pct3">+3%/wk</option><option value="pct4">+4%/wk</option><option value="pct5">+5%/wk</option></select>' : '')
           + (isTime ? '<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);white-space:nowrap;">'
               + '<input type="number" class="pb-sync-delta-time" data-field="'+f+'" value="0" step="1" style="width:48px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-size:11px;text-align:center;"> sec/wk</span>' : '')
           + '</div>';
       }).join('')
     + '</div>'
-    + ((progressable.some(function(f){return fields.indexOf(f)>=0;}) || progressableTime.some(function(f){return fields.indexOf(f)>=0;})) ? '<div style="font-size:9px;color:var(--text3);margin:-6px 0 14px 0;line-height:1.5;">A "/wk" value scales with distance from Week '+(PB_ACTIVE_DAY.weekIdx+1)+' — e.g. +1 on Sets going to Week '+(PB_ACTIVE_DAY.weekIdx+3)+' adds +2. Rest uses seconds. Use negative to decrease. Leave 0 to copy as-is.</div>' : '')
+    + ((progressable.some(function(f){return fields.indexOf(f)>=0;}) || progressableTime.some(function(f){return fields.indexOf(f)>=0;})) ? '<div style="font-size:9px;color:var(--text3);margin:-6px 0 14px 0;line-height:1.5;">A "/wk" value scales with distance from Week '+(PB_ACTIVE_DAY.weekIdx+1)+' — e.g. +1 on Sets going to Week '+(PB_ACTIVE_DAY.weekIdx+3)+' adds +2. Rest uses seconds. Use negative to decrease. Leave 0 to copy as-is. Load “Ramp” works off a weight in lbs (no 1RM needed): +5/+10 lb or +3–5% each week, rounded to the nearest 5; deload weeks keep the starting weight.</div>' : '')
     + '<div style="margin-bottom:16px;">'
     + '<label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Apply to weeks</label>'
     + '<div style="display:flex;gap:6px;margin-bottom:8px;">'
@@ -15661,6 +15664,25 @@ function pbAdjustFieldValue(baseVal, deltaPerWeek, weekDistance) {
   return newNum + suffix;
 }
 
+// Weekly load ramp for a fixed weight (no 1RM): +5/+10 lb or +3/4/5% per week,
+// percent compounds week to week and every result is MROUNDed to 5 lbs.
+function pbRampLoad(baseVal, mode, steps) {
+  var s = String(baseVal == null ? '' : baseVal).trim();
+  if (!s || /%/.test(s) || /^bw/i.test(s)) return null;
+  var m = s.match(/^(\d+(?:\.\d+)?)(.*)$/);
+  if (!m) return null;
+  var w = parseFloat(m[1]), suffix = m[2] || '';
+  if (!steps) return s;
+  var dir = steps > 0 ? 1 : -1;
+  for (var i = 0; i < Math.abs(steps); i++) {
+    if (mode === 'lb5')  w += 5 * dir;
+    else if (mode === 'lb10') w += 10 * dir;
+    else { var p = { pct3: 0.03, pct4: 0.04, pct5: 0.05 }[mode] || 0; w = dir > 0 ? w * (1 + p) : w / (1 + p); }
+    w = Math.max(0, Math.round(w / 5) * 5);
+  }
+  return w + suffix;
+}
+
 function pbConfirmSync(bi, ei) {
   var wk  = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx];
   var day = wk && wk.days[PB_ACTIVE_DAY.dayIdx];
@@ -15691,6 +15713,13 @@ function pbConfirmSync(bi, ei) {
     if (v) timeDeltas[inp.getAttribute('data-field')] = v;
   });
 
+  var loadModeEl = document.querySelector('.pb-sync-loadmode');
+  var loadMode = loadModeEl ? loadModeEl.value : '';
+  if (loadMode && fields.indexOf('load') >= 0 && pbRampLoad(ex.load, loadMode, 1) === null) {
+    alert('Ramp needs a weight in lbs in the Load box (e.g. 135 or 135 lbs) — "' + (ex.load || 'blank') + '" can\'t be ramped. Set a starting weight first.');
+    return;
+  }
+
   var applied = 0, missing = 0;
   weeks.forEach(function(wi) {
     var targetWk  = PB_STATE.weekData[wi];
@@ -15701,7 +15730,14 @@ function pbConfirmSync(bi, ei) {
     var weekDistance = wi - PB_ACTIVE_DAY.weekIdx;
     fields.forEach(function(f) {
       var before = targetEx[f];
-      if (deltas[f]) targetEx[f] = pbAdjustFieldValue(ex[f], deltas[f], weekDistance);
+      if (f === 'load' && loadMode) {
+        // Count only non-deload weeks between source and target as steps; deloads hold the start weight
+        var lo = Math.min(wi, PB_ACTIVE_DAY.weekIdx), hi = Math.max(wi, PB_ACTIVE_DAY.weekIdx), steps = 0;
+        for (var k = lo + 1; k <= hi; k++) if (!(PB_STATE.weekData[k] || {}).isDeload) steps++;
+        if (weekDistance < 0) steps = -steps;
+        targetEx[f] = targetWk.isDeload ? ex[f] : pbRampLoad(ex[f], loadMode, steps);
+      }
+      else if (deltas[f]) targetEx[f] = pbAdjustFieldValue(ex[f], deltas[f], weekDistance);
       else if (timeDeltas[f]) targetEx[f] = pbAdjustRestValue(ex[f], timeDeltas[f], weekDistance);
       else targetEx[f] = ex[f];
       console.log('[pbConfirmSync]   field', f, ':', before, '->', targetEx[f]);
