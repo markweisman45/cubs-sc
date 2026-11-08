@@ -48,6 +48,10 @@ function apISO(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padS
 function apAdd(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function apFmt(d) { return d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; }
 function apAthlete() { return (document.getElementById('annual-athlete') || {}).value || ''; }
+// Plan year runs Oct 1 → Oct 31 the next year, so athletes who started in October show up
+// Weeks run Monday–Sunday (programs start Mondays): week 1 is the Monday on/before Oct 1
+function apYStart(y) { var d = new Date(y, 9, 1); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
+function apNWeeks(y) { return Math.floor(Math.round((new Date(y + 1, 9, 31) - apYStart(y)) / AP_DAY) / 7) + 1; }
 function apYear() { return parseInt((document.getElementById('annual-year') || {}).value || '2026'); }
 function apPlan(create) { var k = annualPlanKey(); if (create && !ANNUAL_PLANS[k]) ANNUAL_PLANS[k] = { blocks: [] }; return ANNUAL_PLANS[k] || { blocks: [] }; }
 function apSeasonLabel(y) { return y + '-' + String((y + 1) % 100).padStart(2, '0'); }
@@ -100,7 +104,7 @@ function apWeekMetrics(wk) {
 function apSyncLiveBlocks() {
   var athlete = apAthlete(), year = apYear(), rows = apLiveRows(athlete);
   if (!rows.length) return;
-  var yStart = new Date(year, 10, 1), yEnd = new Date(year + 1, 9, 31);
+  var yStart = apYStart(year), yEnd = new Date(year + 1, 9, 31);
   var plan = apPlan(true), changed = 0, added = [];
   rows.forEach(function (r) {
     var sp = apLiveSpan(r);
@@ -133,18 +137,19 @@ function apSyncLiveBlocks() {
 // ── Model: one entry per calendar week ──
 var _apLinkedMetrics = typeof annualGetLinkedWeekMetrics === 'function' ? annualGetLinkedWeekMetrics : null;
 function apModel(athlete, year, plan) {
-  var phases = getSeasonPhases(year), rows = apLiveRows(athlete), yStart = new Date(year, 10, 1), today = new Date(); today.setHours(0, 0, 0, 0);
+  var phases = getSeasonPhases(year - 1).concat(getSeasonPhases(year)), rows = apLiveRows(athlete), yStart = apYStart(year), today = new Date(); today.setHours(0, 0, 0, 0);
   var blocks = (plan.blocks || []).map(function (b) { return { b: b, s: apD(b.startDate), e: apD(b.endDate) }; });
   var notes = plan.weekNotes || {}, weeks = [];
-  for (var i = 0; i < 52; i++) {
+  for (var i = 0, nW = apNWeeks(year); i < nW; i++) {
     var ws = apAdd(yStart, i * 7), we = apAdd(ws, 6), iso = apISO(ws);
-    var mid = apAdd(ws, 3);   // a block owns the calendar week its midpoint falls in (blocks start Mondays, the grid Nov 1)
+    var mid = apAdd(ws, 3);   // a block owns the calendar week its midpoint falls in (blocks start Mondays, the grid Oct 1)
     var bx = blocks.find(function (x) { return x.s && x.e && mid >= x.s && mid <= apAdd(x.e, 0); }), b = bx ? bx.b : null;
     var wkInBlock = b ? Math.floor((mid - bx.s) / (7 * AP_DAY)) + 1 : 0;
     var live = apLiveFor(rows, ws);
     var w = { i: i, ws: ws, we: we, iso: iso, b: b, cfg: b ? (BLOCK_TYPES[b.type] || {}) : null, wkInBlock: wkInBlock,
-              phase: phases.find(function (p) { return ws >= p.start && ws <= p.end; }) || null,
-              isToday: today >= ws && today <= we, past: we < today, note: notes[iso] || null, live: null, m: null, mSrc: '' };
+              phase: phases.find(function (p) { return mid >= p.start && mid <= p.end; }) || null,
+              isToday: today >= ws && today <= we, past: we < today, note: null, noteKey: iso, live: null, m: null, mSrc: '' };
+    Object.keys(notes).forEach(function (k) { var d = apD(k); if (d && d >= ws && d <= we && notes[k] && notes[k].text) { w.note = notes[k]; w.noteKey = k; } });
     if (live) {
       var dn = apLiveDone(live.row, live.idx);
       w.live = { row: live.row, idx: live.idx, wk: live.wk, done: dn.done, planned: dn.planned, deload: !!live.wk.isDeload };
@@ -169,7 +174,7 @@ function apModel(athlete, year, plan) {
 // ── Grid HTML (screen + print share it) ──
 // opts: { from, to, print, coach }
 function apGridHTML(M, opts) {
-  var W = M.weeks.slice(opts.from || 0, opts.to || 52), P = !!opts.print, coach = opts.coach !== false;
+  var W = M.weeks.slice(opts.from || 0, opts.to || M.weeks.length), P = !!opts.print, coach = opts.coach !== false;
   var vr = (typeof ANNUAL_SETTINGS !== 'undefined' && ANNUAL_SETTINGS.visibleRows) || {};
   var show = function (k) { return P ? true : vr[k] !== false; };
   var td = function (w, inner, extra, click) {
@@ -182,7 +187,7 @@ function apGridHTML(M, opts) {
   // Month header
   var mh = '', cur = -1, span = 0, lab = '';
   W.forEach(function (w, i) {
-    if (w.ws.getMonth() !== cur) { if (span) mh += '<th colspan="' + span + '">' + lab + '</th>'; cur = w.ws.getMonth(); span = 1; lab = w.ws.toLocaleDateString('en-US', { month: 'short' }); }
+    if (apAdd(w.ws, 3).getMonth() !== cur) { if (span) mh += '<th colspan="' + span + '">' + lab + '</th>'; cur = apAdd(w.ws, 3).getMonth(); span = 1; lab = apAdd(w.ws, 3).toLocaleDateString('en-US', { month: 'short' }); }
     else span++;
   });
   mh += '<th colspan="' + span + '">' + lab + '</th>';
@@ -257,8 +262,8 @@ function apGridHTML(M, opts) {
     h += sec('Notes');
     h += row('📝 Week Notes', map(function (w) {
       var n = w.note && (coach || !w.note.coachOnly) ? w.note : null;
-      return '<td class="c' + (w.isToday ? ' today' : '') + (n ? ' hasnote' : '') + '"' + (n ? ' title="' + apEsc(n.text) + '"' : ' title="Add a note for the week of ' + apFmt(w.ws) + '"') + (P ? '' : ' onclick="apEditWeekNote(\'' + w.iso + '\')"') + ' style="cursor:pointer;">'
-        + (n ? (P ? '<b>' + (Object.keys(M.plan.weekNotes || {}).filter(function (k) { var x = M.plan.weekNotes[k]; return x && (coach || !x.coachOnly); }).sort().indexOf(w.iso) + 1) + '</b>' : (n.coachOnly ? '🔒' : '📝')) : (P ? '' : '<span class="dim">＋</span>')) + '</td>';
+      return '<td class="c' + (w.isToday ? ' today' : '') + (n ? ' hasnote' : '') + '"' + (n ? ' title="' + apEsc(n.text) + '"' : ' title="Add a note for the week of ' + apFmt(w.ws) + '"') + (P ? '' : ' onclick="apEditWeekNote(\'' + w.noteKey + '\')"') + ' style="cursor:pointer;">'
+        + (n ? (P ? '<b>' + (Object.keys(M.plan.weekNotes || {}).filter(function (k) { var x = M.plan.weekNotes[k]; return x && (coach || !x.coachOnly); }).sort().indexOf(w.noteKey) + 1) + '</b>' : (n.coachOnly ? '🔒' : '📝')) : (P ? '' : '<span class="dim">＋</span>')) + '</td>';
     }));
   }
   return h + '</tbody></table>';
@@ -296,7 +301,7 @@ renderAnnualPlan = function () {
 
   var M = apModel(apAthlete(), apYear(), apPlan(false));
   grid.style.setProperty('--apw', ANNUAL_SETTINGS.density === 'comfortable' ? '40px' : '30px');
-  grid.innerHTML = apGridHTML(M, { from: 0, to: 52, print: false, coach: true });
+  grid.innerHTML = apGridHTML(M, { from: 0, to: M.weeks.length, print: false, coach: true });
 
   // Scroll so this week is in view
   var t = grid.querySelector('td.today');
@@ -321,7 +326,7 @@ function apRenderBelow(M) {
     liveLine = '<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">📡 No live program for ' + apEsc(M.athlete) + ' — send one and it shows up here automatically.</div>';
   }
   var blocks = (M.plan.blocks || []).slice().sort(function (a, b) { return a.startDate < b.startDate ? -1 : 1; })
-    .filter(function (b) { var s = apD(b.startDate); return s && s >= new Date(M.year, 9, 1) && s <= new Date(M.year + 1, 10, 30); });
+    .filter(function (b) { var s = apD(b.startDate), e = apD(b.endDate); return s && e && e >= apYStart(M.year) && s <= new Date(M.year + 1, 9, 31); });
   var cards = blocks.map(function (b) {
     var t = BLOCK_TYPES[b.type] || { label: b.type, color: '#94a3b8' }, sq = apBlockSQ(b);
     var chips = Object.keys(sq).sort(function (x, y) { return sq[x] - sq[y]; }).map(function (k) { var q = apSQ(k); return q ? '<span style="font-size:10px;padding:2px 7px;border-radius:10px;border:1px solid ' + q.color + (sq[k] === 1 ? '' : '66') + ';color:' + q.color + ';' + (sq[k] === 1 ? 'background:' + q.color + '22;font-weight:700;' : 'opacity:.8;') + '">' + apEsc(q.label) + '</span>' : ''; }).join(' ');
@@ -521,7 +526,7 @@ function apPrint(aud) {
   var M = apModel(athlete, year, apPlan(false));
   var season = apSeasonLabel(year);
   var plan = M.plan, blocks = (plan.blocks || []).slice().sort(function (a, b) { return a.startDate < b.startDate ? -1 : 1; })
-    .filter(function (b) { var s = apD(b.startDate); return s && s >= new Date(year, 9, 1) && s <= new Date(year + 1, 10, 30); });
+    .filter(function (b) { var s = apD(b.startDate), e = apD(b.endDate); return s && e && e >= apYStart(year) && s <= new Date(year + 1, 9, 31); });
 
   var now = M.weeks.find(function (w) { return w.isToday && w.live; });
   var blockRows = blocks.map(function (b) {
@@ -566,10 +571,14 @@ function apPrint(aud) {
 
   var body = '<div class="bar-top"><button onclick="window.print()">🖨 Print / Save as PDF</button></div><div class="page">'
     + '<div class="hdr"><div><div class="brand">Mark Weisman Strength &amp; Conditioning</div><h1>' + apEsc(athlete) + ' — ' + season + ' Annual Plan</h1></div>'
-    + '<div class="meta">' + (coach ? 'Coach copy' : 'Athlete copy') + '<br>Nov 1, ' + year + ' – Oct 30, ' + (year + 1) + (now ? '<br>Now: ' + apEsc(now.live.row.name) + ' · Week ' + (now.live.idx + 1) : '') + '</div></div>'
+    + '<div class="meta">' + (coach ? 'Coach copy' : 'Athlete copy') + '<br>' + apFmt(M.weeks[0].ws) + ', ' + year + ' – ' + apFmt(M.weeks[M.weeks.length - 1].we) + ', ' + (year + 1) + (now ? '<br>Now: ' + apEsc(now.live.row.name) + ' · Week ' + (now.live.idx + 1) : '') + '</div></div>'
     + '<div class="legend">' + legend + '</div>'
-    + '<div class="half"><h3>Nov – Apr</h3>' + apGridHTML(M, { from: 0, to: 26, print: true, coach: coach }) + '</div>'
-    + '<div class="half"><h3>May – Oct</h3>' + apGridHTML(M, { from: 26, to: 52, print: true, coach: coach }) + '</div>'
+    + (function () {   // two halves, split at the first week of May
+      var cut = M.weeks.findIndex(function (w) { return apAdd(w.ws, 3).getMonth() === 4; }); if (cut < 1) cut = Math.ceil(M.weeks.length / 2);
+      var mo = function (w) { return apAdd(w.ws, 3).toLocaleDateString('en-US', { month: 'short' }); }, a = M.weeks[0], b = M.weeks[cut - 1], c = M.weeks[cut], d = M.weeks[M.weeks.length - 1];
+      return '<div class="half"><h3>' + mo(a) + ' – ' + mo(b) + '</h3>' + apGridHTML(M, { from: 0, to: cut, print: true, coach: coach }) + '</div>'
+        + '<div class="half"><h3>' + mo(c) + ' – ' + mo(d) + '</h3>' + apGridHTML(M, { from: cut, to: M.weeks.length, print: true, coach: coach }) + '</div>';
+    })()
     + (plan.notes ? '<h2>Plan Notes</h2><div class="notes pre">' + apEsc(plan.notes) + '</div>' : '')
     + (blockRows ? '<h2>Blocks</h2><table class="blk"><thead><tr><th style="width:20%;">Block</th><th style="width:13%;">Dates</th><th style="width:20%;">Strength Qualities</th><th style="width:17%;">Speed Emphasis</th><th>Notes</th></tr></thead><tbody>' + blockRows + '</tbody></table>' : '')
     + (wnHTML ? '<h2>Week Notes</h2><ul class="wn">' + wnHTML + '</ul>' : '')
