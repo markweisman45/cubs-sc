@@ -322,7 +322,7 @@ function apRenderBelow(M) {
   if (now && now.live) {
     var L = now.live;
     liveLine = '<div style="font-size:11px;color:#4ade80;margin-bottom:10px;">📡 This week: <b>' + apEsc(L.row.name) + '</b> · Week ' + (L.idx + 1) + ' of ' + L.row.pb.weekData.length + (L.planned ? ' · ' + L.done + '/' + L.planned + ' sessions logged' : '') + '</div>';
-  } else if (!M.rows.length) {
+  } else if (!M.rows.length && String(M.athlete).indexOf('grp:') !== 0) {
     liveLine = '<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">📡 No live program for ' + apEsc(M.athlete) + ' — send one and it shows up here automatically.</div>';
   }
   var blocks = (M.plan.blocks || []).slice().sort(function (a, b) { return a.startDate < b.startDate ? -1 : 1; })
@@ -511,7 +511,7 @@ function apOpenPrint() {
   };
   m.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px;width:520px;max-width:95vw;">'
     + '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">🖨 Print / Save as PDF</div>'
-    + '<div style="font-size:11px;color:var(--text3);margin-bottom:14px;">' + apEsc(apAthlete()) + ' · ' + apSeasonLabel(apYear()) + ' · landscape. In the print window pick “Save as PDF” to share it.</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:14px;">' + apEsc(typeof apPrintTitle === 'function' ? apPrintTitle(apAthlete()) : apAthlete()) + ' · ' + apSeasonLabel(apYear()) + ' · landscape. In the print window pick “Save as PDF” to share it.</div>'
     + '<div style="display:flex;gap:10px;">'
     + card('athlete', '🏃', 'Athlete copy', 'Phases, live program weeks, strength qualities, speed & ESD emphasis, plan + block notes. No loads or coach-only notes.', '#22c55e')
     + card('coach', '📋', 'Coach copy', 'Everything — adds method, sets × reps, intensity %, logged completion and 🔒 coach-only notes.', '#60a5fa')
@@ -570,8 +570,8 @@ function apPrint(aud) {
     + '<span>DL = deload</span><span>W# = live program week' + (coach ? ' (bar = sessions logged)' : '') + '</span><span style="background:#fff4dc;padding:0 4px;">this week</span>';
 
   var body = '<div class="bar-top"><button onclick="window.print()">🖨 Print / Save as PDF</button></div><div class="page">'
-    + '<div class="hdr"><div><div class="brand">Mark Weisman Strength &amp; Conditioning</div><h1>' + apEsc(athlete) + ' — ' + season + ' Annual Plan</h1></div>'
-    + '<div class="meta">' + (coach ? 'Coach copy' : 'Athlete copy') + '<br>' + apFmt(M.weeks[0].ws) + ', ' + year + ' – ' + apFmt(M.weeks[M.weeks.length - 1].we) + ', ' + (year + 1) + (now ? '<br>Now: ' + apEsc(now.live.row.name) + ' · Week ' + (now.live.idx + 1) : '') + '</div></div>'
+    + '<div class="hdr"><div><div class="brand">Mark Weisman Strength &amp; Conditioning</div><h1>' + apEsc(typeof apPrintTitle === 'function' ? apPrintTitle(athlete) : athlete) + ' — ' + season + ' Annual Plan</h1></div>'
+    + '<div class="meta">' + (coach ? 'Coach copy' : 'Athlete copy') + (typeof apPrintMeta === 'function' ? apPrintMeta() : '') + '<br>' + apFmt(M.weeks[0].ws) + ', ' + year + ' – ' + apFmt(M.weeks[M.weeks.length - 1].we) + ', ' + (year + 1) + (now ? '<br>Now: ' + apEsc(now.live.row.name) + ' · Week ' + (now.live.idx + 1) : '') + '</div></div>'
     + '<div class="legend">' + legend + '</div>'
     + (function () {   // two halves, split at the first week of May
       var cut = M.weeks.findIndex(function (w) { return apAdd(w.ws, 3).getMonth() === 4; }); if (cut < 1) cut = Math.ceil(M.weeks.length / 2);
@@ -579,6 +579,7 @@ function apPrint(aud) {
       return '<div class="half"><h3>' + mo(a) + ' – ' + mo(b) + '</h3>' + apGridHTML(M, { from: 0, to: cut, print: true, coach: coach }) + '</div>'
         + '<div class="half"><h3>' + mo(c) + ' – ' + mo(d) + '</h3>' + apGridHTML(M, { from: cut, to: M.weeks.length, print: true, coach: coach }) + '</div>';
     })()
+    + (typeof apPrintExtra === 'function' ? apPrintExtra() : '')
     + (plan.notes ? '<h2>Plan Notes</h2><div class="notes pre">' + apEsc(plan.notes) + '</div>' : '')
     + (blockRows ? '<h2>Blocks</h2><table class="blk"><thead><tr><th style="width:20%;">Block</th><th style="width:13%;">Dates</th><th style="width:20%;">Strength Qualities</th><th style="width:17%;">Speed Emphasis</th><th>Notes</th></tr></thead><tbody>' + blockRows + '</tbody></table>' : '')
     + (wnHTML ? '<h2>Week Notes</h2><ul class="wn">' + wnHTML + '</ul>' : '')
