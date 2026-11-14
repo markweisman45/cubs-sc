@@ -220,7 +220,7 @@ function apGridHTML(M, opts) {
     return td(w, w.b ? ({ linear: 'Lin', wave: 'Wave', dup: 'DUP', block: 'Blk' }[w.b.progression || 'linear'] || w.b.progression) : '', 'color:var(--ap-dim);');
   }));
   if (coach && show('repsIntensity')) {
-    h += row('Sets × Reps', map(function (w) {
+    if (!P) h += row('Sets × Reps', map(function (w) {
       if (!w.m) return td(w, '');
       var real = w.mSrc !== 'proj';
       return '<td class="c' + (w.isToday ? ' today' : '') + (real ? ' real' : ' proj') + '" title="' + (w.mSrc === 'live' ? 'From the live program' : w.mSrc === 'linked' ? 'From the linked program' : 'Projected — no program yet') + '">' + w.m.sets + '×' + w.m.reps + '</td>';
@@ -514,7 +514,7 @@ function apOpenPrint() {
     + '<div style="font-size:11px;color:var(--text3);margin-bottom:14px;">' + apEsc(typeof apPrintTitle === 'function' ? apPrintTitle(apAthlete()) : apAthlete()) + ' · ' + apSeasonLabel(apYear()) + ' · landscape. In the print window pick “Save as PDF” to share it.</div>'
     + '<div style="display:flex;gap:10px;">'
     + card('athlete', '🏃', 'Athlete copy', 'Phases, live program weeks, strength qualities, speed & ESD emphasis, plan + block notes. No loads or coach-only notes.', '#22c55e')
-    + card('coach', '📋', 'Coach copy', 'Everything — adds method, sets × reps, intensity %, logged completion and 🔒 coach-only notes.', '#60a5fa')
+    + card('coach', '📋', 'Coach copy', 'Everything — adds method, intensity %, logged completion and 🔒 coach-only notes.', '#60a5fa')
     + '</div><div style="text-align:right;margin-top:12px;"><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:7px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer;">Cancel</button></div></div>';
   document.body.appendChild(m);
   m.addEventListener('click', function (e) { if (e.target === m) m.remove(); });
