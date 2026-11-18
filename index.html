@@ -11559,6 +11559,7 @@ const RM_KEY = 'cubs_sc_1rm_v1';
 
 function persist1RM() {
   try { localStorage.setItem(RM_KEY, JSON.stringify(ATHLETE_1RM)); } catch(e) {}
+  if (typeof syncToSupabase === 'function') setTimeout(syncToSupabase, 1000);   // back up to the cloud right away
 }
 
 function load1RM() {
@@ -11645,6 +11646,7 @@ function save1RMs() {
   msg.textContent = `✓ Saved ${Object.values(ATHLETE_1RM[athlete]).filter(Boolean).length} lifts for ${athlete}`;
   setTimeout(() => { msg.textContent = ''; }, 3000);
   update1RMStrip(athlete);
+  if (typeof rmOfferRefresh === 'function') rmOfferRefresh(athlete);   // new 1RM → offer to update his live programs
 }
 
 function update1RMStrip(athlete) {
@@ -12043,6 +12045,8 @@ function persistExerciseDB() {
   }
   // 2. Async Supabase sync for enriched exercises (non-blocking)
   persistExerciseDBToSupabase();
+  // 3. Back up the whole library (incl. load ratios / load types) with the regular cloud sync
+  if (typeof syncToSupabase === 'function') setTimeout(syncToSupabase, 1000);
 }
 
 async function persistExerciseDBToSupabase() {
@@ -24833,7 +24837,7 @@ try {
 
 <script src="js/auth.js?v=3"></script>
 <script src="js/training-core.js?v=6"></script>
-<script src="js/load-ratios.js?v=1"></script>
+<script src="js/load-ratios.js?v=2"></script>
 <script src="js/coach-loop.js?v=7"></script>
 <script src="js/speed-intel.js?v=3"></script>
 <script src="js/program-edit.js?v=2"></script>
