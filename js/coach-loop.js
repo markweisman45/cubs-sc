@@ -326,8 +326,9 @@ function prepareForAthlete(pbState, player) {
             }
           }
           var dbEx = EXERCISE_DB.find(function (e) { return e && e.name && e.name.toLowerCase() === String(ex.name).toLowerCase(); });
-          if (dbEx && dbEx.liftKey) {
-            ex.liftKey = dbEx.liftKey;
+          if (dbEx && dbEx.liftKey) ex.liftKey = dbEx.liftKey;
+          if (typeof applyRatioLoad === 'function') applyRatioLoad(ex, player);
+          else if (dbEx && dbEx.liftKey) {
             var rm = get1RM(player, dbEx.liftKey);
             if (rm) { ex.base1RM = rm; var p = TC.pctOf(ex); if (p) ex.calcWeight = calcMROUND(p, rm); }
           }
