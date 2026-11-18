@@ -6,7 +6,7 @@
 <title>Mark Weisman S&amp;C</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
-<script src="js/training-core.js?v=5"></script>
+<script src="js/training-core.js?v=6"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -115,6 +115,7 @@ input,textarea{font-family:inherit;}
 .fld input::-webkit-outer-spin-button,.fld input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .fld input::placeholder{color:#7C88A6;font-weight:500;}
 .fld input:focus{outline:none;border-color:var(--blue-l);background:#16203a;}
+.fld.wide input{padding-right:52px;}
 .fld .u{position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--text3);pointer-events:none;text-transform:uppercase;letter-spacing:.06em;}
 .set-rx{height:46px;border-radius:12px;border:1px dashed var(--border2);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:14px;color:var(--text2);}
 .chk{width:52px;height:46px;border-radius:12px;border:1.5px solid var(--border2);background:transparent;color:#2E3850;font-size:20px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;}
@@ -480,8 +481,8 @@ function rxLine(block, ex, li){
   if (sets && reps) p.push('<b>'+sets+' × '+reps+'</b>'); else if (sets) p.push('<b>'+sets+' sets</b>'); else if (reps) p.push('<b>'+reps+'</b>');
   if (ex.distance) p.push(esc(ex.distance));
   var tl = li && li.lbs;
-  if (tl) p.push('@ <b>'+tl+' lbs</b>');
-  else if (ex.load) p.push('@ '+esc(ex.load));
+  if (tl) p.push('@ <b>'+tl+' lbs'+TC.loadSuffix(ex)+'</b>');
+  else if (ex.load) p.push('@ '+esc(TC.loadText(ex, ex.load)));
   return p.join(' ');
 }
 function chipsHTML(ex, li){
@@ -973,7 +974,7 @@ function exHTML(wi, di, bi, ei, block, ex, tag){
   var last = lastTime(ex.name, wi, di);
   if (last) {
     var s0 = last.sets[last.sets.length - 1];
-    var txt = (s0.weight ? s0.weight + ' lbs' : '') + (s0.weight && s0.actual_reps ? ' × ' : '') + (s0.actual_reps ? s0.actual_reps : '');
+    var txt = (s0.weight ? s0.weight + ' lbs' + TC.loadSuffix(ex) : '') + (s0.weight && s0.actual_reps ? ' × ' : '') + (s0.actual_reps ? s0.actual_reps : '');
     if (txt) h += '<div class="ex-last">Last time (Wk ' + (last.wi + 1) + '): <b>' + esc(txt) + '</b></div>';
   }
   // Set rows
@@ -990,7 +991,7 @@ function exHTML(wi, di, bi, ei, block, ex, tag){
     } else if (simple) {
       h += '<div class="set-rx">' + esc([ex.reps, ex.distance].filter(Boolean).join(' · ') || 'Set ' + (s + 1)) + '</div>';
     } else {
-      if (showLoad) h += '<div class="fld"><input data-f="weight" type="number" inputmode="decimal" placeholder="' + esc(tl || lastWeight(ex, wi, di, s) || '—') + '" value="' + esc(e.weight || '') + '" oninput="setVal(\'' + k + '\',\'weight\',this.value)"><span class="u">lbs</span></div>';
+      if (showLoad) h += '<div class="fld' + (TC.loadSuffix(ex) ? ' wide' : '') + '"><input data-f="weight" type="number" inputmode="decimal" placeholder="' + esc(tl || lastWeight(ex, wi, di, s) || '—') + '" value="' + esc(e.weight || '') + '" oninput="setVal(\'' + k + '\',\'weight\',this.value)"><span class="u">lbs' + esc(TC.loadSuffix(ex)) + '</span></div>';
       else h += '<div class="set-rx">' + (isBodyweight(ex) ? 'Bodyweight' : esc(ex.distance || '—')) + '</div>';
       if (repsField) h += '<div class="fld"><input data-f="actual_reps" type="number" inputmode="numeric" placeholder="' + tr + '" value="' + esc(e.actual_reps || '') + '" oninput="setVal(\'' + k + '\',\'actual_reps\',this.value)"><span class="u">reps' + repsSuffix(ex) + '</span></div>';
       else h += '<div class="set-rx">' + esc(ex.reps || ex.distance || '—') + '</div>';
@@ -1444,7 +1445,7 @@ function printProgram(){
                 if (!e || !dayHasWork(d)) return '<td class="na"></td>';
                 var li = TC.autoLoad(pbObj(), LOG, e, wi, di, sessCache());
                 var sr = [e.sets && e.reps ? e.sets + ' × ' + e.reps : (e.sets ? e.sets + ' sets' : e.reps || ''), e.distance || ''].filter(Boolean).join(' · ');
-                var load = li && li.lbs ? li.lbs + ' lb' : (isBodyweight(e) ? 'BW' : (e.load || ''));
+                var load = li && li.lbs ? li.lbs + ' lb' + TC.loadSuffix(e) : (isBodyweight(e) ? 'BW' : TC.loadText(e, e.load || ''));
                 var alt = e.name !== rx.name ? '<span class="alt">' + esc(e.name) + '</span>' : '';
                 var chg = [tempoOf(e) && tempoOf(e) !== tempoOf(rx) ? 'Tempo ' + tempoOf(e) : '', e.rest && e.rest !== rx.rest ? 'Rest ' + e.rest : ''].filter(Boolean).join(' · ');
                 var showW = !TC.isRunEx(b, e) && !isBodyweight(e) && b.blockType !== 'mobility' && b.blockType !== 'prep';
