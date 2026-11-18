@@ -20,6 +20,37 @@ var TC = (function () {
   function parseISO(s) { var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
   function mround(x, to) { to = to || 5; return Math.round(x / to) * to; }
 
+  // ── Load type: how a weight is read ("50" = 50 total, 50 per DB, 50 per side) ──
+  // ex.loadType is only stored when the coach overrides; otherwise it's
+  // detected from the exercise name so existing programs label themselves.
+  var LOAD_TYPES = [
+    { v: 'total', label: 'Total',    suffix: '' },
+    { v: 'db',    label: 'Per DB',   suffix: '/DB' },
+    { v: 'kb',    label: 'Per KB',   suffix: '/KB' },
+    { v: 'side',  label: 'Per Side', suffix: '/side' }
+  ];
+  function autoLoadType(name) {
+    var n = String(name || '');
+    var oneBell = /goblet|single[\s-]*arm|\bSA\b|1[\s-]*arm|one[\s-]*arm|suitcase/i.test(n);
+    if (/\bDBs?\b|dumbbell/i.test(n)) return oneBell ? 'total' : 'db';
+    if (/\bKBs?\b|kettlebell/i.test(n)) return /double|\b2[\s-]*KB|dual/i.test(n) ? 'kb' : 'total';
+    return 'total';
+  }
+  function loadType(ex) { return (ex && ex.loadType) || autoLoadType(ex && ex.name); }
+  function loadSuffix(ex) {
+    var t = loadType(ex);
+    for (var i = 0; i < LOAD_TYPES.length; i++) if (LOAD_TYPES[i].v === t) return LOAD_TYPES[i].suffix;
+    return '';
+  }
+  // "50" / "50 lbs" → "50 lbs/DB"; "70%", "BW", "RPE 8" etc. are left alone
+  function loadText(ex, raw) {
+    var s = String(raw == null ? '' : raw).trim();
+    var suf = loadSuffix(ex);
+    if (!suf) return s;
+    var m = s.match(/^(\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?)\s*(lbs?|kg)?$/i);
+    return m ? m[1] + ' ' + (m[2] ? m[2].replace(/^lb$/i, 'lbs') : 'lbs') + suf : s;
+  }
+
   // ── Prescription parsing ──
   function pctOf(ex) { var m = String(ex.load || '').match(/(\d+(?:\.\d+)?)\s*%/); return m ? parseFloat(m[1]) : null; }
   function targetReps(ex, s) {
@@ -370,6 +401,7 @@ var TC = (function () {
     epley: epley, liftId: liftId, liftSessions: liftSessions, working1RM: working1RM, autoLoad: autoLoad, sessionMisses: sessionMisses,
     readiness: readiness, readinessAdjust: readinessAdjust, bestJump: bestJump,
     dayLoad: dayLoad, plannedDayLoad: plannedDayLoad,
-    newUid: newUid, ensureUids: ensureUids, buildRemap: buildRemap, applyRemap: applyRemap, upgradeLog: upgradeLog, rxText: rxText
+    newUid: newUid, ensureUids: ensureUids, buildRemap: buildRemap, applyRemap: applyRemap, upgradeLog: upgradeLog, rxText: rxText,
+    LOAD_TYPES: LOAD_TYPES, autoLoadType: autoLoadType, loadType: loadType, loadSuffix: loadSuffix, loadText: loadText
   };
 })();
