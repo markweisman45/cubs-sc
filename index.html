@@ -2517,6 +2517,17 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
             </select>
           </div>
           <div class="control-group">
+            <div class="control-label">No tested 1RM? Base % loads on… (per DB for dumbbell lifts)</div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select class="control-select" id="modal-rmparent" style="font-size:13px;flex:1;">
+                <option value="">— Default —</option>
+              </select>
+              <input class="control-input" id="modal-rmratio" type="number" step="1" min="1" max="200" placeholder="%" style="font-size:13px;width:70px;">
+              <span style="font-size:12px;color:var(--text3);">% of its 1RM</span>
+            </div>
+            <div id="modal-rmhint" style="font-size:10px;color:var(--text3);margin-top:4px;"></div>
+          </div>
+          <div class="control-group">
             <div class="control-label">YouTube URL (optional)</div>
             <input class="control-input" id="modal-video" placeholder="https://youtube.com/watch?v=…" style="font-size:13px;">
           </div>
@@ -8882,12 +8893,9 @@ function pbComputeLoadsForAthlete(pbState, player) {
           delete ex.calcWeight; delete ex.calcWeightSource;
           var dbEx = EXERCISE_DB.find(function(e){ return e && e.name && e.name.toLowerCase() === ex.name.toLowerCase(); });
           if (dbEx && dbEx.video) ex.video = dbEx.video;
-          if (ex.load && /%/.test(String(ex.load)) && dbEx && dbEx.liftKey) {
-            var m = String(ex.load).match(/(\d+(?:\.\d+)?)/);
-            var oneRM = m ? get1RM(player, dbEx.liftKey) : null;
-            var lbs = oneRM ? calcMROUND(parseFloat(m[1]), oneRM) : null;
-            if (lbs) { ex.calcWeight = lbs; ex.calcWeightSource = dbEx.liftKey + ' 1RM: ' + oneRM + ' lbs'; }
-          }
+          // Tested 1RM for this lift, or estimated from its parent lift (js/load-ratios.js)
+          var r = applyRatioLoad(ex, player);
+          if (r && r.source === 'tested' && dbEx && dbEx.liftKey) ex.liftKey = dbEx.liftKey;
         });
       });
     });
@@ -11596,6 +11604,11 @@ function render1RMTable() {
     mlk.innerHTML = '<option value="">— None (BW / No load) —</option>' +
       RM_LIFTS.map(l=>`<option value="${l}">${l}</option>`).join('');
   }
+  const mrp = document.getElementById('modal-rmparent');
+  if (mrp) {
+    mrp.innerHTML = '<option value="">— Default —</option>' +
+      RM_LIFTS.map(l=>`<option value="${l}">${l}</option>`).join('');
+  }
   // Populate calc lift
   const cl = document.getElementById('calc-lift');
   if (cl) {
@@ -12461,11 +12474,9 @@ function getExerciseByName(name) {
 }
 
 function getExerciseLoad(exName, athlete, pct) {
-  const ex = getExerciseByName(exName);
-  if (!ex || !ex.liftKey) return null;
-  const oneRM = get1RM(athlete, ex.liftKey);
-  if (!oneRM || !pct) return null;
-  return calcMROUND(pct, oneRM);
+  const r = resolve1RM(athlete, exName);
+  if (!r || !pct) return null;
+  return calcMROUND(pct, r.oneRM);
 }
 
 function ytId(url) {
@@ -12600,6 +12611,8 @@ function renderLibrary() {
     const vid = ytId(e.video);
     const color = catColors[e.cat] || 'rgba(255,255,255,0.04)';
     const lkTag = e.liftKey ? `<span style="font-size:9px;background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);padding:1px 6px;border-radius:4px;">🔗 ${e.liftKey}</span>` : '';
+    const _rr = (!e.liftKey && typeof loadRatioFor === 'function') ? loadRatioFor(e.name) : null;
+    const rrTag = _rr && _rr[0].toLowerCase() !== String(e.name).toLowerCase() ? `<span style="font-size:9px;background:rgba(93,202,165,0.12);color:#5DCAA5;padding:1px 6px;border-radius:4px;">📐 ${Math.round(_rr[1]*100)}% of ${_rr[0]}</span>` : '';
     const vidTag = vid ? `<a href="${e.video}" target="_blank" rel="noopener" style="font-size:9px;background:rgba(239,68,68,0.15);color:#ff6b6b;padding:1px 6px;border-radius:4px;text-decoration:none;">▶ YouTube</a>` : '';
 
     const bucketTag = e.bucket ? `<span style="font-size:9px;background:${bucketColors[e.bucket]||'rgba(255,255,255,0.08)'};color:${bucketTextColors[e.bucket]||'var(--text2)'};padding:1px 6px;border-radius:4px;">${e.bucket.replace(/_/g,' ')}</span>` : '';
@@ -12625,7 +12638,7 @@ function renderLibrary() {
         <div data-exname="${e.name.replace(/"/g,'&quot;')}" style="font-size:13px;font-weight:600;margin-bottom:4px;cursor:default;">${e.name}</div>
         <div style="font-size:10px;color:var(--text3);margin-bottom:5px;">${e.cat}</div>
         ${bucketTag||muscleTag||sportBucketTag ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px;">${bucketTag}${sportBucketTag}${muscleTag}</div>` : ''}
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">${lkTag}${vidTag}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">${lkTag}${rrTag}${vidTag}</div>
         ${e.notes ? `<div style="font-size:10px;color:var(--text2);font-style:italic;margin-bottom:4px;">${e.notes}</div>` : ''}
         ${e.mechanism_text ? `<div style="font-size:10px;color:var(--text2);line-height:1.5;border-top:1px solid var(--border);padding-top:6px;margin-top:4px;">${e.mechanism_text}</div>` : ''}
         ${!isSelMode ? `<div style="display:flex;gap:4px;margin-top:8px;">
@@ -12651,6 +12664,7 @@ function openAddExerciseModal() {
   document.getElementById('modal-notes').value = '';
   const mlk = document.getElementById('modal-liftkey');
   if (mlk) mlk.value = '';
+  fillRatioFields(null);
   document.getElementById('modal-delete-btn').style.display = 'none';
   openModal('addExModal');
 }
@@ -12666,8 +12680,19 @@ function openEditExercise(idx) {
   document.getElementById('modal-notes').value = e.notes || '';
   const mlk = document.getElementById('modal-liftkey');
   if (mlk) mlk.value = e.liftKey || '';
+  fillRatioFields(e);
   document.getElementById('modal-delete-btn').style.display = 'inline-flex';
   openModal('addExModal');
+}
+
+function fillRatioFields(e) {
+  var mrp = document.getElementById('modal-rmparent'), mrr = document.getElementById('modal-rmratio'), hint = document.getElementById('modal-rmhint');
+  if (!mrp || !mrr) return;
+  mrp.value = (e && e.rmParent) || '';
+  mrr.value = (e && e.rmRatio) || '';
+  var d = e && typeof DEFAULT_LOAD_RATIOS !== 'undefined' ? DEFAULT_LOAD_RATIOS[String(e.name||'').toLowerCase()] : null;
+  mrr.placeholder = d ? String(Math.round(d[1]*100)) : '%';
+  if (hint) hint.textContent = d ? 'Default: ' + Math.round(d[1]*100) + '% of ' + d[0] + ' 1RM. Leave blank to keep it.' : 'No default — set a lift and % to get lbs from % loads.';
 }
 
 function closeAddExerciseModal() { closeModal('addExModal'); }
@@ -12685,8 +12710,12 @@ function saveExercise() {
 
   if (!name || !cat) { alert('Exercise name and category are required.'); return; }
 
+  const rmParent = document.getElementById('modal-rmparent')?.value || '';
+  const rmRatio  = parseFloat(document.getElementById('modal-rmratio')?.value || '') || '';
   const entry = {
     cat, name, liftKey, video, notes,
+    rmParent: rmParent && rmRatio ? rmParent : '',
+    rmRatio:  rmParent && rmRatio ? rmRatio : '',
     // preserve enrichment fields if editing an existing exercise
     muscle_group:   (editingExIdx !== null ? EXERCISE_DB[editingExIdx].muscle_group  : '') || '',
     muscle_head:    (editingExIdx !== null ? EXERCISE_DB[editingExIdx].muscle_head   : '') || '',
@@ -15066,6 +15095,28 @@ function pbAddCustomPreset(field, value) {
 }
 
 // Build a smart dropdown for a field
+// Live "= 85 lbs/DB" line under a % load, for the athlete being programmed
+function pbLoadHint(ex) {
+  if (!ex || !ex.name || typeof resolve1RM !== 'function') return '';
+  var m = String(ex.load || '').match(/(\d+(?:\.\d+)?)\s*%/);
+  if (!m) return '';
+  var pct = parseFloat(m[1]);
+  var ath = PB_STATE && PB_STATE.athlete;
+  var sty = 'font-size:9px;margin:-3px 0 7px 44px;font-family:\'DM Mono\',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  var rule = loadRatioFor(ex.name);
+  var suf = (typeof TC !== 'undefined' && TC.loadSuffix) ? TC.loadSuffix(ex) : '';
+  if (!ath || ath === '(Sandbox)') {
+    return rule ? '<div style="'+sty+'color:var(--text3);">📐 '+pct+'% × '+Math.round(rule[1]*100)+'% of '+escHtml(rule[0])+' 1RM — pick an athlete to see lbs</div>' : '';
+  }
+  var r = resolve1RM(ath, ex.name);
+  if (r) {
+    var lbs = calcMROUND(pct, r.oneRM);
+    return '<div style="'+sty+'color:#5DCAA5;">= '+lbs+' lbs'+suf+' · '+escHtml(r.source === 'tested' ? r.label : pct+'% × '+r.label)+'</div>';
+  }
+  var why = rule ? 'no '+rule[0]+' 1RM for '+ath : 'no parent lift set — add one in Exercise Library';
+  return '<div style="'+sty+'color:var(--yellow);">⚠ '+escHtml(why)+'</div>';
+}
+
 function pbLoadTypeSelect(bi, ei, ex) {
   if (typeof TC === 'undefined' || !TC.LOAD_TYPES) return '';
   var auto = TC.autoLoadType(ex.name), cur = ex.loadType || '';
@@ -15251,7 +15302,8 @@ function pbOpenDay(weekIdx, dayIdx) {
         +'<button onclick="pbRemoveEx('+bi+','+ei+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:1px 3px;">✕</button>'
         +'</div>'
         +'</div>'
-        + (function(){ var pv = pbProgressionPreview(dayIdx, bi, ei); return pv ? '<div style="font-size:9px;color:var(--text3);margin:-3px 0 7px 44px;font-family:\'DM Mono\',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml(pv)+'</div>' : ''; })();
+        + (function(){ var pv = pbProgressionPreview(dayIdx, bi, ei); return pv ? '<div style="font-size:9px;color:var(--text3);margin:-3px 0 7px 44px;font-family:\'DM Mono\',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml(pv)+'</div>' : ''; })()
+        + pbLoadHint(ex);
     }).join('');
 
     // Session header divider — handled at top of map
@@ -22525,17 +22577,8 @@ async function shareProgram(progId) {
             // Always prefer the current Library link over whatever was
             // snapshotted when this exercise was added to the program
             if (dbEx && dbEx.video) ex.video = dbEx.video;
-            if (ex.load && typeof ex.load === 'string' && ex.load.includes('%') && dbEx && dbEx.liftKey) {
-              var pctMatch = ex.load.match(/(\d+(?:\.\d+)?)/);
-              if (pctMatch) {
-                var pct = parseFloat(pctMatch[1]);
-                var oneRM = get1RM(syncAthlete, dbEx.liftKey);
-                if (oneRM) {
-                  var calcLbs = calcMROUND(pct, oneRM);
-                  if (calcLbs) { ex.calcWeight = calcLbs; ex.calcWeightSource = dbEx.liftKey + ' 1RM: ' + oneRM + ' lbs'; }
-                }
-              }
-            }
+            var r = applyRatioLoad(ex, syncAthlete);
+            if (r && r.source === 'tested' && dbEx && dbEx.liftKey) ex.liftKey = dbEx.liftKey;
           });
         });
       });
@@ -24790,7 +24833,8 @@ try {
 
 <script src="js/auth.js?v=3"></script>
 <script src="js/training-core.js?v=6"></script>
-<script src="js/coach-loop.js?v=6"></script>
+<script src="js/load-ratios.js?v=1"></script>
+<script src="js/coach-loop.js?v=7"></script>
 <script src="js/speed-intel.js?v=3"></script>
 <script src="js/program-edit.js?v=2"></script>
 <script src="js/program-history.js?v=2"></script>
