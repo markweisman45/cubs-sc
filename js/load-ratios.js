@@ -166,3 +166,96 @@ function applyRatioLoad(ex, athlete) {
   }
   return r;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW 1RM → UPDATE LIVE PROGRAMS
+// Loads are baked into an athlete's program when it's sent. After a new 1RM
+// is saved, this recalculates the loads on his live programs (started or
+// upcoming, not finished) from the cloud copy — so his live edits, logs and
+// messages stay — and tells him on his page what changed.
+// ═══════════════════════════════════════════════════════════════════════════
+function _rmProgEnded(st) {
+  if (!st || !st.startDate || !st.weekData) return false;
+  var end = new Date(st.startDate + 'T00:00:00');
+  end.setDate(end.getDate() + st.weekData.length * 7);
+  return end < new Date(new Date().toDateString());
+}
+
+// Recalculate one pb_state in place. Returns [{ name, from, to }] — one per exercise whose lbs changed.
+function rmRecalcState(st, athlete) {
+  var changed = {}, out = [];
+  (st.weekData || []).forEach(function (wk) {
+    (wk.days || []).forEach(function (day) {
+      (day.blocks || []).forEach(function (block) {
+        (block.exercises || []).forEach(function (ex) {
+          if (!ex || !ex.name) return;
+          var before = ex.calcWeight || null;
+          var r = applyRatioLoad(ex, athlete);
+          if (!r) return;
+          if (ex.calcWeight && before !== ex.calcWeight && !changed[ex.name]) {
+            changed[ex.name] = 1;
+            out.push({ name: ex.name, from: before, to: ex.calcWeight, suf: (typeof TC !== 'undefined' && TC.loadSuffix) ? TC.loadSuffix(ex) : '' });
+          }
+        });
+      });
+    });
+  });
+  return out;
+}
+
+// dryRun: just report. Otherwise writes. → [{ id, name, changes: [...] , err? }]
+async function rmRefreshLivePrograms(athlete, dryRun) {
+  var db = typeof getSupaClient === 'function' ? getSupaClient() : null;
+  if (!db || !athlete) return [];
+  var q = await db.from('athlete_programs').select('id,name,pb_state').eq('athlete', athlete);
+  if (q.error) throw q.error;
+  var results = [];
+  for (var i = 0; i < (q.data || []).length; i++) {
+    var row = q.data[i];
+    var st = typeof peParse === 'function' ? peParse(row.pb_state) : (typeof row.pb_state === 'string' ? JSON.parse(row.pb_state) : row.pb_state);
+    if (!st || !st.weekData || _rmProgEnded(st)) continue;
+    var changes = rmRecalcState(st, athlete);
+    if (!changes.length) continue;
+    var res = { id: String(row.id), name: row.name || 'Program', changes: changes };
+    if (!dryRun) {
+      try {
+        var shown = changes.slice(0, 6).map(function (c) { return c.name + ' ' + (c.from ? c.from + ' → ' : '') + c.to + ' lbs' + (c.suf || ''); });
+        var text = 'New 1RM — loads updated' + (shown.length ? ': ' + shown.join(', ') : '') + (changes.length > shown.length ? ' + more' : '');
+        var w = await peWriteProgram(db, res.id, st, { by: '1rm', extraChanges: [{ wi: null, di: null, text: text }] });
+        var copy = (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : []).find(function (p) { return String(p.id) === res.id && p.isAssigned; });
+        if (copy) copy.pbState = JSON.parse(JSON.stringify(w.st));
+      } catch (e) { res.err = e.message || String(e); }
+    }
+    results.push(res);
+  }
+  if (!dryRun && typeof persistPrograms === 'function') persistPrograms();
+  if (!dryRun && typeof loadProgramRows === 'function') loadProgramRows();
+  return results;
+}
+
+// After saving 1RMs: offer a one-click update if any live program would change.
+async function rmOfferRefresh(athlete) {
+  var msg = document.getElementById('rm-save-msg');
+  if (!msg) return;
+  var box = document.getElementById('rm-refresh-box');
+  if (!box) { box = document.createElement('div'); box.id = 'rm-refresh-box'; box.style.cssText = 'font-size:11px;margin-top:6px;line-height:1.5;'; msg.parentNode.insertBefore(box, msg.nextSibling); }
+  box.innerHTML = '<span style="color:var(--text3);">Checking ' + athlete + '\'s live programs…</span>';
+  var found;
+  try { found = await rmRefreshLivePrograms(athlete, true); }
+  catch (e) { box.innerHTML = '<span style="color:var(--yellow);">⚠ Couldn\'t check live programs: ' + (e.message || e) + '</span>'; return; }
+  if (!found.length) { box.innerHTML = '<span style="color:var(--text3);">No live programs for ' + athlete + ' need new loads.</span>'; return; }
+  var n = found.reduce(function (s, r) { return s + r.changes.length; }, 0);
+  var ex = found[0].changes.slice(0, 3).map(function (c) { return c.name + ' ' + (c.from ? c.from + '→' : '') + c.to; }).join(', ');
+  box.innerHTML = '<div style="color:var(--yellow);">' + n + ' load' + (n === 1 ? '' : 's') + ' change in ' + found.length + ' live program' + (found.length === 1 ? '' : 's') + (ex ? ' (' + ex + (n > 3 ? ', …' : '') + ')' : '') + '</div>'
+    + '<button id="rm-refresh-go" class="generate-btn" style="padding:6px 12px;margin-top:4px;font-size:11px;">↻ Update ' + athlete.split(' ')[0] + '\'s program' + (found.length === 1 ? '' : 's') + '</button>';
+  document.getElementById('rm-refresh-go').onclick = async function () {
+    this.disabled = true; this.textContent = 'Updating…';
+    try {
+      var done = await rmRefreshLivePrograms(athlete, false);
+      var bad = done.filter(function (r) { return r.err; });
+      box.innerHTML = bad.length
+        ? '<span style="color:#f87171;">⚠ ' + bad.length + ' update' + (bad.length === 1 ? '' : 's') + ' failed: ' + bad.map(function (r) { return r.name + ' — ' + r.err; }).join('; ') + '</span>'
+        : '<span style="color:var(--green);">✅ Updated ' + done.length + ' program' + (done.length === 1 ? '' : 's') + ' — ' + athlete.split(' ')[0] + ' sees the new loads (and a note saying why) next time he opens his link.</span>';
+    } catch (e) { box.innerHTML = '<span style="color:#f87171;">⚠ Update failed: ' + (e.message || e) + '</span>'; }
+  };
+}
