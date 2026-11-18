@@ -5423,7 +5423,7 @@ function buildGridHTML(athlete) {
                   <div class="ex-detail">${ex.sets||'—'}</div>
                   <div class="ex-detail">${ex.reps||'—'}</div>
                   <div class="ex-detail">${ex.tempo||'—'}</div>
-                  <div class="load-display">${ex.load||'—'}</div>
+                  <div class="load-display">${ex.load ? (typeof TC !== 'undefined' ? TC.loadText(ex, ex.load) : ex.load) : '—'}</div>
                   <div class="ex-detail">${ex.rest||'—'}</div>
                   <div class="ex-detail">${ex.notes||''}</div>
                 </div>
@@ -9599,7 +9599,7 @@ function printBrief() {
           var presc = [];
           if (ex.sets) presc.push(ex.sets + '×');
           if (ex.reps) presc.push(ex.reps);
-          if (ex.load) presc.push(ex.load);
+          if (ex.load) presc.push(typeof TC !== 'undefined' ? TC.loadText(ex, ex.load) : ex.load);
           if (ex.tempo) presc.push(ex.tempo);
           if (ex.rest) presc.push(ex.rest + ' rest');
 
@@ -15066,6 +15066,18 @@ function pbAddCustomPreset(field, value) {
 }
 
 // Build a smart dropdown for a field
+function pbLoadTypeSelect(bi, ei, ex) {
+  if (typeof TC === 'undefined' || !TC.LOAD_TYPES) return '';
+  var auto = TC.autoLoadType(ex.name), cur = ex.loadType || '';
+  var autoLbl = (TC.LOAD_TYPES.filter(function(t){ return t.v === auto; })[0] || {}).label || 'Total';
+  var opts = '<option value=""' + (cur ? '' : ' selected') + '>Auto · ' + autoLbl + '</option>'
+    + TC.LOAD_TYPES.map(function(t){ return '<option value="' + t.v + '"' + (cur === t.v ? ' selected' : '') + '>' + t.label + '</option>'; }).join('');
+  var on = TC.loadType(ex) !== 'total';
+  return '<select onchange="pbSetExField(' + bi + ',' + ei + ',\'loadType\',this.value)" title="How the athlete reads this weight: total, per dumbbell, per kettlebell, or per side" '
+    + 'style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 1px;color:' + (on ? '#60a5fa' : 'var(--text3)') + ';font-size:8px;text-align:center;font-family:\'DM Mono\',monospace;width:100%;cursor:pointer;">'
+    + opts + '</select>';
+}
+
 function pbFieldSelect(bi, ei, field, currentVal, placeholder) {
   var opts = PB_PRESETS[field] || [];
   var selStyle = 'background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 2px;color:var(--text);font-size:10px;text-align:center;font-family:\'DM Mono\',monospace;width:100%;cursor:pointer;';
@@ -15226,7 +15238,7 @@ function pbOpenDay(weekIdx, dayIdx) {
         + pbExSearch(bi, ei, ex)
         + pbFieldSelect(bi,ei,'sets',ex.sets||'','Sets')
         + pbFieldSelect(bi,ei,'reps',ex.reps||'','Reps')
-        + pbFieldSelect(bi,ei,'load',ex.load||'','Load')
+        + '<div style="display:flex;flex-direction:column;gap:2px;min-width:0;">' + pbFieldSelect(bi,ei,'load',ex.load||'','Load') + pbLoadTypeSelect(bi,ei,ex) + '</div>'
         + pbFieldSelect(bi,ei,'tempo',ex.tempo||'','Tempo')
         + pbFieldSelect(bi,ei,'rest',ex.rest||'','Rest')
         +'<input value="'+(ex.notes||'')+'" placeholder="Notes" onchange="pbSetExField('+bi+','+ei+',\'notes\',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 5px;color:var(--text);font-size:10px;font-family:\'DM Mono\',monospace;width:100%;">'
@@ -24777,7 +24789,7 @@ try {
   </div>
 
 <script src="js/auth.js?v=3"></script>
-<script src="js/training-core.js?v=5"></script>
+<script src="js/training-core.js?v=6"></script>
 <script src="js/coach-loop.js?v=6"></script>
 <script src="js/speed-intel.js?v=3"></script>
 <script src="js/program-edit.js?v=2"></script>
