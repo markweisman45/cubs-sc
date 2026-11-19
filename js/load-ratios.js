@@ -120,11 +120,29 @@ function _lrDbEx(name) {
   return (typeof EXERCISE_DB !== 'undefined' ? EXERCISE_DB : []).find(function (e) { return e && e.name && e.name.toLowerCase() === n; }) || null;
 }
 
+// Coach ratios for names with no Library entry (template names), set in the
+// 📐 Ratios table: { 'lowercase name': [parent, pct] }. cubs_sc_* → cloud-synced.
+var LOAD_RATIO_OVERRIDES_KEY = 'cubs_sc_load_ratios_v1';
+var _lrOvRaw = null, _lrOv = {};
+function loadRatioOverrides() {
+  var raw = null;
+  try { raw = localStorage.getItem(LOAD_RATIO_OVERRIDES_KEY); } catch (e) {}
+  if (raw !== _lrOvRaw) { _lrOvRaw = raw; try { _lrOv = raw ? JSON.parse(raw) || {} : {}; } catch (e) { _lrOv = {}; } }
+  return JSON.parse(JSON.stringify(_lrOv));
+}
+function saveLoadRatioOverrides(ov) {
+  try { localStorage.setItem(LOAD_RATIO_OVERRIDES_KEY, JSON.stringify(ov || {})); } catch (e) {}
+}
+
 // The [parent, ratio] rule for an exercise, or null. Coach overrides win.
 function loadRatioFor(name) {
   var dbEx = _lrDbEx(name);
   if (dbEx && dbEx.rmParent && parseFloat(dbEx.rmRatio) > 0) return [dbEx.rmParent, parseFloat(dbEx.rmRatio) / 100, 'custom'];
-  var d = DEFAULT_LOAD_RATIOS[String(name || '').toLowerCase()];
+  var k = String(name || '').toLowerCase();
+  loadRatioOverrides();
+  var o = _lrOv[k];
+  if (o && o[0] && parseFloat(o[1]) > 0) return [o[0], parseFloat(o[1]) / 100, 'custom'];
+  var d = DEFAULT_LOAD_RATIOS[k];
   return d ? [d[0], d[1], 'default'] : null;
 }
 
