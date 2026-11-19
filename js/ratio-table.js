@@ -41,7 +41,7 @@
   function view(row) {
     var p = S.pending[row.key];
     if (p && p.reset) return row.def ? { parent: row.def[0], pct: row.def[1], how: 'default', changed: true } : { parent: '', pct: '', how: 'none', changed: true };
-    if (p) return { parent: p.parent, pct: p.pct, how: 'custom', changed: true };
+    if (p) return { parent: p.parent, pct: p.pct, how: 'custom', changed: true, incomplete: !!p.incomplete };
     return row.cur ? { parent: row.cur[0], pct: row.cur[1], how: row.cur[2], changed: false } : { parent: '', pct: '', how: 'none', changed: false };
   }
 
@@ -49,7 +49,7 @@
     var q = lc(S.q);
     return allRows().filter(function (r) {
       var v = view(r);
-      if (!S.showAll && !v.parent) return false;
+      if (!S.showAll && !v.parent && !S.pending[r.key]) return false;
       if (S.parent && v.parent !== S.parent) return false;
       if (q && r.key.indexOf(q) === -1) return false;
       if (S.onlyChanged && !v.changed && v.how !== 'custom') return false;
@@ -62,7 +62,9 @@
 
   function stage(row, parent, pct) {
     pct = parseFloat(pct);
-    if (!parent || !(pct > 0)) { S.pending[row.key] = { reset: true }; return; }
+    if (!parent && !(pct > 0)) { S.pending[row.key] = { reset: true }; return; }
+    // Half-filled (lift but no %, or % but no lift): keep it on screen until the other box is filled
+    if (!parent || !(pct > 0)) { S.pending[row.key] = { parent: parent || '', pct: pct > 0 ? Math.round(pct * 10) / 10 : '', incomplete: true }; return; }
     pct = Math.round(pct * 10) / 10;
     if (row.def && row.def[0] === parent && row.def[1] === pct) { S.pending[row.key] = { reset: true }; return; }
     S.pending[row.key] = { parent: parent, pct: pct };
@@ -80,7 +82,7 @@
     if (!body) return;
     var rows = visible();
     var nSel = rows.filter(function (r) { return S.sel[r.key]; }).length;
-    var nPend = Object.keys(S.pending).length;
+    var nPend = Object.keys(S.pending).filter(function (k) { return !S.pending[k].incomplete; }).length;
     var used = {}; allRows().forEach(function (r) { var p = view(r).parent; if (p) used[p] = (used[p] || 0) + 1; });
 
     var pf = document.getElementById('rt-parent-filter');
@@ -99,7 +101,8 @@
 
     body.innerHTML = rows.map(function (r) {
       var v = view(r), suf = suffix(r.name);
-      var tag = v.changed ? '<span style="color:#f59e0b;">● unsaved</span>'
+      var tag = v.incomplete ? '<span style="color:#f59e0b;">● needs ' + (v.parent ? 'a %' : 'a lift') + '</span>'
+        : v.changed ? '<span style="color:#f59e0b;">● unsaved</span>'
         : v.how === 'custom' ? '<span style="color:#5DCAA5;">your number</span>'
         : v.how === 'default' ? '<span style="color:var(--text3);">default</span>' : '<span style="color:var(--text3);">—</span>';
       var def = r.def ? r.def[1] + '% of ' + esc(r.def[0]) : '—';
@@ -138,7 +141,8 @@
 
   // ── Save ──────────────────────────────────────────────────────────────────
   function save() {
-    var keys = Object.keys(S.pending);
+    var held = Object.keys(S.pending).filter(function (k) { return S.pending[k].incomplete; });
+    var keys = Object.keys(S.pending).filter(function (k) { return !S.pending[k].incomplete; });
     if (!keys.length) return;
     var ov = loadRatioOverrides();
     keys.forEach(function (k) {
@@ -152,11 +156,13 @@
     saveLoadRatioOverrides(ov);
     if (typeof persistExerciseDB === 'function') persistExerciseDB();   // localStorage + cloud sync
     else if (typeof syncToSupabase === 'function') setTimeout(syncToSupabase, 1000);
-    S.pending = {};
+    var keep = {}; held.forEach(function (k) { keep[k] = S.pending[k]; });
+    S.pending = keep;
     if (typeof renderLibrary === 'function') renderLibrary();
     render();
     var msg = document.getElementById('rt-msg');
-    msg.innerHTML = '<span style="color:var(--green);">✅ Saved ' + keys.length + ' ratio' + (keys.length === 1 ? '' : 's') + ' — backed up to the cloud.</span>';
+    msg.innerHTML = '<span style="color:var(--green);">✅ Saved ' + keys.length + ' ratio' + (keys.length === 1 ? '' : 's') + ' — backed up to the cloud.</span>'
+      + (held.length ? ' <span style="color:#f59e0b;">' + held.length + ' still need' + (held.length === 1 ? 's' : '') + ' a lift and a % — not saved yet.</span>' : '');
     offerLiveUpdate(msg);
   }
 
