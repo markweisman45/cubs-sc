@@ -2059,6 +2059,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
               <button onclick="document.getElementById('lib-restore-file-input').click()" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.35);border-radius:6px;color:#4ade80;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;" title="Restore ONLY the exercise library from an old backup JSON file — nothing else in the app is touched">📂 Restore Library from Backup File</button>
               <button onclick="libRemoveDuplicates()" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:6px;color:#f59e0b;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;" title="Merge exercises that share the same name, keeping whichever copy has more filled-in data">🧹 Remove Duplicates</button>
               <button onclick="syncVideosAcrossPrograms(true)" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:6px;color:#ff6b6b;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;" title="Push every exercise's current video link out to every saved program">▶ Sync Videos to Programs</button>
+              <button onclick="openRatioTable()" style="background:rgba(93,202,165,0.12);border:1px solid rgba(93,202,165,0.35);border-radius:6px;color:#5DCAA5;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;" title="Edit every load ratio in one table">📐 Ratios</button>
               <button onclick="openEnrichModal()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">✨ Enrich</button>
               <button onclick="libToggleSelect()" id="lib-select-btn" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">☑ Select</button>
               <button onclick="libDeleteSelected()" id="lib-delete-btn" style="display:none;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;">🗑 Delete (<span id="lib-sel-count">0</span>)</button>
@@ -24837,7 +24838,8 @@ try {
 
 <script src="js/auth.js?v=3"></script>
 <script src="js/training-core.js?v=6"></script>
-<script src="js/load-ratios.js?v=2"></script>
+<script src="js/load-ratios.js?v=3"></script>
+<script src="js/ratio-table.js?v=1"></script>
 <script src="js/coach-loop.js?v=7"></script>
 <script src="js/speed-intel.js?v=3"></script>
 <script src="js/program-edit.js?v=2"></script>
