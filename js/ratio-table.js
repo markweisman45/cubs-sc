@@ -14,7 +14,7 @@
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function lc(s) { return String(s || '').trim().toLowerCase(); }
   function titleCase(s) { return String(s).replace(/(^|[\s(\-/])([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); }).replace(/\b(Bb|Db|Kb|Sl|Sa|Rfe|Ffe|Oh|Rdl|Dl|Ss)\b/g, function (m) { return m.toUpperCase(); }); }
-  function lifts() { return (typeof RM_LIFTS !== 'undefined' ? RM_LIFTS : []).slice(); }
+  function lifts() { return ['Body Weight'].concat(typeof RM_LIFTS !== 'undefined' ? RM_LIFTS : []); }
   function dbEx(name) { return (typeof _lrDbEx === 'function') ? _lrDbEx(name) : null; }
   function suffix(name) { return (typeof TC !== 'undefined' && TC.loadSuffix) ? TC.loadSuffix({ name: name }) : ''; }
 
