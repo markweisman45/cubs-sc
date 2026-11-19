@@ -2512,7 +2512,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
             <input class="control-input" id="modal-newcat" placeholder="e.g. Isometric Variations" style="font-size:13px;">
           </div>
           <div class="control-group">
-            <div class="control-label">1RM Lift Key (for load calc — leave blank if bodyweight/no load)</div>
+            <div class="control-label">1RM Lift Key (for load calc — pick Body Weight for % of BW · blank = no load)</div>
             <select class="control-select" id="modal-liftkey" style="font-size:13px;">
               <option value="">— None (BW / No load) —</option>
             </select>
@@ -11603,12 +11603,14 @@ function render1RMTable() {
   // Populate lift key dropdown in modal
   const mlk = document.getElementById('modal-liftkey');
   if (mlk) {
-    mlk.innerHTML = '<option value="">— None (BW / No load) —</option>' +
+    mlk.innerHTML = '<option value="">— None (no load) —</option>' +
+      '<option value="Body Weight">⚖️ Body Weight (% of current BW)</option>' +
       RM_LIFTS.map(l=>`<option value="${l}">${l}</option>`).join('');
   }
   const mrp = document.getElementById('modal-rmparent');
   if (mrp) {
     mrp.innerHTML = '<option value="">— Default —</option>' +
+      '<option value="Body Weight">⚖️ Body Weight</option>' +
       RM_LIFTS.map(l=>`<option value="${l}">${l}</option>`).join('');
   }
   // Populate calc lift
@@ -12615,7 +12617,7 @@ function renderLibrary() {
   grid.innerHTML = filtered.map(function(e) {
     const vid = ytId(e.video);
     const color = catColors[e.cat] || 'rgba(255,255,255,0.04)';
-    const lkTag = e.liftKey ? `<span style="font-size:9px;background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);padding:1px 6px;border-radius:4px;">🔗 ${e.liftKey}</span>` : '';
+    const lkTag = e.liftKey ? `<span style="font-size:9px;background:rgba(59,122,196,0.15);color:var(--cubs-light-blue);padding:1px 6px;border-radius:4px;">${isBWLift(e.liftKey) ? '⚖️ % of BW' : '🔗 ' + e.liftKey}</span>` : '';
     const _rr = (!e.liftKey && typeof loadRatioFor === 'function') ? loadRatioFor(e.name) : null;
     const rrTag = _rr && _rr[0].toLowerCase() !== String(e.name).toLowerCase() ? `<span style="font-size:9px;background:rgba(93,202,165,0.12);color:#5DCAA5;padding:1px 6px;border-radius:4px;">📐 ${Math.round(_rr[1]*100)}% of ${_rr[0]}</span>` : '';
     const vidTag = vid ? `<a href="${e.video}" target="_blank" rel="noopener" style="font-size:9px;background:rgba(239,68,68,0.15);color:#ff6b6b;padding:1px 6px;border-radius:4px;text-decoration:none;">▶ YouTube</a>` : '';
@@ -12794,7 +12796,7 @@ document.addEventListener('change', e => {
 function resolveLoad(exName, athlete, pct, fallback) {
   const ex = getExerciseByName(exName);
   if (ex && ex.liftKey) {
-    const oneRM = get1RM(athlete, ex.liftKey);
+    const oneRM = isBWLift(ex.liftKey) ? ((currentBodyWeight(athlete) || {}).lbs || null) : get1RM(athlete, ex.liftKey);
     if (oneRM && pct) {
       const load = calcMROUND(pct, oneRM);
       return `${load} lbs <span style="color:var(--text3);font-size:10px;">(${pct}% × ${oneRM})</span>`;
@@ -15110,15 +15112,19 @@ function pbLoadHint(ex) {
   var sty = 'font-size:9px;margin:-3px 0 7px 44px;font-family:\'DM Mono\',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
   var rule = loadRatioFor(ex.name);
   var suf = (typeof TC !== 'undefined' && TC.loadSuffix) ? TC.loadSuffix(ex) : '';
+  var _dbx = typeof _lrDbEx === 'function' ? _lrDbEx(ex.name) : null;
+  var bwKey = !!(_dbx && isBWLift(_dbx.liftKey));
   if (!ath || ath === '(Sandbox)') {
-    return rule ? '<div style="'+sty+'color:var(--text3);">📐 '+pct+'% × '+Math.round(rule[1]*100)+'% of '+escHtml(rule[0])+' 1RM — pick an athlete to see lbs</div>' : '';
+    if (bwKey) return '<div style="'+sty+'color:var(--text3);">⚖️ '+pct+'% of body weight — pick an athlete to see lbs</div>';
+    return rule ? '<div style="'+sty+'color:var(--text3);">📐 '+pct+'% × '+Math.round(rule[1]*100)+'% of '+escHtml(rule[0])+(isBWLift(rule[0]) ? '' : ' 1RM')+' — pick an athlete to see lbs</div>' : '';
   }
   var r = resolve1RM(ath, ex.name);
   if (r) {
     var lbs = calcMROUND(pct, r.oneRM);
     return '<div style="'+sty+'color:#5DCAA5;">= '+lbs+' lbs'+suf+' · '+escHtml(r.source === 'tested' ? r.label : pct+'% × '+r.label)+'</div>';
   }
-  var why = rule ? 'no '+rule[0]+' 1RM for '+ath : 'no parent lift set — add one in Exercise Library';
+  var why = (bwKey || (rule && isBWLift(rule[0]))) ? 'no body weight on file for '+ath+' (VALD, home test, or manual entry)'
+    : rule ? 'no '+rule[0]+' 1RM for '+ath : 'no parent lift set — add one in Exercise Library';
   return '<div style="'+sty+'color:var(--yellow);">⚠ '+escHtml(why)+'</div>';
 }
 
@@ -17772,7 +17778,7 @@ function generateProgram() {
   const date     = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
 
   // Count how many exercises have 1RM data
-  const rmFilled  = pairings.flatMap(p=>p.exercises).filter(e=>e.liftKey && get1RM(athlete,e.liftKey)).length;
+  const rmFilled  = pairings.flatMap(p=>p.exercises).filter(e=>e.liftKey && (isBWLift(e.liftKey) ? currentBodyWeight(athlete) : get1RM(athlete,e.liftKey))).length;
   const rmTotal   = pairings.flatMap(p=>p.exercises).filter(e=>e.liftKey).length;
 
   let html = `<div class="card section-mb" style="border-color:${session.accentColor};margin-bottom:20px;">
@@ -24837,9 +24843,9 @@ try {
   </div>
 
 <script src="js/auth.js?v=3"></script>
-<script src="js/training-core.js?v=6"></script>
-<script src="js/load-ratios.js?v=3"></script>
-<script src="js/ratio-table.js?v=1"></script>
+<script src="js/training-core.js?v=7"></script>
+<script src="js/load-ratios.js?v=4"></script>
+<script src="js/ratio-table.js?v=2"></script>
 <script src="js/coach-loop.js?v=7"></script>
 <script src="js/speed-intel.js?v=3"></script>
 <script src="js/program-edit.js?v=2"></script>
