@@ -115,6 +115,57 @@ var DEFAULT_LOAD_RATIOS = {
   'high pull':                          ['Power Clean', 1.00]
 };
 
+// ── BODY WEIGHT as a load base ──────────────────────────────────────────────
+// Pick "Body Weight" as an exercise's 1RM Lift Key (or as its parent lift with
+// a ratio) and "% loads" become % of the athlete's current body weight:
+//   Sled Push 100% → 1.00 × 212 = 210 lbs.  Farmer Carry → Body Weight 50%, load 100% → 105 lbs/hand.
+// Current BW = newest of: VALD CMJ, at-home test he logged on his page, manual entry.
+var BW_LIFT = 'Body Weight';
+function isBWLift(s) { return /^\s*(body\s*weight|bw)\s*$/i.test(String(s || '')); }
+
+function _lrDate(d) {
+  if (!d) return 0;
+  if (/^\d{4}-\d{2}-\d{2}/.test(d)) return new Date(String(d).slice(0, 10) + 'T12:00:00').getTime();
+  var t = typeof safeParseDate === 'function' ? safeParseDate(d) : new Date(d);
+  t = t instanceof Date ? t.getTime() : +t;
+  if (isNaN(t)) {
+    // Manual entries are "Nov 19" (no year) — assume the most recent such date
+    var y = new Date().getFullYear(), x = new Date(d + ', ' + y + ' 12:00');
+    if (isNaN(x)) return 0;
+    if (x > new Date()) x.setFullYear(y - 1);
+    t = x.getTime();
+  }
+  return t;
+}
+
+// → { lbs, date, src } or null
+function currentBodyWeight(athlete) {
+  if (!athlete) return null;
+  var c = [];
+  try {
+    ((typeof importedData !== 'undefined' && importedData.cmj && importedData.cmj[athlete]) || []).forEach(function (r) {
+      if (r && r.bw > 50 && (!r.type || r.type === 'CMJ') && !(typeof isCMJExcluded === 'function' && isCMJExcluded(athlete, r.date)))
+        c.push({ lbs: +r.bw, t: _lrDate(r.date), date: r.date, src: 'VALD' });
+    });
+  } catch (e) {}
+  try {
+    if (typeof ofTests === 'function') ofTests(athlete).forEach(function (r) {
+      var v = parseFloat(r.bw); if (v > 50) c.push({ lbs: v, t: _lrDate(r.date), date: r.date, src: 'home' });
+    });
+  } catch (e) {}
+  try {
+    ((typeof wellnessLog !== 'undefined' && wellnessLog[athlete]) || []).forEach(function (w) {
+      if (w && w.bw > 50 && !w._cmjOnly) c.push({ lbs: +w.bw, t: _lrDate(w.date), date: w.date, src: 'manual' });
+    });
+  } catch (e) {}
+  if (!c.length) {
+    var g = typeof getLatestBW === 'function' ? getLatestBW(athlete) : null;
+    return g > 50 ? { lbs: +g, date: '', src: '' } : null;
+  }
+  c.sort(function (a, b) { return b.t - a.t; });
+  return { lbs: Math.round(c[0].lbs * 10) / 10, date: c[0].date, src: c[0].src };
+}
+
 function _lrDbEx(name) {
   var n = String(name || '').toLowerCase();
   return (typeof EXERCISE_DB !== 'undefined' ? EXERCISE_DB : []).find(function (e) { return e && e.name && e.name.toLowerCase() === n; }) || null;
@@ -147,12 +198,18 @@ function loadRatioFor(name) {
 }
 
 // Estimated 1RM for an exercise for one athlete.
-// → { oneRM, source: 'tested'|'ratio', liftKey?, parent?, ratio?, parentRM?, label } or null
+// → { oneRM, source: 'tested'|'ratio'|'bw', liftKey?, parent?, ratio?, parentRM?, label } or null
 function resolve1RM(athlete, name, _depth) {
   _depth = _depth || 0;
   if (!athlete || !name || _depth > 4) return null;
   var dbEx = _lrDbEx(name);
   var own = (dbEx && dbEx.liftKey) || name;
+  // Body Weight base: % of his current BW (no BW on file → no load)
+  if (isBWLift(own)) {
+    var bw = currentBodyWeight(athlete);
+    if (!bw) return null;
+    return { oneRM: bw.lbs, source: 'bw', liftKey: BW_LIFT, bwDate: bw.date, label: 'BW ' + Math.round(bw.lbs) };
+  }
   // "Bb Bench Press" in a program is the "BB Bench Press" 1RM — match RM_LIFTS ignoring case
   if (typeof RM_LIFTS !== 'undefined') {
     var canon = RM_LIFTS.find(function (l) { return l.toLowerCase() === String(own).toLowerCase(); });
@@ -166,8 +223,8 @@ function resolve1RM(athlete, name, _depth) {
   if (!p) return null;
   var est = p.oneRM * rule[1];
   return {
-    oneRM: est, source: 'ratio', parent: rule[0], ratio: rule[1], parentRM: p.oneRM, how: rule[2],
-    label: Math.round(rule[1] * 100) + '% of ' + rule[0] + ' (' + (p.source === 'tested' ? '1RM ' : 'est. ') + Math.round(p.oneRM) + ')'
+    oneRM: est, source: 'ratio', parent: rule[0], ratio: rule[1], parentRM: p.oneRM, how: rule[2], bw: p.source === 'bw' || !!p.bw,
+    label: Math.round(rule[1] * 100) + '% of ' + rule[0] + ' (' + (p.source === 'tested' ? '1RM ' : p.source === 'bw' ? '' : 'est. ') + Math.round(p.oneRM) + ')'
   };
 }
 
@@ -175,8 +232,10 @@ function resolve1RM(athlete, name, _depth) {
 function applyRatioLoad(ex, athlete) {
   if (!ex || !ex.name) return null;
   var r = resolve1RM(athlete, ex.name);
-  if (!r) return null;
+  if (!r) { delete ex.loadBase; return null; }
   ex.base1RM = Math.round(r.oneRM);
+  // BW-based: athlete page keeps % × BW (no auto-adjust from logged sets)
+  if (r.source === 'bw' || r.bw) ex.loadBase = 'bw'; else delete ex.loadBase;
   var m = String(ex.load || '').match(/(\d+(?:\.\d+)?)\s*%/);
   if (m) {
     var lbs = calcMROUND(parseFloat(m[1]), r.oneRM);
