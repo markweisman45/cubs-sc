@@ -140,6 +140,7 @@ var TC = (function () {
     var sess = (sessionsCache || liftSessions(pb, log))[liftId(ex)] || [];
     var prior = sess.filter(function (s) { return beforeDay(s, wi, di); });
     var base = num(ex.base1RM);
+    if (ex.loadBase === 'bw') return base ? { oneRM: base, base: base, source: 'test' } : null;   // % of body weight: don't drift with logs
     if (!prior.length) return base ? { oneRM: base, base: base, source: 'test' } : null;
     var last = prior.slice(-2).map(function (s) { return s.e1rm; });
     var est = last.reduce(function (a, v) { return a + v; }, 0) / last.length;
