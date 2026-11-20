@@ -679,31 +679,37 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
     </div>
   </div>
 
-  <div class="sidebar-section">
-    <div class="sidebar-label" style="display:flex;align-items:center;">Roster<button class="season-toggle" id="seasonToggle" onclick="toggleSeasonMode()" title="Off-season hides the roster status colors (no Statcast or game load coming in)"></button><button class="season-toggle" style="margin-left:6px;" onclick="openRosterManager()" title="Add athletes, change groups, mark inactive">✎ Manage</button></div>
+  <div class="sidebar-section mw-athlete-section">
+    <div class="sidebar-label" style="display:flex;align-items:center;">Athlete<button class="season-toggle" id="seasonToggle" onclick="toggleSeasonMode()" title="Off-season hides the roster status colors (no Statcast or game load coming in)"></button><button class="season-toggle" style="margin-left:6px;" onclick="openRosterManager()" title="Add athletes, change groups, mark inactive">Manage</button></div>
     <div id="playerList"></div>
   </div>
 
   <div class="sidebar-nav">
-    <button class="nav-btn active" onclick="switchTab('dashboard', this)">📊 Dashboard</button>
-    <button class="nav-btn" onclick="switchTab('program', this)">💪 Program Builder</button>
-    <button class="nav-btn" onclick="switchTab('programs', this)">📁 My Programs</button>
-    <button class="nav-btn" onclick="switchTab('calendar', this)">📆 Calendar</button>
-    <button class="nav-btn" onclick="switchTab('inbox', this)">📥 Inbox<span id="inbox-badge" style="display:none;"></span></button>
-    <button class="nav-btn" onclick="switchTab('brief', this)">📋 Daily Brief</button>
-    <button class="nav-btn" onclick="switchTab('team', this)">👥 Team Summary</button>
-    <button class="nav-btn" onclick="switchTab('import', this)">📥 Data Import</button>
+    <div class="mw-nav-label">Athlete</div>
+    <button class="nav-btn active" onclick="switchTab('dashboard', this)" data-ico="dash">Dashboard</button>
+    <div class="mw-nav-label">Today</div>
+    <button class="nav-btn" onclick="switchTab('brief', this)" data-ico="brief">Daily Brief</button>
+    <button class="nav-btn" onclick="switchTab('inbox', this)" data-ico="inbox">Inbox<span id="inbox-badge" style="display:none;"></span></button>
+    <div class="mw-nav-label">Plan</div>
+    <button class="nav-btn" onclick="switchTab('calendar', this)" data-ico="cal">Calendar</button>
+    <button class="nav-btn" onclick="switchTab('program', this)" data-ico="bar">Program Builder</button>
+    <button class="nav-btn" onclick="switchTab('programs', this)" data-ico="folder">My Programs</button>
+    <div class="mw-nav-label">Team</div>
+    <button class="nav-btn" onclick="switchTab('team', this)" data-ico="users">Team Summary</button>
+    <div class="mw-nav-label">Data</div>
+    <button class="nav-btn" onclick="switchTab('import', this)" data-ico="upload">Data Import</button>
   </div>
 
-    <div style="margin-top:16px;padding:10px;background:rgba(34,197,94,0.1);border:2px solid rgba(34,197,94,0.4);border-radius:10px;">
-      <div style="font-size:10px;color:#22c55e;font-weight:700;text-transform:uppercase;margin-bottom:8px;text-align:center;">Data Backup</div>
-      <div id="syncIndicator" style="font-size:10px;color:var(--text3);margin:0 0 8px;text-align:center;line-height:1.4;"></div>
-      <button onclick="syncToSupabase(true)" style="padding:8px 14px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:8px;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;">☁️ Sync to Cloud</button>
-          <button onclick="exportAllData()" style="display:block;width:100%;padding:8px;background:#22c55e;color:#000;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">&#11015; Download Backup</button>
-      <button onclick="document.getElementById('restoreInput').click()" style="display:block;width:100%;padding:8px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.5);color:#f59e0b;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">&#11014; Restore Backup</button>
+  <details class="mw-backup">
+    <summary><span class="mw-backup-title">Backup &amp; sync</span><span id="syncIndicator" class="mw-sync"></span></summary>
+    <div class="mw-backup-body">
+      <button onclick="syncToSupabase(true)" class="mw-bk mw-bk-primary">Sync to Cloud</button>
+      <button onclick="exportAllData()" class="mw-bk">Download Backup</button>
+      <button onclick="document.getElementById('restoreInput').click()" class="mw-bk">Restore Backup</button>
       <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="importAllData(this)">
-      <button onclick="hardReset()" style="display:block;width:100%;padding:8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">&#128308; Hard Reset</button>
+      <button onclick="hardReset()" class="mw-bk mw-bk-danger">Hard Reset</button>
     </div>
+  </details>
 </aside>
 
 <!-- ── MAIN ── -->
@@ -726,10 +732,6 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
       <button class="tab-btn" onclick="switchDashTab('programs', this)">📋 Programs</button>
       <button class="tab-btn" onclick="switchDashTab('pcal', this)" style="color:#60a5fa;">📅 Calendar</button>
       <button class="tab-btn" onclick="switchDashTab('value', this)" style="color:#93c5fd;">📈 Value Added</button>
-      <button onclick="openAthleteProfile(currentPlayer)" title="One-page profile across seasons — print or save as PDF to share" style="margin-left:auto;padding:5px 12px;background:rgba(14,51,134,0.25);border:1px solid rgba(96,165,250,0.45);border-radius:6px;color:#93c5fd;font-size:10px;font-weight:600;cursor:pointer;">👤 Profile</button>
-      <button onclick="exportPlayerPDF()" style="padding:5px 12px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#f87171;font-size:10px;font-weight:600;cursor:pointer;">📄 PDF Report</button>
-      <button onclick="exportAllData()" style="padding:5px 12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:6px;color:#4ADE80;font-size:10px;font-weight:600;cursor:pointer;" title="Export all data to move to another browser">📤 Export Data</button>
-      <button onclick="importAllData()" style="padding:5px 12px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;font-size:10px;font-weight:600;cursor:pointer;" title="Import data from another browser">📥 Import Data</button>
     </div>
   </div>
 
@@ -743,7 +745,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
       <!-- YEAR IN REVIEW / OFF-SEASON TAB (player landing page) -->
       <div id="dash-review" class="page active">
         <div style="max-width:1400px;margin:0 auto;">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;">📅 <span id="review-year"></span> Year in Review · Off-Season</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:#fff;"><span id="review-year"></span> Year in Review · Off-Season</div>
           <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">Last three seasons for <span id="review-player" style="color:var(--text2);"></span> — vs MLB where the data is public, vs the roster where it isn't</div>
           <div id="review-body"></div>
         </div>
@@ -1998,7 +2000,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
               <option>Carson Kelly</option><option>Miguel Amaya</option>
               <option>Michael Busch</option><option>Alex Bregman</option>
               <option>Tyrone Taylor</option><option>Ian Happ</option>
-              <option>Colin Rea</option><option>Matt Boyd</option>
+              <option>Colin Rea</option><option>Matthew Boyd</option>
               <option>Jameson Taillon</option><option>Shota Imanaga</option>
               <option>Justin Steele</option><option>Daniel Palencia</option>
               <option>Caleb Thielbar</option><option>Edward Cabrera</option>
@@ -2022,7 +2024,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
                 <option>Carson Kelly</option><option>Miguel Amaya</option>
                 <option>Michael Busch</option><option>Alex Bregman</option>
                 <option>Tyrone Taylor</option><option>Ian Happ</option>
-                <option>Colin Rea</option><option>Matt Boyd</option>
+                <option>Colin Rea</option><option>Matthew Boyd</option>
                 <option>Jameson Taillon</option><option>Shota Imanaga</option>
                 <option>Justin Steele</option><option>Daniel Palencia</option>
                 <option>Caleb Thielbar</option><option>Edward Cabrera</option>
@@ -2861,7 +2863,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
           <option>Carson Kelly</option><option>Miguel Amaya</option>
           <option>Michael Busch</option><option>Alex Bregman</option>
           <option>Tyrone Taylor</option><option>Ian Happ</option>
-          <option>Colin Rea</option><option>Matt Boyd</option>
+          <option>Colin Rea</option><option>Matthew Boyd</option>
           <option>Jameson Taillon</option><option>Shota Imanaga</option>
           <option>Justin Steele</option><option>Daniel Palencia</option>
           <option>Caleb Thielbar</option><option>Edward Cabrera</option>
@@ -2913,7 +2915,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
           <option>Carson Kelly</option><option>Miguel Amaya</option>
           <option>Michael Busch</option><option>Alex Bregman</option>
           <option>Tyrone Taylor</option><option>Ian Happ</option>
-          <option>Colin Rea</option><option>Matt Boyd</option>
+          <option>Colin Rea</option><option>Matthew Boyd</option>
           <option>Jameson Taillon</option><option>Shota Imanaga</option>
           <option>Justin Steele</option><option>Daniel Palencia</option>
           <option>Caleb Thielbar</option><option>Edward Cabrera</option>
@@ -2923,7 +2925,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
       </div>
 
       <!-- Legend -->
-      <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+      <div id="cal-legend" style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
         <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);">
           <div style="width:10px;height:10px;border-radius:2px;background:var(--cubs-red);"></div>Game
         </div>
@@ -2940,6 +2942,8 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
           <div style="width:10px;height:10px;border-radius:2px;background:var(--text3);"></div>Rest
         </div>
       </div>
+
+      <div id="mw-compliance"></div>
 
       <!-- Calendar grid -->
       <div class="card" style="padding:0;overflow:hidden;">
@@ -2985,7 +2989,7 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
               <option>Carson Kelly</option><option>Miguel Amaya</option>
               <option>Michael Busch</option><option>Alex Bregman</option>
               <option>Tyrone Taylor</option><option>Ian Happ</option>
-              <option>Colin Rea</option><option>Matt Boyd</option>
+              <option>Colin Rea</option><option>Matthew Boyd</option>
               <option>Jameson Taillon</option><option>Shota Imanaga</option>
               <option>Justin Steele</option><option>Daniel Palencia</option>
               <option>Caleb Thielbar</option><option>Edward Cabrera</option>
@@ -24872,5 +24876,6 @@ try {
 <script src="js/year-writeup.js?v=3"></script>
 <script src="js/roster.js?v=1"></script>
 <script src="js/srpe.js?v=1"></script>
+<script src="js/ui-refresh.js?v=1"></script>
 </body>
 </html>
