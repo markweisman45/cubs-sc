@@ -1464,5 +1464,72 @@ function printProgram(){
 
 init();
 </script>
+<script>
+// ── Throwing program — the coach imports the PDF in the dashboard; it shows here
+// for the selected day (type, velo cap, throws, pitches) plus a one-week strip.
+var THROW = null, THROW_LOADED = false;
+(function(){
+  var KC = { pen:'#F87171', live:'#5B8CF5', high:'#FCD34D', med:'#2DD4BF', low:'#5EEAD4', rec:'#9AA3BA', off:'#5A6680' };
+  var KS = { pen:'Pen', live:'Live', high:'High', med:'Med', low:'Low', rec:'Rec', off:'Off' };
+  function kind(t){ var s = String(t||'').toLowerCase(); if (!s || s === 'off') return 'off'; if (/^post/.test(s)) return 'rec'; if (/bullpen|touch and feel/.test(s)) return 'pen'; if (/outing|live|sim|game/.test(s)) return 'live'; if (/high/.test(s)) return 'high'; if (/medium/.test(s)) return 'med'; return 'low'; }
+  function short(t){ return String(t||'').replace('Touch and Feel','Touch & feel').replace('Post-Bullpen Low','Post-bullpen low').replace('Post-Game Low','Post-game low').replace('Sim Game Outing','Sim game').replace('Live Outing','Live outing'); }
+  var st = document.createElement('style');
+  st.textContent = '.thr-a{margin:0 0 14px;padding:14px;border-radius:16px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--k);}'
+    + '.thr-a .h{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}'
+    + '.thr-a .t{font-family:"Bebas Neue",sans-serif;font-size:24px;letter-spacing:.04em;color:#fff;line-height:1;}'
+    + '.thr-a .g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}'
+    + '.thr-a .g div{background:var(--surface2);border-radius:10px;padding:8px 10px;}'
+    + '.thr-a .g b{display:block;font-family:"DM Mono",monospace;font-size:17px;color:#fff;font-weight:500;}'
+    + '.thr-a .g span{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;}'
+    + '.thr-s{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:12px;}'
+    + '.thr-s div{text-align:center;font-size:9px;color:var(--text3);font-weight:700;}'
+    + '.thr-s i{display:block;height:6px;border-radius:3px;margin:4px 2px 3px;background:var(--c);}'
+    + '.thr-s .on{color:#fff;} .thr-s .on i{box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--c);}';
+  document.head.appendChild(st);
+  async function loadThrow(){
+    THROW_LOADED = true;
+    var ck = 'cthrow_' + (LINK_TOK || (PROG && PROG.athlete) || '');
+    try { THROW = JSON.parse(localStorage.getItem(ck) || 'null'); } catch(e) {}
+    try {
+      if (!SUPA) return;
+      var got = null, done = false;
+      if (LINK_TOK) { var r = await SUPA.rpc('athlete_get_throwing', { tok: LINK_TOK }); if (!r.error) { got = r.data; done = true; } }
+      if (!done && PROG && PROG.athlete) {
+        var m = await SUPA.from('cubs_sc_data').select('value').eq('key', 'cubs_sc_throwing_v1').maybeSingle();
+        if (!m.error) { done = true; if (m.data) { try { got = (JSON.parse(m.data.value) || {})[PROG.athlete] || null; } catch(e) {} } }
+      }
+      if (done) { THROW = got; try { localStorage.setItem(ck, JSON.stringify(got)); } catch(e) {} }
+    } catch(e) { console.warn('[throwing]', e); }
+    if (PROG) renderSession();
+  }
+  function dayFor(dk){ if (!THROW || !THROW.days) return null; for (var i = 0; i < THROW.days.length; i++) if (THROW.days[i][0] === dk) return THROW.days[i]; return null; }
+  function stripHTML(dt){
+    var ws = new Date(dt); ws.setDate(ws.getDate() - ((ws.getDay() + 6) % 7)); var h = '', sel = localISO(dt);
+    for (var i = 0; i < 7; i++) { var d = new Date(ws); d.setDate(ws.getDate() + i); var dk = localISO(d), a = dayFor(dk), k = a ? kind(a[1]) : null;
+      h += '<div class="' + (dk === sel ? 'on' : '') + '" style="--c:' + (k ? KC[k] : 'rgba(255,255,255,.06)') + ';">' + d.toLocaleDateString('en-US', { weekday: 'narrow' }) + '<i></i>' + (k ? KS[k] : '') + '</div>'; }
+    return '<div class="thr-s">' + h + '</div>';
+  }
+  function cardHTML(dt){
+    var dk = localISO(dt), a = dayFor(dk); if (!a) return '';
+    var k = kind(a[1]);
+    var head = '<div class="h"><span>⚾ Throwing</span><span>' + (k === 'off' ? '' : 'Velo cap ' + Number(a[2]).toFixed(1) + ' mph') + '</span></div>';
+    if (k === 'off') return '<div class="thr-a" style="--k:' + KC.off + ';">' + head + '<div class="t" style="color:var(--text2);">Off — no throwing</div>' + stripHTML(dt) + '</div>';
+    return '<div class="thr-a" style="--k:' + KC[k] + ';">' + head + '<div class="t" style="color:' + KC[k] + ';">' + esc(short(a[1])) + '</div>'
+      + '<div class="g"><div><b>' + a[5] + '</b><span>THROWS</span></div>' + (a[4] ? '<div><b>' + a[4] + '</b><span>PITCHES</span></div>' : '<div><b>' + Number(a[2]).toFixed(1) + '</b><span>VELO CAP</span></div>') + '<div><b>' + a[3] + '</b><span>LOAD</span></div></div>'
+      + stripHTML(dt) + '</div>';
+  }
+  var _rs = renderSession;
+  renderSession = function(){
+    _rs.apply(this, arguments);
+    if (!THROW_LOADED) loadThrow();
+    try {
+      var dt = dayDate(S.week, S.day); if (!dt) return;
+      var html = cardHTML(dt); if (!html) return;
+      var el = document.getElementById('session'), t = el && el.querySelector('.sess-title');
+      if (t) t.insertAdjacentHTML('afterend', html); else if (el) el.insertAdjacentHTML('afterbegin', html);
+    } catch(e) { console.warn('[throwing]', e); }
+  };
+})();
+</script>
 </body>
 </html>
