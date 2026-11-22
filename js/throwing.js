@@ -351,6 +351,7 @@
       var r = _sdd.apply(this, arguments);
       try {
         var c = document.getElementById('dayDetailContent'), list = throwersOn(dk, filterVal()); if (!c || !list.length) return r;
+        Array.prototype.slice.call(c.children).forEach(function (x) { if (/^No events scheduled for this day\.?$/.test((x.textContent || '').trim())) x.remove(); });
         c.insertAdjacentHTML('beforeend', '<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px;">Throwing</div>' + list.map(function (t) {
           var x = t.x, p = plan(t.name), cf = conflictOn(t.name, dk).filter(function (q) { return q.d === dk; });
           return '<div class="thr-card" style="--k:' + KC[x.kind] + ';"><div style="flex:1;min-width:180px;"><div class="t">' + esc(t.name) + ' · ' + esc(short(x.type)) + '</div>'
@@ -390,11 +391,11 @@
         var td = function (w, inner, extra, title) { return '<td class="c' + (w.isToday ? ' today' : '') + '"' + (extra ? ' style="' + extra + '"' : '') + (title ? ' title="' + esc(title) + '"' : '') + '>' + (inner || '') + '</td>'; };
         var row = function (label, cells) { return '<tr class="thr"><td class="lbl">' + label + '</td>' + cells + '</tr>'; };
         var get = function (w) { return A[iso(new Date(w.ws.getFullYear(), w.ws.getMonth(), w.ws.getDate(), 12))]; };
-        var rows = '<tr class="sec"><td colspan="' + (W.length + 1) + '">Throwing<span class="hint">' + esc(p.title || '') + (p.target ? ' · target chronic ' + num(p.target) + (p.chronicDate ? ' by ' + fmt(p.chronicDate) : '') : '') + '</span></td></tr>';
+        var rows = '<tr class="thr-h"><td class="lbl" style="color:#fff;background:#1c2230;">Throwing</td><td colspan="' + W.length + '" style="text-align:left;padding:3px 8px;font-size:9px;color:var(--text3);background:rgba(255,255,255,.04);">' + esc(p.title || '') + (p.target ? ' · target chronic ' + num(p.target) + (p.chronicDate ? ' by ' + fmt(p.chronicDate) : '') : '') + '</td></tr>';
         rows += row('Throw Phase', W.map(function (w) {
           var a = get(w); if (!a) return td(w, '');
           var f = focusOn(p, iso(add(w.ws, 6))) || '', c = /contin/i.test(f) ? '#3b82f6' : '#14b8a6';
-          return td(w, '<div class="thr-ph" style="background:' + c + '33;color:' + c + ';">' + esc(f.slice(0, 4)) + '</div>', '', f);
+          return td(w, '<div class="thr-ph" style="background:' + c + '33;color:' + c + ';">' + esc(/contin/i.test(f) ? 'Cont' : /build/i.test(f) ? 'Bld' : f.slice(0, 4)) + '</div>', '', f);
         }).join(''));
         rows += row('Throw Load', W.map(function (w) {
           var a = get(w); if (!a || !a.load) return td(w, '');
