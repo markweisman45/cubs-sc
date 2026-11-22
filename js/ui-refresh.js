@@ -373,10 +373,10 @@ body.offseason #mw-pick-panel .status-dot, body.offseason #mw-pick-btn .status-d
     { id: 'review', label: 'Year in Review', ico: 'award', tabs: ['review'] },
     { id: 'perf', label: 'Performance', ico: 'trend', tabs: ['overview', 'value'] },
     { id: 'test', label: 'Testing', ico: 'zap', tabs: ['jumps', 'heruns', 'maxstrength'] },
-    { id: 'load', label: 'Load', ico: 'gauge', tabs: ['workload'] },
+    { id: 'load', label: 'Load', ico: 'gauge', tabs: ['workload', 'throwing'] },
     { id: 'plan', label: 'Programs', ico: 'cal', tabs: ['programs', 'pcal'] }
   ];
-  var SUBLABEL = { review: 'Year in Review', overview: 'In-Season', value: 'Value Added', jumps: 'Jumps', heruns: 'HE Runs', maxstrength: '1RM', workload: 'Workload', programs: 'Programs', pcal: 'Calendar' };
+  var SUBLABEL = { review: 'Year in Review', overview: 'In-Season', value: 'Value Added', jumps: 'Jumps', heruns: 'HE Runs', maxstrength: '1RM', workload: 'Workload', throwing: 'Throwing', programs: 'Programs', pcal: 'Calendar' };
   var lastSub = {};
   function tabOf(b) { var m = (b.getAttribute('onclick') || '').match(/switchDashTab\('(\w+)'/); return m ? m[1] : null; }
   function groupOf(tab) { return GROUPS.find(function (g) { return g.tabs.indexOf(tab) >= 0; }); }
@@ -428,6 +428,7 @@ body.offseason #mw-pick-panel .status-dot, body.offseason #mw-pick-btn .status-d
       x.style.display = G.tabs.some(function (t) { var b = tabBtn(t); return b && !hiddenByRole(b); }) ? '' : 'none';
     });
   }
+  window.mwSyncTabs = function () { try { syncTabs(); } catch (e) {} };
   if (typeof switchDashTab === 'function') {
     var _sdt = switchDashTab;
     switchDashTab = function () { var r = _sdt.apply(this, arguments); try { syncTabs(); } catch (e) {} return r; };
