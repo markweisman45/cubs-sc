@@ -28,7 +28,7 @@ function mtEnsure(cb) {
     if (typeof METHOD_TEMPLATES === 'undefined' || typeof MW_TEMPLATES === 'undefined') return;
     var q = MT.loading; MT.loading = null; q.forEach(function (f) { try { f(); } catch (e) { console.error(e); } });
   };
-  if (typeof METHOD_TEMPLATES === 'undefined') mtLoadScript('data/method-templates.js?v=1', done);
+  if (typeof METHOD_TEMPLATES === 'undefined') mtLoadScript('data/method-templates.js?v=2', done);
   if (typeof MW_TEMPLATES === 'undefined') mtLoadScript('data/mw-templates.js?v=1', done);
   done();
 }
@@ -154,7 +154,19 @@ var MT_NEW_EX = [
   ["Shoulder Complex", "Cuban Press", "", "Upright row → external rotation → press; light"],
   ["Core Rotation", "Half Kneeling Cable Chop", "", "High to low across the body, hips square"],
   ["UB Plyos", "Med Ball Rotational Scoop Toss", "", "Load the back hip, scoop and release — max intent"],
-  ["Strongman Variations", "Lateral Sled Drag", "", "Side-on, push off the trail leg — frontal-plane power"]
+  ["Strongman Variations", "Lateral Sled Drag", "", "Side-on, push off the trail leg — frontal-plane power"],
+  // KILO advanced methods
+  ["LB Plyos", "Standing Jump and Reach", "", "Two-foot countermovement jump, reach high with one hand — stick the landing"],
+  ["LB Plyos", "Alternating Push-Off", "", "Foot on a low box, drive up and switch feet in the air"],
+  ["LB Plyos", "Penta Jump", "", "Five alternating bounds from a standing start — measure total distance"],
+  ["LB Plyos", "Deca Jump", "", "Ten alternating bounds — distance that grows jump to jump = good reactive ability"],
+  ["LB Plyos", "Cone One-Leg Alternating Jumps", "", "Hop over low cones on one leg, alternate legs each set"],
+  ["LB Plyos", "Drop Landing (Stick)", "", "Step off the box, land in an athletic stance and hold 3–5 s — absorb, do not bounce"],
+  ["UB Vertical Push", "Bb Overhead Press", "", "Strict standing press — glutes tight, head through at lockout"],
+  ["Grip", "Wrist Radial/Ulnar Deviation", "", "Hammer or club — tilt the wrist up and down, forearm still"],
+  ["Core Anti-Flexion", "Biering-Sorensen Hold", "", "Hips on the pad, torso horizontal, arms crossed — hold for time"],
+  ["Shoulder Complex", "Elbow-on-Knee DB External Rotation", "", "Seated, elbow on the knee at shoulder height — rotate back slowly"],
+  ["Shoulder Complex", "Incline Trap-3 Raise", "", "Chest on an incline bench, thumb up, raise in line with the lower traps"]
 ];
 var MT_EX_FLAG = 'cubs_sc_mt_ex_added_v1';
 function mtEnsureExercises(only) {
@@ -176,6 +188,17 @@ setTimeout(function () {
     if (n && typeof showStatus === 'function') showStatus('📚 Added ' + n + ' exercises to your library (leg extension, leg press, chest-supported rows, curls, triceps, cuff work…) for the phase templates');
   } catch (e) { console.error(e); }
 }, 6000);
+// v2: the KILO advanced-method exercises (only these — anything you deleted from the first batch stays deleted)
+var MT_EX_FLAG2 = 'cubs_sc_mt_ex_added_v2';
+setTimeout(function () {
+  try {
+    if (localStorage.getItem(MT_EX_FLAG2)) return;
+    var only = {}; MT_NEW_EX.slice(MT_NEW_EX.length - 11).forEach(function (e) { only[e[1]] = 1; });
+    var n = mtEnsureExercises(only);
+    localStorage.setItem(MT_EX_FLAG2, new Date().toISOString());
+    if (n && typeof showStatus === 'function') showStatus('📚 Added ' + n + ' KILO exercises to your library (jump and reach, penta / deca jumps, drop landings, overhead press, Biering-Sorensen hold, trap-3 raise…)');
+  } catch (e) { console.error(e); }
+}, 7000);
 
 // ── Your built-in phase templates (Intensification / Realization / In-Season / Deload) ──
 // loadPhaseTemplates() writes them into drafts; capture them once without touching your drafts
@@ -533,4 +556,156 @@ function mtApplyPlan(p, rows, pitcher) {
     };
     try { peRenderPicker(); } catch (e) {}
   }
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// KILO method picker — Program Builder lift rows get a 🧪 button that fills in
+// sets, reps, load, tempo, rest and notes for a KILO method, plus two warnings:
+//   · supra-maximal eccentric for an athlete under 2 years of training age
+//   · isometric set longer than 40 s
+// ═══════════════════════════════════════════════════════════════════════════
+// [id, group, label, sets, reps, load, tempo, rest, note, flags]  (load '' = keep the row's load)
+var MT_METHODS = [
+  ['imca', 'Concentric', 'IMCA — intent to accelerate (A series)', 5, 5, '', '4-0-X-0', '3:00', 'IMCA — intent to accelerate every rep; the X must be truly as fast as possible. 4-0-X-0 GPP; 3-0-X-0 SPP (intermediate), 2-0-X-0 (advanced)'],
+  ['mvc', 'Concentric', 'MVC — to concentric failure (B series)', 3, 10, 'RPE 10', '3-0-1-0', '1:30', 'MVC — controlled tempo to concentric failure. Never to failure in power phases'],
+  ['rir', 'Concentric', 'RIR — short of failure (C series)', 3, 12, 'RPE 7–8', '2-0-1-0', '1:00', 'RIR — stop 2–3 reps short of failure, controlled tempo'],
+  ['ext-14', 'Extended sets', '1¼ reps', 3, 8, '', '3-0-1-0', '1:30', '1¼ reps — quarter rep at the weak angle (bottom or top)'],
+  ['ext-d14', 'Extended sets', 'Double 1¼ reps', 3, 6, '', '3-0-1-0', '1:30', 'Double 1¼ — quarter reps at the bottom and the top'],
+  ['ext-max', 'Extended sets', 'Maximum reps (60–70%)', 3, 'Max', '65%', '2-0-1-0', '2:00', 'Max reps at 60–70% 1RM'],
+  ['ext-time', 'Extended sets', 'Reps for time (40–70 s)', 3, 'Max in 40–70s', 'RPE 8', '1-0-1-0', '2:00', 'Max reps in 40–70 s — faster reps for the same time under tension'],
+  ['ext-rp', 'Extended sets', 'Rest-pause', 3, '10 + max', 'RPE 8', '3-0-1-0', '1:30', 'Rest-pause — 10 reps, 10–15 s pause, max reps at the same load and tempo'],
+  ['ext-pfp', 'Extended sets', 'Post-fatigue partials', 3, '10 + partials', 'RPE 8', '3-0-1-0', '1:30', 'Post-fatigue partials — 10 reps, then as many partial reps as possible'],
+  ['ext-assist', 'Extended sets', 'Assisted (forced) reps', 3, '10 + assisted', 'RPE 9', '3-0-1-0', '1:30', 'Assisted reps — 10 reps, then as many spotter-assisted reps as possible'],
+  ['ext-vma', 'Extended sets', 'Variable muscle action (10 + 1 + 10)', 3, '10 + 1 + 10', '50%', '3-0-3-0 / 1-0-1-8', '2:00', 'Variable muscle action — 10 @ 3-0-3-0, one rep with an 8 s concentric pause, 10 @ 1-0-1-0'],
+  ['ext-drop', 'Extended sets', 'Drop sets', 3, '12 / 10 / 8', 'RPE 8', '2-0-1-0', '1:30', 'Drop set — ~10% drop per step, no rest (12/10/8, 10/8/6, 8/6/6, 6/4/4, 4/2/2)'],
+  ['ext-mech', 'Extended sets', 'Mechanical-advantage set', 3, '8 / 6 / 6', 'RPE 8', '3-0-1-0', '1:30', 'Mechanical-advantage set — same load, weakest to strongest grip/leverage (e.g. pronated → supinated → neutral)'],
+  ['ext-slow', 'Extended sets', 'Isokinetic super slow', 3, 6, 'RPE 8', '5-0-5-0', '1:30', 'Super slow — 3 x 6 @ 5-0-5-0 or 3 x 10 @ 3-0-3-0'],
+  ['ecc-extended', 'Eccentric', 'Extended eccentric (sub-max)', 4, 4, '70%', '8-0-X-0', '3:00', 'Extended eccentric — 5 @ 6-0-X-0, 4 @ 8-0-X-0, 3 @ 10-0-X-0, 2 @ 15-0-X-0; ~30 s TUT; start near 70%'],
+  ['conc-ecc', 'Eccentric', 'Concentric-eccentric combo', 4, '6 + 2 ecc', '80%', '4-0-X-0 + 4-0-0-0', '3:00', 'RM set, then 2 eccentric-only reps (spotter lifts it); 10 s between; start near 80%'],
+  ['ecc-conc', 'Eccentric', 'Eccentric-concentric', 4, '4 ecc + 6', '80% / 50%', '4-0-0-0 + 2-0-X-0', '3:00', '4 eccentric-only reps (~80%), 10 s, then 6 fast reps (~50%) — GPP, neural adaptation to power'],
+  ['ecc-21', 'Eccentric', '2-1 method (accentuated, sub-max)', 3, 5, 'RPE 8', '6-0-1-0', '1:30', '2-1 method — lift with two limbs, lower with one (leg curl, leg press, calf raise)'],
+  ['ecc-telle', 'Eccentric', 'Telle method', 3, 12, 'Light', '3-0-1-0', '1:00', 'Telle method — accentuated eccentric on a favourable lever (lateral raise)'],
+  ['ecc-supra', 'Eccentric', 'Supra-maximal eccentric (100–120%)', 4, 2, '105%', '6-0-0-0', '3:30', 'Supra-maximal eccentric — 4 @ 4-0-0-0 down to 1 @ 10-0-0-0 at 100–120% (never over 120%). Needs 2+ years of training age', 'supra'],
+  ['ecc-max-accent', 'Eccentric', 'Maximal accentuated eccentric (hooks +40%)', 4, 3, '60% bar + 40% hooks', '4-0-X-0', '3:00', 'Weight releasers: 60/100 up to 80/120 (Simmons rule). Most useful in GPP', 'supra'],
+  ['ecc-expl-accent', 'Eccentric', 'Explosive accentuated eccentric (hooks +20%)', 5, 3, '60% bar + 20% hooks', '4-0-X-0', '2:30', 'Re-hang the hooks every rep with a 4 s+ lowering, then explode. Bar 50–70%, +20% on the hooks'],
+  ['ecc-dyn-iso', 'Eccentric', 'Dynamic eccentric-isometric', 5, 3, '50%', 'X-2-X-0', '2:00', 'Pull yourself down fast, stick 2 s, explode (fast eccentrics — SPP)'],
+  ['ecc-landing', 'Eccentric', 'Drop landings', 3, 8, 'BW', '', '1:30', 'Low → medium → high box; stick and hold 3–5 s; 24–40 a week. Barbell drop catch ≤ 60%'],
+  ['yield-pause', 'Isometric — yielding', 'Intra-rep pause', 3, 8, 'RPE 8', '3-0-1-2', '1:30', 'Top, mid or bottom pause 2–4 s (B / C series — spider, Scott or seated DB curl)'],
+  ['yield-mechdis', 'Isometric — yielding', 'Mechanical-disadvantage pause', 4, 5, '', '4-2-X-0', '3:00', '2 s (4-2-X-0) or 4 s (4-4-X-0) pause in the hole'],
+  ['yield-3pause-ecc', 'Isometric — yielding', '3-pause eccentric', 4, 5, '', '6-0-X-0', '3:00', '2 s pauses at ¾, ½ and ¼ of the range (12-0-X-0 for 4 s pauses); fewer pauses on small joints'],
+  ['yield-stick', 'Isometric — yielding', 'Sticking-point concentric pause', 4, 5, '', '4-0-X-2', '3:00', 'Pause 2–4 s at the sticking point on the way up'],
+  ['yield-3pause-con', 'Isometric — yielding', '3-pause concentric', 4, 4, '', '4-0-6-0', '3:00', 'Three 2 s pauses on the way up (4-0-12-0 for 4 s pauses)'],
+  ['yield-stato', 'Isometric — yielding', 'Stato-dynamic', 5, 3, '60–70%', '4-0-X-2', '2:30', 'Concentric pause, then explode through the rest of the rep — good pre-season and in-season'],
+  ['yield-stato-band', 'Isometric — yielding', 'Stato-dynamic + bands', 4, 6, '50% bar + 25% band', '2-0-X-2', '2:30', '~75% total at the top'],
+  ['yield-iso-ex', 'Isometric — yielding', 'Iso to exhaustion (20–40 s)', 2, '30s', '70–80%', 'iso', '3:00', 'Top, mid or bottom hold 20–40 s, weakest to strongest position; 1–3 sets', 'iso'],
+  ['yield-iso-contrast', 'Isometric — yielding', 'Iso to exhaustion contrast (1 + 2 + 1 + 2)', 2, '1 + 2 + 1 + 2', '70% hold / 50% reps', 'iso → 2-0-X-0', '2:30', 'Mid-range hold to exhaustion, 2 fast reps; 2 rounds = 1 set', 'iso'],
+  ['yield-iso-complex', 'Isometric — yielding', 'Iso to exhaustion complex (1 + 5 plyos)', 3, '1 + 5', '70%', 'iso → X-0-X-0', '3:00', 'Hold, then 5 plyos (reactive bias)', 'iso'],
+  ['yield-iso-max', 'Isometric — yielding', 'Iso to exhaustion + max reps', 1, 'Hold + max', '70% hold / 50% reps', 'iso → 1-0-X-0', '3:00', 'Hold 20–40 s, then max reps — a good last A-series set (e.g. after 5 x 5)', 'iso'],
+  ['over-functional', 'Isometric — overcoming', 'Functional isometric (pins)', 3, '3 × 6–8 s', '50%', 'iso', '2:00', 'Push into pins at the bottom, mid and top; never over 8 s; keep the bottom crossbar in', 'iso'],
+  ['over-isometronic', 'Isometric — overcoming', 'Isometronic', 4, 5, '', '4-0-X-0', '3:00', 'Dynamic reps, one 6–8 s push into pins (~4–6 in of travel), finish the set. Extra rep after the push → add load'],
+  ['over-iso-ex', 'Isometric — overcoming', 'Overcoming iso to exhaustion', 3, '30–40s', '50%', 'iso', '2:30', 'Push into pins until exhaustion; 3–5 sets by series', 'iso'],
+  ['over-fi-contrast', 'Isometric — overcoming', 'Functional iso contrast (2 + 2 + 2 + 2)', 3, '2 + 2 + 2 + 2', '50%', '1-0-1-6 / 2-0-X-0', '2:30', '2 reps with a 6 s pin push, 2 fast full-range reps, repeat'],
+  ['over-fi-complex', 'Isometric — overcoming', 'Functional iso complex (3 + 3 plyos)', 3, '3 + 3', '50%', '1-0-1-6 → X-0-X-0', '2:30', '3 reps with a 6 s pin push, then 3 plyos (reactive)'],
+  ['over-fi-max', 'Isometric — overcoming', 'Functional iso + max reps (4 + max)', 3, '4 + max', '50%', '1-0-1-6 → 1-0-X-0', '2:30', '4 reps with a 6 s pin push, then max reps (usually 6–8) — power rack'],
+  ['ss-deadstop', 'Speed-strength', 'Starting strength — deadstop + bands', 6, 2, '55% + bands', '2-4-X-0', '2:00', 'Deadstop from pins; ~20% band tension at the top (fish scale). Relax fully, then contract everything at once. Raise band tension before bar weight'],
+  ['ss-inertia', 'Speed-strength', 'Starting strength — inertia start', 6, 2, '50%', '2-2-X-0', '2:00', 'Pause in the bottom position (removes ~50% of the elastic energy), then explode'],
+  ['ss-variable', 'Speed-strength', 'Explosive — bands / chains', 6, 3, '55% + bands', '1-0-X-0', '1:30', 'Bar 50–70% + bands or chains (chain rule 80/20, speed device 70/30), 4–8 reps; stop at a 10% velocity drop'],
+  ['ss-olympic', 'Speed-strength', 'Explosive — Olympic variation', 5, 3, '70%', 'X-0-X-0', '2:00', 'Pulls, power clean / snatch, push jerk at 60–80%, 0.5–0.75 m/s; stop at a 7–10% velocity drop'],
+  ['ss-ballistic', 'Speed-strength', 'Ballistic — throws / loaded jumps', 4, 3, '0–20%', 'X-0-X-0', '1:30', 'Release the load, no deceleration — always A series or contrast'],
+  ['react-myotatic', 'Speed-strength', 'Reactive — myotatic 1¼ + bands', 5, 3, '50% + bands', '2-0-X-0', '2:00', '1¼ reps at ~50% + bands — bridge from explosive to reactive'],
+  ['react-third', 'Speed-strength', 'Reactive — ⅓ reps + bands', 5, 5, '40% + bands', '2-0-X-0', '2:00', 'Bottom-third reps at ~40% + bands'],
+  ['contrast', 'Contrast / complex', 'Contrast (slow → fast)', 5, 4, '', '4-0-X-0', '3:30', 'A1 primary 4–6 x 3–5 @ 4-0-X-0, 10–15 s, then A2 plyo 4–6 x 3–10; 180–240 s between rounds'],
+  ['complex', 'Contrast / complex', 'Complex (fast → slow)', 5, 3, '', 'X-0-X-0', '3:00', 'Plyo, then speed-strength lift, then primary lift — 4–6 sets each, 90–240 s rest. Contrast before complex; RSI ≈ 2.0 first'],
+];
+function mtMethod(id) { for (var i = 0; i < MT_METHODS.length; i++) if (MT_METHODS[i][0] === id) return MT_METHODS[i]; return null; }
+var MT_TA_KEY = 'cubs_sc_training_age_v1';
+function mtTrainingAge(name) { try { var o = JSON.parse(localStorage.getItem(MT_TA_KEY) || '{}'); return o[name] == null ? null : +o[name]; } catch (e) { return null; } }
+function mtSetTrainingAge(name, v) { try { var o = JSON.parse(localStorage.getItem(MT_TA_KEY) || '{}'); if (v === '' || v == null) delete o[name]; else o[name] = +v; localStorage.setItem(MT_TA_KEY, JSON.stringify(o)); } catch (e) {} }
+function mtCurEx(bi, ei) {
+  if (typeof PB_ACTIVE_DAY === 'undefined' || !PB_ACTIVE_DAY) return null;
+  var d = PB_STATE.weekData[PB_ACTIVE_DAY.weekIdx].days[PB_ACTIVE_DAY.dayIdx];
+  return d && d.blocks[bi] && d.blocks[bi].exercises[ei];
+}
+function mtAthleteName() { return (typeof PB_STATE !== 'undefined' && PB_STATE.athlete) || '(Sandbox)'; }
+// Warnings for one exercise row
+function mtMethodWarnings(ex) {
+  var w = [], m = ex && ex.method ? mtMethod(ex.method) : null;
+  var supra = (m && m[9] === 'supra') || (/^\d/.test(ex.load || '') && parseFloat(ex.load) > 100 && /-0-0-0/.test(ex.tempo || ''));
+  if (supra) {
+    var who = mtAthleteName(), ta = mtTrainingAge(who);
+    if (ta == null || ta < 2) w.push('Supra-maximal eccentric needs 2+ years of training age — ' + (who === '(Sandbox)' ? 'set the athlete' : who) + (ta == null ? ': training age not set (🧪 to set it)' : ': ' + ta + ' yr'));
+  }
+  var iso = (m && m[9] === 'iso') || /\biso\b|hold/i.test((ex.tempo || '') + ' ' + (ex.reps || ''));
+  if (iso) {
+    var secs = String(ex.reps || '').match(/(\d+)\s*(s|sec)\b/gi) || [];
+    var mx = 0; secs.forEach(function (s) { mx = Math.max(mx, parseInt(s)); });
+    var rng = String(ex.reps || '').match(/(\d+)\s*[–-]\s*(\d+)\s*s\b/i); if (rng) mx = Math.max(mx, +rng[2]);
+    if (mx > 40) w.push('Isometric set is ' + mx + ' s — keep time under tension under 40 s for athletes');
+  }
+  return w;
+}
+function mtApplyMethod(bi, ei, id) {
+  var ex = mtCurEx(bi, ei), m = mtMethod(id); if (!ex || !m) return;
+  ex.sets = String(m[3]); ex.reps = String(m[4]); if (m[5]) ex.load = m[5];
+  ex.tempo = m[6]; ex.rest = m[7]; ex.notes = m[2] + ' — ' + m[8]; ex.method = id;
+  var mm = document.getElementById('mt-method-modal'); if (mm) mm.remove();
+  try { pbRenderDayGrid(); pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx); } catch (e) { console.error(e); }
+  try { if (typeof pbAutoSave === 'function') pbAutoSave(); } catch (e) {}
+}
+function mtClearMethod(bi, ei) { var ex = mtCurEx(bi, ei); if (!ex) return; delete ex.method; var mm = document.getElementById('mt-method-modal'); if (mm) mm.remove(); try { pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx); } catch (e) {} }
+function mtMethodMenu(bi, ei) {
+  var ex = mtCurEx(bi, ei); if (!ex) return;
+  var who = mtAthleteName(), ta = mtTrainingAge(who);
+  var old = document.getElementById('mt-method-modal'); if (old) old.remove();
+  var groups = [], by = {};
+  MT_METHODS.forEach(function (m) { if (!by[m[1]]) { by[m[1]] = []; groups.push(m[1]); } by[m[1]].push(m); });
+  var body = '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">'
+    + '<input id="mt-meth-q" placeholder="Search methods…" style="flex:1;min-width:160px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 9px;color:var(--text);font-size:12px;">'
+    + '<label style="font-size:11px;color:var(--text3);">Training age · ' + mtEsc(who) + ' <select id="mt-meth-ta" style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px;">'
+    + ['', 0, 1, 2, 3, 4, 6, 8].map(function (v) { return '<option value="' + v + '"' + (String(ta == null ? '' : ta) === String(v) ? ' selected' : '') + '>' + (v === '' ? 'not set' : v + (v === 8 ? '+' : '') + ' yr') + '</option>'; }).join('') + '</select></label></div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Fills sets, reps, load, tempo, rest and notes on <b style="color:var(--text2);">' + mtEsc(ex.name || 'this row') + '</b>. "Keep" means the row\'s current load stays.'
+    + (ex.method ? ' Current: <b style="color:#fbbf24;">' + mtEsc((mtMethod(ex.method) || [0, 0, ex.method])[2]) + '</b> · <a href="#" id="mt-meth-clear" style="color:#f87171;">clear</a>' : '') + '</div>'
+    + '<div id="mt-meth-list">' + groups.map(function (g) {
+      return '<div class="mt-meth-g" style="margin-bottom:10px;"><div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#a5b4fc;margin-bottom:5px;">' + mtEsc(g) + '</div>'
+        + by[g].map(function (m) {
+          return '<button class="mt-meth" data-id="' + m[0] + '" data-s="' + mtEsc((m[2] + ' ' + m[8]).toLowerCase()) + '" style="display:block;width:100%;text-align:left;margin-bottom:4px;padding:7px 10px;background:' + (ex.method === m[0] ? 'rgba(245,158,11,0.14)' : 'rgba(255,255,255,0.03)') + ';border:1px solid rgba(255,255,255,0.08);border-radius:6px;color:var(--text);cursor:pointer;">'
+            + '<div style="font-size:12px;font-weight:600;">' + mtEsc(m[2]) + (m[9] === 'supra' ? ' <span style="color:#f87171;font-size:10px;">2+ yr</span>' : '') + (m[9] === 'iso' ? ' <span style="color:#fbbf24;font-size:10px;">&lt; 40 s</span>' : '') + '</div>'
+            + '<div style="font-size:10px;color:var(--text3);font-family:\'DM Mono\',monospace;margin-top:2px;">' + mtEsc(m[3] + ' x ' + m[4] + ' · ' + (m[5] || 'keep load') + ' · ' + (m[6] || '—') + ' · ' + m[7]) + '</div>'
+            + '<div style="font-size:10px;color:var(--text3);margin-top:2px;">' + mtEsc(m[8]) + '</div></button>';
+        }).join('') + '</div>';
+    }).join('') + '</div>';
+  var m = mtModal('🧪 KILO method', body, 560); m.id = 'mt-method-modal';
+  m.querySelectorAll('.mt-meth').forEach(function (b) { b.onclick = function () { mtApplyMethod(bi, ei, b.getAttribute('data-id')); }; });
+  var q = m.querySelector('#mt-meth-q');
+  q.oninput = function () { var v = q.value.trim().toLowerCase(); m.querySelectorAll('.mt-meth').forEach(function (b) { b.style.display = !v || b.getAttribute('data-s').indexOf(v) >= 0 ? 'block' : 'none'; }); m.querySelectorAll('.mt-meth-g').forEach(function (g) { var any = [].some.call(g.querySelectorAll('.mt-meth'), function (b) { return b.style.display !== 'none'; }); g.style.display = any ? '' : 'none'; }); };
+  m.querySelector('#mt-meth-ta').onchange = function () { mtSetTrainingAge(who, this.value); try { pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx); } catch (e) {} };
+  var c = m.querySelector('#mt-meth-clear'); if (c) c.onclick = function (e) { e.preventDefault(); mtClearMethod(bi, ei); };
+  setTimeout(function () { q.focus(); }, 30);
+}
+// Decorate the open day: 🧪 button on lift rows, method badge, warnings under the row
+function mtDecorateDay() {
+  if (typeof PB_ACTIVE_DAY === 'undefined' || !PB_ACTIVE_DAY) return;
+  document.querySelectorAll('button[onclick^="pbGenerateExerciseNote("]').forEach(function (btn) {
+    if (btn.getAttribute('data-mt')) return;
+    var a = (btn.getAttribute('onclick').match(/\((\d+),(\d+)\)/) || []); if (!a.length) return;
+    var bi = +a[1], ei = +a[2], ex = mtCurEx(bi, ei); if (!ex || ex.type === 'speed') return;
+    btn.setAttribute('data-mt', '1');
+    var b = document.createElement('button');
+    b.title = ex.method ? 'KILO method: ' + (mtMethod(ex.method) || [0, 0, ex.method])[2] : 'Apply a KILO method (tempo, load, rest, notes)';
+    b.textContent = '🧪'; b.style.cssText = 'background:none;border:none;cursor:pointer;font-size:12px;padding:1px 3px;' + (ex.method ? 'filter:drop-shadow(0 0 3px #f59e0b);' : 'opacity:.55;');
+    b.onclick = function () { mtMethodMenu(bi, ei); };
+    btn.parentNode.insertBefore(b, btn);
+    var warn = mtMethodWarnings(ex), row = btn.parentNode.parentNode;
+    if (warn.length && row && row.parentNode) {
+      var d = document.createElement('div');
+      d.style.cssText = 'margin:-2px 0 7px 44px;font-size:10px;color:#fbbf24;';
+      d.textContent = '⚠ ' + warn.join(' · ');
+      row.insertAdjacentElement('afterend', d);
+    }
+  });
+}
+(function () {
+  if (typeof pbOpenDay !== 'function') return;
+  var _od = pbOpenDay;
+  pbOpenDay = function () { var r = _od.apply(this, arguments); try { mtDecorateDay(); } catch (e) { console.error(e); } return r; };
 })();
