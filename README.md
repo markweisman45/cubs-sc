@@ -11,8 +11,9 @@ Athlete readiness, performance and programming dashboard for professional athlet
 - Roster manager (sidebar **✎ Manage**): add athletes, set group (position player, pitcher, private client), position and number, mark athletes inactive (`js/roster.js`; saved in key `cubs_sc_roster_v1`)
 - Load monitoring: strain & monotony (Foster), EWMA ACWR for HE and total distance, safe-distance range
 - CMJ / ABCMJ trends (VALD ForceDecks), HE runs & speed zones, 1RM tracker
-- Program Builder (single session, weekly, mesocycle), phase templates, exercise library with video links
+- Program Builder (single session, weekly, mesocycle), exercise library with video links. **1️⃣ Start a program**: pick Sandbox or an athlete, then 📚 Template (one browser for your saved templates, your library — Reload, Spring, In-Season by role, built-in phases — and the Method Library), 🔨 Scratch, or 📂 Saved
 - Annual plan, calendar, Return to Performance protocols, workload planner
+- Method Library: pre-made phases built from the programming spec (Hypertrophy Clusters, Poliquin, KILO, Conjugate, Triphasic, Undulated, VJP, Francis High/Low, 95 MPH Body, Taper, In-Season RE/DE, Prep, Transition, Deload) in 4- and 3-day versions, pitcher versions where the source calls for one, and private-client versions. Annual Plan → 🧭 Plan Templates lays a full year onto an athlete or group; 🚀 Start Program on a block loads its phase sized to the block (`js/method-library.js`, `data/method-templates.js`)
 - Team Summary, Daily Brief, PDF reports, coach notes per athlete
 - Speed readiness from HE runs: max-velocity exposure, effort-matched fatigue, sprint profile, RTP speed (`js/speed-intel.js`)
 - Live program edits: change one athlete's sent program (move/swap days, push the week back, add blocks or weeks) and it updates on his phone with a "coach updated" banner (`js/program-edit.js`)
@@ -36,7 +37,10 @@ Athlete readiness, performance and programming dashboard for professional athlet
 | `index.html` | Coach dashboard (all app code) |
 | `data/oc-programs.js` | Program template library (loaded by `index.html`) |
 | `data/mw-templates.js` | Template library in Mark's style (Reload, Spring ramp, In-season by role) |
+| `data/method-templates.js` | Method Library phase + annual plan templates — generated, don't edit by hand |
+| `tools/build-method-templates.js` | Generator for `data/method-templates.js` (`node tools/build-method-templates.js`); fails if an exercise isn't in the library |
 | `js/roster.js` | Roster manager (add athletes, groups, inactive) |
+| `js/method-library.js` | Method Library browser, Annual Plan templates, block → template loading |
 | `js/training-core.js` | Shared program/log logic for both pages, including log remapping for live edits |
 | `js/coach-loop.js`, `js/speed-intel.js`, `js/program-edit.js` | Inbox, program checks, equipment/RTP prep, speed flags, live editing |
 | `program.html`, `sw.js`, `manifest.json`, icons | Athlete-facing program page (installable PWA) |

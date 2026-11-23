@@ -1180,9 +1180,9 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
               </div>
             </div>
 
-            <!-- Block Setup (Step 1 — full form; collapses to the summary bar above once built) -->
+            <!-- Step 1 — Start a program: who, then from a template / from scratch / from saved (collapses to the summary bar above once built) -->
             <div class="card" id="pb-setup-full" style="padding:14px;">
-              <div class="card-title" style="margin-bottom:10px;">1️⃣ WHO & WHAT</div>
+              <div class="card-title" style="margin-bottom:10px;">1️⃣ START A PROGRAM</div>
               <div style="display:flex;flex-direction:column;gap:8px;">
                 <!-- Sandbox toggle -->
                 <div style="display:flex;gap:6px;margin-bottom:2px;">
@@ -1193,6 +1193,22 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
                   <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Athlete</label>
                   <select id="pb-athlete" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;"></select>
                 </div>
+                <!-- How to start -->
+                <div id="pb-start-tabs" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;padding:3px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;margin-top:4px;">
+                  <button data-tab="tpl" onclick="pbStartTab('tpl')" style="padding:6px 2px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">📚 Template</button>
+                  <button data-tab="scratch" onclick="pbStartTab('scratch')" style="padding:6px 2px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">🔨 Scratch</button>
+                  <button data-tab="saved" onclick="pbStartTab('saved')" style="padding:6px 2px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">📂 Saved</button>
+                </div>
+
+                <!-- From a template -->
+                <div id="pb-pane-tpl" class="pb-start-pane" style="display:flex;flex-direction:column;gap:8px;">
+                  <div style="font-size:10px;color:var(--text3);line-height:1.5;">Pre-made phases — your library, your saved templates and the method library from your courses. Loads for the athlete above.</div>
+                  <button onclick="mtOpenLibrary()" style="width:100%;padding:10px;background:rgba(99,102,241,0.18);border:1px solid rgba(99,102,241,0.5);border-radius:7px;color:#c7d2fe;font-size:12px;font-weight:700;cursor:pointer;">📚 Browse Phase Templates</button>
+                  <div id="pb-tpl-recent"></div>
+                </div>
+
+                <!-- From scratch -->
+                <div id="pb-pane-scratch" class="pb-start-pane" style="display:none;flex-direction:column;gap:8px;">
                 <div>
                   <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Block Phase</label>
                   <select id="pb-phase" onchange="pbPhaseChange()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;">
@@ -1289,6 +1305,13 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
                   </div>
                 </div>
                 <button onclick="pbBuild()" style="padding:8px;background:rgba(167,139,250,0.2);border:1px solid rgba(167,139,250,0.5);border-radius:6px;color:#a78bfa;font-size:12px;font-weight:700;cursor:pointer;width:100%;">🔨 Build Program →</button>
+                </div>
+
+                <!-- From saved drafts / templates -->
+                <div id="pb-pane-saved" class="pb-start-pane" style="display:none;flex-direction:column;gap:6px;">
+                  <div style="font-size:10px;color:var(--text3);line-height:1.5;">Your drafts and saved templates.</div>
+                  <div id="pb-drafts-list" style="max-height:360px;overflow-y:auto;"></div>
+                </div>
               </div>
             </div>
 
@@ -1306,20 +1329,9 @@ body.offseason .season-toggle { color:#93c5fd; border-color:rgba(96,165,250,.45)
                   <button onclick="pbSaveDraft()" title="Work in progress — finish later" style="padding:6px 4px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.35);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;">📝 Draft</button>
                   <button onclick="pbSaveAsTemplate()" title="Reusable starting point for anyone" style="padding:6px 4px;background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.35);border-radius:6px;color:#60a5fa;font-size:10px;font-weight:700;cursor:pointer;">⭐ Template</button>
                 </div>
-                <div style="font-size:9px;color:var(--text3);line-height:1.5;">Sending again updates the same athlete links — logs stay with each exercise. To change one athlete only, use ✏️ Edit a live program above.</div>
+                <div style="font-size:9px;color:var(--text3);line-height:1.5;">Sending again updates the same athlete links — logs stay with each exercise. To change one athlete only, use ✏️ Edit a live program below.</div>
                 <div id="pb-checks"></div>
               </div>
-            </div>
-
-            <!-- Start from a draft or template instead -->
-            <div class="card" id="pb-start-from-saved" style="padding:14px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <div class="card-title" style="margin:0;">OR START FROM SAVED</div>
-                <button onclick="pbToggleDraftsList()" id="pb-drafts-toggle" style="font-size:10px;padding:4px 10px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:5px;color:var(--text2);cursor:pointer;">📂 My Drafts / Templates ▾</button>
-              </div>
-              <button onclick="mwInstallTemplates()" title="Reload after IL, Spring Training ramp and In-Season by role — in 6, 4 and 3-day layouts" style="width:100%;font-size:11px;padding:7px;margin-bottom:6px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;cursor:pointer;font-weight:600;">📚 Add Template Library (11)</button>
-              <button onclick="loadPhaseTemplates()" style="width:100%;font-size:11px;padding:7px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);border-radius:6px;color:#6BA3F8;cursor:pointer;font-weight:600;margin-bottom:6px;">⚡ Load Built-In Phase Templates</button>
-              <div id="pb-drafts-list" style="display:none;max-height:220px;overflow-y:auto;margin-top:4px;"></div>
             </div>
 
             <!-- Progression charts (folded away until needed) -->
@@ -12039,6 +12051,34 @@ let EXERCISE_DB = [
   {cat:'Core Anti-Flexion',name:'45° Back Extension',liftKey:'',video:'',notes:''},
   {cat:'Grip',name:'Farmer Carry',liftKey:'',video:'',notes:'Tall posture, tight lats'},
   {cat:'Grip',name:'Plate Pinch',liftKey:'',video:'',notes:''},
+  // Added with the Method Library (programming spec templates)
+  {cat:'Squat Variations',name:'Leg Extension',liftKey:'',video:'',notes:'Quad isolation — full lockout, control the lowering'},
+  {cat:'Squat Variations',name:'Leg Press',liftKey:'',video:'',notes:'Feet low for quad bias; full depth without the pelvis tucking'},
+  {cat:'Squat Variations',name:'Cossack Squat',liftKey:'',video:'',notes:'Sit deep into one hip, opposite leg straight, toes up'},
+  {cat:'Deadlift Variations',name:'Deficit Trap Bar Deadlift',liftKey:'',video:'',notes:'Stand on a 1–2 in plate — longer pull from the floor'},
+  {cat:'Deadlift Variations',name:'Rack Pull',liftKey:'',video:'',notes:'Pins just below the knee — lockout strength'},
+  {cat:'Hamstring',name:'Barbell Hip Thrust',liftKey:'',video:'',notes:'Upper back on bench, chin tucked, 1 s squeeze at the top'},
+  {cat:'Calf Ankle',name:'Standing Calf Raise',liftKey:'',video:'',notes:'2 s pause in the stretch at the bottom'},
+  {cat:'Hip ABD_ADD',name:'X-Band Walk',liftKey:'',video:'',notes:'Band crossed at the ankles — stay tall, small steps'},
+  {cat:'Hip ABD_ADD',name:'Stability Ball Groin Squeeze',liftKey:'',video:'',notes:'Ball between the knees — 2 s squeeze'},
+  {cat:'UB Horizontal Push',name:'Neutral Grip DB Bench Press',liftKey:'DB Bench Press',video:'',notes:'Palms facing — elbows tucked, shoulder-friendly'},
+  {cat:'UB Horizontal Push',name:'Swiss Bar Floor Press',liftKey:'',video:'',notes:'Neutral grip, triceps touch the floor, press from a dead stop'},
+  {cat:'UB Horizontal Pull',name:'Chest Supported DB Row',liftKey:'',video:'',notes:'Chest on an incline bench — no body English'},
+  {cat:'UB Horizontal Pull',name:'Chest Supported T-Bar Row',liftKey:'',video:'',notes:'Chest on the pad, drive elbows back, full stretch'},
+  {cat:'UB Horizontal Pull',name:'SA Cable Row',liftKey:'',video:'',notes:'Single-arm cable row — reach long, pull to the hip'},
+  {cat:'UB Horizontal Pull',name:'Inverted Row',liftKey:'',video:'',notes:'Bar or rings — body in one line, chest to the bar'},
+  {cat:'Biceps Triceps',name:'DB Hammer Curl',liftKey:'',video:'',notes:'Neutral grip, elbows pinned'},
+  {cat:'Biceps Triceps',name:'Incline DB Curl',liftKey:'',video:'',notes:'Long-length bias — arms hang behind the body'},
+  {cat:'Biceps Triceps',name:'Rope Pushdown',liftKey:'',video:'',notes:'Split the rope at lockout'},
+  {cat:'Biceps Triceps',name:'Overhead Cable Triceps Extension',liftKey:'',video:'',notes:'Long-length bias — elbows by the ears'},
+  {cat:'Biceps Triceps',name:'DB Triceps Extension',liftKey:'',video:'',notes:'Lying or seated — elbows stay still'},
+  {cat:'Shoulder Complex',name:'Side-Lying DB External Rotation',liftKey:'',video:'',notes:'Towel under the elbow, slow lowering'},
+  {cat:'Shoulder Complex',name:'Band ER at 90/90',liftKey:'',video:'',notes:'Elbow at shoulder height, rotate back without shrugging'},
+  {cat:'Shoulder Complex',name:'Serratus Wall Slide',liftKey:'',video:'',notes:'Forearms on the wall, reach up and protract'},
+  {cat:'Shoulder Complex',name:'Cuban Press',liftKey:'',video:'',notes:'Upright row → external rotation → press; light'},
+  {cat:'Core Rotation',name:'Half Kneeling Cable Chop',liftKey:'',video:'',notes:'High to low across the body, hips square'},
+  {cat:'UB Plyos',name:'Med Ball Rotational Scoop Toss',liftKey:'',video:'',notes:'Load the back hip, scoop and release — max intent'},
+  {cat:'Strongman Variations',name:'Lateral Sled Drag',liftKey:'',video:'',notes:'Side-on, push off the trail leg — frontal-plane power'},
 ];
 
 // ── Exercise library persistence
@@ -24884,5 +24924,6 @@ try {
 <script src="js/ui-refresh.js?v=2"></script>
 <script src="js/throwing-parse.js?v=1"></script>
 <script src="js/throwing.js?v=2"></script>
+<script src="js/method-library.js?v=1"></script>
 </body>
 </html>
