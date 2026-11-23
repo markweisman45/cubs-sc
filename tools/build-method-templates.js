@@ -24,7 +24,14 @@ const S = v => String(v);
 function lift(name, pair, sets, reps, load, tempo, rest, notes) {
   const e = L(name);
   // % loads only where a 1RM drives them; weighted pull-ups / Nordics / GHR go by effort
-  if (/%/.test(load || '') && (!e.liftKey || /Pull Up|Nordic|Glute-Ham/.test(name))) load = /Pull Up/.test(name) ? 'RPE 8' : 'RPE 7';
+  if (/%/.test(load || '') && (!e.liftKey || /Pull Up|Nordic|Glute-Ham/.test(name))) {
+    const p = parseFloat(load);
+    if (/^\d/.test(load) && !/band|hook|bar|BW|\+/.test(load) && p >= 50 && p <= 100) {
+      // no 1RM link: effort by % (Epley-ish) and keep the % in the notes
+      notes = (notes ? notes + ' · ' : '') + '≈' + load.trim() + ' 1RM';
+      load = p >= 92.5 ? 'RPE 9–10' : p >= 87.5 ? 'RPE 9' : p >= 82.5 ? 'RPE 8–9' : p >= 77.5 ? 'RPE 8' : p >= 70 ? 'RPE 7' : 'RPE 6';
+    } else if (!/band|hook|bar \+|\+ /.test(load)) load = /Pull Up/.test(name) ? 'RPE 8' : 'RPE 7';
+  }
   const o = { type: 'lift', name, cat: e.cat, pair, sets: S(sets), reps: S(reps), load: load || '', tempo: tempo || '', rest: rest || '' };
   if (notes) o.notes = notes;
   return o;
@@ -165,6 +172,369 @@ function add(meta, weeks4) {
     T.push(Object.assign({}, base, p4, { key: meta.key + '-4-p', days: 4, variant: 'pitcher' }));
     if (meta.no3 !== true) T.push(Object.assign({}, base, { key: meta.key + '-3-p', days: 3, variant: 'pitcher', weeks: p4.weeks.map(f3) }));
   }
+}
+
+// ── 0. ALTIS speed programs (Need for Speed Gamespeed model, Pfaff week-by-theme, Huntington short-to-long) ──
+//   Zone volumes: ACC 160–300 m (team-sport cap 300), MSS 120–400 m, HiS ≤ 6 reps. MSS from a fly-10 (or HE Runs top speed).
+{
+  const Z = { acc: 'Zone 5 · ACC (> 95%)', mss: 'Zone 5 · MSS (> 95%)', his: 'Zone 4 · HiS (88–95%)', mis: 'Zone 3 · MiS (78–88%)', lis: 'Zone 2 · LiS (65–78%)', mas: 'Zone 1 · MAS (< 65%)' };
+  const z = (o, zone) => { o.zone = zone; return o; };
+  // Warm-up A (accel day) / B (max-v day) — fixed every day so it doubles as the movement screen
+  function wuA(note) {
+    return blk('speed', 'Warm-up A · Acceleration day', [
+      spd('Walking A Drill', 'A', 1, 2, '20m', 'Walk', ':20', 'Torso activation, dynamic mobility and flexibility — first 6 exercises of each module (fixed daily)'),
+      spd('A-Skip', 'A', 1, 2, '20m', '70%', ':30', 'Sprint drills: all 12, a 3–5-step burst after every 1–2 drills'),
+      spd('Dribbles (Calf)', 'A', 1, 2, '20m', '70%', ':30', 'Rhythm — cadence rises like a crescendo'),
+      spd('Wall Drill (March / Switch)', 'A', 2, '5ea', '', 'Tech', ':30', 'Neutral pelvis · flexed ankles · forward torso · push back · scissor'),
+      spd('Power Skips- Distance', 'B', 2, 1, '20m', '90%', '1:00', 'Projection — skips for distance before every accel session' + (note ? ' · ' + note : '')),
+    ]);
+  }
+  function wuB(rhs) {
+    return blk('speed', 'Warm-up B · Max-velocity day', [
+      spd('Walking A Drill', 'A', 1, 2, '20m', 'Walk', ':20', 'All 12 exercises in every warm-up module (fixed daily)'),
+      spd('Dribbles (Ankle)', 'A', 1, 2, '20m', '70%', ':30', 'Ankle → calf → knee, raise cadence within each height'),
+      spd('Dribbles (Knee)', 'A', 1, 2, '20m', '75%', ':30'),
+      spd('B-Skip', 'A', 1, 2, '20m', '75%', ':30'),
+      spd('Rudiment Hop Series (RHS)', 'B', 2, rhs || 10, '', 'Stiff', ':45', 'Contacts, not distance — team sport starts at ~10 double-leg / 5 per leg (half of T&F)'),
+    ]);
+  }
+  // Session cores by phase (ph 0 GPP · 1 Accel · 2 MaxV · 3 Gamespeed)
+  const ACC = [
+    [z(spd('Sled Pull Sprint', 'C', 4, 1, '10m', '45% BW', '2:00', 'Heavy (force-deficient) — 30% BW for everyone else. Pull, do not push'), 'acc'),
+      z(spd('Stick Accel (Tape Ladder)', 'C', 3, 1, '15m', '95%+', '2:00', 'Projection, rhythm, rise'), 'acc'),
+      z(spd('2pt Start (LSV)', 'D', 4, 1, '10m', '95%+', '1:30', 'Zone 5 only — accel below Zone 5 is not effective'), 'acc'),
+      z(spd('2pt Start (LSV)', 'D', 3, 1, '20m', '95%+', '3:00', 'Total ≈ 185 m'), 'acc')],
+    [spd('Power Skips- Distance', 'C', 3, 1, '20m', '95%', '1:00', 'Complex: skip for distance → straight into the next accel (technical potentiation)'),
+      z(spd('2pt Start (LSV)', 'C', 3, 1, '20m', '95%+', '2:30', 'Paired with the skip above'), 'acc'),
+      z(spd('Hill Sprint', 'D', 4, 1, '15m', '95%+', '2:00'), 'acc'),
+      z(spd('Sled Pull Sprint', 'D', 4, 1, '20m', '30% BW', '2:30', '15% BW if velocity-deficient'), 'acc'),
+      z(spd('2pt Start (LSV)', 'E', 3, 1, '30m', '95%+', '3:00', 'Team-sport athletes need 20–30 m to reach 90–96% of max velocity · total ≈ 290 m'), 'acc')],
+    [z(spd('2pt Start (LSV)', 'C', 5, 1, '10m', '95%+', '1:30'), 'acc'),
+      z(spd('2pt Start (LSV)', 'C', 4, 1, '20m', '95%+', '3:00'), 'acc'),
+      z(spd('Sled Pull Sprint', 'D', 3, 1, '20m', '15% BW', '2:30', 'Light — hold ratio of force at speed · total ≈ 190 m'), 'acc')],
+    [z(spd('Steal Start (3 steps)', 'C', 5, 1, '15m', '95%+', '2:00', 'Lead-off start — rise to match the task, not a 100 m rise'), 'acc'),
+      z(spd('Rolling Start Sprint', 'D', 3, 1, '30m', '95%+', '3:00', 'Jog-in 10 m, then sprint (secondary lead / going first to third)'), 'acc'),
+      z(spd('Ground Start Chaser Variations', 'D', 2, 1, '20m', '95%+', '2:30', 'Reactive — chase a partner · total ≈ 205 m'), 'acc')],
+  ];
+  const MAXV = [
+    [spd('Dribble-Bleed', 'C', 3, 1, '30m', '80%', '1:30', 'Calf height → full stride'),
+      spd('Wickets', 'C', 4, 1, '30m', '90%', '2:00', 'Strike from above — wicket spacing by athlete'),
+      z(spd('Fly (variation)', 'D', 4, 1, '20m + 10m fly', '95%+', '3:30', 'Fly-10 = MSS test (MSS = 10 ÷ time) · 30–60 s rest per 1 s of sprinting · total 120 m'), 'mss')],
+    [spd('Wickets', 'C', 4, 1, '40m', '90%', '2:00'),
+      z(spd('Fly (variation)', 'D', 4, 1, '20m + 20m fly', '95%+', '4:00', 'Total 160 m'), 'mss'),
+      spd('Scissor Bound (Bent / Straight Leg)', 'E', 3, 1, '20m', '90%', '1:30', 'Scissoring and specific strength')],
+    [spd('Wickets', 'C', 4, 1, '40m', '95%', '2:30'),
+      z(spd('Fly (variation)', 'D', 5, 1, '30m + 20m fly', '95%+', '5:00', 'Short to long (Huntington) · total 250 m'), 'mss'),
+      spd('Speed Bound (Accel to Bound)', 'E', 3, 1, '15m + 20m', '95%', '2:30', '10–20 m accel straight into bounding'),
+      z(spd('Vest Sprint', 'E', 2, 1, '40m', '95%', '5:00', 'Vest 5–20% BM — alternate with unloaded reps; total MSS ≈ 330 m'), 'mss')],
+    [z(spd('Fly (variation)', 'C', 3, 1, '20m + 20m fly', '95%+', '4:00', 'One quality exposure'), 'mss'),
+      z(spd('Curved Sprint (1st to 3rd)', 'D', 3, 1, '30m', '95%', '4:00', 'Through the bag — baseball curve'), 'mss')],
+  ];
+  // Pfaff-style strength: single-leg emphasis, low Olympic volume
+  const lowerA = (ph) => blk('lift', 'Lower · single-leg emphasis', [
+    lift(ph >= 2 ? 'Hang Clean' : 'Trap Bar Counter Movement Jump', 'A', 3, 3, ph >= 2 ? 'RPE 7' : 'Light (20–30% BW)', 'X-0-X-0', '2:00', 'Low Olympic volume (Pfaff)'),
+    lift('RFE Split Squat (DB)', 'B', 4, [8, 6, 5, 4][ph] + 'ea', 'RPE 8', '3-0-1-0', '2:00', 'Single-leg first (most elite sprinters are single-leg pullers)'),
+    lift('SL DB RDL', 'B', 3, '6ea', 'RPE 7', '3-0-1-0', '1:30'),
+    lift('Nordic Curl', 'C', 3, [4, 5, 5, 3][ph], 'BW', '4-0-X-0', '1:30', 'Hamstring — early risers especially'),
+    lift('SL Elevated Calf Raise', 'D', 2, '10ea', 'BW', '2-1-1-1', ':45'),
+    lift('Copenhagen Plank', 'D', 2, '20s ea', 'BW', '', ':30')]);
+  const lowerB = (ph) => blk('lift', 'Lower · bilateral strength', [
+    lift('Trap Bar Deadlift', 'A', 4, [6, 5, 4, 3][ph], 'RPE ' + [7, 8, 8, 8][ph], '2-0-X-0', '2:30', 'Clydesdales need maximal force work; Thoroughbreds less'),
+    lift('Petersen Step-Up', 'B', 3, '10ea', 'BW', '2-0-1-0', '1:00', 'Front of the knee — hamstring problems often trace here'),
+    lift('Glute-Ham Raise', 'B', 3, 6, 'BW', '3-0-1-0', '1:30'),
+    lift('Rudiment Hop Series (RHS)', 'C', 2, 10, 'BW', '', ':45', 'RHS after lifting — volume, then height or load, then variability'),
+    lift('Pallof Press', 'D', 2, '10ea', 'Light', '2', ':30')]);
+  const upper = (ph, which) => blk('lift', 'Upper', which === 1
+    ? [lift('Chin Up', 'A', 4, [8, 6, 5, 5][ph], 'BW', '3-0-1-0', '1:30'), lift('Half Kneeling Landmine Press', 'A', 4, '8ea', 'RPE 7', '2-0-1-0', '1:30'),
+      lift('DB Single Arm Row', 'B', 3, '10ea', 'RPE 7', '2-0-1-0', '1:00'), lift('Dead Bug', 'C', 2, '6ea', 'BW', '3131', ':30')].concat(ARM_CARE())
+    : [lift('Bb Bench Press', 'A', 4, [8, 6, 5, 4][ph], 'RPE 7', '2-0-X-0', '2:00'), lift('Chest Supported DB Row', 'A', 4, 8, 'RPE 7', '2-0-1-0', '1:30'),
+      lift('Med Ball Chest Pass', 'B', 3, 5, '8 lb MB', 'X-0-X-0', '1:00'), lift('Side Plank', 'C', 2, '30s ea', 'BW', '', ':30')].concat(ARM_CARE()));
+  const EXT = [
+    blk('speed', Z.mas, [z(spd('MAS Intervals (Zone 1)', 'A', 2, 6, '20s', '< 65%', '20s', '2:00 between sets · ALTIS: 3x 6x 20 s w/ 20 s & 2\''), 'mas')]),
+    blk('speed', Z.lis, [z(spd('Extensive Tempo (LiS, Zone 2)', 'A', 2, 6, '30s', '65–78%', '1:00', '2:00 between sets'), 'lis')]),
+    blk('speed', 'Extensive dribble-bleeds (replace tempo)', [spd('Dribble-Bleed', 'A', 1, 6, '80m', '75%', '1:30', 'Extensive dribble-bleeds of 60–90 m can replace tempo work')]),
+    blk('speed', Z.mis + ' + RSA', [z(spd('MiS Runs (Zone 3)', 'A', 2, 4, '15s', '78–88%', '1:30', '3:00 between sets'), 'mis'),
+      z(spd('Repeated Sprint Ability (RSA)', 'B', 1, 6, '20m', '95%', ':30', 'Log the decrement %'), 'rsa')]),
+  ];
+  const COD = (ph) => blk('speed', 'Decel / COD', [
+    spd('Sprint (__yd) Decel (__yd)', 'A', 3, 1, '10m + 5m', '90%', '1:30', 'High decels cost ~3x an accel — keep the count low'),
+    spd(ph >= 3 ? 'Shuffle To Sprint' : 'Sprint-Cut-Decel', 'A', 3, 1, '15m', '90%', '1:30'),
+    ph >= 3 ? z(spd('HiS Runs (Zone 4)', 'B', 1, 5, '10s', '88–95%', '4:00', '5x 10 s w/ 3–5\' — 6 reps max'), 'his') : null,
+  ]);
+  const PH = ['General Prep · Technical', 'Acceleration emphasis', 'Max-velocity emphasis', 'Gamespeed · speed endurance'];
+  function altisWeek(n, ph, w, nW) {
+    const deload = w === nW && nW >= 4;
+    const cut = b => deload ? Object.assign({}, b, { exercises: b.exercises.map(e => Object.assign({}, e, { sets: S(Math.max(1, (parseInt(e.sets) || 2) - 1)) })) }) : b;
+    const accDay = day('', 'lift', 'Lower 1 · Acceleration', [wuA(), cut(blk('speed', Z.acc, ACC[ph])), lowerA(ph)]);
+    const extDay = day('', 'lift', 'Upper 1 · Extensive', [cut(EXT[ph]), upper(ph, 1)]);
+    const mvDay = day('', 'lift', 'Lower 2 · Max Velocity', [wuB([10, 12, 15, 10][ph]), cut(blk('speed', Z.mss, MAXV[ph])), lowerB(ph)]);
+    const codDay = day('', 'lift', 'Upper 2 · Decel / COD', [cut(COD(ph)), upper(ph, 2)]);
+    return week(n, 'ALTIS ' + PH[ph] + ' · W' + w + (deload ? ' · unload (sets −1)' : ''), four(accDay, extDay, mvDay, codDay), deload);
+  }
+  // 3-day: Mon accel + lower A + upper 1, Wed extensive + upper 2, Fri max-v + lower B
+  const altis3 = w4 => {
+    const td = w4.days.filter(d => d.type !== 'off');
+    const [A, E, M, C] = td;
+    const map = {
+      Mon: day('', 'lift', 'Acceleration + Full Body', clone(A.blocks.concat(E.blocks.filter(b => b.blockType === 'lift')))),
+      Wed: day('', 'lift', 'Extensive / COD + Upper', clone(E.blocks.filter(b => b.blockType === 'speed').concat(C.blocks))),
+      Fri: day('', 'lift', 'Max Velocity + Lower', clone(M.blocks)),
+    };
+    return Object.assign({}, w4, { days: layout(3, map) });
+  };
+  const base = { category: 'Method Library · ALTIS Speed', source: 'ALTIS Need for Speed (Gamespeed zones, warm-up A/B, special methods), Pfaff Vault (week by theme, single-leg strength), Huntington (short to long)', to3: altis3 };
+  const ZNOTE = 'Every zone is a % of the athlete\'s MSS (fly-10: MSS = 10 ÷ time; or HE Runs top speed). Use 🧪 on any speed row for zone targets in m/s and mph. Volume rules: acceleration 160–300 m (team-sport cap 300 m), MSS 120–400 m, HiS ≤ 6 reps; MSS rest 30–60 s per 1 s of sprinting. Never add load to dysfunction — progress speed only once the movement is stable.';
+  const mk = (key, ph, nW, name, phaseType, sq, extra) => add(Object.assign({}, base, { key, name, phaseType, sq, pitcher: true,
+    notes: PH[ph] + '. ' + extra + ' ' + ZNOTE }), Array.from({ length: nW }, (_, i) => altisWeek(i + 1, ph, i + 1, nW)));
+  mk('altis-gpp', 0, 4, '⚡ ALTIS Speed · General Prep / Technical (4 wk)', 'accumulation', { power: 1, fhyp: 1 },
+    'Heavy sled pulls (45% BW for force-deficient athletes, 30% otherwise), wall drills, stick accels, 10–20 m Zone 5 accels (~185 m), wickets and fly-10s (120 m MSS), Zone 1 MAS tempo. Week 4 unloads.');
+  mk('altis-accel', 1, 4, '⚡ ALTIS Speed · Acceleration Emphasis (4 wk)', 'transmutation', { power: 2 },
+    'Skip-for-distance → accel complexes, hills, 30% sled pulls, 20–30 m accels (~290 m, near the 300 m team-sport cap), fly-20s (160 m MSS), scissor bounds, Zone 2 LiS tempo. Schedule the weaker pattern (push or pull) early.');
+  mk('altis-maxv', 2, 4, '⚡ ALTIS Speed · Max-Velocity Emphasis (4 wk)', 'realization', { power: 2, relstr: 1 },
+    'Short to long: 30 + 20 m flys, wickets, speed bounds, vest sprints (5–20% BM, alternated), light 15% sled for velocity-deficient athletes; accel volume drops to ~190 m; extensive dribble-bleeds replace tempo.');
+  mk('altis-gamespeed', 3, 3, '⚡ ALTIS Speed · Gamespeed / Baseball (3 wk)', 'realization', { power: 2, relstr: 1 },
+    'Baseball translation: steal starts (rise matched to the task), rolling starts (top speed ~16 m in from a 7 m/s approach vs ~27 m from standing), curved sprints first to third, chaser starts, HiS 5x 10 s, MiS + RSA with decrement. Content vs context: once the drill is clean, add the game information.');
+
+  // In-season: two short exposures a week; keep a ≥ 90% exposure every ~7 days (speed-intel)
+  const insDay = (lab, sp) => day('', 'lift', lab, sp);
+  const insWeek = (n, pitcher) => week(n, 'In-season speed W' + n, layout(2, {
+    Mon: insDay(pitcher ? 'Speed 1 · Accel (day after the start / bullpen day)' : 'Speed 1 · Acceleration', [wuA('short'),
+      blk('speed', Z.acc, pitcher ? [z(spd('2pt Start (LSV)', 'C', 4, 1, '15m', '95%+', '2:00', 'Starters: day 2 after the start. Relievers: on a non-throwing day only'), 'acc')]
+        : [z(spd('Steal Start (3 steps)', 'C', 3, 1, '15m', '95%+', '2:00'), 'acc'), z(spd('2pt Start (LSV)', 'C', 2, 1, '20m', '95%+', '2:30', 'Total ≈ 85 m'), 'acc')]),
+      blk('lift', 'Lift (short)', [lift('Trap Bar Deadlift', 'A', 3, 3, 'RPE 7', '2-0-X-0', '2:00'), lift('RFE Split Squat (DB)', 'B', 2, '5ea', 'RPE 7', '3-0-1-0', '1:30'), lift('Nordic Curl', 'C', 2, 3, 'BW', '4-0-X-0', '1:30')])]),
+    Thu: insDay('Speed 2 · Max Velocity', [wuB(8),
+      blk('speed', Z.mss, [z(spd('Fly (variation)', 'C', pitcher ? 2 : 3, 1, '20m + 10m fly', '95%+', '3:30', 'One ≥ 90% exposure every ~7 days keeps hamstrings ready'), 'mss')]),
+      blk('lift', 'Lift (short)', [lift('Chin Up', 'A', 3, 5, 'BW', '3-0-1-0', '1:30'), lift('Half Kneeling Landmine Press', 'A', 3, '6ea', 'RPE 7', '2-0-1-0', '1:30'), lift('Rudiment Hop Series (RHS)', 'B', 2, 10, 'BW', '', ':45')])]),
+  }));
+  const meta2 = (key, name, variant, notes) => Object.assign({}, base, { key, name, variant, notes, group: 'athlete', days: 2, phaseType: 'inseason', sq: { power: 1 } });
+  delete base.to3;
+  T.push(Object.assign(meta2('altis-inseason-2', '⚡ ALTIS In-Season Speed (2-day)', 'all', 'Two short exposures a week: Zone 5 accels / steal starts and one fly. Stride-length athletes keep strength and hip mobility up in season; stride-frequency athletes need neural freshness — cut volume first. ' + ZNOTE), { weeks: [1, 2, 3].map(n => insWeek(n, false)) }));
+  T.push(Object.assign(meta2('altis-inseason-2-p', '⚡ ALTIS In-Season Speed · Pitcher (2-day)', 'pitcher', 'ALTIS on pitchers: train starters and relievers differently. Starters run accels on day 2 after the start and the fly mid-rotation; relievers only on non-throwing days, lower volume. ' + ZNOTE), { weeks: [1, 2, 3].map(n => insWeek(n, true)) }));
+
+  // Return to performance — criteria-gated, as close to plan A as the tissue allows
+  const rtpDay = (lab, sp, lf) => day('', 'lift', lab, [blk('speed', sp[0], sp[1]), lf ? blk('lift', 'Plan A strength (as tissue allows)', lf) : null]);
+  const RTP = [
+    ['Return to participation · W1', [spd('Walking A Drill', 'A', 2, 2, '20m', 'Walk', ':30', 'Normal warm-up at walking speed'), spd('Dribbles (Ankle)', 'A', 2, 2, '20m', 'Walk', ':30', 'Range the tissue allows — even a hamstring tear can walk ankle dribbles within days'), spd('Rudiment Hop Series (RHS)', 'B', 2, 10, '', 'Stiff', ':45', 'Start in chest-deep water if needed; team sport ~10 double / 5 per leg')], 'Gate: pain-free walking warm-up and ankle dribbles'],
+    ['Return to participation · W2', [spd('Walking A Drill', 'A', 1, 2, '20m', 'Walk', ':30'), spd('Dribbles (Calf)', 'A', 2, 2, '20m', '60%', ':30', 'Raise cadence before moving up a height'), spd('Rudiment Hop Series (RHS)', 'B', 3, 10, '', 'Stiff', ':45', 'Shallower water → land')], 'Gate: calf dribbles at full cadence. Expect to bounce between phases 1 and 2'],
+    ['Return to sport · W3', [spd('Dribbles (Knee)', 'A', 2, 2, '20m', '70%', ':30'), spd('Dribble-Bleed', 'A', 3, 1, '40m', '75%', '1:00'), spd('2pt Start (LSV)', 'B', 4, 1, '10m', '80%', '1:30', 'Short accels — no competitive drills yet'), spd('Fly (variation)', 'C', 4, 1, '40m stride', '75%', '1:30', '20–80 m strides · ~350 m sound work this week')], 'Gate: dribble-bleed at knee height, clean strides'],
+    ['Return to sport · W4', [spd('Scissor Bound (Bent / Straight Leg)', 'A', 3, 1, '20m', '80%', '1:30', 'Bent-leg first, then straight-leg'), spd('2pt Start (LSV)', 'B', 4, 1, '20m', '90%', '2:00'), spd('Fly (variation)', 'C', 4, 1, '60m stride', '85%', '2:00', '~650 m cumulative technically sound work')], 'Gate: ~1000 m of technically sound work by the end of next week'],
+    ['Return to competition · W5', [spd('2pt Start (LSV)', 'A', 4, 1, '20m', '95%', '2:30'), spd('Fly (variation)', 'B', 3, 1, '20m + 10m fly', '95%', '3:30', 'Fly-10 vs pre-injury'), spd('Steal Start (3 steps)', 'C', 3, 1, '15m', '90%', '2:00', 'Lower-arousal games first')], 'Gate: fly-10 within ~3% of pre-injury'],
+    ['Return to competition · W6', [spd('Steal Start (3 steps)', 'A', 4, 1, '15m', '95%+', '2:00'), spd('Curved Sprint (1st to 3rd)', 'B', 2, 1, '30m', '95%', '3:00'), spd('Ground Start Chaser Variations', 'C', 3, 1, '20m', '95%+', '2:30', 'Reactive / competitive')], 'Gate: performance markers match pre-injury (fly-10, HE Runs max) — only then fully returned'],
+  ];
+  const rtpLift = [lift('RFE Split Squat (DB)', 'A', 3, '6ea', 'RPE 6', '3-0-1-0', '1:30'), lift('SL Bridge', 'B', 3, '10ea', 'BW', '2-1-1-0', ':45'), lift('Copenhagen Plank', 'C', 2, '15s ea', 'BW', '', ':30')];
+  T.push(Object.assign({}, base, { key: 'altis-rtp-3', days: 3, group: 'athlete', variant: 'all', phaseType: 'restore', sq: { power: 1 },
+    name: '⚡ ALTIS Return to Performance · Speed (6 wk, criteria-gated)',
+    notes: 'Gated by criteria, not by time — a week only moves on when its gate is met. Dribble gate sequence: ankle → calf → knee → dribble-bleed, raising cadence within each height. Return to sport needs ~1000 m of technically sound work; add bent- and straight-leg scissor bounds; no competitive drills early. Return to competition: lower-arousal games first; fully returned only when performance markers match pre-injury. Regional interdependence: hamstring problems often trace to the front of the knee; a one-sided fault usually means tissue, a two-sided fault usually means the athlete does not understand the task. Fits on top of the 6-phase RTP tab.',
+    weeks: RTP.map((r, i) => week(i + 1, r[0] + ' · ' + r[2], layout(3, { Mon: rtpDay('Speed RTP 1', [r[0], r[1]], rtpLift), Wed: rtpDay('RHS + dribbles', ['Structural tolerance', [r[1][0], spd('Rudiment Hop Series (RHS)', 'B', 2, 10, '', 'Stiff', ':45')]]), Fri: rtpDay('Speed RTP 2', [r[0], r[1]], rtpLift) }))) }));
+}
+
+// ── 0b. Templates for the remaining spec tabs ────────────────────────────────
+{
+  const raw = (o, load) => { o.load = load; return o; };   // band / velocity loads kept as written
+  const pushTpl = (meta, weeks) => T.push(Object.assign({ group: 'athlete', variant: 'all' }, meta, { weeks }));
+
+  // ── Simmons, Special Strength (baseball build): ME lower Mon, ME upper Tue, DE lower Thu, DE upper Fri ──
+  const ME_L = ['Box Squat', 'Trap Bar Deadlift', 'Rack Pull', 'Bb Good Morning', 'Safety Bar Squat', 'Front Squat'];
+  const ME_U = ['Swiss Bar Floor Press', 'Swiss Bar Bench Press', 'Incline DB Press', 'Pull Up (Weighted)', 'Swiss Bar Floor Press', 'Bb Close Grip Bench Press'];
+  function simWeek(n, pitcher) {
+    const w = (n - 1) % 3, pct = [50, 55, 60][w], sets = [10, 10, 8][w];
+    const meL = day('', 'lift', 'Lower 1 · Max Effort', [accelBlock(1), blk('lift', 'Max effort', [
+      raw(lift(ME_L[n - 1], 'A', 1, '1–3RM', '', '', '3:00', 'Work up in singles to a 1–3RM — no more than 3 lifts at 90%+. New ME lift every week'), 'Work up'),
+      lift('Resisted Box Jump', 'B', 5, 1, 'Vest / ankle weights', '', '2:00', 'ME jump — change box and resistance every session'),
+      lift('Reverse Hyper', 'C', 4, 15, 'Moderate', '', '1:00', 'Reverse Hyper volume ~4x squat volume (posterior chain)'), lift('Glute-Ham Raise', 'C', 3, 8, 'BW', '3-0-1-0', '1:30'),
+      lift('Sled March', 'D', 6, '30m', 'Heavy', '', '1:00', 'Heaviest sled of the week (Mon heavy · Thu −30% · light for restoration)')])]);
+    const meU = day('', 'lift', 'Upper 1 · Max Effort', [blk('lift', 'Max effort', [
+      pitcher ? lift('Half Kneeling Landmine Press', 'A', 4, '5ea', 'RPE 8 cap', '', '2:00', 'Pitchers: landmine or neutral DB press at an RPE cap — no barbell max (Simmons tab)')
+        : raw(lift(ME_U[n - 1], 'A', 1, '3RM', '', '', '3:00', 'Work up to a 3RM; floor press or incline for position players'), 'Work up'),
+      lift('Chest Supported DB Row', 'B', 4, 10, 'RPE 8', '2-0-1-0', '1:30'), lift('Chin Up', 'B', 4, 8, 'BW', '3-0-1-0', '1:30')].concat(ARM_CARE()))]);
+    const deL = day('', 'lift', 'Lower 2 · Dynamic Effort', [maxVBlock(1), blk('lift', 'Dynamic effort', [
+      raw(lift('Box Squat', 'A', sets, 2, '', 'X', ':45', 'Speed strength — wave ' + pct + '% bar + 25% band at lockout (top ≈ ' + (pct + 25) + '%, bottom ≈ ' + (pct + 10) + '%). 0.7–0.9 m/s; cut sets below 0.7. Week 4 restarts with a new bar, box or band'), pct + '% + 25% band'),
+      lift('Kneeling Jump to Feet', 'A', 5, 3, 'BW', 'X', '1:00', 'Then light bar / kneeling power clean as it gets easy (≤ 5 reps)'),
+      raw(lift('Trap Bar Deadlift', 'B', 6, 2, '', 'X', ':45', 'Speed pull — 50% + band'), '50% + 30% band'),
+      lift('Belt Squat', 'C', 3, '60s', 'Moderate', '1 rep/s', '2:00', 'Strength endurance — 1 rep a second for 60 s'),
+      lift('Sled March', 'D', 8, '30m', '−30% vs Mon', '', ':45', 'Lighter sled, more trips')])]);
+    const deU = day('', 'lift', 'Upper 2 · Dynamic + Rotation', [blk('lift', 'Dynamic effort', [
+      pitcher ? lift('Med Ball Rotational Scoop Toss', 'A', 8, '3ea', '6 lb MB', 'X', ':45', 'Pitchers: med-ball throws, no barbell speed press')
+        : raw(lift('Swiss Bar Bench Press', 'A', 8, 3, '', 'X', ':45', 'Speed bench 50% + band; 3 grips inside the power lines; rotate bands / chains / releasers each wave'), '50% + band'),
+      lift('MB Step Back Side Toss', 'B', 4, '3ea', '8 lb MB', 'X', '1:00', 'Rotational, both sides, for distance'),
+      lift('TB Pendlay Row', 'B', 4, 8, 'RPE 7', '2-0-1-0', '1:30'), lift('Reverse Hyper', 'C', 3, 20, 'Light', '', '1:00', 'Light posterior volume')].concat(ARM_CARE()))]);
+    return week(n, 'Simmons · Wave ' + (n <= 3 ? 1 : 2) + ' · ' + pct + '% + band', four(meL, meU, deL, deU));
+  }
+  add({ key: 'simmons', category: 'Method Library · Special Strength (Simmons)', phaseType: 'transmutation', sq: { maxstr: 2, power: 2 }, pitcher: true, no3: true,
+    name: '🏋️ Simmons Special Strength · Baseball (6 wk, 2 waves)', source: 'Louie Simmons, Special Strength Development for All Sports — baseball build from the tab',
+    pitcherWeeks: [1, 2, 3, 4, 5, 6].map(n => simWeek(n, true)),
+    notes: 'Three velocities every week; ~80% special exercises, 20% classic barbell. Mon ME lower → Thu DE lower keeps 72 h. ME: rotate the lift weekly, work up in singles, ≤ 3 lifts at 90%+. DE: 3-week pendulum 50 / 55 / 60% + 25% band (8–10 x 2 for baseball), restart week 4 with a new bar, box or band. Sled heavy Mon, −30% Thu. In-season: one lower day a week alternating ME (~90% single or triple) and DE; keep the jumps. Pitchers: no overhead or barbell pressing max, med-ball throws instead of speed bench; treat grip-heavy and wheelbarrow work cautiously.' },
+    [1, 2, 3, 4, 5, 6].map(n => simWeek(n, false)));
+
+  // ── Triphasic HS manual: 3-day undulated minor-league off-season (16 wk) ──
+  const THS = {   // block → [day1, day2, day3] as [sets, reps, pct]
+    wc: [[4, 8, 65], [3, 6, 70], [4, 10, 60]],
+    ss: [[5, '3–4', 70], [4, '1–2', 77.5], [5, '3–6', 60]],
+    str: null,
+    hv: [[4, '5–8', 40], [4, '4–6', 50], [4, '6–8', 25]],
+  };
+  const STR4 = [[[5, '1–3', 77.5], [4, '1–2', 85], [5, '4–5', 72.5]], [[5, '1–2', 80], [4, 1, 87.5], [5, '4–5', 75]], [[5, '1–2', 82.5], [4, 1, 90], [5, '3–5', 77.5]], [[5, '1–2', 85], [4, 1, 92.5], [5, '3–4', 80]]];
+  const THS_PLAN = [['wc', 3, 'Work capacity'], ['ss', 3, 'Speed-strength'], ['str', 4, 'Strength'], ['ss', 3, 'Speed-strength'], ['hv', 3, 'High-velocity peaking']];
+  function thsWeek(n, blkKey, wi, label, pitcher) {
+    const L = blkKey === 'str' ? STR4[wi] : THS[blkKey].map(x => [x[0], x[1], blkKey === 'ss' || blkKey === 'hv' ? x[2] : x[2] + 2.5 * wi]);
+    const sq = pitcher ? 'Safety Bar Squat' : 'Back Squat', pr = 'Bb Bench Press';
+    const plyo = n <= 6 ? ['SL Lateral Hop', 'SL single-leg (strength plyo)'] : n <= 10 ? ['Hurdle Hop', 'Double-leg (speed plyo)'] : n <= 13 ? ['Lunge Jump W/Catch', 'Single-leg accelerated (band)'] : ['Band-Assisted Squat Jump', 'Double-leg accelerated (band)'];
+    const late = n >= 11;
+    const mk = (d, lab, main, pressName) => day('', 'lift', lab, [
+      d !== 1 ? blk('speed', 'Speed dose · Level 2', [z2(spd(d === 0 ? '2pt Start (LSV)' : 'Steal Start (3 steps)', 'A', 1, d === 0 ? '8–10' : '7–9', d === 0 ? '15m' : '27m', '95%+', d === 0 ? ':45' : '1:15', d === 0 ? '3 s drills (≈ 15–20 m start) — full rest, or it becomes conditioning' : '5 s drills (≈ home to first)'))]) : null,
+      blk('lift', 'Triphasic HS', [
+        lift(main, 'A', L[d][0], L[d][1], pct(L[d][2]), blkKey === 'hv' ? 'X' : '', d === 1 ? '3:00' : '2:00', (d === 0 && n % 4 === 0 ? 'Test set first: 5@55%, 3@70%, 1–3@80% → estimate reps possible → update 1RM. ' : '') + ['Day 1 · submax', 'Day 2 · max', 'Day 3 · volume'][d] + (late && main !== 'Front Squat' ? ' · sport back squat (narrow, sport-width stance) for the last 4–6 weeks' : '')),
+        lift(plyo[0], 'A', L[d][0], 4, 'BW', 'X', '', plyo[1] + ' — paired with every set (pause → regular → reactive across the block)'),
+        lift(pressName, 'B', L[d][0], L[d][1], pct(L[d][2]), '', '2:00', d === 1 ? 'Day 2 bench can run as 2-rep clusters, 20 s between reps' : ''),
+        lift('Med Ball Chest Pass', 'B', 3, 4, '8 lb MB', 'X', '', 'Paired with the press'),
+        lift(['DB Single Arm Row', 'Chin Up', 'Chest Supported DB Row'][d], 'C', 3, 8, 'RPE 7', '2-0-1-0', '1:15'),
+        lift(['Db Step-Up', 'Db Lunge', 'SL DB RDL'][d], 'C', 3, '6ea', 'RPE 7', '2-0-1-0', '1:15'),
+        lift(['Glute-Ham Raise', 'Bb RDL', 'SL Elevated Calf Raise'][d], 'D', 3, [6, 8, '10ea'][d], ['BW', 'RPE 7', 'BW'][d], '2-0-1-0', '1:00', d === 2 && late ? 'Explosive calf raise with a timed knee bend (last 4–6 wk)' : '')].concat(d === 2 ? ARM_CARE() : []))]);
+    const z2 = o => o;
+    return week(n, 'Triphasic HS · ' + label + ' · W' + (wi + 1), layout(3, { Mon: mk(0, 'Day 1 · Submax', sq, pr), Wed: mk(1, 'Day 2 · Max', sq, pr), Fri: mk(2, 'Day 3 · Volume', pitcher ? 'Trap Bar Deadlift' : 'Front Squat', 'Db Bench Press') }));
+  }
+  const thsWeeks = (pitcher) => { const out = []; let n = 0; THS_PLAN.forEach(([k, len, lab]) => { for (let i = 0; i < len; i++) { n++; out.push(thsWeek(n, k, i, lab, pitcher)); } }); return out; };
+  const thsMeta = { category: 'Method Library · Triphasic HS', phaseType: 'transmutation', sq: { maxstr: 1, power: 2 }, days: 3, source: 'XLathlete Triphasic Training HS Manual 2.0 — undulated 3-day model; minor-league build from the tab' };
+  const thsNotes = 'Minor-league off-season on the 3-day undulated model: Day 1 submax, Day 2 max, Day 3 volume. 16 weeks: work capacity 3 → speed-strength 3 → strength 4 (77.5/85/72.5 → 85/92.5/80%) → speed-strength 3 → high-velocity peaking 3 into spring training. A1 main lift paired with the block\'s plyo (single-leg → double-leg → band-accelerated). Test set on Day 1 every 4th week keeps 1RMs current. Eccentrics never above 85%. In-season: about half the off-season sets, Day 2 max at 1–2 sets.';
+  pushTpl(Object.assign({}, thsMeta, { key: 'triphasic-hs-3', name: '📈 Triphasic HS · Undulated Minor-League Off-Season (16 wk · 3-day)', notes: thsNotes }), thsWeeks(false));
+  pushTpl(Object.assign({}, thsMeta, { key: 'triphasic-hs-3-p', variant: 'pitcher', name: '📈 Triphasic HS · Undulated Off-Season · Pitcher (16 wk · 3-day)', notes: thsNotes + ' Pitchers: SSB / trap bar instead of back and front squat, landmine pressing, hang or high pull instead of the catch.' }),
+    pitcherize({ weeks: thsWeeks(true) }).weeks);
+
+  // ── The System: monthly rep budget → weeks → sessions → lifts ──
+  function systemMonth(level, pitcher) {
+    const M = level === 'adv' ? 1000 : 800, nd = level === 'adv' ? 4 : 3;
+    const wk = level === 'adv' ? [27, 22, 32, 19] : [28, 22, 35, 15];
+    const ss = nd === 3 ? [42, 24, 34] : [27, 22, 32, 19];
+    const sh = pitcher ? { sq: 24, pr: 14, cl: 14, pu: 16, pc: 18, sl: 14 } : { sq: 22, pr: 16, cl: 16, pu: 14, pc: 16, sl: 16 };
+    const nm = { sq: pitcher ? 'Safety Bar Squat' : 'Back Squat', pr: pitcher ? 'Db Bench Press' : 'Bb Bench Press', cl: pitcher ? 'Trap Bar Counter Movement Jump' : 'Hang Clean', pu: pitcher ? 'High Pull' : 'Clean Pull', pc: 'Bb RDL', sl: 'RFE Split Squat (DB)' };
+    const RI = level === 'adv' ? [75, 77.5, 80, 70] : [67.5, 70, 72.5, 60];
+    const runYd = [275, 325, 450, 200];
+    return wk.map((wp, wi) => {
+      const days = {}, keys = nd === 3 ? ['Mon', 'Wed', 'Fri'] : ['Mon', 'Tue', 'Thu', 'Fri'];
+      keys.forEach((k, di) => {
+        const sessReps = M * wp / 100 * ss[di] / 100;
+        const hi = di === (nd === 3 ? 1 : 2), p = RI[wi] + (hi ? 5 : di === 0 ? 0 : -2.5);
+        const row = (key, pair) => {
+          const tot = Math.max(4, Math.round(sessReps * sh[key] / 100));
+          const power = key === 'cl' || key === 'pu';
+          const rps = power ? (hi ? 2 : 3) : (hi ? 3 : p < 70 ? 6 : 5);
+          const sets = Math.max(1, Math.round(tot / rps));
+          return lift(nm[key], pair, sets, rps, pitcher && (key === 'cl' || key === 'pr' || key === 'sl') ? 'RPE ' + (hi ? 8 : 7) : pct(p), power ? 'X' : '', power ? '2:00' : '2:30',
+            tot + ' reps budgeted (' + sh[key] + '% of the session)' + (key === 'cl' ? ' — fastest lift first' : ''));
+        };
+        const run = (di === 0 || di === nd - 1) ? blk('speed', 'Running · ' + (di === 0 ? 'intensity day' : 'volume day'), [
+          spd('2pt Start (LSV)', 'A', 1, Math.round(runYd[wi] / 2 / (di === 0 ? 20 : 30)), di === 0 ? '20yd' : '30yd', '95%+', di === 0 ? '1:30' : '2:00', 'Week speed volume ' + runYd[wi] + ' yd (Vermeil, speed-emphasis week) split over 2 run days; heavy run week = heavy lift week')]) : null;
+        days[k] = day('', 'lift', 'Total Body ' + (di + 1) + (hi ? ' · high intensity' : ''), [run, blk('lift', 'Fundamental lifts', [row('cl', 'A'), row('pu', 'A'), row('sq', 'B'), row('pr', 'B'), row('pc', 'C'), row('sl', 'C')].concat(ARM_CARE()))]);
+      });
+      return week(wi + 1, 'The System · ' + ['W1 · ' + wk[0] + '%', 'W2 · ' + wk[1] + '%', 'W3 · ' + wk[2] + '% (heaviest)', 'W4 · ' + wk[3] + '% unload'][wi] + ' of ' + M + ' reps · RI ~' + RI[wi] + '%', layout(nd, days), wi === 3);
+    });
+  }
+  const sysMeta = { category: 'Method Library · The System (Parker)', sq: { fhyp: 1, maxstr: 2 }, phaseType: 'accumulation', source: 'Parker, Miller & Panariello — The System: monthly rep budgets, Vermeil hierarchy; baseball shares from the tab' };
+  const sysNote = ' Reps are counted from the first warm-up set; strength lifts cap at 35 ± 3 a session, power lifts at 25 ± 3. Next month: raise the total by ≤ 10% and start each week above last month\'s matching week. Preseason −⅓, in-season another −⅓ (2 days a week).';
+  pushTpl(Object.assign({}, sysMeta, { key: 'system-novice-3', days: 3, name: '📊 The System · Novice Month (800 reps · 3-day)', notes: 'Monthly total 800 reps split 28 / 22 / 35 / 15 across the weeks and 42 / 24 / 34 across the sessions, then by lift: squat 22, press 16, clean 16, pulls 14, posterior chain 16, single-leg 16%. Zones One–Three.' + sysNote }), systemMonth('nov', false));
+  pushTpl(Object.assign({}, sysMeta, { key: 'system-novice-3-p', days: 3, variant: 'pitcher', name: '📊 The System · Novice Month · Pitcher (800 reps · 3-day)', notes: 'Pitcher shares: squat 24, press 14, trap bar jump 14, pulls 16, posterior 18, single-leg 14% — no catches, no barbell overhead.' + sysNote }), systemMonth('nov', true));
+  pushTpl(Object.assign({}, sysMeta, { key: 'system-adv-4', days: 4, name: '📊 The System · Advanced Month (1,000 reps · 4-day)', notes: 'Monthly total 1,000 reps split 27 / 22 / 32 / 19 across the weeks and the same pattern across the 4 sessions. Zones Three–Four (70–89%); single sets in Five–Six only for advanced position players.' + sysNote }), systemMonth('adv', false));
+  pushTpl(Object.assign({}, sysMeta, { key: 'system-adv-4-p', days: 4, variant: 'pitcher', name: '📊 The System · Advanced Month · Pitcher (1,000 reps · 4-day)', notes: 'Advanced month with pitcher shares and swaps.' + sysNote }), systemMonth('adv', true));
+
+  // ── Zatsiorsky: UConn non-linear rotation (12 workouts) + RFD bursts ──
+  const UC = [['12–15RM', 4, 13, 65, '1:30'], ['8–10RM', 4, 9, 75, '2:00'], ['4–6RM', 3, 5, 85, '3:00'], ['1–3RM', 4, 2, 92.5, '4:00']];
+  function ucWeek(w, pitcher) {
+    const days = {};
+    ['Mon', 'Wed', 'Fri'].forEach((k, di) => {
+      const r = UC[(w * 3 + di) % 4];
+      days[k] = day('', 'lift', 'Workout ' + (w * 3 + di + 1) + ' · ' + r[0], [
+        di !== 1 ? maxVBlock(1) : null,
+        blk('lift', 'Non-linear', [
+          lift('Trap Bar Deadlift', 'A', 3, 3, pct(90), 'X', '5:00', 'RFD bursts — maximally fast, fresh after the warm-up (ESD in throwing ~50%: rate of force development, not more max strength)'),
+          lift(pitcher ? 'Safety Bar Squat' : 'Back Squat', 'B', r[1], r[2], pct(r[3]), '', r[4], r[0] + ' day — rotation 12–15 → 8–10 → 4–6 → 1–3RM; a missed day just shifts it'),
+          lift(pitcher ? 'Half Kneeling Landmine Press' : 'Bb Bench Press', 'B', r[1], pitcher ? Math.max(5, r[2]) + 'ea' : r[2], pitcher ? 'RPE 8' : pct(r[3]), '', r[4], 'Alternate exercise types — fatigue is specific'),
+          lift('Bb RDL', 'C', 3, Math.max(5, r[2]), 'RPE 8', '3-0-1-0', '2:00'), lift('Chin Up', 'C', 3, 6, 'BW', '3-0-1-0', '1:30')].concat(ARM_CARE()))]);
+    });
+    return week(w + 1, 'Zatsiorsky · UConn non-linear · workouts ' + (w * 3 + 1) + '–' + (w * 3 + 3), layout(3, days));
+  }
+  pushTpl({ key: 'zatsiorsky-nl-3', days: 3, category: 'Method Library · Zatsiorsky', phaseType: 'accumulation', sq: { fhyp: 1, maxstr: 2 }, source: 'Zatsiorsky & Kraemer, Science and Practice of Strength Training',
+    name: '📐 Zatsiorsky · UConn Non-Linear + RFD (4 wk · 3-day)',
+    notes: 'Non-linear rotation counted in workouts (12 here): 12–15RM, 8–10RM, 4–6RM, 1–3RM, 4 sets (3–4 on the 4–6RM day). RFD bursts 3 x 3 at ~90% fresh after the warm-up, 4x a week to improve, 2x to maintain; change exercises after 6–8 weeks. Max effort before repeated effort; dynamic before slow; large before small. In season keep a near-max lift every week (≥ 85% every ≤ 10 days) or the strength is gone by mid-season.' }, [0, 1, 2, 3].map(w => ucWeek(w, false)));
+  pushTpl({ key: 'zatsiorsky-nl-3-p', days: 3, variant: 'pitcher', category: 'Method Library · Zatsiorsky', phaseType: 'accumulation', sq: { fhyp: 1, maxstr: 2 }, source: 'Zatsiorsky & Kraemer',
+    name: '📐 Zatsiorsky · UConn Non-Linear + RFD · Pitcher (4 wk · 3-day)', notes: 'Pitcher version: SSB squat and landmine press.' }, [0, 1, 2, 3].map(w => ucWeek(w, true)));
+
+  // ── 8 Vector COD plyo progression (2-day add-on) ──
+  const V8 = [['Extensive', 2, '6 per angle ea', 'Continuous submax hops / bounds through Z (135°), box (90°), triangle (45–60°), out-and-back (0°)'],
+    ['Intensive', 3, '1 per angle ea', 'Max broad jump into the cut, max broad jump out — minimal ground contact'],
+    ['Shock', 3, '1 per angle ea', '2-fold broad jump into the cut, then broad jump out']];
+  function v8Week(n, pitcher) {
+    const ph = V8[Math.min(2, Math.floor((n - 1) / 2))];
+    const angles = pitcher ? 'lateral, forward 45 and 90° cuts' : 'all 8 vectors (135 / 90 / 45 / 0°, both sides)';
+    const d = (lab, extra) => day('', 'lift', lab, [blk('speed', '8-vector prep', [spd('8 Vector Cuts', 'A', 2, '2ea', '5yd', 'Stick → 50–75% → max', '1:00', 'Low-amplitude prep hops around a centre point first')]),
+      blk('lift', '8-vector COD plyos · ' + ph[0], [
+        lift(ph[0] === 'Extensive' ? 'SL Lateral Hop' : 'Broad Jump W/ Stick', 'A', ph[1], ph[2], 'BW', '', '1:30', ph[3] + ' — ' + angles + '. Weak angle = long contact, less distance out, "stuck in mud"'),
+        lift('Lateral Bound', 'A', ph[1], '3ea', 'BW', '', '1:30', 'Vertical, horizontal and lateral jump abilities are largely independent — train all three'),
+        pitcher ? lift('Med Ball Rotational Scoop Toss', 'B', 3, '3ea', '6 lb MB', 'X', '1:00', 'Lateral bound into scoop toss (frontal + transverse emphasis)')
+          : lift('Med Ball Chest Pass', 'B', 3, 4, '6 lb MB', 'X', '1:00', '8-vector cut med ball toss: cut at the angle, throw out of it'),
+        extra])]);
+    return week(n, '8 Vector · ' + ph[0] + ' · W' + n, layout(2, { Tue: d('COD plyos 1', lift('Trap Bar Counter Movement Jump', 'C', 3, 3, 'Light (10–30% BW)', 'X', '1:30', 'Loaded jump — record, rank & publish')), Fri: d('COD plyos 2', lift('Copenhagen Plank', 'C', 2, '20s ea', 'BW', '', ':30')) }));
+  }
+  const v8Meta = { days: 2, category: 'Method Library · 8 Vector', phaseType: 'transmutation', sq: { power: 2 }, source: 'Nieuwsma & DiMarco, The 8 Vector System — baseball mapping from the tab' };
+  pushTpl(Object.assign({}, v8Meta, { key: '8vector-cod-2', name: '🧭 8 Vector COD Plyo Progression (6 wk · 2-day add-on)', notes: 'Extensive → intensive → shock, 2 weeks each, 1–3 x a week. Baseball map: home to first / steals = linear forward (+ lateral crossover start); rounding a base = 135° and 90° cuts; infield range = lateral and forward 45 with a 135° cut to the throw; OF drop step = backward 45 (45° cuts); pickoff dive back / rundowns = 0° cut. Sprints stop at a rep ≥ 5% slower than the day\'s best. RTP target 105–110% of pre-injury.' }), [1, 2, 3, 4, 5, 6].map(n => v8Week(n, false)));
+  pushTpl(Object.assign({}, v8Meta, { key: '8vector-cod-2-p', variant: 'pitcher', name: '🧭 8 Vector COD Plyo Progression · Pitcher (6 wk · 2-day)', notes: 'Pitchers: lateral, forward 45 and 90° cuts, PFP off the landing leg, lateral bound into scoop toss.' }), [1, 2, 3, 4, 5, 6].map(n => v8Week(n, true)));
+
+  // ── Supertraining: concentrated strength block → LDTE speed-strength block (12 wk) ──
+  function stWeek(n) {
+    const conc = n <= 6, unload = n === 7, seq = n <= 9 ? 'jumps' : n <= 11 ? 'barbell' : 'depth';
+    const lab = conc ? 'Concentrated strength block' : unload ? 'Unload — LDTE starts' : 'Speed-strength · ' + { jumps: 'jumps', barbell: 'barbell (30–50% + 70–90%)', depth: 'depth jumps' }[seq];
+    const strength = blk('lift', 'Strength', [
+      lift('Back Squat', 'A', conc ? 5 : 3, conc ? 6 : 3, pct(conc ? 70 : unload ? 60 : 85), '', conc ? '2:00' : '3:00', conc ? 'High volume, low intensity — the concentration itself is the stressor; speed-strength will dip' : ''),
+      lift('Bb RDL', 'B', conc ? 4 : 3, conc ? 8 : 5, 'RPE ' + (conc ? 7 : 8), '3-0-1-0', '1:30'),
+      lift('RFE Split Squat (DB)', 'B', conc ? 4 : 2, '8ea', 'RPE 7', '2-0-1-0', '1:30'), lift('Chin Up', 'C', 3, 8, 'BW', '3-0-1-0', '1:30')].concat(ARM_CARE()));
+    const ss = conc ? blk('lift', 'Technique at low intensity', [lift('Box Jump', 'A', 3, 3, 'BW', '', '1:00', 'Elements and rhythm only — no speed work inside the strength block')])
+      : blk('lift', 'Speed-strength sequence', seq === 'jumps' ? [lift('Hurdle Hop', 'A', 4, 5, 'BW', '', '2:00', 'Jumps first, then barbell, then depth jumps (Verkhoshansky sequence)'), lift('Broad Jump W/ Stick', 'A', 4, 3, 'BW', '', '1:30')]
+        : seq === 'barbell' ? [lift('Trap Bar Counter Movement Jump', 'A', 5, 3, 'Light (30–50% TB DL)', 'X', '2:00', 'Mix 30–50% and 70–90% loads for the most power'), lift('Hang Clean', 'A', 4, 3, pct(75), 'X', '2:00')]
+        : [lift('Depth Jump', 'A', 3, 6, 'BW', 'Reactive', '10:00', 'Shock method: ≤ 4 x 10 conditioned, 2–3 x 5–8 otherwise; 10–12 min between sets'), lift('Hang Clean', 'B', 3, 2, pct(80), 'X', '2:00')]);
+    const sp = !conc && !unload ? maxVBlock(n >= 10 ? 2 : 1) : null;
+    return week(n, 'Supertraining · ' + lab + ' · W' + n, layout(3, { Mon: day('', 'lift', 'Day 1', [sp, ss, strength]), Wed: day('', 'lift', 'Day 2', [strength]), Fri: day('', 'lift', 'Day 3', [sp ? accelBlock(1) : null, ss, strength]) }), unload);
+  }
+  pushTpl({ key: 'supertraining-block-3', days: 3, category: 'Method Library · Supertraining', phaseType: 'accumulation', sq: { maxstr: 2, power: 1 }, source: 'Verkhoshansky & Siff, Supertraining — concentrated loading and the long-term delayed training effect',
+    name: '🧱 Supertraining · Concentrated Block → LDTE (12 wk · 3-day)',
+    notes: 'Weeks 1–6: concentrated, high-volume, moderate-intensity strength block (speed-strength dips — expected). Week 7 unloads; the long-term delayed training effect rebounds above the old level after a 1–3 week lag and lasts about as long as the block. Weeks 8–12 ride it with the speed-strength sequence: jumps → barbell (30–50% + 70–90%) → depth jumps; sprinting starts as the LDTE rises. High-volume strength after a jump block can cut explosive strength by up to 30%, so keep the order. A trained athlete tolerates three such blocks a year, 7–10 days apart.' }, Array.from({ length: 12 }, (_, i) => stWeek(i + 1)));
+
+  // ── VBT (Mann) in-season ──
+  const vbtWeek = (n, pitcher) => week(n, 'VBT in-season W' + n, layout(2, {
+    Mon: day('', 'lift', 'Lower + power', [blk('lift', 'VBT', [
+      raw(lift('Trap Bar Deadlift', 'A', 1, 'To speed', '', '', '2:30', 'Warm-up readiness: 3rd rep 10%+ slower than the 4-week average at that load → restoration day. Then ONE working set at 0.45–0.6 m/s (stop at 0.35)'), 'Load to 0.45–0.6 m/s'),
+      raw(lift('Trap Bar Counter Movement Jump', 'B', 4, 3, '', 'X', '1:30', 'Power sets — stop at a 10% velocity drop; sets completed = readiness'), '1.2–1.5 m/s (peak)'),
+      lift('RFE Split Squat (DB)', 'C', 2, '6ea', 'RPE 7', '3-0-1-0', '1:30'), lift('Copenhagen Plank', 'D', 2, '20s ea', 'BW', '', ':30')])]),
+    Thu: day('', 'lift', 'Upper + power', [blk('lift', 'VBT', [
+      raw(lift(pitcher ? 'High Pull' : 'Hang Clean', 'A', 4, 3, '', 'X', '2:00', pitcher ? 'Hang pull 1.2–1.4 m/s, no catch' : 'Hang clean 1.3–1.4 m/s (or peak) — speed without form does not count'), pitcher ? '1.2–1.4 m/s' : '1.3–1.4 m/s'),
+      raw(lift(pitcher ? 'Half Kneeling Landmine Press' : 'Db Bench Press', 'B', 1, 'To speed', '', '', '2:00', 'One working set to target speed'), '0.5 m/s'),
+      lift('Chest Supported DB Row', 'B', 3, 8, 'RPE 7', '2-0-1-0', '1:15')].concat(ARM_CARE()))]),
+  }));
+  const vbtMeta = { days: 2, category: 'Method Library · VBT (Mann)', phaseType: 'inseason', sq: { power: 1, maxstr: 1 }, source: 'Bryan Mann, Developing Explosive Athletes — in-season build from the tab' };
+  pushTpl(Object.assign({}, vbtMeta, { key: 'vbt-inseason-2', name: '📡 VBT In-Season (2-day)', notes: 'No percentages: one working set to target speed on the A lift plus 3–4 power sets stopping at 10% velocity loss. Judge strength by the 12-week trend of top-set load at the target speed, not single days. VBT autonomy for trusted veterans first; flag suspiciously slow first sets.' }), [1, 2, 3].map(n => vbtWeek(n, false)));
+  pushTpl(Object.assign({}, vbtMeta, { key: 'vbt-inseason-2-p', variant: 'pitcher', name: '📡 VBT In-Season · Pitcher (2-day)', notes: 'Pitchers: hang pull with no catch, landmine press; lower day 1 after the start, upper day 3.' }), [1, 2, 3].map(n => vbtWeek(n, true)));
+
+  // ── Westside assessment workout (one session) ──
+  pushTpl({ key: 'westside-assess-1', days: 1, category: 'Method Library · Conjugate (Westside)', phaseType: 'restore', sq: { maxstr: 1 }, source: 'Westside Barbell Online Internship — one-hour assessment workout',
+    name: '🧾 Westside Assessment Workout (1 session)', notes: 'Run at onboarding, at the end of every 8–12-week block, 3 weeks before a major competition (trimmed), after injury clearance, and whenever progress stalls 2 weeks. Output = one sheet: joint status, top lift, speed, accessory weaknesses, the athlete\'s own words. Keep a metric only if it changes what you program on Monday.',
+  }, [week(1, 'Assessment', layout(1, { Mon: day('', 'lift', 'Assessment · 1 hour', [
+      blk('speed', 'Team-sport add-on', [spd('Fly (variation)', 'A', 2, 1, '20m + 10m fly', '95%+', '3:00', 'Short timed sprint (or a sled drag) on the same day')]),
+      blk('lift', 'Assessment', [
+        lift('Bb Good Morning', 'A', 1, 6, 'Empty bar', '', ':30', '1 · Joint literacy screen: squat, hinge, lunge, hip and shoulder rotations — red flags to modify or refer, not perfection'),
+        raw(lift('Trap Bar Deadlift', 'B', 1, 1, '', '', '3:00', '2 · Technical strength single (~90% effort). Focus breaks before form = mental limiter; form breaks while focus holds = physical'), '~90% effort'),
+        raw(lift('Box Squat', 'C', 10, 2, '', 'X', ':45', '3 · DE capacity window: 10–12 doubles at 50–60% of the top single, 30–60 s rest — watch bar speed, rest discipline, intent'), '50–60% of top single'),
+        lift('Glute-Ham Raise', 'D', 3, 8, 'BW', '', '', '4 · Accessories under fatigue (supersets): posterior chain, upper back, core, single-leg'),
+        lift('Chest Supported DB Row', 'D', 3, 10, 'RPE 8', '', ''), lift('RFE Split Squat (DB)', 'D', 3, '8ea', 'RPE 8', '', '1:30', '5 · Conversation: strongest, weakest, what the athlete thinks needs work'),
+        lift('Broad Jump W/ Stick', 'E', 3, 1, 'BW', '', '1:00', 'Jumps for team-sport athletes')])]) }))]);
+
+  // ── Jovanović agile DUP phase (4 sprints) ──
+  const JV = [[70, 60, 80], [72.5, 62.5, 82.5], [75, 65, 85], [77.5, 67.5, 87.5]];
+  const jvWeek = (w, pitcher) => week(w + 1, 'Agile phase · sprint ' + (w + 1) + ' · step ' + (w + 1), layout(3, {
+    Mon: day('', 'lift', 'Medium · 5 x 5', [accelBlock(1), blk('lift', 'DUP', [lift(pitcher ? 'Safety Bar Squat' : 'Back Squat', 'A', 5, 5, pct(JV[w][0]), '', '2:30', 'Off the every-day max (80–90% of a training max). Err light'), lift(pitcher ? 'Half Kneeling Landmine Press' : 'Bb Bench Press', 'A', 5, pitcher ? '5ea' : 5, pitcher ? 'RPE 7' : pct(JV[w][0]), '', '2:00'), lift('Chin Up', 'B', 3, '4–6', 'BW', '', '1:30', 'Rep zone — fix the load, let reps float')].concat(ARM_CARE()))]),
+    Wed: day('', 'lift', 'Easy · 3 x 5', [blk('lift', 'DUP', [lift(pitcher ? 'Safety Bar Squat' : 'Back Squat', 'A', 3, 5, pct(JV[w][1]), '', '2:00'), lift(pitcher ? 'Half Kneeling Landmine Press' : 'Bb Bench Press', 'A', 3, pitcher ? '5ea' : 5, pitcher ? 'RPE 6' : pct(JV[w][1]), '', '1:30'), lift('Bb RDL', 'B', 3, 6, 'RPE 7', '', '1:30', 'Open set — athlete picks the load')])]),
+    Fri: day('', 'lift', 'Hard · 1 x 5+', [maxVBlock(1), blk('lift', 'DUP', [lift(pitcher ? 'Safety Bar Squat' : 'Back Squat', 'A', 1, w === 3 ? '5+' : 5, pct(JV[w][2]), '', '3:00', w === 3 ? 'Plus set (AMRAP, cap ~10) — Epley estimate is evidence for the bump, not the next max. Default bump +5 kg lower / +2.5 kg upper' : 'Hard day'), lift(pitcher ? 'Half Kneeling Landmine Press' : 'Bb Bench Press', 'A', 1, w === 3 ? '5+' : 5, pitcher ? 'RPE 8' : pct(JV[w][2]), '', '2:30'), lift('DB Single Arm Row', 'B', 3, '8ea', 'RPE 8', '', '1:15')])]),
+  }));
+  const jvMeta = { days: 3, category: 'Method Library · Jovanović', phaseType: 'accumulation', sq: { maxstr: 2 }, source: 'Mladen Jovanović, Strength Training Manual — agile periodization' };
+  pushTpl(Object.assign({}, jvMeta, { key: 'jovanovic-dup-3', name: '🔁 Jovanović · Agile DUP Phase (4 sprints · 3-day)', notes: 'Horizontal: medium 5x5 / easy 3x5 / hard 1x5 on the same lifts; vertical: 4 progression steps (+2.5% a step), step 4 ends with a plus set. Counted in sprints, not calendar weeks. Review every sprint (compliance, missed reps, back-off overshoot, how the athlete felt), then pick the phase-to-phase quadrant: same / new exercises × same / new schemes.' }), [0, 1, 2, 3].map(w => jvWeek(w, false)));
+  pushTpl(Object.assign({}, jvMeta, { key: 'jovanovic-dup-3-p', variant: 'pitcher', name: '🔁 Jovanović · Agile DUP Phase · Pitcher (4 sprints · 3-day)', notes: 'Pitcher swaps: SSB squat, landmine press on RPE.' }), [0, 1, 2, 3].map(w => jvWeek(w, true)));
 }
 
 // ── 1. Transition / Compensation (Bompa; KILO structural balance; Francis tempo) ──
@@ -1136,6 +1506,39 @@ const ANNUAL = [
       A('deload', 1, 'restore', 'Mid-Season Unload', 'All-Star break'),
       A('kilo-inseason-s', 8, 'inseason', 'In-Season Block 2', '', { d4: 2, d3: 2 }),
       A('kilo-inseason-s', 9, 'inseason', 'In-Season Block 3 / Stretch Run', '', { d4: 2, d3: 2 }),
+    ],
+  },
+  {
+    key: 'athlete-altis', group: 'athlete', name: 'Athlete — ALTIS Speed Year',
+    start: 'oct1', notes: 'ALTIS Gamespeed progression on the pro calendar: general / technical → acceleration → max velocity (short to long, Huntington) → baseball gamespeed into report day, then two short speed exposures a week in season. MSS from a fly-10 (or HE Runs top speed) sets every zone; retest the fly-10 at the end of each block. Strength is Pfaff-style (single-leg, low Olympic volume) inside the speed templates.',
+    blocks: [
+      A('transition', 2, 'restore', 'Transition — Structural Balance', 'Observe 2–3 weeks before formal testing; mailbox the athlete', { d4: 3, d3: 2 }),
+      A('altis-gpp', 4, 'accumulation', 'ALTIS General Prep / Technical', 'Fly-10 test in week 1'),
+      A('altis-accel', 4, 'transmutation', 'ALTIS Acceleration', 'Weaker pattern (push / pull) early in the block'),
+      A('altis-maxv', 4, 'realization', 'ALTIS Max Velocity', 'Retest fly-10'),
+      A('altis-gamespeed', 3, 'realization', 'ALTIS Gamespeed / Baseball', 'Steal and rolling starts, curves'),
+      A('taper', 3, 'realization', 'Taper → Report', 'Volume −41–60%, intensity held'),
+      A('mw:spring', 3, 'spring', 'Spring Training Ramp', 'Exhibition games are training'),
+      A('altis-inseason', 3, 'inseason', 'Spring → Opening Day', 'Two short exposures a week', { d4: 2, d3: 2 }),
+      A('altis-inseason', 8, 'inseason', 'In-Season Block 1', '≥ 90% exposure every ~7 days', { d4: 2, d3: 2 }),
+      A('deload', 1, 'restore', 'Mid-Season Unload', 'All-Star break'),
+      A('altis-inseason', 8, 'inseason', 'In-Season Block 2', '', { d4: 2, d3: 2 }),
+      A('altis-inseason', 9, 'inseason', 'In-Season Block 3 / Stretch Run', '', { d4: 2, d3: 2 }),
+    ],
+  },
+  {
+    key: 'athlete-minors-ths', group: 'athlete', name: 'Athlete — Minor-League Triphasic HS Year',
+    start: 'oct1', notes: 'Big-group minor-league off-season on the Triphasic HS 3-day undulated model (work capacity → speed-strength → strength → speed-strength → high-velocity peaking), with the 8 Vector COD plyo progression available as an add-on. 1RMs stay current with the 80% test set every 4th week, so no test days in spring.',
+    blocks: [
+      A('transition', 2, 'restore', 'Transition', '', { d4: 3, d3: 2 }),
+      A('triphasic-hs', 16, 'transmutation', 'Triphasic HS Undulated Off-Season', 'WC 3 · SS 3 · Str 4 · SS 3 · HV 3', { d4: 3, d3: 3 }),
+      A('taper', 2, 'realization', 'Taper → Report', ''),
+      A('mw:spring', 3, 'spring', 'Spring Training Ramp', ''),
+      A('inseason', 3, 'inseason', 'Spring → Opening Day', 'About half the off-season sets', { d4: 3, d3: 2 }),
+      A('inseason', 8, 'inseason', 'In-Season Block 1', '', { d4: 3, d3: 2 }),
+      A('deload', 1, 'restore', 'Mid-Season Unload', ''),
+      A('inseason', 8, 'inseason', 'In-Season Block 2', '', { d4: 3, d3: 2 }),
+      A('inseason', 9, 'inseason', 'In-Season Block 3 / Stretch Run', '', { d4: 3, d3: 2 }),
     ],
   },
   {
