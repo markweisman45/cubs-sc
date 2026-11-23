@@ -64,6 +64,8 @@ const PITCHER_SWAP = {
   'Med Ball Chest Pass': ['MB Step Back Side Toss', 'Pitcher swap — rotational throw instead of chest pass'],
   'Neutral Grip DB Bench Press': ['Half Kneeling Landmine Press', 'Pitcher swap — landmine press (Tuura tab)'],
   'Swiss Bar Floor Press': ['Half Kneeling Landmine Press', 'Pitcher swap — no barbell pressing max'],
+  'Bb Overhead Press': ['Half Kneeling Landmine Press', 'Pitcher swap — no barbell overhead press (Brewster)'],
+  'Incline Barbell Press': ['Half Kneeling Cable Press', 'Pitcher swap — cable press instead of barbell incline'],
 };
 function pitcherize(t) {
   const c = clone(t);
@@ -355,6 +357,296 @@ function clusterWeek(n, ph, label, deload, wi) {
     name: '🏋 KILO Acc / Int Mesocycles (12 wk)', notes }, Array.from({ length: 12 }, (_, x) => wk(x + 1, false)));
   add({ key: 'c-kilo', group: 'client', category: 'Private Client · Strength', phaseType: 'transmutation', sq: { fhyp: 1, maxstr: 2 }, source: 'KILO Strength Society',
     name: '🏋 Client · KILO Acc / Int (12 wk)', notes: notes + ' Client version: no sprint block.' }, Array.from({ length: 12 }, (_, x) => wk(x + 1, true)));
+}
+
+// ── 5b. KILO advanced — test-driven method blocks (ESD / XSD), short block, MLB infielder case study,
+//        pre-competition, in-season rotation and the 12-week plyo plan (Specialty Technique Seminar) ──
+const KILO_PLYO = (() => {
+  // [exercise, note, sets by week, reps] — KILO team-sport plyo plan, 3 exercises a session, never to failure
+  const W = [];
+  const ph = (wks, list) => wks.forEach((wn, x) => W[wn - 1] = list.map(([n, note, sets, reps]) => ({ n, note, s: Array.isArray(sets) ? sets[x] : sets, r: Array.isArray(reps) ? reps[x] : reps })));
+  ph([1, 2, 3], [['Pogo Jumps', 'Two-foot ankle hop', [4, 5, 6], 15], ['Standing Jump and Reach', '', [3, 4, 5], 8], ['Russian Alt Split Jumps', 'Split squat jump', [3, 4, 5], 6]]);
+  ph([4, 5, 6], [['Pogo Jumps', 'Two-foot ankle hop', [5, 6, 7], 15], ['Hurdle Jump-Continuous', 'Hurdle jump', [4, 6, 7], 5], ['Alternating Push-Off', '', [4, 5, 7], 8]]);
+  ph([7, 8, 9], [['Tuck Jump', '', [12, 12, 12], [6, 8, 10]], ['Hurdle Jump-Continuous', 'Hurdle jump and reach', [11, 11, 12], [4, 5, 6]], ['Penta Jump', 'Measure distance', [10, 10, 11], 1]]);
+  ph([10, 11, 12], [['Cone One-Leg Alternating Jumps', '', [8, 10, 12], 6], ['Depth Jump', 'Depth jump and reach — box height by strength', [8, 10, 12], 6], ['Deca Jump', 'Distance that grows jump to jump = reactive; long first bound that shrinks = explosive', [6, 7, 8], 1]]);
+  return W;
+})();
+const KILO_CONTACTS = [100, 125, 160, 125, 160, 200, 160, 200, 250, 200, 250, 300];
+function kiloPlyo(wn) {   // wn 1–12 → A-pair exercises
+  const rest = wn <= 6 ? '2:00' : '1:30';
+  return KILO_PLYO[wn - 1].map(p => lift(p.n, 'A', p.s, p.r, 'BW', 'X-0-X-0', rest, ['KILO plyo plan W' + wn + ' (~' + KILO_CONTACTS[wn - 1] + ' contacts)', p.note, 'never to failure'].filter(Boolean).join(' · ')));
+}
+{
+  const RPE_OF = p => p >= 90 ? 'RPE 9' : p >= 85 ? 'RPE 8–9' : p >= 80 ? 'RPE 8' : p >= 75 ? 'RPE 7–8' : 'RPE 7';
+  const r1 = n => Math.round(n * 2) / 2;
+  // A-series lift: % where a 1RM drives the load, otherwise RPE with the % in the notes
+  function kA(name, pair, sets, reps, p, tempo, rest, note, method) {
+    const e = L(name);
+    const o = lift(name, pair, sets, reps, e.liftKey ? r1(p) + '%' : RPE_OF(p), tempo, rest, [note, e.liftKey ? null : '≈' + r1(p) + '% 1RM'].filter(Boolean).join(' · '));
+    if (method) o.method = method;
+    return o;
+  }
+  // Method sets: the load text is written exactly as KILO prescribes it (bands, hooks, split loads)
+  function kM(name, pair, sets, reps, load, tempo, rest, note, method) {
+    const o = lift(name, pair, sets, reps, '', tempo, rest, note);
+    o.load = load; if (method) o.method = method;
+    return o;
+  }
+
+  // A-series lifts by phase (athletic-development rotation)
+  const LIFTS = {
+    gppAcc1: { U1: 'Arnold Press', L1: 'Back Squat', U2: 'Dip (Weighted)', L2: 'Front Squat' },
+    gppAcc2: { U1: 'Arnold Press', L1: 'Back Squat', U2: 'Incline Barbell Press', L2: 'Front Squat' },
+    gppInt: { U1: 'Bb Overhead Press', L1: 'Safety Bar Squat', U2: 'Bb Bench Press', L2: 'Conventional DL' },
+    sppAcc: { U1: 'Bb Overhead Press', L1: 'Back Squat', U2: 'Bb Bench Press', L2: 'Front Squat' },
+    sppInt: { U1: 'Incline Barbell Press', L1: 'Back Squat', U2: 'Dip (Weighted)', L2: 'Box Squat' },
+  };
+  // Method for each block → A-series sets for the four days. ph: { lab, p, s, r, acc, gpp, lifts, method }
+  const METHODS = {
+    imca: { tag: 'Concentric (IMCA)', fn: (ph, w, pw, t, o, P) => ({ L1: [P(ph.lifts.L1)], L2: [P(ph.lifts.L2)], U1: [P(ph.lifts.U1)], U2: [P(ph.lifts.U2)] }) },
+    ecc: { tag: 'Eccentric', fn: (ph, w, pw, t, o, P) => {
+      const x = [{ s: 5, r: 5, t: '6-0-X-0', p: 70 }, { s: 4, r: 4, t: '8-0-X-0', p: 72.5 }, { s: 3, r: 3, t: '10-0-X-0', p: 75 }][w - 1];
+      const ext = n => kA(n, 'B', x.s, x.r, x.p, x.t, '3:00', 'Extended eccentric — about 30 s time under tension a set; start near 70%', 'ecc-extended');
+      const supra = o.supra && w === 3 && !o.pitcher;
+      const L1 = supra ? kA(ph.lifts.L1, 'B', 4, 2, 105, '6-0-0-0', '3:30', 'Supra-maximal eccentric — 100–120% (never over 120%), spotters or hooks. Only with 2+ years of training age; otherwise repeat week 2', 'ecc-supra') : ext(ph.lifts.L1);
+      const up = n => w === 2
+        ? kM(n, 'B', 4, '4 ecc + 6', '80% / 50%', '4-0-0-0 + 2-0-X-0', '3:00', 'Eccentric-concentric — 4 eccentric-only reps (~80%), 10 s, then 6 fast reps (~50%)', 'ecc-conc')
+        : kM(n, 'B', 4, '6 + 2 ecc', '80%', '4-0-X-0 + 4-0-0-0', '3:00', 'Concentric-eccentric combo — RM set, then 2 eccentric-only reps (spotter lifts it); start near 80%', 'conc-ecc');
+      return { labelP: supra ? 105 : x.p, L1: [L1], L2: [ext(ph.lifts.L2)], U1: [up(ph.lifts.U1)], U2: [up(ph.lifts.U2)],
+        primL: lift('Drop Landing (Stick)', 'A', 3, [8, 10, 10][w - 1], 'BW', '', '1:30', ['Low box', 'Low → medium box', 'Medium box'][w - 1] + ' · stick and hold 3–5 s (eccentric block)') };
+    } },
+    iso: { tag: 'Isometric — yielding + overcoming', fn: (ph, w, pw, t, o, P) => ({
+      L1: [kA(ph.lifts.L1, 'B', 4, ph.r, pw, '4-2-X-0', '2:30', 'Mechanical-disadvantage pause — 2 s in the hole (yielding iso)', 'yield-mechdis'),
+        kM(ph.lifts.L1, 'B', 1, 'Hold + max reps', '70% hold / 50% reps', 'iso → 1-0-X-0', '3:00', 'Iso to exhaustion + max reps — mid-range hold 20–40 s, rack, then max fast reps. Last A-series set', 'yield-iso-max')],
+      L2: [kA(ph.lifts.L2, 'B', 4, ph.r, pw, '6-0-X-0', '2:30', '3-pause eccentric — 2 s pauses at ¾, ½ and ¼ depth', 'yield-3pause-ecc'),
+        kM(ph.lifts.L2, 'B', 3, '4 + max', '50%', '1-0-1-6 → 1-0-X-0', '2:30', 'Functional iso + max reps — 4 reps with a 6 s push into the pins, then max reps (power rack)', 'over-fi-max')],
+      U1: [kA(ph.lifts.U1, 'B', 4, ph.r, pw, '4-0-X-2', '2:30', 'Sticking-point pause on the way up (yielding)', 'yield-stick')],
+      U2: [P(ph.lifts.U2), o.pitcher ? null : kM(ph.lifts.U2, 'B', 2, '1 + 2 + 1 + 2', '70% hold / 50% reps', 'iso → 2-0-X-0', '2:30', 'Iso to exhaustion contrast — mid-range hold to exhaustion, 2 fast reps; 2 rounds = 1 set', 'yield-iso-contrast')],
+    }) },
+    isoInt: { tag: 'Isometric — overcoming (ESD > 125%)', fn: (ph, w, pw, t, o, P) => ({
+      L1: [kA(ph.lifts.L1, 'B', ph.s, ph.r, pw, t, '3:00', 'Isometronic — one 6–8 s push into pins set just above the sticking point, then finish the set. Extra rep after the push → add load', 'over-isometronic')],
+      L2: [P(ph.lifts.L2), kM(ph.lifts.L2, 'B', 3, '3 × 6–8 s', '50%', 'iso', '2:00', 'Functional isometric — pushes into pins at the bottom, mid and top; never over 8 s', 'over-functional')],
+      U1: [P(ph.lifts.U1)],
+      U2: [P(ph.lifts.U2), o.pitcher ? null : kM(ph.lifts.U2, 'B', 3, '2 + 2 + 2 + 2', '50%', '1-0-1-6 / 2-0-X-0', '2:30', 'Functional iso contrast — 2 reps with a 6 s pin push, 2 fast full-range reps, repeat', 'over-fi-contrast')],
+    }) },
+    explosive: { tag: 'Speed-strength — explosive', fn: (ph, w, pw, t, o, P) => ({
+      L1: [P(ph.lifts.L1), kM(ph.lifts.L1, 'B', 6, 3, '55% + bands', '1-0-X-0', '1:30', 'Variable resistance — bands or chains (chain rule 80/20); stop at a 10% velocity drop', 'ss-variable')],
+      L2: [P(ph.lifts.L2), kA('Hang Clean', 'B', 5, 3, 70, 'X-0-X-0', '2:00', 'Olympic variation, 0.5–0.75 m/s — stop at a 7–10% velocity drop', 'ss-olympic')],
+      U1: [P(ph.lifts.U1), lift('Plyo Push Up', 'B', 4, 5, 'BW', 'X-0-X-0', '1:30', 'Ballistic — always in the A series')],
+      U2: [P(ph.lifts.U2), o.pitcher ? null : kM(ph.lifts.U2, 'B', 6, 3, '50% + 20% band', '1-0-X-0', '1:30', 'Speed press with bands', 'ss-variable')],
+      primL: lift('Trap Bar Counter Movement Jump', 'A', 4, 3, 'Light (20–30% BW)', 'X-0-X-0', '1:30', 'Ballistic — release, no deceleration'),
+    }) },
+    starting: { tag: 'Speed-strength — starting strength', fn: (ph, w, pw, t, o, P) => ({
+      L1: [P(ph.lifts.L1), kM(ph.lifts.L1, 'B', 6, 2, '55% + bands at the bottom', '2-4-X-0', '2:00', 'Deadstop from pins + bands (~20% band tension at the top). Relax fully, then contract everything at once. Raise band tension before bar weight', 'ss-deadstop')],
+      L2: [P(ph.lifts.L2), lift('Squat Jump', 'B', 5, 3, 'BW', '2-3-X-0', '1:30', 'Paused squat jump (3-count) — starting strength, no countermovement')],
+      U1: [P(ph.lifts.U1), o.pitcher ? null : kM(ph.lifts.U1, 'B', 5, 2, '55% + bands', '2-4-X-0', '2:00', 'Deadstop from pins + bands', 'ss-deadstop')],
+      U2: [P(ph.lifts.U2), lift('Med Ball Chest Pass', 'B', 5, 3, '8 lb MB', 'X-0-X-0', '1:30', 'From a dead stop — no wind-up')],
+    }) },
+    fastEcc: { tag: 'Fast eccentrics', fn: (ph, w, pw, t, o, P) => ({
+      L1: [P(ph.lifts.L1), kM(ph.lifts.L1, 'B', 5, 3, '60% bar + 20% hooks', '4-0-X-0', '2:30', 'Explosive accentuated eccentric — weight releasers; re-hang every rep with a 4 s+ lowering, explode up', 'ecc-expl-accent')],
+      L2: [P(ph.lifts.L2), kM(ph.lifts.L2, 'B', 5, 3, '50%', 'X-2-X-0', '2:00', 'Dynamic eccentric-isometric — pull yourself down fast, stick 2 s, explode. (KILO points to Joseph Coyne for fast eccentrics)', 'ecc-dyn-iso')],
+      U1: [P(ph.lifts.U1)],
+      U2: [P(ph.lifts.U2), o.pitcher ? null : kM(ph.lifts.U2, 'B', 4, 3, '60% bar + 20% hooks', '4-0-X-0', '2:30', 'Explosive accentuated eccentric (weight releasers)', 'ecc-expl-accent')],
+    }) },
+    isoDyn: { tag: 'Iso-dynamic', fn: (ph, w, pw, t, o, P) => ({
+      L1: [P(ph.lifts.L1), kM(ph.lifts.L1, 'B', 5, 3, '60–70%', '4-0-X-2', '2:30', 'Stato-dynamic — 2 s pause at the sticking point on the way up, then explode', 'yield-stato')],
+      L2: [P(ph.lifts.L2), kM(ph.lifts.L2, 'B', 4, 6, '50% bar + 25% band', '2-0-X-2', '2:30', 'Stato-dynamic + bands (~75% at the top)', 'yield-stato-band')],
+      U1: [P(ph.lifts.U1)],
+      U2: [P(ph.lifts.U2), o.pitcher ? null : kM(ph.lifts.U2, 'B', 3, '2 + 2 + 2 + 2', '50%', '1-0-1-6 / 2-0-X-0', '2:30', 'Functional iso contrast', 'over-fi-contrast')],
+    }) },
+    reactiveA: { tag: 'Reactive strength — myotatic', fn: (ph, w, pw, t, o, P) => ({
+      L1: [P(ph.lifts.L1), kM('Squat 1 1/4', 'B', 5, 3, '50% + bands', '2-0-X-0', '2:00', 'Myotatic + bands — 1¼ reps at ~50% (bridge from explosive to reactive)', 'react-myotatic')],
+      L2: [P(ph.lifts.L2), lift('Depth Jump', 'B', 5, 5, 'BW', 'X-0-X-0', '3:00', 'Contrast — 10–15 s after the A1 set. RSI ≈ 2.0 before complex work')],
+      U1: [P(ph.lifts.U1), lift('Bench Elevated Plyo Push-Up', 'B', 4, 5, 'BW', 'X-0-X-0', '1:30', 'Reactive — short ground contacts')],
+      U2: [P(ph.lifts.U2), o.pitcher ? null : kM(ph.lifts.U2, 'B', 5, 3, '50% + bands', '2-0-X-0', '2:00', 'Myotatic 1¼ reps + bands', 'react-myotatic')],
+    }) },
+    reactiveI: { tag: 'Reactive strength — ⅓ reps + contrast', fn: (ph, w, pw, t, o, P) => ({
+      L1: [P(ph.lifts.L1), kM(ph.lifts.L1, 'B', 5, 5, '40% + bands', '2-0-X-0', '2:00', 'Myotatic ⅓ reps — bottom third only, ~40% + bands', 'react-third')],
+      L2: [P(ph.lifts.L2), lift('Hurdle Jump-Continuous', 'B', 5, 5, 'BW', 'X-0-X-0', '3:00', 'Contrast plyo (slow-fast) — 10–15 s after A1')],
+      U1: [P(ph.lifts.U1), lift('Plyo Push Up', 'B', 4, 5, 'BW', 'X-0-X-0', '1:30', 'Contrast — reactive push-up')],
+      U2: [P(ph.lifts.U2), lift('Med Ball Chest Pass', 'B', 5, 5, '6 lb MB', 'X-0-X-0', '1:30', 'Contrast throw')],
+    }) },
+  };
+
+  // B-series (assistance) and C/D remedial by mesocycle type — extended sets in Accumulation, accentuated eccentrics in Intensification
+  function assist(day, ph) {
+    const a = ph.acc;
+    const B = (n, s, r, load, t, rest, note) => lift(n, 'C', s, r, load, t, rest, note);
+    const m = {
+      L1: a ? [B('RFE Split Squat (DB)', 3, '10ea + rest-pause', 'RPE 8', '3-0-1-0', '1:30', 'Rest-pause — 10 reps, 10–15 s, max reps at the same load'), B('Glute-Ham Raise', 3, 8, 'BW', '3-0-1-0', '1:30', 'MVC — controlled tempo to concentric failure')]
+        : [B('RFE Split Squat (DB)', 3, '6ea', 'RPE 8', '3-0-1-0', '1:30'), B('Seated Leg Curl', 3, 5, 'RPE 8', '6-0-1-0', '1:30', '2-1 method — up with two legs, lower with one (accentuated eccentric)')],
+      L2: [B(ph.gpp ? 'Clean Grip Deadlift' : 'Bb RDL', 3, a ? 8 : 5, 'RPE 7–8', '3-0-1-0', '2:00', ph.gpp ? 'Deadlift variation as B1 on front-squat day (KILO)' : null),
+        a ? B('Goblet Lateral Lunge', 3, '8ea', 'RPE 7', '3-0-1-0', '1:15', '1¼ reps — quarter rep at the bottom') : B('Glute-Ham Raise', 3, 5, 'BW', '4-0-1-0', '1:30')],
+      U1: a ? [B('DB Single Arm Row', 3, '12 / 10 / 8', 'RPE 8', '2-0-1-0', '1:30', 'Drop set — ~10% drop per step, no rest'), B('Half Kneeling Landmine Press', 3, '10ea', 'RPE 7', '3-0-1-0', '1:15', '1¼ reps at the bottom')]
+        : [B('DB Single Arm Row', 3, '6ea', 'RPE 8', '3-0-1-0', '1:30'), B('DB Lateral Raise', 3, 12, 'Light', '3-0-1-0', '1:00', 'Telle method — accentuated eccentric')],
+      U2: a ? [B('TB Pendlay Row', 3, 10, 'RPE 7–8', '2-0-1-0', '1:30'), B('DB Incline Zottman Curl', 3, '8 / 6 / 6', 'RPE 8', '3-0-1-0', '1:00', 'Mechanical-advantage set — pronated → supinated → neutral, same load')]
+        : [B('TB Pendlay Row', 3, 6, 'RPE 8', '2-0-1-0', '1:30'), B('Incline DB Curl', 3, 8, 'RPE 7', '3-0-1-2', '1:00', 'Intra-rep pause at the top (yielding iso)')],
+    }[day];
+    return m;
+  }
+  function remedial(day, ph, o, u2IsDip) {
+    const E = (n, s, r, load, t, rest, note) => lift(n, 'E', s, r, load, t, rest, note);
+    return {
+      L1: [E('Biering-Sorensen Hold', 2, '30–40s', 'BW', '', ':45', 'Low-back endurance — twice a week if Biering-Sorensen < 176 s (then no conventional deadlift)'), E('Dead Bug', 2, '6ea', 'BW', '3131', ':30')],
+      L2: [E('Biering-Sorensen Hold', 2, '30–40s', 'BW', '', ':45', 'Second low-back exposure'), E('Pallof Press', 2, '10ea', 'Light', '2', ':30')],
+      U1: [E('Elbow-on-Knee DB External Rotation', 2, '8ea', 'Light', '3-0-1-0', ':45', 'Shoulder balance — twice a week if the ER / trap-3 score is under 4'), E('Plate Pinch', 2, '30s', 'Heavy', '', ':45', 'Grip under 125 psi (men) / 90 psi (women) → twice a week')]
+        .concat(o.forearm ? [E('Supination/Pronation Club', 2, '10ea', 'Light', '2-0-2-0', ':30', 'Forearm work for throwing-elbow health (your notes)')] : []),
+      U2: [E('Incline Trap-3 Raise', 2, 10, 'Light', '2-0-1-2', ':45', u2IsDip ? 'External rotation after dip days (KILO)' : 'Shoulder balance remedial'), E('Supination/Pronation Club', 2, '10ea', 'Light', '2-0-2-0', ':30', 'Grip / forearm D series')]
+        .concat(o.forearm ? [E('Wrist Radial/Ulnar Deviation', 2, '12ea', 'Light', '2-0-2-0', ':30', 'Wrist deviation — throwing-elbow health')] : []),
+    }[day];
+  }
+
+  // One week of a KILO block. o: { client, pitcher, beg, supra, forearm, plyo (1–12 or 0), speed (ALTIS level) }
+  function kWeek(n, ph, w, o) {
+    const pw = ph.p - 2.5 + 2.5 * (w - 1);                       // waves around the mesocycle average
+    const t = (ph.gpp || o.beg) ? '4-0-X-0' : '3-0-X-0';         // A-series tempo by phase and training age
+    const R = ph.acc ? '2:30' : '3:00';
+    const P = (name) => kA(name, 'B', ph.s, ph.r, pw, t, R, 'A-series — same lift all 3 weeks · intent to accelerate every rep', 'imca');
+    const A = METHODS[ph.method].fn(ph, w, pw, t, o, P);
+    const prim = { L1: A.primL || lift('Box Jump', 'A', 3, 3, 'BW', '', '1:00'), L2: A.primL ? clone(A.primL) : lift('Broad Jump W/ Stick', 'A', 3, 3, 'BW', '', '1:00'),
+      U1: lift('MB Side Toss', 'A', 3, '4ea', '8 lb MB', '', '1:00'), U2: lift('Med Ball Chest Pass', 'A', 3, 5, '8 lb MB', '', '1:00') };
+    if (o.plyo) { prim.L1 = kiloPlyo(o.plyo); prim.L2 = kiloPlyo(o.plyo); }
+    const chin = (d) => lift(d === 'U1' ? 'Chin Up' : 'Pull Up (Weighted)', 'B', ph.s, ph.acc ? '6–8' : '3–5', ph.acc ? 'BW' : 'RPE 8', t, R, 'Chin-up paired with every upper day (KILO long-term)');
+    const mk = (d, label, speed) => day('', 'lift', label + (speed && !o.client ? ' · ' + (d === 'L1' ? 'Acceleration' : 'Max Velocity') : ''), [
+      speed && !o.client ? (d === 'L1' ? accelBlock(o.speed) : maxVBlock(o.speed)) : null,
+      blk('lift', label.split(' ')[0], [].concat(prim[d], A[d].filter(Boolean), d[0] === 'U' ? [chin(d)] : [], assist(d, ph), remedial(d, ph, o, ph.lifts.U2 === 'Dip (Weighted)'))),
+    ]);
+    const L1 = mk('L1', 'Lower 1', true), U1 = mk('U1', 'Upper 1'), L2 = mk('L2', 'Lower 2', true), U2 = mk('U2', 'Upper 2');
+    return week(n, ph.lab + ' · ' + METHODS[ph.method].tag + ' · W' + w + ' · ~' + r1(A.labelP || pw) + '%', four(L1, U1, L2, U2));
+  }
+  // blocks: [{ lab, p, s, r, acc, gpp, lifts, method }] × 3 weeks each
+  function kBlock(blocks, o, plyoFrom) {
+    const out = [];
+    blocks.forEach((ph, bi) => { for (let w = 1; w <= 3; w++) {
+      const n = bi * 3 + w;
+      const plyo = plyoFrom && n >= plyoFrom.at ? plyoFrom.start + (n - plyoFrom.at) : 0;
+      out.push(kWeek(n, ph, w, Object.assign({}, o, { plyo, speed: ph.gpp ? (bi ? 2 : 1) : 2 })));
+    } });
+    return out;
+  }
+  const PH = (lab, p, s, r, acc, gpp, lifts, method) => ({ lab, p, s, r, acc, gpp, lifts: LIFTS[lifts], method });
+  const GPP = esdHigh => [
+    PH('GPP Acc 1', 70, 3, '10–12', true, true, 'gppAcc1', 'imca'),
+    PH('GPP Int 1', 80, 5, '5–7', false, true, 'gppInt', esdHigh ? 'isoInt' : 'ecc'),
+    PH('GPP Acc 2', 75, 4, '12, 10, 8, 8', true, true, 'gppAcc2', esdHigh ? 'explosive' : 'iso'),
+    PH('GPP Int 2', 85, 6, '3–5', false, true, 'gppInt', 'imca'),
+  ];
+  const SPP = xsdHigh => [
+    PH('SPP Acc 3', 74, 4, 8, true, false, 'sppAcc', 'imca'),
+    PH('SPP Int 3', 88, 6, '3–4', false, false, 'sppInt', xsdHigh ? 'isoDyn' : 'fastEcc'),
+    PH('SPP Acc 4', 77, 5, '6–8', true, false, 'sppAcc', xsdHigh ? 'reactiveA' : 'explosive'),
+    PH('SPP Int 4', 90, 6, '2–3', false, false, 'sppInt', xsdHigh ? 'reactiveI' : 'starting'),
+  ];
+  const SHORT = high => [
+    PH('GPP Acc 1', 70, 3, '10–12', true, true, 'gppAcc1', 'imca'),
+    PH('GPP Int 1', 78, 5, '5–7', false, true, 'gppInt', high ? 'isoInt' : 'ecc'),
+    PH('SPP Acc 4', 83, 5, '4–5', true, false, 'sppAcc', high ? 'reactiveA' : 'explosive'),
+    PH('SPP Int 4', 90, 6, '2–3', false, false, 'sppInt', high ? 'reactiveI' : 'starting'),
+  ];
+  const RULES = 'Same A lifts all 3 weeks of a mesocycle; load waves −2.5 / 0 / +2.5% around the block average. Acc→Int +8–15%, Acc→Acc +2–8%; Acc 2 reps ≥ Acc 1, Int 2 ≤ Int 1. A-series tempo 4-0-X-0 in GPP, 3-0-X-0 in SPP (intermediate; 2-0-X-0 advanced). Conventional deadlift only in GPP Intensification and only if Biering-Sorensen > 176 s — trap bar or speed pulls otherwise; never in SPP. Isometric holds stay under 40 s.';
+  const base = { category: 'Method Library · KILO Advanced', source: 'KILO Strength Society — Specialty Technique Seminar (concentric, eccentric and isometric methods) + Athletic Development periodization' };
+  const fullO = { supra: true };
+
+  add(Object.assign({}, base, { key: 'kilo-gpp-ecc', phaseType: 'accumulation', sq: { fhyp: 1, maxstr: 2 }, pitcher: true,
+    name: '🧪 KILO GPP · ESD under 125% — Eccentric / Isometric (12 wk)', pitcherWeeks: kBlock(GPP(false), { pitcher: true }),
+    notes: 'For an Eccentric Strength Deficit under 125% (needs eccentric strength and size): Acc 1 concentric IMCA 70% → Int 1 eccentric 80% (extended eccentric on lower, concentric-eccentric and eccentric-concentric combos on upper, supra-maximal eccentric in week 3 only with 2+ years of training age; drop landings as the jump) → Acc 2 yielding + overcoming isometrics 75% → Int 2 IMCA 85%. Extended sets in the B series on Acc weeks, accentuated eccentrics (2-1, Telle) on Int weeks. Pitcher version: sub-maximal eccentrics only, med-ball work replaces upper method sets. ' + RULES }),
+    kBlock(GPP(false), fullO));
+  add(Object.assign({}, base, { key: 'kilo-gpp-iso', phaseType: 'accumulation', sq: { fhyp: 1, maxstr: 2 }, pitcher: true,
+    name: '🧪 KILO GPP · ESD over 125% — Isometric / Explosive (12 wk)', pitcherWeeks: kBlock(GPP(true), { pitcher: true }),
+    notes: 'For an Eccentric Strength Deficit over 125% (relative-strength athlete): Acc 1 IMCA 70% → Int 1 overcoming isometrics 80% (isometronics, functional isos, functional-iso contrast) → Acc 2 speed-strength explosive 75% (bands/chains, Olympic pulls at 0.5–0.75 m/s, ballistic jumps) → Int 2 IMCA 85%. ' + RULES }),
+    kBlock(GPP(true), fullO));
+  add(Object.assign({}, base, { key: 'kilo-spp-exp', phaseType: 'transmutation', sq: { maxstr: 1, power: 2 }, pitcher: true,
+    name: '🧪 KILO SPP · XSD under 80% — Explosive / Starting (12 wk)', pitcherWeeks: kBlock(SPP(false), { pitcher: true }, { at: 1, start: 1 }),
+    notes: 'For an Explosive Strength Deficit under 80% (squat jump ÷ CMJ): build explosive and starting strength. Acc 3 IMCA 74% → Int 3 fast eccentrics 88% (explosive accentuated eccentric with hooks, dynamic eccentric-isometric) → Acc 4 explosive 77% (bands, Olympic pulls, ballistic) → Int 4 starting strength 90% (deadstops + bands, paused squat jumps). KILO plyo plan weeks 1–12 run as the jump on both lower days. Squat 2x BW and bench 1.5x BW before speed-strength becomes the focus. ' + RULES }),
+    kBlock(SPP(false), {}, { at: 1, start: 1 }));
+  add(Object.assign({}, base, { key: 'kilo-spp-rea', phaseType: 'realization', sq: { power: 2, relstr: 1 }, pitcher: true,
+    name: '🧪 KILO SPP · XSD over 80% — Reactive (12 wk)', pitcherWeeks: kBlock(SPP(true), { pitcher: true }, { at: 1, start: 1 }),
+    notes: 'For an Explosive Strength Deficit over 80%: build speed (reactive strength). Acc 3 IMCA 74% → Int 3 iso-dynamic 88% (stato-dynamic, stato-dynamic + bands, functional-iso contrast) → Acc 4 reactive 77% (myotatic 1¼ reps + bands, depth-jump contrast) → Int 4 reactive 90% (⅓ reps at 40% + bands, hurdle-jump contrast). RSI ≈ 2.0 and contrast before complex. KILO plyo plan weeks 1–12 on both lower days. ' + RULES }),
+    kBlock(SPP(true), {}, { at: 1, start: 1 }));
+  add(Object.assign({}, base, { key: 'kilo-short-s', phaseType: 'transmutation', sq: { maxstr: 2, power: 1 }, pitcher: true,
+    name: '🧪 KILO Short Block · Strength-biased (12 wk)', pitcherWeeks: kBlock(SHORT(false), { pitcher: true }, { at: 7, start: 1 }),
+    notes: '8–12-week athlete block, straight line (too short to undulate): GPP Acc 1 70% IMCA → GPP Int 1 78% eccentric → SPP Acc 4 83% explosive → SPP Int 4 90% starting strength. For ESD under 125% and XSD under 80% — the usual pro-baseball profile. Plyo plan weeks 1–6 run in weeks 7–12. Mixed profiles: build from the GPP and SPP templates. ' + RULES }),
+    kBlock(SHORT(false), {}, { at: 7, start: 1 }));
+  add(Object.assign({}, base, { key: 'kilo-short-r', phaseType: 'realization', sq: { power: 2, relstr: 1 }, pitcher: true,
+    name: '🧪 KILO Short Block · Speed-biased (12 wk)', pitcherWeeks: kBlock(SHORT(true), { pitcher: true }, { at: 7, start: 7 }),
+    notes: '8–12-week athlete block for ESD over 125% and XSD over 80%: GPP Acc 1 70% IMCA → GPP Int 1 78% overcoming isometrics → SPP Acc 4 83% reactive (myotatic + contrast) → SPP Int 4 90% reactive (⅓ reps + contrast). Plyo plan weeks 7–12 run in weeks 7–12 (needs the earlier plyo phases done). ' + RULES }),
+    kBlock(SHORT(true), {}, { at: 7, start: 7 }));
+  // MLB infielder (Case Study 8): beginner — 4-0-X-0 everywhere, sub-maximal eccentrics only, forearm work, plyos phase 1 from week 7
+  add(Object.assign({}, base, { key: 'kilo-mlb-if', phaseType: 'transmutation', sq: { maxstr: 2, power: 1 },
+    name: '⚾ KILO Case Study — MLB Infielder Off-Season (12 wk)',
+    notes: 'KILO Case Study 8 worked through with the course rules. Training age 1 yr (beginner), 4 days a week. ESD 455 ÷ 390 = 117% (< 125% → eccentric strength + size); XSD 23 ÷ 30 in = 77% (< 80% → explosive and starting strength). Weeks 1–3 GPP Acc 1 70% 3x10–12; 4–6 GPP Int 1 78% sub-maximal eccentrics only (no supra-max under 2 yrs); 7–9 SPP Acc 4 83% explosive (bands 50–70%, med-ball throws); 10–12 SPP Int 4 90% starting strength (deadstop + bands, 2-4-X-0). A-series 4-0-X-0 in every phase. Conventional deadlift in GPP only if Biering-Sorensen > 176 s, none in SPP. Plyos weeks 7–12 only, plyo-plan phase 1. ALTIS acceleration / fly-10 stays in front of both lower days. Forearm supination / pronation and wrist deviation for throwing-elbow health. In-season: KILO 2-day rotation.' }),
+    kBlock(SHORT(false), { beg: true, supra: false, forearm: true }, { at: 7, start: 1 }));
+  // Private-client GPP versions (no sprint blocks, no supra-max)
+  add(Object.assign({}, base, { key: 'c-kilo-gpp-ecc', group: 'client', category: 'Private Client · KILO Advanced', phaseType: 'accumulation', sq: { fhyp: 1, maxstr: 2 },
+    name: '🧪 Client · KILO GPP · ESD under 125% (12 wk)', notes: 'Client version of the eccentric / isometric GPP block: no sprint block, sub-maximal eccentrics only. ' + RULES }), kBlock(GPP(false), { client: true }));
+  add(Object.assign({}, base, { key: 'c-kilo-gpp-iso', group: 'client', category: 'Private Client · KILO Advanced', phaseType: 'accumulation', sq: { fhyp: 1, maxstr: 2 },
+    name: '🧪 Client · KILO GPP · ESD over 125% (12 wk)', notes: 'Client version of the isometric / explosive GPP block: no sprint block. ' + RULES }), kBlock(GPP(true), { client: true }));
+
+  // ── Pre-competition (3 wk) and in-season 3-week rotation — 2 full-body days ──
+  function fb2(n, label, pitcher, cfg) {
+    // cfg: { sets, p, method: 'imca'|'explosive'|'starting'|'reactive'|'plyo', speed }
+    const t = '3-0-X-0', s = cfg.sets;
+    const low = pitcher ? 'Trap Bar Deadlift' : 'Back Squat', low2 = pitcher ? 'Trap Bar Deadlift' : 'Front Squat';
+    const A1L = pitcher
+      ? (cfg.method === 'explosive' || cfg.method === 'reactive'
+        ? kM(low, 'B', s, 3, '50% bar + 25% band', '2-0-X-2', '2:30', 'Pitchers in season: stato-dynamic + bands — low soreness (KILO baseball fit)', 'yield-stato-band')
+        : cfg.method === 'starting' ? kM(low, 'B', s, '4 + max', '50%', '1-0-1-6 → 1-0-X-0', '2:30', 'Pitchers in season: functional iso + max reps', 'over-fi-max')
+        : kM(low, 'B', s, 3, '60–70%', '4-0-X-2', '2:30', 'Pitchers in season: stato-dynamic 60–70% — low soreness', 'yield-stato'))
+      : kA(low, 'B', s, 3, cfg.p, t, '3:00', 'Primary lift — keep one exposure ≥ 85% a week', 'imca');
+    const A2L = pitcher ? lift('Squat Jump', 'B', s, 3, 'BW', '2-3-X-0', '1:30', 'Paused squat jump') : ({
+      imca: null,
+      explosive: kM(low, 'B', s, 3, '55% + bands', '1-0-X-0', '1:30', 'Explosive — bands / chains', 'ss-variable'),
+      starting: kM(low, 'B', s, 2, '55% + bands at the bottom', '2-4-X-0', '2:00', 'Starting strength — deadstop from pins + bands', 'ss-deadstop'),
+      reactive: lift('Depth Jump', 'B', s, 5, 'BW', 'X-0-X-0', '2:30', 'Contrast plyo — 10–15 s after A1'),
+      plyo: lift('Depth Jump', 'B', s, 5, 'BW', 'X-0-X-0', '2:30', 'Pre-comp: plyometrics (stretch-shortening cycle) — contrast after A1'),
+    })[cfg.method];
+    const up = pitcher ? 'Half Kneeling Landmine Press' : 'Bb Bench Press';
+    const D1 = day('', 'lift', 'Full Body 1 · Primary-lift biased', [
+      !pitcher && cfg.speed !== undefined ? accelBlock(cfg.speed, 'low volume') : null,
+      blk('lift', 'Primary', [lift(pitcher ? 'MB Step Back Side Toss' : 'Box Jump', 'A', 3, 3, pitcher ? '6 lb MB' : 'BW', '', '1:00'),
+        A1L, A2L, kA(up, 'B', s, 3, cfg.p - 5, t, '2:30', 'Upper primary'),
+        pitcher ? lift('Med Ball Rotational Scoop Toss', 'B', s, '3ea', '8 lb MB', 'X-0-X-0', '1:30', 'Ballistic') : lift(cfg.method === 'reactive' || cfg.method === 'plyo' ? 'Plyo Push Up' : 'Med Ball Chest Pass', 'B', s, 5, cfg.method === 'reactive' || cfg.method === 'plyo' ? 'BW' : '8 lb MB', 'X-0-X-0', '1:30'),
+        lift('Chin Up', 'C', s, 5, 'BW', '3-0-1-0', '1:30'),
+        lift('Elbow-on-Knee DB External Rotation', 'E', 2, '8ea', 'Light', '3-0-1-0', ':45'), lift('Dead Bug', 'E', 2, '6ea', 'BW', '3131', ':30')])]);
+    const D2 = day('', 'lift', 'Full Body 2 · Assistance biased', [
+      blk('lift', 'Assistance', [lift('Broad Jump W/ Stick', 'A', 3, 3, 'BW', '', '1:00'),
+        pitcher ? lift('RFE Split Squat (DB)', 'B', s, '6ea', 'RPE 7', '3-0-1-0', '1:30') : kA(low2, 'B', s, 3, cfg.p - 5, t, '2:30', 'Second lower lift — lighter'),
+        lift('SL DB RDL', 'C', s, '6ea', 'RPE 7', '3-0-1-0', '1:15'), lift('DB Single Arm Row', 'C', s, '8ea', 'RPE 7', '2-0-1-0', '1:15'),
+        lift('Half Kneeling Landmine Press', 'C', s, '8ea', 'RPE 7', '2-0-1-0', '1:15'),
+        lift('Supination/Pronation Club', 'E', 2, '10ea', 'Light', '2-0-2-0', ':30', 'Forearm supination / pronation — throwing-elbow health'), lift('Wrist Radial/Ulnar Deviation', 'E', 2, '12ea', 'Light', '2-0-2-0', ':30'),
+        lift('Incline Trap-3 Raise', 'E', 2, 10, 'Light', '2-0-1-2', ':45'), lift('Biering-Sorensen Hold', 'E', 2, '30s', 'BW', '', ':45')])]);
+    return week(n, label, layout(2, { Mon: D1, Thu: D2 }));
+  }
+  const meta2 = (key, name, phaseType, notes, variant) => Object.assign({}, base, { key, name, phaseType, notes, group: 'athlete', variant: variant || 'all', days: 2, sq: { relstr: 1, power: 2 } });
+  T.push(Object.assign(meta2('kilo-precomp-2', '🧪 KILO Pre-Competition — Plyometric (3 wk · 2-day)', 'realization',
+    'KILO pre-competition: 3–6 weeks, low volume (2–4 sets), 2 full-body days, plyometrics (stretch-shortening cycle) as the method. Peaking takes about 3 weeks of delayed transformation — this block runs into report day. Contrast pairs: primary lift then depth jump / plyo push-up.'),
+    { weeks: [fb2(1, 'Pre-comp W1 · 4 sets', false, { sets: 4, p: 85, method: 'plyo', speed: 3 }), fb2(2, 'Pre-comp W2 · 3 sets', false, { sets: 3, p: 87.5, method: 'plyo', speed: 3 }), fb2(3, 'Pre-comp W3 · 2 sets', false, { sets: 2, p: 90, method: 'plyo', speed: 3 })] }));
+  T.push(Object.assign(meta2('kilo-precomp-2-p', '🧪 KILO Pre-Competition — Pitcher (3 wk · 2-day)', 'realization',
+    'Pitcher pre-competition: low volume, stato-dynamic / functional-iso lower body (KILO baseball fit), med-ball ballistics instead of barbell pressing. Lift after throwing.', 'pitcher'),
+    { weeks: [fb2(1, 'Pre-comp W1 · 4 sets', true, { sets: 4, p: 80, method: 'imca' }), fb2(2, 'Pre-comp W2 · 3 sets', true, { sets: 3, p: 80, method: 'explosive' }), fb2(3, 'Pre-comp W3 · 2 sets', true, { sets: 2, p: 80, method: 'starting' })] }));
+  const ins = (pitcher, rot) => rot.map((m, x) => fb2(x + 1, 'In-season W' + (x + 1) + ' · ' + { imca: 'IMCA', explosive: 'Explosive', starting: 'Starting strength', reactive: 'Reactive' }[m], pitcher, { sets: 3, p: 85, method: m }));
+  T.push(Object.assign(meta2('kilo-inseason-s-2', '🧪 KILO In-Season · XSD under 80% (3-wk rotation · 2-day)', 'inseason',
+    'KILO in-season maintenance: 2 full-body days — one primary-lift biased, one assistance biased. 3-week method rotation IMCA → explosive → starting strength, then repeat (the plan repeats it to fill the block). Forearm supination / pronation and wrist deviation for throwing-elbow health.'),
+    { weeks: ins(false, ['imca', 'explosive', 'starting']) }));
+  T.push(Object.assign(meta2('kilo-inseason-r-2', '🧪 KILO In-Season · XSD over 80% (3-wk rotation · 2-day)', 'inseason',
+    'KILO in-season maintenance for reactive athletes: IMCA → explosive / starting → reactive (depth-jump contrast), repeated. Two full-body days, primary-lift biased and assistance biased.'),
+    { weeks: ins(false, ['imca', 'explosive', 'reactive']) }));
+  T.push(Object.assign(meta2('kilo-inseason-s-2-p', '🧪 KILO In-Season · Pitcher (3-wk rotation · 2-day)', 'inseason',
+    'Pitcher in-season (KILO baseball fit): stato-dynamic and functional-iso lower-body A series at 60–70% (low soreness), landmine pressing, med-ball ballistics. Lower day 1 after the start, upper / assistance day 3. No supra-maximal eccentrics in season.', 'pitcher'),
+    { weeks: ins(true, ['imca', 'explosive', 'starting']) }));
+  T.push(Object.assign(meta2('kilo-inseason-r-2-p', '🧪 KILO In-Season · Pitcher (3-wk rotation · 2-day)', 'inseason',
+    'Pitcher in-season (KILO baseball fit): stato-dynamic and functional-iso lower body, landmine pressing, med-ball ballistics.', 'pitcher'),
+    { weeks: ins(true, ['imca', 'explosive', 'reactive']) }));
+
+  // ── 12-week plyo plan (2 sessions a week) with the Vermeil warm-up ──
+  const plyoDay = (wn, lab) => day('', 'lift', lab, [blk('lift', 'Vermeil Plyo Warm-up', [
+    lift('Pogo Jumps', 'A', 3, '20s', 'BW', '', '1:30', 'Ankle hops for frequency'), lift('Pogo Jumps', 'A', 3, '20s', 'BW', '', '1:30', 'Ankle hops for range of motion · then pendulum swings, bent-knee rotations, heel kicks, hop-and-tuck, front hops'),
+    lift('Depth Jump', 'B', 3, 6, 'BW', 'X-0-X-0', '1:30', 'Low-box depth jump and reach')]),
+    blk('lift', 'Plyometrics', kiloPlyo(wn).map(e => Object.assign(e, { pair: 'C' })))]);
+  T.push(Object.assign({}, base, { key: 'kilo-plyo-2', group: 'athlete', variant: 'all', days: 2, phaseType: 'transmutation', sq: { power: 2 },
+    name: '🦘 KILO Plyo Plan (12 wk · 2 sessions a week)',
+    notes: 'KILO team-sport plyo plan: 12 weeks, 2 sessions a week, 3 exercises a session, never to failure. Contacts rise 100 → 300 (the table dose is one session; if you read it as the weekly total, run day 2 at half the sets). Rest 2:00 in weeks 1–6, 1:30 in weeks 7–12. Progress bilateral before unilateral. Depth-jump height by strength: mid-shin needs a 1x BW squat, hip height 2x, chest height 4x. Contrast before complex; RSI ≈ 2.0 and ~20–30 basic contacts a week before complex training. Run it on the lower days of any lifting block, or on its own. Upper-body plyos (med-ball throw, slam and toss; plyo, alternating med-ball, clap and depth push-ups) as needed.',
+    weeks: Array.from({ length: 12 }, (_, x) => week(x + 1, 'Plyo W' + (x + 1) + ' · ~' + KILO_CONTACTS[x] + ' contacts', layout(2, { Tue: plyoDay(x + 1, 'Plyo 1'), Fri: plyoDay(x + 1, 'Plyo 2') }))) }));
 }
 
 // ── 6. Conjugate (Westside internship + Simmons Special Strength) ────────────
@@ -829,6 +1121,22 @@ const ANNUAL = [
       A('brewster', 4, 'transmutation', '95 MPH Body — Strength-Power', 'Throwing ramps up — lift after throwing'),
       A('brewster', 4, 'transmutation', '95 MPH Body — Second Mesocycle', 'Start above last block\'s week 1'),
     ].concat(INSEASON_YEAR),
+  },
+  {
+    key: 'athlete-kilo', group: 'athlete', name: 'Athlete — KILO Test-Driven (ESD / XSD)',
+    start: 'oct1', notes: 'KILO short-block year: transition, structural prep, a 12-week straight-line block chosen by the ESD / XSD tests, 3-week plyometric pre-competition into report day, then the KILO 2-day in-season rotation. Default is the strength-biased block (ESD < 125%, XSD < 80% — most pro hitters); swap in the speed-biased block or the full GPP / SPP templates after testing. Test days before the block (grip, 1RM bench / chin-up, ESD, Klatt, overhead squat, 1RM squat, Biering-Sorensen) and an XSD retest before week 7.',
+    blocks: [
+      A('transition', 2, 'restore', 'Transition — Structural Balance', '2–3 sets across the board', { d4: 3, d3: 2 }),
+      A('prep', 3, 'structural', 'Prep / Structural Balance', 'Test days at the end of week 3'),
+      A('kilo-short-s', 12, 'transmutation', 'KILO Short Block (ESD / XSD)', 'GPP Acc 1 → Int 1 → SPP Acc 4 → Int 4 · retest XSD before week 7'),
+      A('kilo-precomp', 3, 'realization', 'KILO Pre-Competition', 'Plyometrics, low volume — into report day', { d4: 2, d3: 2 }),
+      A('mw:spring', 3, 'spring', 'Spring Training Ramp', 'Exhibition games are training'),
+      A('kilo-inseason-s', 3, 'inseason', 'Spring → Opening Day', 'KILO in-season rotation starts before Opening Day', { d4: 2, d3: 2 }),
+      A('kilo-inseason-s', 8, 'inseason', 'In-Season Block 1', 'IMCA → explosive → starting, repeat', { d4: 2, d3: 2 }),
+      A('deload', 1, 'restore', 'Mid-Season Unload', 'All-Star break'),
+      A('kilo-inseason-s', 8, 'inseason', 'In-Season Block 2', '', { d4: 2, d3: 2 }),
+      A('kilo-inseason-s', 9, 'inseason', 'In-Season Block 3 / Stretch Run', '', { d4: 2, d3: 2 }),
+    ],
   },
   {
     key: 'client-year', group: 'client', name: 'Private Client — Year-Round',
