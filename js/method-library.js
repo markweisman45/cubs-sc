@@ -1,1 +1,536 @@
-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
+// ═══════════════════════════════════════════════════════════════════════════
+// Method Library — pre-made phases + annual plans from the programming spec
+//   • Phase templates (data/method-templates.js, built by tools/build-method-templates.js):
+//     Hypertrophy Clusters, Poliquin, KILO, Conjugate, Triphasic, Undulated, VJP,
+//     Francis High/Low, 95 MPH Body, Taper, In-Season RE/DE, Prep, Transition, Deload —
+//     4- and 3-day, pitcher versions where the source calls for one, private-client versions
+//   • Program Builder → 🧭 Method Library: browse, load into the builder, or save to My Programs
+//   • Annual Plan → 🧭 Plan Templates: lay a whole year of blocks onto the athlete / group
+//     (Athlete or Private Client, 4 or 3 days, position player or pitcher). Each block remembers
+//     its phase template; "Start Program for This Block" loads it for the athlete, sized to
+//     the block's weeks, so you edit it before sending.
+// Loaded after annual-plan.js / annual-groups.js. Library file loads only when first opened.
+// ═══════════════════════════════════════════════════════════════════════════
+var MT = { loading: null };
+
+function mtEsc(s) { return typeof escHtml === 'function' ? escHtml(String(s == null ? '' : s)) : String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function mtLoadScript(src, ok) {
+  var s = document.createElement('script'); s.src = src;
+  s.onload = ok; s.onerror = function () { alert('Couldn\'t load ' + src); MT.loading = null; };
+  document.head.appendChild(s);
+}
+// Both libraries: the method library and Mark's own (Spring ramp lives there)
+function mtEnsure(cb) {
+  if (typeof METHOD_TEMPLATES !== 'undefined' && typeof MW_TEMPLATES !== 'undefined') return cb();
+  if (MT.loading) { MT.loading.push(cb); return; }
+  MT.loading = [cb];
+  var done = function () {
+    if (typeof METHOD_TEMPLATES === 'undefined' || typeof MW_TEMPLATES === 'undefined') return;
+    var q = MT.loading; MT.loading = null; q.forEach(function (f) { try { f(); } catch (e) { console.error(e); } });
+  };
+  if (typeof METHOD_TEMPLATES === 'undefined') mtLoadScript('data/method-templates.js?v=1', done);
+  if (typeof MW_TEMPLATES === 'undefined') mtLoadScript('data/mw-templates.js?v=1', done);
+  done();
+}
+function mtGet(key) {
+  if (!key) return null;
+  if (key.indexOf('mw:') === 0) {
+    var m = (typeof MW_TEMPLATES !== 'undefined' ? MW_TEMPLATES : []).find(function (t) { return t.key === key.slice(3); });
+    return m ? { key: key, name: m.name, notes: m.notes, source: 'Mark Weisman template library', sq: {}, pbState: m.pbState, category: m.category } : null;
+  }
+  return (typeof METHOD_TEMPLATES !== 'undefined' ? METHOD_TEMPLATES : []).find(function (t) { return t.key === key; }) || null;
+}
+// base 'hyp-clusters' + days + pitcher → 'hyp-clusters-4-p' / 'hyp-clusters-4' (mw: keys too)
+function mtResolve(base, days, pitcher) {
+  if (base.indexOf('mw:') === 0) return mtGet(base + '-' + days) ? base + '-' + days : null;
+  var k = base + '-' + days;
+  if (pitcher && mtGet(k + '-p')) return k + '-p';
+  if (mtGet(k)) return k;
+  return mtGet(k + '-p') ? k + '-p' : null;   // pitcher-only sources (95 MPH Body)
+}
+function mtWeeks(t) { return (t.pbState && t.pbState.weekData || []).length; }
+function mtDays(t) { return t.days || ((t.pbState.weekData[0] || { days: [] }).days.filter(function (d) { return d.type !== 'off'; }).length); }
+
+// ── Load a template into Program Builder ─────────────────────────────────────
+// athlete: name, '(Sandbox)' or null (= whoever the builder has selected)
+// opts.weeks: fit to a block length — repeats the template's weeks to fill, or cuts it short
+function mtLoadIntoBuilder(t, athlete, opts) {
+  opts = opts || {};
+  if (!t || !t.pbState || !(t.pbState.weekData || []).length) { if (typeof showStatus === 'function') showStatus('⚠️ Template has no weeks'); return; }
+  if (!athlete) athlete = (typeof pbMode !== 'undefined' && pbMode === 'sandbox') ? '(Sandbox)' : ((document.getElementById('pb-athlete') || {}).value || (typeof currentPlayer !== 'undefined' ? currentPlayer : '(Sandbox)'));
+  if (String(athlete).indexOf('grp:') === 0) athlete = '(Sandbox)';
+  var st = JSON.parse(JSON.stringify(t.pbState));
+  var src = st.weekData, n = opts.weeks || src.length;
+  if (n !== src.length) {
+    st.weekData = [];
+    for (var i = 0; i < n; i++) {
+      var w = JSON.parse(JSON.stringify(src[i % src.length]));
+      w.week = i + 1;
+      if (i >= src.length) w.label = (w.label || '') + ' (repeat)';
+      if (w.progMod) w.progMod.label = 'W' + (i + 1);
+      st.weekData.push(w);
+    }
+  }
+  st.weeks = st.weekData.length; st.activeWeek = 0; st.athlete = athlete;
+  if (opts.startDate) st.startDate = opts.startDate;
+  delete st._savedProgId;
+  PB_STATE = st;
+  PB_LOADED_PROGRAM_ID = null;   // fresh copy — never writes back into a template
+  var addedEx = mtEnsureExercises(mtNamesIn(st));
+  if (t.key) mtPushRecent({ key: t.key, name: t.name, weeks: st.weekData.length, days: mtTrainDays(st) });
+
+  if (typeof switchProgTab === 'function') switchProgTab('builder', document.getElementById('ptab-builder'));
+  if (typeof pbSetMode === 'function') pbSetMode(athlete === '(Sandbox)' ? 'sandbox' : 'athlete');
+  var athEl = document.getElementById('pb-athlete'); if (athEl && athlete !== '(Sandbox)') athEl.value = athlete;
+  var phaseEl = document.getElementById('pb-phase'); if (phaseEl) phaseEl.value = st.phase || 'accumulation';
+  var weeksEl = document.getElementById('pb-weeks'); if (weeksEl) weeksEl.value = st.weeks;
+  var progEl = document.getElementById('pb-progression'); if (progEl) progEl.value = st.progression || 'linear';
+  var nameEl = document.getElementById('pb-program-name');
+  if (nameEl) nameEl.value = opts.name || (t.name.replace(/^\S+\s/, '') + (athlete !== '(Sandbox)' ? ' — ' + athlete : ''));
+  try { if (typeof pbRenderWeekTabs === 'function') pbRenderWeekTabs(); if (typeof pbRenderDayGrid === 'function') pbRenderDayGrid(); if (typeof pbRenderWeekTargets === 'function') pbRenderWeekTargets(); if (typeof pbCloseEditor === 'function') pbCloseEditor(); if (typeof pbCollapseSetup === 'function') pbCollapseSetup(); } catch (e) { console.error(e); }
+  mtRenderRecent();
+  if (typeof showStatus === 'function') showStatus('📚 Loaded "' + t.name + '" for ' + (athlete === '(Sandbox)' ? 'Sandbox' : athlete) + ' · ' + st.weeks + ' weeks' + (addedEx ? ' · added ' + addedEx + ' exercises to your library' : '') + ' — edit it, then Save / Send');
+}
+
+// ── Save one template into My Programs → Templates ───────────────────────────
+function mtSaveToPrograms(key) {
+  var t = mtGet(key); if (!t) return;
+  if (typeof SAVED_PROGRAMS === 'undefined') return;
+  var ex = SAVED_PROGRAMS.find(function (p) { return p && p.tplKey === 'mt:' + key; });
+  if (ex && !confirm('"' + t.name + '" is already in your templates.\n\nOK = replace it with the library version (your edits to it are lost)')) return;
+  var base = Date.now(); SAVED_PROGRAMS.forEach(function (p) { var n = Number(p.id); if (n >= base) base = n + 1; });
+  var prog = { name: t.name, notes: t.notes, athlete: 'Template Library', category: t.category, meso: t.pbState.phase, macro: t.pbState.phase,
+    scope: 'meso', scopeLabel: 'Mesocycle', mesoLabel: t.name, html: '', content: '', isTemplate: true, tplKey: 'mt:' + key, tplVersion: METHOD_TEMPLATES_VERSION,
+    pbState: JSON.parse(JSON.stringify(t.pbState)) };
+  if (ex) Object.assign(ex, prog); else { prog.id = base; prog.created = new Date().toISOString(); SAVED_PROGRAMS.push(prog); }
+  if (typeof persistPrograms === 'function') persistPrograms();
+  if (typeof renderPBDrafts === 'function') renderPBDrafts();
+  if (typeof showStatus === 'function') showStatus('💾 "' + t.name + '" saved to My Programs → Templates');
+}
+
+// ── Modal shell ──────────────────────────────────────────────────────────────
+function mtModal(title, body, width) {
+  var m = document.createElement('div');
+  m.className = 'mt-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  m.innerHTML = '<div style="background:#1a1f2e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px;width:' + (width || 760) + 'px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-size:16px;font-weight:700;color:#fff;">' + title + '</div>'
+    + '<button class="mt-x" style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;">✕</button></div>'
+    + '<div class="mt-body" style="overflow-y:auto;flex:1;min-height:0;">' + body + '</div></div>';
+  document.body.appendChild(m);
+  m.querySelector('.mt-x').onclick = function () { m.remove(); };
+  m.addEventListener('click', function (e) { if (e.target === m) m.remove(); });
+  return m;
+}
+var MT_CHIP = 'padding:5px 11px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);color:#cbd5e1;';
+var MT_CHIP_ON = 'padding:5px 11px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #f59e0b;background:rgba(245,158,11,0.16);color:#fbbf24;';
+
+// ── Exercises the templates need (added to the library once; re-added if a template needs one that's gone) ──
+// [category, name, 1RM lift key, coaching note]
+var MT_NEW_EX = [
+  ["Squat Variations", "Leg Extension", "", "Quad isolation — full lockout, control the lowering"],
+  ["Squat Variations", "Leg Press", "", "Feet low for quad bias; full depth without the pelvis tucking"],
+  ["Squat Variations", "Cossack Squat", "", "Sit deep into one hip, opposite leg straight, toes up"],
+  ["Deadlift Variations", "Deficit Trap Bar Deadlift", "", "Stand on a 1–2 in plate — longer pull from the floor"],
+  ["Deadlift Variations", "Rack Pull", "", "Pins just below the knee — lockout strength"],
+  ["Hamstring", "Barbell Hip Thrust", "", "Upper back on bench, chin tucked, 1 s squeeze at the top"],
+  ["Calf Ankle", "Standing Calf Raise", "", "2 s pause in the stretch at the bottom"],
+  ["Hip ABD_ADD", "X-Band Walk", "", "Band crossed at the ankles — stay tall, small steps"],
+  ["Hip ABD_ADD", "Stability Ball Groin Squeeze", "", "Ball between the knees — 2 s squeeze"],
+  ["UB Horizontal Push", "Neutral Grip DB Bench Press", "DB Bench Press", "Palms facing — elbows tucked, shoulder-friendly"],
+  ["UB Horizontal Push", "Swiss Bar Floor Press", "", "Neutral grip, triceps touch the floor, press from a dead stop"],
+  ["UB Horizontal Pull", "Chest Supported DB Row", "", "Chest on an incline bench — no body English"],
+  ["UB Horizontal Pull", "Chest Supported T-Bar Row", "", "Chest on the pad, drive elbows back, full stretch"],
+  ["UB Horizontal Pull", "SA Cable Row", "", "Single-arm cable row — reach long, pull to the hip"],
+  ["UB Horizontal Pull", "Inverted Row", "", "Bar or rings — body in one line, chest to the bar"],
+  ["Biceps Triceps", "DB Hammer Curl", "", "Neutral grip, elbows pinned"],
+  ["Biceps Triceps", "Incline DB Curl", "", "Long-length bias — arms hang behind the body"],
+  ["Biceps Triceps", "Rope Pushdown", "", "Split the rope at lockout"],
+  ["Biceps Triceps", "Overhead Cable Triceps Extension", "", "Long-length bias — elbows by the ears"],
+  ["Biceps Triceps", "DB Triceps Extension", "", "Lying or seated — elbows stay still"],
+  ["Shoulder Complex", "Side-Lying DB External Rotation", "", "Towel under the elbow, slow lowering"],
+  ["Shoulder Complex", "Band ER at 90/90", "", "Elbow at shoulder height, rotate back without shrugging"],
+  ["Shoulder Complex", "Serratus Wall Slide", "", "Forearms on the wall, reach up and protract"],
+  ["Shoulder Complex", "Cuban Press", "", "Upright row → external rotation → press; light"],
+  ["Core Rotation", "Half Kneeling Cable Chop", "", "High to low across the body, hips square"],
+  ["UB Plyos", "Med Ball Rotational Scoop Toss", "", "Load the back hip, scoop and release — max intent"],
+  ["Strongman Variations", "Lateral Sled Drag", "", "Side-on, push off the trail leg — frontal-plane power"]
+];
+var MT_EX_FLAG = 'cubs_sc_mt_ex_added_v1';
+function mtEnsureExercises(only) {
+  if (typeof EXERCISE_DB === 'undefined') return 0;
+  var have = {}; EXERCISE_DB.forEach(function (e) { if (e && e.name) have[e.name.trim().toLowerCase()] = 1; });
+  var add = MT_NEW_EX.filter(function (e) { return !have[e[1].toLowerCase()] && (!only || only[e[1]]); });
+  if (!add.length) return 0;
+  add.forEach(function (e) { EXERCISE_DB.push({ cat: e[0], name: e[1], liftKey: e[2], video: '', notes: e[3] }); });
+  try { if (typeof persistExerciseDB === 'function') persistExerciseDB(); } catch (x) { console.error(x); }
+  try { if (typeof renderLibrary === 'function') renderLibrary(); } catch (x) {}
+  return add.length;
+}
+function mtNamesIn(st) { var o = {}; (st && st.weekData || []).forEach(function (w) { (w.days || []).forEach(function (d) { (d.blocks || []).forEach(function (b) { (b.exercises || []).forEach(function (e) { if (e && e.name) o[e.name] = 1; }); }); }); }); return o; }
+setTimeout(function () {
+  try {
+    if (localStorage.getItem(MT_EX_FLAG)) return;
+    var n = mtEnsureExercises();
+    localStorage.setItem(MT_EX_FLAG, new Date().toISOString());
+    if (n && typeof showStatus === 'function') showStatus('📚 Added ' + n + ' exercises to your library (leg extension, leg press, chest-supported rows, curls, triceps, cuff work…) for the phase templates');
+  } catch (e) { console.error(e); }
+}, 6000);
+
+// ── Your built-in phase templates (Intensification / Realization / In-Season / Deload) ──
+// loadPhaseTemplates() writes them into drafts; capture them once without touching your drafts
+function mtBuiltinPhases() {
+  if (MT.builtin) return MT.builtin;
+  MT.builtin = [];
+  if (typeof loadPhaseTemplates !== 'function' || typeof pbDrafts === 'undefined') return MT.builtin;
+  var keep = pbDrafts, ls = null, rs = window.renderPBDrafts, ss = window.showStatus, cf = window.confirm;
+  try { ls = localStorage.getItem(PB_DRAFTS_KEY); } catch (e) {}
+  try {
+    pbDrafts = []; window.renderPBDrafts = function () {}; window.showStatus = function () {}; window.confirm = function () { return true; };
+    loadPhaseTemplates();
+    MT.builtin = pbDrafts.map(function (d, i) { return { key: 'bi:' + i, name: d.name, pbState: d.pbState }; });
+  } catch (e) { console.error(e); }
+  finally {
+    pbDrafts = keep; window.renderPBDrafts = rs; window.showStatus = ss; window.confirm = cf;
+    try { if (ls === null) localStorage.removeItem(PB_DRAFTS_KEY); else localStorage.setItem(PB_DRAFTS_KEY, ls); } catch (e) {}
+  }
+  return MT.builtin;
+}
+
+// ── Every template in one list ──
+function mtTrainDays(st) { var w = (st && st.weekData || [])[0]; return w ? (w.days || []).filter(function (d) { return d.type !== 'off' && (d.blocks || []).length; }).length : 0; }
+function mtItems() {
+  var out = [];
+  (typeof SAVED_PROGRAMS !== 'undefined' ? SAVED_PROGRAMS : []).filter(function (p) { return p && p.isTemplate && p.pbState && (p.pbState.weekData || []).length; }).forEach(function (p) {
+    out.push({ key: 'mine:' + p.id, kind: 'mine', name: p.name, category: '⭐ My Templates', notes: p.notes || '', source: p.category || 'Saved template', pbState: p.pbState,
+      group: /client/i.test(p.name + ' ' + (p.category || '')) ? 'client' : 'athlete', variant: /pitcher/i.test(p.name) ? 'pitcher' : 'all' });
+  });
+  (typeof MW_TEMPLATES !== 'undefined' ? MW_TEMPLATES : []).forEach(function (t) {
+    out.push({ key: 'mw:' + t.key, kind: 'lib', name: t.name, category: '🧢 Your Library · ' + t.category, notes: t.notes, source: 'Your template library', pbState: t.pbState, group: 'athlete', variant: 'all' });
+  });
+  mtBuiltinPhases().forEach(function (t) {
+    out.push({ key: t.key, kind: 'lib', name: t.name, category: '🧢 Your Library · Built-In Phases', notes: 'Your phase templates — speed block first, specific compound lifts.', source: 'Built-in phase template', pbState: t.pbState, group: 'athlete', variant: 'all' });
+  });
+  (typeof METHOD_TEMPLATES !== 'undefined' ? METHOD_TEMPLATES : []).forEach(function (t) {
+    out.push({ key: t.key, kind: 'method', name: t.name, category: '🧭 ' + t.category.replace(/^(Method Library|Private Client) · /, ''), notes: t.notes, source: t.source, pbState: t.pbState, group: t.group, variant: t.variant, days: t.days, sq: t.sq });
+  });
+  out.forEach(function (x) { x.days = x.days || mtTrainDays(x.pbState); x.weeks = (x.pbState.weekData || []).length; });
+  return out;
+}
+function mtItem(key) {
+  if (/^(mine:|bi:)/.test(key) || key.indexOf('mw:') === 0) return mtItems().find(function (x) { return x.key === key; }) || null;
+  return mtGet(key);
+}
+
+// ── Start tabs (Template / Scratch / Saved) ──
+function pbStartTab(tab) {
+  ['tpl', 'scratch', 'saved'].forEach(function (t) {
+    var pane = document.getElementById('pb-pane-' + t); if (pane) pane.style.display = t === tab ? 'flex' : 'none';
+  });
+  document.querySelectorAll('#pb-start-tabs button').forEach(function (b) {
+    var on = b.getAttribute('data-tab') === tab;
+    b.style.background = on ? 'rgba(99,102,241,0.85)' : 'transparent';
+    b.style.color = on ? '#fff' : 'var(--text3)';
+  });
+  try { localStorage.setItem('mt_start_tab', tab); } catch (e) {}
+  if (tab === 'saved' && typeof renderPBDrafts === 'function') renderPBDrafts();
+  if (tab === 'tpl') mtRenderRecent();
+}
+function mtRecent() { try { return JSON.parse(localStorage.getItem('mt_recent_v1') || '[]') || []; } catch (e) { return []; } }
+function mtPushRecent(it) {
+  var r = mtRecent().filter(function (x) { return x.key !== it.key; });
+  r.unshift({ key: it.key, name: it.name, weeks: it.weeks, days: it.days });
+  try { localStorage.setItem('mt_recent_v1', JSON.stringify(r.slice(0, 5))); } catch (e) {}
+}
+function mtRenderRecent() {
+  var host = document.getElementById('pb-tpl-recent'); if (!host) return;
+  var r = mtRecent();
+  host.innerHTML = r.length ? '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:2px 0 5px;">Recent</div>'
+    + r.map(function (x) {
+      return '<button onclick="mtLoadKey(\'' + mtEsc(x.key) + '\')" title="Load for the athlete above" style="display:block;width:100%;text-align:left;padding:6px 8px;margin-bottom:4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:11px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+        + mtEsc(x.name) + ' <span style="color:var(--text3);font-size:10px;">· ' + (x.weeks || '?') + ' wk · ' + (x.days || '?') + 'd</span></button>';
+    }).join('') : '';
+}
+function mtLoadKey(key, athlete) {
+  mtEnsure(function () {
+    var it = mtItem(key);
+    if (!it) { if (typeof showStatus === 'function') showStatus('⚠️ That template is gone'); return; }
+    mtLoadIntoBuilder(it, athlete || null);
+  });
+}
+
+// ── 📚 Phase Templates browser ──
+var MT_LIB = { group: 'athlete', days: 'all', src: 'all', q: '', open: null, who: null };
+function mtWhoOptions() {
+  var sel = document.getElementById('pb-athlete');
+  var names = sel ? Array.prototype.map.call(sel.options, function (o) { return o.value; }).filter(Boolean) : [];
+  return ['(Sandbox)'].concat(names);
+}
+function mtOpenLibrary() {
+  mtEnsure(function () {
+    MT_LIB.who = (typeof pbMode !== 'undefined' && pbMode === 'sandbox') ? '(Sandbox)' : ((document.getElementById('pb-athlete') || {}).value || '(Sandbox)');
+    try {
+      var pl = typeof PLAYERS !== 'undefined' ? PLAYERS[MT_LIB.who] : null;
+      if (pl && typeof isClientPos === 'function' && isClientPos(pl.pos)) MT_LIB.group = 'client';
+      else if (pl && typeof isPitcherPos === 'function' && isPitcherPos(pl.pos)) MT_LIB.group = 'pitcher';
+      else if (MT_LIB.who !== '(Sandbox)') MT_LIB.group = 'athlete';
+    } catch (e) {}
+    var m = mtModal('📚 Phase Templates', '<div id="mt-lib"></div>', 860);
+    MT.libItems = mtItems();
+    mtRenderLibrary(m);
+  });
+}
+function mtRenderLibrary(m) {
+  var host = m.querySelector('#mt-lib'); if (!host) return;
+  var f = MT_LIB, q = f.q.trim().toLowerCase();
+  var list = (MT.libItems || []).filter(function (t) {
+    if (f.group === 'client' ? t.group !== 'client' : t.group === 'client') return false;
+    if (f.group === 'pitcher' && t.kind === 'method' && t.variant !== 'pitcher') return false;   // pitcher view: pitcher versions + your own
+    if (f.group === 'athlete' && t.variant === 'pitcher' && t.kind === 'method') return false;
+    if (f.days !== 'all' && String(t.days) !== String(f.days)) return false;
+    if (f.src !== 'all' && t.kind !== f.src) return false;
+    return !q || (t.name + ' ' + t.category + ' ' + (t.source || '')).toLowerCase().indexOf(q) >= 0;
+  });
+  var cats = []; list.forEach(function (t) { if (cats.indexOf(t.category) < 0) cats.push(t.category); });
+  var chip = function (k, v, label) { return '<span class="mt-f" data-k="' + k + '" data-v="' + v + '" style="' + (String(f[k]) === String(v) ? MT_CHIP_ON : MT_CHIP) + '">' + label + '</span>'; };
+  var dayset = []; (MT.libItems || []).forEach(function (t) { if (t.days && dayset.indexOf(t.days) < 0) dayset.push(t.days); }); dayset.sort();
+  var sel = 'background:#0f1320;border:1px solid rgba(255,255,255,0.14);border-radius:6px;padding:6px 9px;color:#e2e8f0;font-size:12px;';
+  var bar = '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;padding:10px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:8px;">'
+    + '<span style="font-size:11px;color:#c7d2fe;font-weight:700;">Load for</span><select id="mt-who" style="' + sel + 'min-width:170px;">'
+    + mtWhoOptions().map(function (n) { return '<option value="' + mtEsc(n) + '"' + (n === f.who ? ' selected' : '') + '>' + (n === '(Sandbox)' ? '🧪 Sandbox' : mtEsc(n)) + '</option>'; }).join('') + '</select>'
+    + '<input id="mt-q" placeholder="Search — clusters, VJP, conjugate…" value="' + mtEsc(f.q) + '" style="' + sel + 'flex:1;min-width:160px;"></div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px;">'
+    + chip('group', 'athlete', '⚾ Athlete') + chip('group', 'pitcher', '🎯 Pitcher') + chip('group', 'client', '👤 Private Client')
+    + '<span style="width:10px;"></span>' + chip('days', 'all', 'Any days') + dayset.map(function (d) { return chip('days', d, d + '-day'); }).join('') + '</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 12px;">'
+    + chip('src', 'all', 'All sources') + chip('src', 'mine', '⭐ My templates') + chip('src', 'lib', '🧢 Your library') + chip('src', 'method', '🧭 Method library (courses)')
+    + '<span style="margin-left:auto;font-size:10px;color:var(--text3);">' + list.length + ' templates · tap a name to preview</span></div>';
+  var rows = list.length ? cats.map(function (c) {
+    return '<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin:14px 0 6px;">' + mtEsc(c) + '</div>'
+      + list.filter(function (t) { return t.category === c; }).map(function (t) {
+        var open = f.open === t.key, w1 = open ? (t.pbState.weekData[0] || { days: [] }) : null;
+        return '<div style="border:1px solid ' + (open ? 'rgba(99,102,241,0.45)' : 'rgba(255,255,255,0.08)') + ';border-radius:8px;padding:9px 11px;margin-bottom:6px;background:rgba(255,255,255,0.02);">'
+          + '<div style="display:flex;align-items:center;gap:10px;">'
+          + '<div class="mt-open" data-key="' + mtEsc(t.key) + '" style="flex:1;min-width:0;cursor:pointer;"><div style="font-size:13px;color:#fff;font-weight:600;">' + mtEsc(t.name) + ' <span style="color:var(--text3);font-weight:400;font-size:11px;">' + (open ? '▴' : '▾') + '</span></div>'
+          + '<div style="font-size:10px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.weeks + ' wk · ' + t.days + ' days/wk' + (t.variant === 'pitcher' ? ' · pitcher' : '') + (t.source ? ' · ' + mtEsc(t.source) : '') + '</div></div>'
+          + (t.kind === 'method' ? '<button class="mt-save" data-key="' + mtEsc(t.key) + '" title="Save a copy to My Templates to edit and reuse" style="padding:5px 8px;background:none;border:1px solid rgba(255,255,255,0.12);border-radius:5px;color:var(--text3);font-size:11px;cursor:pointer;">⭐</button>' : '')
+          + '<button class="mt-load" data-key="' + mtEsc(t.key) + '" style="padding:6px 14px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Load</button></div>'
+          + (open ? '<div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5;">' + mtEsc(t.notes || '') + '</div>'
+            + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:8px;">' + w1.days.filter(function (d) { return d.type !== 'off'; }).map(function (d) {
+              return '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:6px 8px;"><div style="font-size:10px;color:#a5b4fc;font-weight:700;">' + mtEsc(d.day) + ' · ' + mtEsc(d.label || '') + '</div>'
+                + '<div style="font-size:10px;color:var(--text3);margin-top:3px;line-height:1.4;">' + (d.blocks || []).map(function (b) { return (b.exercises || []).filter(function (e) { return e.pair === 'B'; }).map(function (e) { return mtEsc(e.name); }).join(', '); }).filter(Boolean).join(' · ') + '</div></div>';
+            }).join('') + '</div>'
+            + '<div style="font-size:10px;color:var(--text3);margin-top:8px;">' + t.pbState.weekData.map(function (w) { return 'W' + w.week + ' ' + mtEsc(w.label || ''); }).join(' · ') + '</div>' : '')
+          + '</div>';
+      }).join('');
+  }).join('') : '<div style="color:var(--text3);font-size:12px;padding:20px 0;">Nothing matches.</div>';
+  host.innerHTML = bar + '<div id="mt-rows">' + rows + '</div>';
+  host.querySelector('#mt-who').onchange = function () { MT_LIB.who = this.value; };
+  var qi = host.querySelector('#mt-q');
+  qi.oninput = function () { MT_LIB.q = this.value; var pos = this.selectionStart; mtRenderLibrary(m); var n = m.querySelector('#mt-q'); n.focus(); n.setSelectionRange(pos, pos); };
+  host.querySelectorAll('.mt-f').forEach(function (el) { el.onclick = function () { MT_LIB[el.getAttribute('data-k')] = el.getAttribute('data-v'); mtRenderLibrary(m); }; });
+  host.querySelectorAll('.mt-open').forEach(function (el) { el.onclick = function () { var k = el.getAttribute('data-key'); MT_LIB.open = MT_LIB.open === k ? null : k; mtRenderLibrary(m); }; });
+  host.querySelectorAll('.mt-load').forEach(function (el) { el.onclick = function () { var it = mtItem(el.getAttribute('data-key')); m.remove(); mtLoadIntoBuilder(it, MT_LIB.who); }; });
+  host.querySelectorAll('.mt-save').forEach(function (el) { el.onclick = function () { mtSaveToPrograms(el.getAttribute('data-key')); MT.libItems = mtItems(); mtRenderLibrary(m); }; });
+}
+
+// ── 🧭 Plan Templates (Annual Plan) ──────────────────────────────────────────
+var MT_AN = { plan: null, days: 4, pitcher: false, start: '', mode: 'replace' };
+function mtNextMonday() { var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); return d; }
+function mtPlanStart(p) {
+  if (p.start === 'oct1' && typeof apYStart === 'function') return apISO(apYStart(apYear()));
+  return apISO(mtNextMonday());
+}
+function mtPlanBlocks(p, startISO, days, pitcher) {
+  var cur = apD(startISO), out = [];
+  (p.blocks || []).forEach(function (b, i) {
+    var dd = b['d' + days] || days, key = mtResolve(b.tpl, dd, pitcher || !!p.pitcherOnly), t = mtGet(key);
+    var s = new Date(cur), e = apAdd(s, b.weeks * 7 - 1);
+    out.push({ src: b, key: key, t: t, start: apISO(s), end: apISO(e), weeks: b.weeks, days: dd });
+    cur = apAdd(s, b.weeks * 7);
+  });
+  return out;
+}
+function mtOpenAnnual() {
+  if (typeof apPlan !== 'function') { alert('Annual Plan isn\'t ready yet.'); return; }
+  mtEnsure(function () {
+    var sel = (document.getElementById('annual-athlete') || {}).value || '';
+    var isClient = false, isPitcher = false;
+    try {
+      var pl = typeof PLAYERS !== 'undefined' ? PLAYERS[sel] : null;
+      if (pl) { isClient = typeof isClientPos === 'function' && isClientPos(pl.pos); isPitcher = typeof isPitcherPos === 'function' && isPitcherPos(pl.pos); }
+    } catch (e) {}
+    // Default to the athlete's group each time the modal opens
+    MT_AN.plan = isClient ? 'client-year' : (MT_AN.plan && MT_AN.plan !== 'client-year' ? MT_AN.plan : ANNUAL_TEMPLATES[0].key);
+    MT_AN.pitcher = isPitcher;
+    var p = ANNUAL_TEMPLATES.find(function (x) { return x.key === MT_AN.plan; });
+    MT_AN.start = mtPlanStart(p);
+    var m = mtModal('🧭 Annual Plan Templates', '<div id="mt-an"></div>', 760);
+    mtRenderAnnual(m);
+  });
+}
+function mtRenderAnnual(m) {
+  var host = m.querySelector('#mt-an'); if (!host) return;
+  var p = ANNUAL_TEMPLATES.find(function (x) { return x.key === MT_AN.plan; }) || ANNUAL_TEMPLATES[0];
+  var pitcher = p.group === 'athlete' && (MT_AN.pitcher || !!p.pitcherOnly);
+  var rows = mtPlanBlocks(p, MT_AN.start, MT_AN.days, pitcher);
+  var who = (document.getElementById('annual-athlete') || {}).value || '';
+  var whoLabel = who.indexOf('grp:') === 0 ? (typeof AG !== 'undefined' && AG[who.slice(4)] ? '👥 ' + AG[who.slice(4)].name : 'this group') : who;
+  var existing = (apPlan(false).blocks || []).length;
+  var lab = function (t) { return '<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">' + t + '</div>'; };
+  var inp = 'width:100%;background:#0f1320;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:7px 9px;color:#e2e8f0;font-size:12px;box-sizing:border-box;';
+  var chip = function (k, v, label, on) { return '<span class="mt-a" data-k="' + k + '" data-v="' + v + '" style="' + (on ? MT_CHIP_ON : MT_CHIP) + '">' + label + '</span>'; };
+  var groups = [['athlete', '⚾ Athlete'], ['client', '👤 Private Client']];
+  host.innerHTML =
+    '<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:12px;">'
+    + '<div>' + lab('Plan') + groups.map(function (g) {
+      var ps = ANNUAL_TEMPLATES.filter(function (x) { return x.group === g[0]; });
+      return '<div style="font-size:10px;color:var(--text3);margin:4px 0;">' + g[1] + '</div>' + ps.map(function (x) {
+        return '<div class="mt-pl" data-key="' + x.key + '" style="padding:7px 10px;margin-bottom:4px;border-radius:6px;cursor:pointer;font-size:12px;'
+          + (x.key === p.key ? 'background:rgba(245,158,11,0.14);border:1px solid rgba(245,158,11,0.5);color:#fbbf24;font-weight:700;' : 'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);color:#cbd5e1;') + '">' + mtEsc(x.name) + '</div>';
+      }).join('');
+    }).join('') + '</div>'
+    + '<div>' + lab('Days per week') + '<div style="display:flex;gap:6px;margin-bottom:12px;">' + chip('days', 4, '4-day', MT_AN.days === 4) + chip('days', 3, '3-day', MT_AN.days === 3) + '</div>'
+    + (p.group === 'athlete' ? lab('Athlete type') + '<div style="display:flex;gap:6px;margin-bottom:12px;">' + (p.pitcherOnly ? chip('pitcher', 1, '🎯 Pitcher', true) : chip('pitcher', 0, 'Position player', !MT_AN.pitcher) + chip('pitcher', 1, '🎯 Pitcher', MT_AN.pitcher)) + '</div>' : '')
+    + lab('Start (Monday)') + '<input type="date" id="mt-start" value="' + MT_AN.start + '" style="' + inp + 'margin-bottom:12px;">'
+    + lab('Existing blocks' + (existing ? ' (' + existing + ')' : '')) + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + chip('mode', 'replace', 'Replace in these weeks', MT_AN.mode === 'replace') + chip('mode', 'fill', 'Only fill open weeks', MT_AN.mode === 'fill') + '</div>'
+    + '</div></div>'
+    + '<div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px;">' + mtEsc(p.notes || '') + '</div>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:11px;">' + rows.map(function (r) {
+      var bt = (typeof BLOCK_TYPES !== 'undefined' && BLOCK_TYPES[r.src.type]) || { label: r.src.type, color: '#94a3b8' };
+      return '<tr style="border-top:1px solid rgba(255,255,255,0.06);"><td style="padding:6px 6px 6px 0;white-space:nowrap;color:var(--text3);font-family:\'DM Mono\',monospace;">' + apFmt(apD(r.start)) + ' – ' + apFmt(apD(r.end)) + '</td>'
+        + '<td style="padding:6px;"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + bt.color + ';margin-right:6px;"></span><b style="color:#e2e8f0;">' + mtEsc(r.src.label) + '</b> <span style="color:var(--text3);">' + r.weeks + ' wk</span></td>'
+        + '<td style="padding:6px;color:' + (r.t ? 'var(--text2)' : '#ef4444') + ';">' + (r.t ? mtEsc(r.t.name) + (r.days !== MT_AN.days ? ' <span style="color:var(--text3);">(' + r.days + '-day)</span>' : '') : 'missing template') + '</td></tr>';
+    }).join('') + '</table>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px;">'
+    + '<div style="font-size:11px;color:var(--text3);">Applies to <b style="color:#cbd5e1;">' + mtEsc(whoLabel) + '</b>. Edit any block afterwards; 🚀 Start Program on a block loads its template.</div>'
+    + '<button id="mt-apply" style="padding:8px 18px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Apply Plan</button></div>';
+
+  host.querySelectorAll('.mt-pl').forEach(function (el) { el.onclick = function () { MT_AN.plan = el.getAttribute('data-key'); var q = ANNUAL_TEMPLATES.find(function (x) { return x.key === MT_AN.plan; }); MT_AN.start = mtPlanStart(q); mtRenderAnnual(m); }; });
+  host.querySelectorAll('.mt-a').forEach(function (el) { el.onclick = function () { var k = el.getAttribute('data-k'), v = el.getAttribute('data-v'); MT_AN[k] = k === 'days' ? parseInt(v) : k === 'pitcher' ? v === '1' : v; mtRenderAnnual(m); }; });
+  host.querySelector('#mt-start').onchange = function () {
+    var d = apD(this.value); if (!d) return;
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));   // snap to Monday
+    MT_AN.start = apISO(d); mtRenderAnnual(m);
+  };
+  host.querySelector('#mt-apply').onclick = function () { if (mtApplyPlan(p, rows, pitcher)) m.remove(); };
+}
+function mtApplyPlan(p, rows, pitcher) {
+  if (rows.some(function (r) { return !r.t; })) { alert('A block\'s template is missing — rebuild data/method-templates.js.'); return false; }
+  var plan = apPlan(true);
+  var first = apD(rows[0].start), last = apD(rows[rows.length - 1].end);
+  var overlaps = function (b, s, e) { var bs = apD(b.startDate), be = apD(b.endDate); return bs && be && bs <= e && be >= s; };
+  var mine = (plan.blocks || []).filter(function (b) { return !b.liveRowId && overlaps(b, first, last); });
+  if (MT_AN.mode === 'replace' && mine.length && !confirm('Replace the ' + mine.length + ' existing block' + (mine.length > 1 ? 's' : '') + ' between ' + apFmt(first) + ' and ' + apFmt(last) + '?\n\nBlocks that come from a live program stay.')) return false;
+  if (MT_AN.mode === 'replace') plan.blocks = plan.blocks.filter(function (b) { return mine.indexOf(b) < 0; });
+  var added = 0, skipped = 0, now = Date.now();
+  rows.forEach(function (r, i) {
+    var s = apD(r.start), e = apD(r.end);
+    if (MT_AN.mode === 'fill' && plan.blocks.some(function (b) { return overlaps(b, s, e); })) { skipped++; return; }
+    plan.blocks.push({
+      id: 'blk_' + now + '_' + i, type: r.src.type, progression: 'linear', startDate: r.start, endDate: r.end, weeks: r.weeks,
+      notes: r.src.label + (r.src.notes ? ' — ' + r.src.notes : ''),
+      coachNotes: '📚 ' + r.t.name + (r.t.source ? ' · ' + r.t.source : ''),
+      sq: JSON.parse(JSON.stringify(r.t.sq || {})), speed: [40, 30, 15, 10, 5], esd: [50, 30, 20],
+      tplKey: r.key, tplPlan: p.key, tplPitcher: !!pitcher,
+    });
+    added++;
+  });
+  if (!plan.notes) plan.notes = p.name + (pitcher && p.group === 'athlete' && !p.pitcherOnly ? ' (pitcher)' : '') + ' · ' + MT_AN.days + '-day\n' + (p.notes || '');
+  saveAnnualData();
+  if (typeof renderAnnualPlan === 'function') renderAnnualPlan();
+  if (typeof showStatus === 'function') showStatus('🧭 ' + p.name + ': ' + added + ' blocks added' + (skipped ? ', ' + skipped + ' skipped (weeks already planned)' : '') + ' — open a block → 🚀 Start Program to load its template');
+  return true;
+}
+
+// ── Hooks ────────────────────────────────────────────────────────────────────
+(function () {
+  // "Start Program for This Block" → load the block's phase template, sized to the block
+  if (typeof annualStartProgramForBlock === 'function') {
+    var _s = annualStartProgramForBlock;
+    annualStartProgramForBlock = function (blockId) {
+      var plan = typeof ANNUAL_PLANS !== 'undefined' ? ANNUAL_PLANS[annualPlanKey()] : null;
+      var b = plan && plan.blocks.find(function (x) { return x.id === blockId; });
+      var ath = (document.getElementById('annual-athlete') || {}).value || '';
+      var r = _s.apply(this, arguments);
+      // Close the Edit Block modal (the original's selector misses it once the browser normalizes the style)
+      var ab = document.getElementById('ab-save'); if (ab) { var ov = ab.closest('div[style*="fixed"]'); if (ov) ov.remove(); }
+      if (b && b.tplKey) {
+        mtEnsure(function () {
+          setTimeout(function () {
+            var t = mtGet(b.tplKey);
+            if (!t) { if (typeof showStatus === 'function') showStatus('⚠️ Template "' + b.tplKey + '" not found in the library'); return; }
+            mtLoadIntoBuilder(t, ath, { weeks: b.weeks, startDate: b.startDate, name: (b.notes || t.name).split(' — ')[0] + (ath && ath.indexOf('grp:') !== 0 ? ' — ' + ath : '') });
+            if (ath.indexOf('grp:') === 0 && typeof showStatus === 'function') showStatus('🧭 Loaded "' + t.name + '" in Sandbox — pick an athlete in the builder, then send (groups have no single athlete)');
+          }, 250);
+        });
+      }
+      return r;
+    };
+  }
+  // Block modal: show which template the button will load
+  if (typeof annualEditBlock === 'function') {
+    var _e = annualEditBlock;
+    annualEditBlock = function (id) {
+      var r = _e.apply(this, arguments);
+      try {
+        var plan = ANNUAL_PLANS[annualPlanKey()], b = plan && plan.blocks.find(function (x) { return x.id === id; });
+        if (b && b.tplKey) mtEnsure(function () {
+          var t = mtGet(b.tplKey);
+          document.querySelectorAll('button').forEach(function (btn) {
+            if (t && /Start Program for This Block/.test(btn.textContent)) btn.innerHTML = '🚀 Start Program — load "' + mtEsc(t.name) + '"' + (mtWeeks(t) !== b.weeks ? ' sized to ' + b.weeks + ' wk' : '');
+          });
+        });
+      } catch (e) {}
+      return r;
+    };
+  }
+  // Buttons
+  function addButtons() {
+    var last = 'tpl'; try { last = localStorage.getItem('mt_start_tab') || 'tpl'; } catch (e) {}
+    if (document.getElementById('pb-start-tabs')) pbStartTab(last);
+    var ai = document.querySelector('button[onclick="annualOpenAIModal()"]');
+    if (ai && !document.getElementById('mt-an-btn')) {
+      var a = document.createElement('button');
+      a.id = 'mt-an-btn'; a.onclick = mtOpenAnnual;
+      a.title = 'Lay a pre-made annual plan (Athlete or Private Client) onto this athlete or group';
+      a.style.cssText = 'padding:6px 12px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.45);border-radius:6px;color:#a5b4fc;font-size:12px;font-weight:700;cursor:pointer;';
+      a.textContent = '🧭 Plan Templates';
+      ai.parentNode.insertBefore(a, ai);
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addButtons); else addButtons();
+  // Empty builder: say how to start instead of "Pick a day above"
+  function mtEmptyHint() {
+    var h = document.getElementById('pb-empty-hint'); if (!h) return;
+    var empty = typeof PB_STATE === 'undefined' || !(PB_STATE.weekData || []).length;
+    h.innerHTML = empty
+      ? '<div style="margin:30px auto;max-width:420px;text-align:center;padding:26px;border:1px dashed rgba(255,255,255,0.12);border-radius:12px;">'
+        + '<div style="font-size:15px;color:#e2e8f0;font-weight:700;margin-bottom:6px;">No program open</div>'
+        + '<div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px;">Pick who it\'s for on the left, then start from a phase template, build from scratch, or open something saved.</div>'
+        + '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">'
+        + '<button onclick="mtOpenLibrary()" style="padding:8px 14px;background:#6366f1;border:none;border-radius:7px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📚 Browse Phase Templates</button>'
+        + '<button onclick="pbExpandSetup();pbStartTab(\'scratch\')" style="padding:8px 14px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:7px;color:var(--text2);font-size:12px;cursor:pointer;">🔨 From scratch</button>'
+        + '<button onclick="pbExpandSetup();pbStartTab(\'saved\')" style="padding:8px 14px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:7px;color:var(--text2);font-size:12px;cursor:pointer;">📂 Saved</button></div></div>'
+      : 'Pick a day above to program it.';
+  }
+  if (typeof pbRenderDayGrid === 'function') {
+    var _dg = pbRenderDayGrid;
+    pbRenderDayGrid = function () { var r = _dg.apply(this, arguments); try { mtEmptyHint(); } catch (e) {} return r; };
+  }
+  setTimeout(mtEmptyHint, 0);
+
+  // ✏️ Edit a live program sits below Save & Send — it's a separate job from starting a program
+  if (typeof peRenderPicker === 'function') {
+    var _pp = peRenderPicker;
+    peRenderPicker = function () {
+      var r = _pp.apply(this, arguments);
+      try {
+        var host = document.getElementById('pe-picker'), save = document.getElementById('pb-program-name'), card = save && save.closest('.card');
+        if (host && card && card.nextElementSibling !== host) card.parentNode.insertBefore(host, card.nextSibling);
+      } catch (e) {}
+      return r;
+    };
+    try { peRenderPicker(); } catch (e) {}
+  }
+})();
