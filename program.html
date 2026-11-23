@@ -490,7 +490,7 @@ function chipsHTML(ex, li){
   if (li && li.lbs && li.pct) c.push(esc(li.pct)+'% of '+(li.how === 'log' ? 'est. ' : '')+'1RM');
   if (li && li.how === 'log' && li.was && Math.abs(li.lbs - li.was) >= 5 && !li.beforeReady) c.push((li.lbs > li.was ? '↑' : '↓')+' from '+li.was+' · based on your last sessions');
   if (li && li.beforeReady) c.push('↓ from '+li.beforeReady+' · today\'s check-in');
-  if (ex.swappedFrom) c.push('Home swap for '+esc(ex.swappedFrom));
+  if (ex.swappedFrom) c.push(({hotel_gym:'Hotel gym swap',hotel_room:'Hotel room swap',home:'Home swap'}[ex.swapLoc]||'Home swap')+' for '+esc(ex.swappedFrom));
   if (ex.pct) c.push(esc(ex.pct)+(/%/.test(ex.pct)?'':'%')+' effort');
   if (ex.tempo && ex.tempo !== 'Tempo') c.push('Tempo '+esc(ex.tempo));
   if (ex.rest) c.push('Rest '+esc(ex.rest));
