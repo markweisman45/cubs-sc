@@ -12497,14 +12497,25 @@ function libRestoreFromBackupFile(input) {
   reader.readAsText(file);
 }
 
+// Supabase returns at most 1,000 rows per request — page through so big tables come back whole
+async function supaSelectAll(build) {
+  const out = [], step = 1000;
+  for (let from = 0; ; from += step) {
+    const { data, error } = await build().range(from, from + step - 1);
+    if (error) return { data: out.length ? out : null, error };
+    out.push(...(data || []));
+    if (!data || data.length < step) return { data: out, error: null };
+  }
+}
 async function loadEnrichedFromSupabase() {
   try {
     if (!_supaClient) { console.warn('[loadEnrichedFromSupabase] no Supabase client'); if (typeof showStatus === 'function') showStatus('⚠️ Recovery skipped — Supabase client not ready'); return; }
     // Fetch every exercise row Supabase has — not just ones with mechanism_text,
     // since an exercise can be enriched with just a video and nothing else.
-    const { data, error } = await _supaClient
+    const { data, error } = await supaSelectAll(() => _supaClient
       .from('exercises')
-      .select('*');
+      .select('*')
+      .order('name'));
 
     if (error) {
       var errText = 'code=' + (error.code||'?') + ' message=' + (error.message||'?') + ' details=' + (error.details||'?') + ' hint=' + (error.hint||'?');
@@ -22552,9 +22563,10 @@ async function loadPhasePriorities() {
     if (error || !data) return;
 
     // Also fetch exercise names to join
-    var { data: exData } = await _supaClient
+    var { data: exData } = await supaSelectAll(function(){ return _supaClient
       .from('exercises')
-      .select('id, name');
+      .select('id, name')
+      .order('id'); });
     var exMap = {};
     (exData || []).forEach(function(e){ exMap[e.id] = e.name; });
 
@@ -24971,7 +24983,7 @@ try {
 <script src="js/year-review.js?v=7"></script>
 <script src="js/year-goals.js?v=5"></script>
 <script src="js/athlete-kpi.js?v=5"></script>
-<script src="js/data-check.js?v=2"></script>
+<script src="js/data-check.js?v=3"></script>
 <script src="js/offseason.js?v=1"></script>
 <script src="js/year-writeup.js?v=3"></script>
 <script src="js/roster.js?v=1"></script>
