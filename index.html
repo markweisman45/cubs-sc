@@ -8513,7 +8513,7 @@ function renderAllCharts(p) {
   // Helper: build enhanced chart config with avg line + PR marker + gradient fill
   const mkCMJChart = (id, labels, data, opts={}) => {
     const valid  = data.filter(v => v !== null && v !== undefined && v !== 0);
-    if (!valid.length) return;
+    if (!valid.length) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } return; }   // don't leave a stale chart up
     const avg    = valid.reduce((s,v)=>s+v,0) / valid.length;
     const pr     = Math.max(...valid);
     const prIdx  = data.indexOf(pr);
@@ -18425,6 +18425,21 @@ function rebuildCMJTrends() {
         else trends.push(entry);
       } catch(e) {}
     });
+    // VALD sync sessions (cache:vald-jumps) — fill any date the CSV imports don't have.
+    // VALD sync has no concentric power (W) or stiffness, so those stay blank for these sessions.
+    const valdTests = (typeof JP !== 'undefined' && JP.data && JP.data.players && JP.data.players[name]) || [];
+    valdTests.forEach(t => {
+      try {
+        if ((t.t !== 'CMJ' && t.t !== 'ABCMJ') || !t.v || !(t.v.jh >= 1) || !(t.v.ppbm >= 1) || !t.d) return;
+        const pz = t.d.split('-'), rawDate = (+pz[1]) + '/' + (+pz[2]) + '/' + pz[0];
+        if (isCMJExcluded(name, rawDate)) return;
+        if (trends.some(x => x.type === t.t && isoDate(x.rawDate) === t.d)) return;   // CSV already has this session
+        const v = t.v, rd = (x, n) => x == null ? 0 : +(+x).toFixed(n);
+        trends.push({date:new Date(+pz[0], +pz[1]-1, +pz[2]).toLocaleDateString('en-US',{month:'short',day:'numeric'}), rawDate,
+          jump:rd(v.jh,1), ppbm:rd(v.ppbm,1), conc:null, stiff:null, vto:rd(v.vto,2), p1:rd(v.p1,1), p2:rd(v.p2,1),
+          rsiMod:rd(v.rsi,2), pkPow:Math.round(v.pp||0), cmDepth:rd(v.depth,1), type:t.t, src:'vald'});
+      } catch(e) {}
+    });
     if (trends.length > 0) {
       trends.sort((a,b) => safeParseDate(a.rawDate) - safeParseDate(b.rawDate));
       p.cmjTrends = trends;
@@ -24948,7 +24963,7 @@ try {
 <script src="js/savant.js?v=3"></script>
 <script src="js/value-added.js?v=4"></script>
 <script src="js/vald-sync.js?v=6"></script>
-<script src="js/jump-profile.js?v=10"></script>
+<script src="js/jump-profile.js?v=11"></script>
 <script src="js/mlb-norms.js?v=1"></script>
 <script src="js/jump-kpi.js?v=6"></script>
 <script src="js/jump-lma.js?v=1"></script>
