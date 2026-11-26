@@ -7033,7 +7033,7 @@ const WELLNESS_KEY = 'cubs_sc_wellness_v1';
 
 function getLatestBW(playerName) {
   // Source of truth: importedData.cmj sorted newest-first, then manual wellness entries
-  const cmj = (importedData.cmj[playerName] || [])
+  const cmj = jumpRows(playerName, 'CMJ')
     .filter(c => c.bw > 0 && (!c.type || c.type === 'CMJ') && !isCMJExcluded(playerName, c.date))
     .sort((a,b) => safeParseDate(b.date) - safeParseDate(a.date));
   if (cmj.length) return cmj[0].bw; // newest CMJ entry
@@ -8396,7 +8396,7 @@ function renderAllCharts(p) {
       .filter(w => w.bw && w.bw > 50 && !w._cmjOnly);
     manualBW.forEach(w => { bwByDate[w.date] = w.bw; });
     // Sort CMJ oldest→newest, then write last — CMJ always overwrites a manual entry on the same date
-    const cmjSorted = [...(importedData.cmj[currentPlayer]||[])]
+    const cmjSorted = [...jumpRows(currentPlayer, 'CMJ')]
       .filter(c => c.bw > 0 && (!c.type || c.type === 'CMJ'))
       .sort((a,b) => safeParseDate(a.date) - safeParseDate(b.date));
     cmjSorted.forEach(c => { bwByDate[fmtDate(c.date)] = c.bw; });
@@ -9262,6 +9262,9 @@ function renderBrief() {
   // ── Today's programs ──────────────────────────────────────────────────────
   renderBriefPrograms();
 
+  // ── Data freshness (VALD sync age, athletes overdue to jump) ───────────────
+  briefRenderFreshness();
+
   // ── Alert banner ──────────────────────────────────────────────────────────
   var alertEl = document.getElementById('brief-alerts');
   if (alertEl) {
@@ -9271,6 +9274,52 @@ function renderBrief() {
     if (!alerts.length) alerts.push('<span style="color:var(--green);">✅ All players within normal ranges</span>');
     alertEl.innerHTML = '<div style="background:var(--bg3);border-radius:8px;padding:12px 16px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;border-left:4px solid '+(concern.length?'var(--red)':cmjAlerts.length?'var(--yellow)':'var(--green)')+';">'+alerts.join('<span style="color:var(--border);">|</span>')+'</div>';
   }
+}
+
+// ── Data freshness nudges ──────────────────────────────────────────────────────
+var BRIEF_JUMP_DAYS = 30, BRIEF_SYNC_DAYS = 7;
+function briefRenderFreshness() {
+  var host = document.getElementById('brief-fresh');
+  if (!host) {
+    var a = document.getElementById('brief-alerts'); if (!a) return;
+    host = document.createElement('div'); host.id = 'brief-fresh'; host.style.marginBottom = '16px';
+    a.parentNode.insertBefore(host, a.nextSibling);
+  }
+  if (typeof JP !== 'undefined' && !JP.data && !JP.err && typeof jpLoad === 'function' && !briefRenderFreshness._loading) {
+    briefRenderFreshness._loading = 1;
+    jpLoad().then(function () { briefRenderFreshness._loading = 0; if (JP.err) { JP.data = null; JP.err = null; } else briefRenderFreshness(); });
+  }
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var daysSince = function (raw) { var d = safeParseDate(raw); if (!d || isNaN(d)) return null; d.setHours(0, 0, 0, 0); return Math.round((today - d) / 864e5); };
+  var items = [], warn = false;
+  // VALD sync age
+  if (typeof JP !== 'undefined' && JP.data && JP.data.at) {
+    var at = new Date(JP.data.at); at.setHours(0, 0, 0, 0);   // stored in UTC — compare on the local calendar day
+    var sd = isNaN(at) ? null : Math.max(0, Math.round((today - at) / 864e5));
+    var stale = sd != null && sd > BRIEF_SYNC_DAYS; warn = warn || stale;
+    items.push('<span style="color:' + (stale ? 'var(--yellow)' : 'var(--text2)') + ';">🔄 VALD last synced <b>' + (sd === 0 ? 'today' : sd === 1 ? 'yesterday' : sd + ' days ago') + '</b>' + (stale ? ' — run the VALD Hub bookmark' : '') + '</span>');
+  } else if (typeof JP !== 'undefined' && !JP.data) {
+    items.push('<span style="color:var(--text3);">🔄 Checking VALD sync…</span>');
+  }
+  // Athletes overdue to jump (team athletes, position players and pitchers)
+  var noJ = (typeof DATA_FIX !== 'undefined' && DATA_FIX.noJumps) || [], overdue = [], never = [];
+  Object.keys(PLAYERS).filter(function (n) { return isTeamAthlete(n) && noJ.indexOf(n) < 0; }).forEach(function (n) {
+    var rows = typeof jumpRows === 'function' ? jumpRows(n, 'CMJ') : [];
+    var last = rows.length ? rows[rows.length - 1].date : null;
+    if (!last) { never.push(n); return; }
+    var dd = daysSince(last); if (dd != null && dd >= BRIEF_JUMP_DAYS) overdue.push({ n: n, d: dd });
+  });
+  overdue.sort(function (a, b) { return b.d - a.d; });
+  if (overdue.length) {
+    warn = true;
+    var nm = function (n) { return n.split(' ').slice(-1)[0]; };
+    items.push('<span style="color:var(--yellow);" title="' + overdue.map(function (o) { return o.n + ' — ' + o.d + ' days'; }).join('\n').replace(/"/g, '&quot;') + '">📏 <b>' + overdue.length + '</b> athlete' + (overdue.length > 1 ? 's haven\'t' : ' hasn\'t') + ' jumped in ' + BRIEF_JUMP_DAYS + '+ days: '
+      + overdue.slice(0, 8).map(function (o) { return nm(o.n) + ' <span style="color:var(--text3);">' + o.d + 'd</span>'; }).join(', ') + (overdue.length > 8 ? ' +' + (overdue.length - 8) + ' more' : '') + '</span>');
+  }
+  if (never.length) items.push('<span style="color:var(--text3);">No jumps on file: ' + never.map(function (n) { return n.split(' ').slice(-1)[0]; }).join(', ') + '</span>');
+  if (!items.length) { host.innerHTML = ''; return; }
+  host.innerHTML = '<div style="background:var(--bg3);border-radius:8px;padding:10px 16px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-size:12.5px;border-left:4px solid ' + (warn ? 'var(--yellow)' : 'var(--green)') + ';">'
+    + '<span style="font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;">Data freshness</span>' + items.join('') + '</div>';
 }
 
 // ── Extract exercises from a saved program's content ──────────────────────────
@@ -18401,6 +18450,37 @@ function renderCMJOverlayChart(cmjStd, cmjAB) {
   });
 }
 
+// ── Jump data: VALD sync is the primary source; CSV imports only fill dates VALD doesn't have ──
+function valdJumpRows(name, type) {
+  var T = (typeof JP !== 'undefined' && JP.data && JP.data.players && JP.data.players[name]) || [];
+  var rd = function (x, n) { return x == null || isNaN(x) ? 0 : +(+x).toFixed(n); };
+  return T.filter(function (t) { return t.t === type && t.v && t.v.jh >= 1 && t.v.ppbm >= 1 && t.d; }).map(function (t) {
+    var p = t.d.split('-'), v = t.v;
+    return { date: (+p[1]) + '/' + (+p[2]) + '/' + p[0], jump: rd(v.jh, 1), ppbm: rd(v.ppbm, 1),
+      conc: v.cmp != null ? Math.round(v.cmp) : null, stiff: v.stiff != null ? Math.round(v.stiff) : null,
+      vto: rd(v.vto, 2), bw: rd(v.bw, 1), p1: rd(v.p1, 1), p2: rd(v.p2, 1), rsiMod: rd(v.rsi, 2),
+      pkPow: Math.round(v.pp || 0), cmDepth: rd(v.depth, 1), src: 'vald' };
+  });
+}
+function jumpRows(name, type) {
+  type = type || 'CMJ';
+  var store = (type === 'ABCMJ' ? importedData.abcmj : importedData.cmj) || {};
+  var csv = store[name] || [], vald = valdJumpRows(name, type);
+  if (!vald.length) return csv;
+  var byDay = {}, seen = {};
+  csv.forEach(function (r) { byDay[isoDate(r.date)] = r; });
+  var out = vald.map(function (r) {
+    var d = isoDate(r.date), c = byDay[d]; seen[d] = 1;
+    if (c) {   // older syncs had no conc power / stiffness — borrow them from the CSV for that day
+      if (r.conc == null && c.conc) r.conc = c.conc;
+      if (r.stiff == null && c.stiff) r.stiff = c.stiff;
+      if (!r.bw && c.bw) r.bw = c.bw;
+    }
+    return r;
+  });
+  csv.forEach(function (r) { if (!seen[isoDate(r.date)]) out.push(r); });
+  return out.sort(function (a, b) { return safeParseDate(a.date) - safeParseDate(b.date); });
+}
 function rebuildCMJTrends() {
   // Rebuild each player's cmjTrends from importedData.cmj + importedData.abcmj
   // so real data is always used, overriding any hardcoded placeholder values
@@ -18408,7 +18488,7 @@ function rebuildCMJTrends() {
     const p = PLAYERS[name];
     const trends = [];
     // Standard CMJ
-    (importedData.cmj[name] || []).forEach(r => {
+    jumpRows(name, 'CMJ').forEach(r => {
       if (isCMJExcluded(name, r.date)) return; // skip bad test
       try {
         const dt = new Date(r.date);
@@ -18423,7 +18503,7 @@ function rebuildCMJTrends() {
       } catch(e) {}
     });
     // ABCMJ
-    (importedData.abcmj[name] || []).forEach(r => {
+    jumpRows(name, 'ABCMJ').forEach(r => {
       if (isCMJExcluded(name, r.date)) return; // skip bad test
       try {
         const dt = new Date(r.date);
@@ -18434,21 +18514,6 @@ function rebuildCMJTrends() {
         const entry = {date:dateStr, rawDate:r.date, jump:r.jump, ppbm:r.ppbm, conc:r.conc, stiff:r.stiff, vto:r.vto||0, p1:r.p1||0, p2:r.p2||0, rsiMod:r.rsiMod||0, pkPow:r.pkPow||0, cmDepth:r.cmDepth||0, type:'ABCMJ'};
         if (existing >= 0) trends[existing] = entry;
         else trends.push(entry);
-      } catch(e) {}
-    });
-    // VALD sync sessions (cache:vald-jumps) — fill any date the CSV imports don't have.
-    // VALD sync has no concentric power (W) or stiffness, so those stay blank for these sessions.
-    const valdTests = (typeof JP !== 'undefined' && JP.data && JP.data.players && JP.data.players[name]) || [];
-    valdTests.forEach(t => {
-      try {
-        if ((t.t !== 'CMJ' && t.t !== 'ABCMJ') || !t.v || !(t.v.jh >= 1) || !(t.v.ppbm >= 1) || !t.d) return;
-        const pz = t.d.split('-'), rawDate = (+pz[1]) + '/' + (+pz[2]) + '/' + pz[0];
-        if (isCMJExcluded(name, rawDate)) return;
-        if (trends.some(x => x.type === t.t && isoDate(x.rawDate) === t.d)) return;   // CSV already has this session
-        const v = t.v, rd = (x, n) => x == null ? 0 : +(+x).toFixed(n);
-        trends.push({date:new Date(+pz[0], +pz[1]-1, +pz[2]).toLocaleDateString('en-US',{month:'short',day:'numeric'}), rawDate,
-          jump:rd(v.jh,1), ppbm:rd(v.ppbm,1), conc:null, stiff:null, vto:rd(v.vto,2), p1:rd(v.p1,1), p2:rd(v.p2,1),
-          rsiMod:rd(v.rsi,2), pkPow:Math.round(v.pp||0), cmDepth:rd(v.depth,1), type:t.t, src:'vald'});
       } catch(e) {}
     });
     if (trends.length > 0) {
@@ -18471,7 +18536,7 @@ function rebuildCMJTrends() {
       }
     }
     // Merge CMJ values into recentGames by date (so perf table shows real CMJ data)
-    const cmjEntries = importedData.cmj[name] || [];
+    const cmjEntries = jumpRows(name, 'CMJ');
     if (cmjEntries.length && p.recentGames) {
       p.recentGames.forEach(g => {
         const match = cmjEntries.find(c => isoDate(c.date) === isoDate(g.date));
@@ -18483,8 +18548,8 @@ function rebuildCMJTrends() {
     p.bests.ppbm   = 0;
     p.bests.abJump = 0;
     p.bests.abPPBM = 0;
-    const cmjOnly  = (importedData.cmj[name]||[]).filter(c => !isCMJExcluded(name, c.date));
-    const abcmjOnly = (importedData.abcmj[name]||[]).filter(c => !isCMJExcluded(name, c.date));
+    const cmjOnly  = jumpRows(name, 'CMJ').filter(c => !isCMJExcluded(name, c.date));
+    const abcmjOnly = jumpRows(name, 'ABCMJ').filter(c => !isCMJExcluded(name, c.date));
     cmjOnly.forEach(c => {
       if ((c.jump||0) > (p.bests.jump||0)) p.bests.jump = c.jump;
       if ((c.ppbm||0) > (p.bests.ppbm||0)) p.bests.ppbm = c.ppbm;
@@ -18996,8 +19061,8 @@ function applyStatcastData() {
         bat:      hitting.bat    || existingGame?.bat    || 0,
         exit:     hitting.exit   || existingGame?.exit   || 0,
         throwV:   hitting.throwV || existingGame?.throwV || 0,
-        jump:     (() => { const c = (importedData.cmj[name]||[]).find(c=>isoDate(c.date)===dateStr); return c ? c.jump : (existingGame?.jump || p.latestJump || 0); })(),
-        ppbm:     (() => { const c = (importedData.cmj[name]||[]).find(c=>isoDate(c.date)===dateStr); return c ? c.ppbm : (existingGame?.ppbm || p.latestPPBM || 0); })(),
+        jump:     (() => { const c = jumpRows(name,'CMJ').find(c=>isoDate(c.date)===dateStr); return c ? c.jump : (existingGame?.jump || p.latestJump || 0); })(),
+        ppbm:     (() => { const c = jumpRows(name,'CMJ').find(c=>isoDate(c.date)===dateStr); return c ? c.ppbm : (existingGame?.ppbm || p.latestPPBM || 0); })(),
         readiness:existingGame?.readiness || p.readiness || 1.0,
         acwr:     existingGame?.acwr  || p.acwr           || 1.0,
         status:   existingGame?.status|| p.status         || 'YELLOW',
@@ -21749,6 +21814,13 @@ async function _initWithSupabase() {
     loadAllData();
     if (typeof loadHERuns === 'function') loadHERuns();
     rebuildCMJTrends();
+    // VALD sync is the primary jump source — load it now so every tab uses it, not just Testing
+    if (typeof jpLoad === 'function' && typeof JP !== 'undefined' && !JP.data) {
+      jpLoad().then(function () {
+        if (JP.err) { JP.data = null; JP.err = null; return; }   // let the Jumps tab retry later
+        if (typeof renderDashboard === 'function') renderDashboard();
+      });
+    }
 
     // Refresh every in-memory store that's backed by localStorage but was
     // already initialized (from possibly-empty local data) before this
@@ -24959,7 +25031,7 @@ try {
 
 <script src="js/auth.js?v=3"></script>
 <script src="js/training-core.js?v=7"></script>
-<script src="js/load-ratios.js?v=4"></script>
+<script src="js/load-ratios.js?v=5"></script>
 <script src="js/ratio-table.js?v=3"></script>
 <script src="js/coach-loop.js?v=8"></script>
 <script src="js/coach-style.js?v=1"></script>
@@ -24974,16 +25046,16 @@ try {
 <script src="js/athlete-profile.js?v=3"></script>
 <script src="js/savant.js?v=3"></script>
 <script src="js/value-added.js?v=4"></script>
-<script src="js/vald-sync.js?v=6"></script>
+<script src="js/vald-sync.js?v=7"></script>
 <script src="js/jump-profile.js?v=11"></script>
 <script src="js/mlb-norms.js?v=1"></script>
 <script src="js/jump-kpi.js?v=6"></script>
 <script src="js/jump-lma.js?v=1"></script>
-<script src="js/data-fixes.js?v=2"></script>
+<script src="js/data-fixes.js?v=3"></script>
 <script src="js/year-review.js?v=7"></script>
 <script src="js/year-goals.js?v=5"></script>
 <script src="js/athlete-kpi.js?v=5"></script>
-<script src="js/data-check.js?v=3"></script>
+<script src="js/data-check.js?v=4"></script>
 <script src="js/offseason.js?v=1"></script>
 <script src="js/year-writeup.js?v=3"></script>
 <script src="js/roster.js?v=1"></script>
