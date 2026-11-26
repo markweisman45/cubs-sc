@@ -70,6 +70,8 @@ async function jpLoad() {
     if (r.error) throw r.error;
     JP.data = jpScale(r.data && r.data.value ? JSON.parse(r.data.value) : { players: {}, scaled: true });
     JP.rows = jpBuild(JP.data);
+    // Feed VALD sessions into the session trend charts too (they otherwise only see CSV imports)
+    if (typeof rebuildCMJTrends === 'function') { try { rebuildCMJTrends(); } catch (e2) {} JP._chartsFor = null; }
   } catch (e) { JP.err = e.message || String(e); }
   return JP.data;
 }
