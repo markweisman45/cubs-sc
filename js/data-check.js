@@ -11,7 +11,7 @@
 //   yellow  Data under a name that isn't on the roster (likely a name mismatch)
 //           Body weight jumps 15+ lb between tests ≤ 21 days apart (wrong athlete on the plate?)
 //           CMJ height or peak power/BM jumps 20%+ between tests ≤ 30 days apart
-//           Position player with no Savant match
+//           Position player with no Savant match (pitchers and private clients skipped)
 //   info    No VALD jumps on file
 // ═══════════════════════════════════════════════════════════════════════════
 var DC = { last: null };
@@ -67,7 +67,7 @@ async function dcRun() {
   // 2. Savant match (position players)
   if (typeof VA !== 'undefined' && VA.data) {
     (VA.data.rows || []).forEach(function (r) { if (per[r.roster]) per[r.roster].savant = r.name || r.roster; });
-    (VA.data.missing || []).forEach(function (n) { if (per[n]) add('yellow', n, 'No Baseball Savant match — sprint speed and on-field value won\'t show.'); });
+    (VA.data.missing || []).forEach(function (n) { if (per[n] && !per[n].pit) add('yellow', n, 'No Baseball Savant match — sprint speed and on-field value won\'t show.'); });
   }
 
   // 3. Pitchers with position-player data
