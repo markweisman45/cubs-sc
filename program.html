@@ -1389,9 +1389,16 @@ async function init(){
   if (/[?&]print=1/.test(location.search)) setTimeout(printProgram, 400);   // opened from the dashboard's 🖨 PDF
 
   try {
-    var er = await SUPA.from('exercises').select('name,mechanism_text,sport_transfer,video').not('mechanism_text', 'is', null);
-    (er.data || []).forEach(function(e){ ENRICH[String(e.name).toLowerCase()] = e; });
-    if (er.data && er.data.length) renderSession();
+    // Page through — Supabase caps each request at 1,000 rows
+    var all = [];
+    for (var from = 0; ; from += 1000) {
+      var er = await SUPA.from('exercises').select('name,mechanism_text,sport_transfer,video').not('mechanism_text', 'is', null).order('name').range(from, from + 999);
+      if (er.error || !er.data) break;
+      all = all.concat(er.data);
+      if (er.data.length < 1000) break;
+    }
+    all.forEach(function(e){ ENRICH[String(e.name).toLowerCase()] = e; });
+    if (all.length) renderSession();
   } catch(e) {}
 }
 // ── Print / PDF — weeks side by side ──────────────────────────────────────────
