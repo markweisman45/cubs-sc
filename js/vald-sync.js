@@ -31,7 +31,7 @@ async function cubsValdSync(CFG) {
     var ASYM = ['cimp', 'edimp', 'plf', 'p1', 'p2'], LOWER = ['ct', 'bpd'], CTX = ['depth', 'bw'], byId = {}; Object.keys(KEYS).forEach(function (k) { byId[KEYS[k]] = k; });
     var defs = await (await fetch('https://use-api-forcedecks-gateway.prd.vald.com/api/v1/resultdefinitions', { headers: H })).json();
     // Metrics we only know by name: look their result ids up in VALD's definitions
-    var BYNAME = { cppbm: /^concentric peak power\s*\/\s*bm$/i }, found = [];
+    var BYNAME = { cppbm: /^concentric peak power\s*\/\s*bm$/i, cmp: /^concentric mean power$/i, stiff: /^cmj stiffness$/i }, found = [];
     Object.keys(BYNAME).forEach(function (k) {
       var d = (defs || []).find(function (x) { return [x.resultName, x.name, x.resultDescription, x.description].some(function (s) { return s && BYNAME[k].test(String(s).trim()); }); });
       if (d && d.resultId != null) { KEYS[k] = d.resultId; byId[d.resultId] = k; found.push(k); }
@@ -101,7 +101,7 @@ async function cubsValdSync(CFG) {
         };
       });
     } else if (!u.ok) throw new Error('Saving failed (' + u.status + ')');
-    say('✅ Done — ' + tests + ' sessions for ' + Object.keys(out.players).length + ' athletes.' + (missing.length ? '<br><span style="color:#fbbf24;">Not found in VALD: ' + missing.join(', ') + '</span>' : '') + (found.indexOf('cppbm') < 0 ? '<br><span style="color:#fbbf24;">Concentric peak power / BM not found in VALD definitions.</span>' : '') + '<br>Reload the dashboard\'s Jump Profile.');
+    say('✅ Done — ' + tests + ' sessions for ' + Object.keys(out.players).length + ' athletes.' + (missing.length ? '<br><span style="color:#fbbf24;">Not found in VALD: ' + missing.join(', ') + '</span>' : '') + (['cppbm', 'cmp', 'stiff'].filter(function (k) { return found.indexOf(k) < 0; }).length ? '<br><span style="color:#fbbf24;">Not found in VALD definitions: ' + ['cppbm', 'cmp', 'stiff'].filter(function (k) { return found.indexOf(k) < 0; }).map(function (k) { return { cppbm: 'Concentric peak power / BM', cmp: 'Concentric mean power', stiff: 'CMJ stiffness' }[k]; }).join(', ') + '</span>' : '') + '<br>Reload the dashboard\'s Jump Profile.');
   } catch (e) { say('<span style="color:#fca5a5;">' + (e.message || e) + '</span>'); }
   setTimeout(function () { box.remove(); }, 15000);
 }
