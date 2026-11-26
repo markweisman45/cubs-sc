@@ -61,7 +61,7 @@ async function dcRun() {
   });
   Object.keys(stray).forEach(function (name) {
     var guess = roster.filter(function (r) { return dcLast(r) === dcLast(name); }), g = guess.length === 1 ? guess[0] : null;
-    add('yellow', null, '<b>' + dcEsc(name) + '</b> isn\'t on the roster but has data (' + dcEsc(stray[name].join(', ')) + ')' + (g ? ' — probably <b>' + dcEsc(g) + '</b> under a different name' + (dcPit(g) ? '' : ', so it isn\'t being used') : ' — fine if he\'s off the roster') + '.');
+    add('yellow', null, '<b>' + dcEsc(name) + '</b> isn\'t on the roster but has data (' + dcEsc(stray[name].join(', ')) + ')' + (g ? ' — probably <b>' + dcEsc(g) + '</b> under a different name' + (dcPit(g) ? '' : ', so it isn\'t being used') : ' — fine if he\'s off the roster') + '.', g ? { merge: name, into: g } : null);
   });
 
   // 2. Savant match (position players)
@@ -144,7 +144,8 @@ var DC_ICON = { red: '⛔', yellow: '⚠️', info: 'ℹ️' };
 function dcFlagHTML(f, showWho) {
   return '<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-size:12.5px;line-height:1.45;color:var(--text);">'
     + '<span>' + DC_ICON[f.lvl] + '</span><div style="flex:1;">' + (showWho && f.who ? '<b style="color:' + DC_COL[f.lvl] + ';">' + dcEsc(f.who) + '</b> — ' : '') + f.msg + '</div>'
-    + (f.fix ? '<button onclick="dcFix(\'' + String(f.fix.name).replace(/'/g, "\\'") + '\', this)" style="flex-shrink:0;padding:4px 10px;border-radius:7px;border:1px solid rgba(59,130,246,.5);background:rgba(59,130,246,.15);color:#93c5fd;font-size:11px;font-weight:700;cursor:pointer;">↻ Rebuild page</button>' : '')
+    + (f.fix && f.fix.merge ? '<button onclick="dcMerge(\'' + String(f.fix.merge).replace(/'/g, "\\'") + '\', \'' + String(f.fix.into).replace(/'/g, "\\'") + '\', this)" style="flex-shrink:0;padding:4px 10px;border-radius:7px;border:1px solid rgba(34,197,94,.5);background:rgba(34,197,94,.15);color:#86efac;font-size:11px;font-weight:700;cursor:pointer;">⇢ Merge into ' + dcEsc(String(f.fix.into).split(' ')[0]) + '</button>' : '')
+    + (f.fix && f.fix.name ? '<button onclick="dcFix(\'' + String(f.fix.name).replace(/'/g, "\\'") + '\', this)" style="flex-shrink:0;padding:4px 10px;border-radius:7px;border:1px solid rgba(59,130,246,.5);background:rgba(59,130,246,.15);color:#93c5fd;font-size:11px;font-weight:700;cursor:pointer;">↻ Rebuild page</button>' : '')
     + '</div>';
 }
 
@@ -194,6 +195,20 @@ async function dcOpen(recheck) {
   dcRender();
 }
 
+// Move data filed under a misspelled name onto the roster athlete, and remember the alias for future imports
+async function dcMerge(from, to, btn) {
+  if (!confirm('Move all data filed under "' + from + '" onto ' + to + '?\n\nFuture imports under "' + from + '" will be filed under ' + to + ' automatically.')) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Merging…'; }
+  try {
+    dfAddAlias(from, to);
+    var changed = dfApplyAliases(); dfSaveAliased(changed);
+    if (typeof rebuildCMJTrends === 'function') rebuildCMJTrends();
+    if (typeof renderDashboard === 'function') renderDashboard();
+    if (typeof syncToSupabase === 'function') setTimeout(syncToSupabase, 500);
+    if (typeof showStatus === 'function') showStatus('✅ Merged ' + from + ' into ' + to);
+  } catch (e) { alert('Couldn\'t merge: ' + (e.message || e)); }
+  await dcRun(); dcRender();
+}
 async function dcFix(name, btn) {
   if (btn) { btn.disabled = true; btn.textContent = 'Rebuilding…'; }
   try {
