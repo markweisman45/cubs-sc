@@ -6,6 +6,7 @@
 //  • dropRuns: single bad HE runs removed from every speed view
 //  • bwLb: body weight to use for relative strength (overrides VALD)
 //  • Statcast speed typed without a decimal (2871 → 28.71) is corrected
+//  • alias: data filed under another spelling is moved to the roster name (Data Check "Merge" adds these)
 // ═══════════════════════════════════════════════════════════════════════════
 var DATA_FIX = {
   noJumps: ['Dansby Swanson', 'Ian Happ'],
@@ -17,6 +18,43 @@ var DATA_FIX = {
   ],
   bwLb: { 'Nico Hoerner': 200, 'Dansby Swanson': 188, 'Ian Happ': 208 }
 };
+// Name aliases: built-in + ones added from Data Check (cloud-synced key)
+var DF_ALIAS_KEY = 'cubs_sc_name_alias_v1';
+function dfAliases() {
+  var a = { 'Matt Boyd': 'Matthew Boyd' };
+  try { var u = JSON.parse(localStorage.getItem(DF_ALIAS_KEY) || '{}'); Object.keys(u).forEach(function (k) { a[k] = u[k]; }); } catch (e) {}
+  return a;
+}
+function dfAddAlias(from, to) {
+  var u = {}; try { u = JSON.parse(localStorage.getItem(DF_ALIAS_KEY) || '{}'); } catch (e) {}
+  u[from] = to; localStorage.setItem(DF_ALIAS_KEY, JSON.stringify(u));
+}
+// Move every row filed under an alias onto the roster name (exact duplicates dropped). Returns stores changed.
+function dfApplyAliases() {
+  var A = dfAliases(), changed = {};
+  var stores = { statcast: null, hitting: null, cmj: null, abcmj: null, he: null };
+  if (typeof importedData !== 'undefined') ['statcast', 'hitting', 'cmj', 'abcmj'].forEach(function (k) { stores[k] = importedData[k]; });
+  if (typeof heRunsData !== 'undefined') stores.he = heRunsData;
+  Object.keys(stores).forEach(function (k) {
+    var S = stores[k]; if (!S || typeof S !== 'object') return;
+    Object.keys(A).forEach(function (from) {
+      var to = A[from]; if (!Array.isArray(S[from]) || from === to) return;
+      var dest = Array.isArray(S[to]) ? S[to] : [], seen = {};
+      dest.forEach(function (r) { seen[JSON.stringify(r)] = 1; });
+      S[from].forEach(function (r) { var j = JSON.stringify(r); if (!seen[j]) { dest.push(r); seen[j] = 1; } });
+      S[to] = dest; delete S[from]; changed[k] = 1;
+    });
+  });
+  return changed;
+}
+function dfSaveAliased(changed) {
+  try {
+    if (changed.statcast && typeof saveStatcast === 'function') saveStatcast();
+    if (changed.hitting && typeof saveHitting === 'function') saveHitting();
+    if ((changed.cmj || changed.abcmj) && typeof saveCMJ === 'function') saveCMJ();
+    if (changed.he && typeof saveHERuns === 'function') saveHERuns();
+  } catch (e) { console.warn('[data-fixes] alias save', e); }
+}
 function dfDropped(name, iso, type) {
   return DATA_FIX.dropTests.some(function (x) { return x.name === name && x.d === iso && (!x.t || x.t === type); });
 }
@@ -74,7 +112,8 @@ function athleteBW(name) {
   if (typeof jpScale === 'function') { var _js = jpScale; jpScale = function (D) { return dfFixVald(_js.apply(this, arguments)); }; }
   if (typeof rebuildCMJTrends === 'function') { var _rb = rebuildCMJTrends; rebuildCMJTrends = function () { var x = _rb.apply(this, arguments); dfFixTrends(); return x; }; }
   if (typeof renderDashboard === 'function') { var _rd = renderDashboard; renderDashboard = function () { dfFixSpeed(); dfFixTrends(); return _rd.apply(this, arguments); }; }
-  if (typeof loadHERuns === 'function') { var _lh = loadHERuns; loadHERuns = function () { var x = _lh.apply(this, arguments); dfFixRuns(); return x; }; }
+  if (typeof loadHERuns === 'function') { var _lh = loadHERuns; loadHERuns = function () { var x = _lh.apply(this, arguments); dfApplyAliases(); dfFixRuns(); return x; }; }
+  if (typeof loadAllData === 'function') { var _la = loadAllData; loadAllData = function () { var x = _la.apply(this, arguments); dfApplyAliases(); return x; }; }
   if (typeof renderHERuns === 'function') { var _rh = renderHERuns; renderHERuns = function () { dfFixRuns(); return _rh.apply(this, arguments); }; }
-  dfFixSpeed(); dfFixTrends(); dfFixRuns();
+  dfApplyAliases(); dfFixSpeed(); dfFixTrends(); dfFixRuns();
 })();
