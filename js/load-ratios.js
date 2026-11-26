@@ -143,7 +143,7 @@ function currentBodyWeight(athlete) {
   if (!athlete) return null;
   var c = [];
   try {
-    ((typeof importedData !== 'undefined' && importedData.cmj && importedData.cmj[athlete]) || []).forEach(function (r) {
+    ((typeof jumpRows === 'function' ? jumpRows(athlete, 'CMJ') : (typeof importedData !== 'undefined' && importedData.cmj && importedData.cmj[athlete])) || []).forEach(function (r) {
       if (r && r.bw > 50 && (!r.type || r.type === 'CMJ') && !(typeof isCMJExcluded === 'function' && isCMJExcluded(athlete, r.date)))
         c.push({ lbs: +r.bw, t: _lrDate(r.date), date: r.date, src: 'VALD' });
     });
