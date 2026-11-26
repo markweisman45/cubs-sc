@@ -73,7 +73,12 @@ async function dcRun() {
   // 3. Pitchers with position-player data
   roster.forEach(function (n) {
     if (!per[n].pit) return;
-    S.forEach(function (s) { var c = per[n].src[s.k]; if (s.pos && c && c.n) add('red', n, 'Pitcher with ' + c.n + ' ' + s.label + ' record' + (c.n === 1 ? '' : 's') + ' under his name — likely another player\'s data.'); });
+    S.forEach(function (s) {
+      var c = per[n].src[s.k]; if (!s.pos || !c || !c.n) return;
+      // A throw-velocity-only row (no bat speed / exit velo) is the pitcher's own fielding throw, not hitting data
+      var cnt = s.k === 'hitting' ? (s.map[n] || []).filter(function (r) { return (+r.bat || 0) > 0 || (+r.exit || 0) > 0; }).length : c.n;
+      if (cnt) add('red', n, 'Pitcher with ' + cnt + ' ' + s.label + ' record' + (cnt === 1 ? '' : 's') + ' under his name — likely another player\'s data.');
+    });
   });
 
   // 4. Same data filed under two names
