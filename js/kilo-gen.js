@@ -261,7 +261,7 @@
         U1: a ? [C('DB Single Arm Row', 3, '12 / 10 / 8', 'RPE 8', '2-0-1-0', '1:30', 'Drop set — ~10% drop per step, no rest'), C('Half Kneeling Cable Press', 3, '10ea', 'RPE 7', '3-0-1-0', '1:15', '1¼ reps at the bottom')]
           : [C('DB Single Arm Row', 3, '6ea', 'RPE 8', '3-0-1-0', '1:30'), C('DB Lateral Raise', 3, 10, 'Light', '4-0-1-0', '1:00', 'Telle method — accentuated eccentric')],
         U2: a ? [C('TB Pendlay Row', 3, 10, 'RPE 7–8', '2-0-1-0', '1:30'), C('DB Incline Zottman Curl', 3, '8 / 6 / 6', 'RPE 8', '3-0-1-0', '1:00', 'Mechanical-advantage set — pronated → supinated → neutral, same load')]
-          : [C('TB Pendlay Row', 3, 6, 'RPE 8', '2-0-1-0', '1:30'), C('Incline DB Curl', 3, 8, 'RPE 7', '3-0-1-2', '1:00', 'Pause at the top (yielding iso)')],
+          : [C('TB Pendlay Row', 3, 6, 'RPE 8', '2-0-1-0', '1:30'), C('Incline DB Curl', 3, 6, 'RPE 7', '3-0-1-2', '1:00', 'Pause at the top (yielding iso)')],
       }[d];
     }
     function remedial(d, pair, u2IsDip) {
