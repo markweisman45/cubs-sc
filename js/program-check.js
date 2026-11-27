@@ -60,6 +60,7 @@
     return out;
   }
   function tutChip(ex, w) {
+    if (/^\s*X/i.test(ex.tempo || '')) return '';   // ballistic (jumps, throws) — no time under tension
     var s = TUT(ex.tempo, ex.reps); if (s == null) return '';
     var r = tutRange(ex, w), ok = !r || (s >= r[0] && s <= r[1]);
     return '<span title="Time under tension per set = tempo × reps' + (r ? ' · target ' + r[0] + '–' + r[1] + ' s' : '') + '" style="padding:1px 6px;border-radius:4px;font-family:\'DM Mono\',monospace;'
@@ -138,7 +139,7 @@
               var t = fitTempo(e.reps, r[0], r[1], e.tempo);
               out.push({ lvl: s > r[1] ? 'red' : 'yellow', where: where, tag: tag,
                 msg: e.name + ' ' + e.sets + '×' + e.reps + ' @ ' + e.tempo + ' = ' + s + ' s a set — ' + (phaseOf(w) === 'acc' ? 'Accumulation' : phaseOf(w) === 'int' ? 'Intensification' : 'target') + ' range is ' + r[0] + '–' + r[1] + ' s',
-                fix: t ? { type: 'tempo', wi: wi, di: di, bi: x.bi, ei: ei, v: t } : null, fixLabel: t ? 'Tempo → ' + t : '' });
+                fix: t ? { type: 'tempo', wi: wi, di: di, bi: x.bi, ei: ei, v: t } : null, fixLabel: t ? 'Tempo → ' + (typeof kiloCompactTempo === 'function' ? kiloCompactTempo(t) : t) : '' });
             }
             var list = String(e.reps || '').trim();
             if (/^\d+(\s*,\s*\d+)+$/.test(list) && list.split(',').length !== parseInt(e.sets, 10)) {
@@ -164,7 +165,7 @@
     }
     var e = b.exercises[f.ei]; if (!e) return false;
     if (f.type === 'drop') { b.exercises.splice(f.ei, 1); return true; }
-    if (f.type === 'tempo') { e.tempo = f.v; return true; }
+    if (f.type === 'tempo') { e.tempo = typeof kiloCompactTempo === 'function' ? kiloCompactTempo(f.v) : f.v; return true; }
     if (f.type === 'sets') { e.sets = f.v; return true; }
     return false;
   }
