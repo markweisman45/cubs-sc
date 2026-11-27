@@ -42,6 +42,9 @@
     'react-third':       { fam: 'Reactive', label: 'Myotatic ⅓ reps + bands', sets: 5, reps: 5, tempo: '2-0-X-0', rest: '2:00', load: '40% + bands', tut: null, note: 'Bottom third only — fast stretch-shortening' },
   };
 
+  // Category and 1RM link for every exercise the generator uses (from the exercise library in index.html)
+  var KILO_EX_META = {"2pt Start (LSV)":["Mobility"],"A-Skip":["Performance Prep"],"Alternating Push-Off":["LB Plyos"],"Arnold Press":["UB Vertical Push"],"B-Skip":["Performance Prep"],"Back Squat":["Squat Variations","Back Squat"],"Barbell Hip Thrust":["Hamstring"],"Bb Bench Press":["UB Horizontal Push"],"Bb Overhead Press":["UB Vertical Push"],"Bb RDL":["Hamstring"],"Bench Elevated Plyo Push-Up":["UB Horizontal Push"],"Biering-Sorensen Hold":["Core Anti-Flexion"],"Bird Dog":["Core Anti-Extension"],"Bounding":["Max Velocity Running"],"Box Jump":["LB Plyos"],"Box Squat":["Squat Variations","Box Squat"],"Broad Jump W/ Stick":["LB Plyos"],"Chin Up":["UB Vertical Pull"],"Clean Grip Deadlift":["Hamstring"],"Cone One-Leg Alternating Jumps":["LB Plyos"],"Conventional DL":["Deadlift Variations","Conventional DL"],"Copenhagen Plank":["Hip ABD_ADD"],"DB Incline Zottman Curl":["Biceps Triceps"],"DB Lateral Raise":["Shoulder Complex"],"DB Single Arm Row":["UB Horizontal Pull"],"Dead Bug":["Core Anti-Extension"],"Deca Jump":["LB Plyos"],"Depth Jump":["LB Plyos"],"Dip (Weighted)":["UB Vertical Push"],"Dribbles (Calf)":["Calf Ankle"],"Dribbles (Knee)":["LB Plyos"],"Drop Landing (Stick)":["LB Plyos"],"Elbow-on-Knee DB External Rotation":["Shoulder Complex"],"Farmer Carry":["Strongman Variations"],"Fly (variation)":["Max Velocity Running"],"Front Squat":["Squat Variations","Front Squat"],"Glute-Ham Raise":["Hamstring","Glute-Ham Raise"],"Goblet Lateral Lunge":["Squat Variations"],"Ground Start Chaser Variations":["Acceleration"],"Half Kneeling Cable Press":["UB Horizontal Pull"],"Half Kneeling Landmine Press":["UB Vertical Push","Landmine Press"],"Hang Clean":["Olympic Variations","Hang Clean"],"High Pull":["Olympic Variations"],"Hurdle Jump-Continuous":["LB Plyos"],"Incline Barbell Press":["UB Horizontal Push"],"Incline DB Curl":["Biceps Triceps"],"Incline Trap-3 Raise":["Shoulder Complex"],"MB Side Toss":["LB Plyos"],"MB Step Back Side Toss":["LB Plyos"],"Med Ball Chest Pass":["UB Plyos"],"Pallof Press":["Core Anti-Rotation"],"Penta Jump":["LB Plyos"],"Plate Pinch":["Grip"],"Plyo Push Up":["UB Plyos"],"Pogo Jumps":["LB Plyos"],"Power Skips- Distance":["LB Plyos"],"Prowler Sprint":["Acceleration"],"Pull Up (Weighted)":["UB Vertical Pull","Pull Up (weighted)"],"Push-Up":["UB Horizontal Push"],"RFE Split Squat (DB)":["Squat Variations"],"Russian Alt Split Jumps":["LB Plyos"],"SL DB RDL":["Hamstring"],"Safety Bar Squat":["Squat Variations","Safety Bar Squat"],"Seated Calf Raise":["Calf Ankle"],"Seated Leg Curl":["Hamstring"],"Side Plank":["Core Anti-Lateral Flexion"],"Squat 1 1/4":["Squat Variations"],"Squat Jump":["LB Plyos"],"Standing Jump and Reach":["LB Plyos"],"Steal Start (3 steps)":["Mobility"],"Supination/Pronation Club":["Mobility"],"TB Pendlay Row":["UB Horizontal Pull"],"Trap Bar Counter Movement Jump":["Olympic Variations"],"Trap Bar Deadlift":["Deadlift Variations","Trap Bar DL"],"Tuck Jump":["LB Plyos"],"Wickets":["Max Velocity Running"],"Wrist Radial/Ulnar Deviation":["Grip"]};
+
   // Seconds under tension for one set of a straight tempo (X = 1 s)
   function kiloTut(tempo, reps) {
     var m = String(tempo || '').match(/^(\d+|X)-(\d+|X)-(\d+|X)-(\d+|X)$/);
@@ -59,7 +62,13 @@
   function kiloBuildTemplates(DB) {
     var BY = {};
     (DB || []).forEach(function (e) { if (e && e.name && !BY[e.name]) BY[e.name] = e; });
-    function L(name) { var e = BY[name]; if (!e) throw new Error('Not in library: ' + name); return e; }
+    // Your live library can spell an exercise differently — fall back to the built-in category / 1RM link.
+    // Method Library adds any exercise you don't have when you load the template (same as before).
+    function L(name) {
+      var e = BY[name]; if (e) return e;
+      var m = KILO_EX_META[name]; if (!m) throw new Error('Not in library: ' + name);
+      return { name: name, cat: m[0], liftKey: m[1] || null };
+    }
     var S = function (v) { return String(v); };
     var clone = function (o) { return JSON.parse(JSON.stringify(o)); };
     var r1 = function (n) { return Math.round(n * 2) / 2; };
