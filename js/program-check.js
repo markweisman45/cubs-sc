@@ -66,12 +66,29 @@
     return '<span title="Time under tension per set = tempo × reps' + (r ? ' · target ' + r[0] + '–' + r[1] + ' s' : '') + '" style="padding:1px 6px;border-radius:4px;font-family:\'DM Mono\',monospace;'
       + (ok ? 'color:var(--text3);background:rgba(255,255,255,0.04);' : 'color:#fbbf24;background:rgba(251,191,36,0.12);') + '">TUT ' + s + ' s' + (ok ? '' : ' ⚠') + '</span>';
   }
+  // External load on top of the bar — bands, chains, vest, weight releasers (shows to athletes with the load)
+  function extSelect(ex, at) {
+    var list = (typeof TC !== 'undefined' && TC.EXT_LOADS) || ['Light bands', 'Average bands', 'Heavy bands', 'Chains', 'Weight releasers', 'Weighted vest'];
+    var cur = ex.ext || '', opts = '<option value="">+ none</option>';
+    if (cur && list.indexOf(cur) < 0) opts += '<option value="' + esc(cur) + '" selected>' + esc(cur) + '</option>';
+    list.forEach(function (x) { opts += '<option value="' + esc(x) + '"' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; });
+    return '<span style="margin-left:4px;">🔗 External</span>'
+      + '<select onchange="pcSetExt(' + at.bi + ',' + at.ei + ',this.value)" title="External load on top of the bar — shows to the athlete with the load (e.g. 185 lbs + Average bands)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 4px;color:' + (cur ? '#fcd34d' : 'var(--text3)') + ';font-size:9.5px;max-width:140px;">' + opts + '</select>';
+  }
+  window.pcSetExt = function (bi, ei, val) {
+    var a = activeDay(); if (!a) return;
+    var ex = a.d.blocks[bi].exercises[ei]; if (!ex) return;
+    if (val) ex.ext = val; else delete ex.ext;
+    if (typeof pbRenderDayGrid === 'function') pbRenderDayGrid();
+    if (typeof pbOpenDay === 'function') pbOpenDay(PB_ACTIVE_DAY.weekIdx, PB_ACTIVE_DAY.dayIdx);
+  };
   function methodStrip(ex) {
     var at = locate(ex); if (!at) return '';
     var m = ex.method && M()[ex.method];
     return '<div style="display:flex;align-items:center;gap:6px;margin:-3px 0 7px 44px;font-size:9.5px;color:var(--text3);">'
       + '<span>🧪 Method</span>'
       + '<select onchange="pcPickMethod(' + at.bi + ',' + at.ei + ',this.value)" title="Pick a method — sets, reps, tempo, rest and load fill in together" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 4px;color:' + (m ? '#c4b5fd' : 'var(--text3)') + ';font-size:9.5px;max-width:230px;">' + methodOptions(ex.method || '') + '</select>'
+      + extSelect(ex, at)
       + tutChip(ex, at.w)
       + (m ? '<span style="opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px;" title="' + esc(m.note) + '">' + esc(m.note) + '</span>' : '')
       + '</div>';
@@ -84,6 +101,7 @@
     else {
       var m = M()[key];
       ex.method = key; ex.sets = String(m.sets); ex.reps = String(m.reps); ex.tempo = m.tempo; ex.rest = m.rest; ex.load = m.load;
+      if (m.ext) ex.ext = m.ext; else delete ex.ext;   // the method's bands / chains / releasers come with it
       // replace a method note we wrote; keep the coach's own notes
       if (!ex.notes || (prevNote && ex.notes.indexOf(prevNote) === 0) || /^IMCA|^A-series/.test(ex.notes)) ex.notes = m.label + ' — ' + m.note;
     }
