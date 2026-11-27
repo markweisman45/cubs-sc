@@ -15294,6 +15294,13 @@ function pbFieldSelect(bi, ei, field, currentVal, placeholder) {
 
   // Build options
   var optHtml = '<option value="">'+placeholder+'</option>';
+  // A saved value that isn't one of the presets (e.g. tempo 4-0-X-0, load 55% + bands, reps 6–8)
+  // still has to show — otherwise the box looks empty even though the value is there
+  var cv = currentVal == null ? '' : String(currentVal);
+  if (cv && opts.indexOf(cv) < 0) {
+    var cvEsc = cv.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    optHtml += '<option value="'+cvEsc+'" selected>'+cvEsc+'</option>';
+  }
   opts.forEach(function(o) {
     optHtml += '<option value="'+o+'"'+(o===currentVal?' selected':'')+'>'+o+'</option>';
   });
@@ -25063,8 +25070,8 @@ try {
 <script src="js/ui-refresh.js?v=2"></script>
 <script src="js/throwing-parse.js?v=1"></script>
 <script src="js/throwing.js?v=2"></script>
-<script src="js/kilo-gen.js?v=3"></script>
+<script src="js/kilo-gen.js?v=5"></script>
 <script src="js/method-library.js?v=4"></script>
-<script src="js/program-check.js?v=1"></script>
+<script src="js/program-check.js?v=2"></script>
 </body>
 </html>
