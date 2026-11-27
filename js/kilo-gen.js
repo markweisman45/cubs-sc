@@ -24,7 +24,7 @@
     'ecc-supra':         { fam: 'Eccentric', label: 'Supra-maximal eccentric', sets: 4, reps: 2, tempo: '6-0-0-0', rest: '3:30', load: '105%', tut: null, lower: true, note: '100–120% (never over 120%), spotters or hooks · 2+ years training age only' },
     'conc-ecc':          { fam: 'Eccentric', label: 'Concentric-eccentric combo', sets: 4, reps: '6 + 2 ecc', tempo: '3-0-X-0 + 5-0-0-0', rest: '3:00', load: '80%', tut: null, note: 'RM set, then 2 eccentric-only reps (spotter lifts it)' },
     'ecc-conc':          { fam: 'Eccentric', label: 'Eccentric-concentric combo', sets: 4, reps: '4 ecc + 6', tempo: '5-0-0-0 + 2-0-X-0', rest: '3:00', load: '80% / 50%', tut: null, note: '4 eccentric-only reps (~80%), 10 s, then 6 fast reps (~50%)' },
-    'ecc-expl-accent':   { fam: 'Eccentric', label: 'Explosive accentuated eccentric', sets: 5, reps: 3, tempo: '4-0-X-0', rest: '2:30', load: '60% bar + 20% hooks', tut: null, note: 'Weight releasers — 4 s lowering, hooks drop, explode up · re-hang every rep' },
+    'ecc-expl-accent':   { fam: 'Eccentric', label: 'Explosive accentuated eccentric', sets: 5, reps: 3, tempo: '4-0-X-0', rest: '2:30', load: '60%', ext: 'Weight releasers', tut: null, note: 'Weight releasers — 4 s lowering, hooks drop, explode up · re-hang every rep' },
     'ecc-dyn-iso':       { fam: 'Eccentric', label: 'Dynamic eccentric-isometric', sets: 5, reps: 3, tempo: 'X-2-X-0', rest: '2:00', load: '50%', tut: null, note: 'Pull yourself down fast, stick 2 s, explode' },
     'yield-mechdis':     { fam: 'Isometric', label: 'Mechanical-disadvantage pause', sets: 4, reps: '6–8', tempo: '3-2-X-0', rest: '2:30', load: '72.5%', tut: [30, 70], note: '2 s pause in the hole · last set: mid-range hold 20–40 s, rack, then max fast reps at 50%' },
     'yield-3pause-ecc':  { fam: 'Isometric', label: '3-pause eccentric', sets: 4, reps: 6, tempo: '6-0-X-0', rest: '2:30', load: '72.5%', tut: [30, 70], note: '2 s pauses at ¾, ½ and ¼ depth on the way down' },
@@ -34,12 +34,12 @@
     'over-functional':   { fam: 'Isometric', label: 'Functional isometric', sets: 4, reps: '3 × 6–8 s', tempo: 'iso', rest: '2:00', load: 'Max push into pins', tut: null, note: 'Pushes at the bottom, middle and top · never over 8 s' },
     'over-fi-contrast':  { fam: 'Isometric', label: 'Functional-iso contrast', sets: 3, reps: '2 + 2 (×2)', tempo: '1-0-1-6 / 2-0-X-0', rest: '2:30', load: '50%', tut: null, note: '2 reps with a 6 s pin push, 2 fast full-range reps, repeat' },
     'yield-stato':       { fam: 'Iso-dynamic', label: 'Stato-dynamic', sets: 5, reps: 3, tempo: '4-0-X-2', rest: '2:30', load: '60–70%', tut: null, note: '2 s pause at the sticking point on the way up, then explode' },
-    'yield-stato-band':  { fam: 'Iso-dynamic', label: 'Stato-dynamic + bands', sets: 4, reps: 5, tempo: '2-0-X-2', rest: '2:30', load: '50% bar + 25% band', tut: null, note: '~75% at the top with the band' },
-    'ss-variable':       { fam: 'Speed-strength', label: 'Variable resistance (bands / chains)', sets: 6, reps: 3, tempo: '1-0-X-0', rest: '1:30', load: '55% + bands', tut: null, note: 'Chain rule 80/20 · stop at a 10% velocity drop' },
+    'yield-stato-band':  { fam: 'Iso-dynamic', label: 'Stato-dynamic + bands', sets: 4, reps: 5, tempo: '2-0-X-2', rest: '2:30', load: '50%', ext: 'Average bands', tut: null, note: '~75% at the top with the band' },
+    'ss-variable':       { fam: 'Speed-strength', label: 'Variable resistance (bands / chains)', sets: 6, reps: 3, tempo: '1-0-X-0', rest: '1:30', load: '55%', ext: 'Average bands', tut: null, note: 'Chain rule 80/20 · stop at a 10% velocity drop' },
     'ss-olympic':        { fam: 'Speed-strength', label: 'Olympic variation', sets: 5, reps: 3, tempo: 'X-0-X-0', rest: '2:00', load: '70%', tut: null, lower: true, note: '0.5–0.75 m/s · stop at a 7–10% velocity drop' },
-    'ss-deadstop':       { fam: 'Speed-strength', label: 'Deadstop + bands (starting strength)', sets: 6, reps: 2, tempo: '2-4-X-0', rest: '2:00', load: '55% + bands', tut: null, note: 'Deadstop on pins, ~20% band tension at the top · relax fully, then contract everything at once' },
-    'react-myotatic':    { fam: 'Reactive', label: 'Myotatic 1¼ reps + bands', sets: 5, reps: 3, tempo: '2-0-X-0', rest: '2:00', load: '50% + bands', tut: null, note: '1¼ reps — bridge from explosive to reactive' },
-    'react-third':       { fam: 'Reactive', label: 'Myotatic ⅓ reps + bands', sets: 5, reps: 5, tempo: '2-0-X-0', rest: '2:00', load: '40% + bands', tut: null, note: 'Bottom third only — fast stretch-shortening' },
+    'ss-deadstop':       { fam: 'Speed-strength', label: 'Deadstop + bands (starting strength)', sets: 6, reps: 2, tempo: '2-4-X-0', rest: '2:00', load: '55%', ext: 'Light bands', tut: null, note: 'Deadstop on pins, ~20% band tension at the top · relax fully, then contract everything at once' },
+    'react-myotatic':    { fam: 'Reactive', label: 'Myotatic 1¼ reps + bands', sets: 5, reps: 3, tempo: '2-0-X-0', rest: '2:00', load: '50%', ext: 'Light bands', tut: null, note: '1¼ reps — bridge from explosive to reactive' },
+    'react-third':       { fam: 'Reactive', label: 'Myotatic ⅓ reps + bands', sets: 5, reps: 5, tempo: '2-0-X-0', rest: '2:00', load: '40%', ext: 'Light bands', tut: null, note: 'Bottom third only — fast stretch-shortening' },
   };
 
   // Single-digit tempos in the builder's compact style (4-0-X-0 → 40X0) so they match the Tempo presets
@@ -104,8 +104,10 @@
     function mrow(name, pair, key, ov) {
       var m = KILO_METHODS[key]; ov = ov || {};
       var load = ov.load != null ? ov.load : m.load;
-      return lift(name, pair, ov.sets || m.sets, ov.reps || m.reps, load, ov.tempo || m.tempo, ov.rest || m.rest,
+      var row = lift(name, pair, ov.sets || m.sets, ov.reps || m.reps, load, ov.tempo || m.tempo, ov.rest || m.rest,
         [m.label + ' — ' + (ov.note || m.note)].concat(ov.extra ? [ov.extra] : []).join(' · '), key);
+      if (m.ext) row.ext = m.ext;
+      return row;
     }
     var blk = function (blockType, label, exercises) { return { blockType: blockType, label: label, exercises: exercises.filter(Boolean) }; };
     var day = function (d, type, label, blocks) { return { day: d, type: type, label: label, blocks: (blocks || []).filter(function (b) { return b && b.exercises && b.exercises.length; }) }; };
@@ -164,7 +166,7 @@
           var o = Object.assign({}, ex, { name: s[0], cat: n.cat, notes: s[1] + (ex.notes ? ' · ' + ex.notes : '') });
           // Pressing methods (bands, hooks, iso contrast) don't carry to a landmine — straight effort sets
           if (o.method && b.blockType === 'lift' && /Press|Push-Up/.test(o.name)) {
-            o.reps = /\d/.test(String(o.reps)) && !/\+/.test(o.reps) ? o.reps : '5'; o.load = 'RPE 7'; o.tempo = '30X0'; delete o.method;
+            o.reps = /\d/.test(String(o.reps)) && !/\+/.test(o.reps) ? o.reps : '5'; o.load = 'RPE 7'; o.tempo = '30X0'; delete o.method; delete o.ext;
             o.notes = s[1] + ' · straight sets, intent to accelerate';
           } else if (/%/.test(o.load || '')) o.load = 'RPE 7';
           return o;
@@ -319,11 +321,11 @@
         U1: mrow(ph.lifts.U1, 'B', 'over-isometronic', { load: ld, sets: ph.s }), U2: o.pitcher ? P(ph.lifts.U2) : mrow(ph.lifts.U2, 'B', 'over-fi-contrast') }; } },
       explosive: { tag: 'Speed-strength — explosive', fn: function (ph, w, pw, P, o) { return {
         L1: mrow(ph.lifts.L1, 'B', 'ss-variable'), L2: mrow('Hang Clean', 'B', 'ss-olympic', { note: 'Olympic variation on the second lower day — 0.5–0.75 m/s, stop at a 7–10% velocity drop' }),
-        U1: mrow(ph.lifts.U1, 'B', 'ss-variable', { load: '50% + bands' }), U2: mrow(ph.lifts.U2, 'B', 'ss-variable', { load: '50% + 20% band' }),
+        U1: mrow(ph.lifts.U1, 'B', 'ss-variable', { load: '50%' }), U2: mrow(ph.lifts.U2, 'B', 'ss-variable', { load: '50%', note: 'speed press, ~20% band tension at the top' }),
         jump: lift('Trap Bar Counter Movement Jump', 'A', 4, 3, 'Light (20–30% BW)', 'X-0-X-0', '1:30', 'Ballistic — release, no deceleration'),
         ujump: lift('Plyo Push Up', 'A', 3, 5, 'BW', 'X-0-X-0', '1:30', 'Ballistic') }; } },
       starting: { tag: 'Speed-strength — starting strength', fn: function (ph, w, pw, P, o) { return {
-        L1: mrow(ph.lifts.L1, 'B', 'ss-deadstop'), L2: mrow(ph.lifts.L2, 'B', 'ss-deadstop', { load: '60% + bands', note: 'deadstop off the box — relax, then contract everything at once' }),
+        L1: mrow(ph.lifts.L1, 'B', 'ss-deadstop'), L2: mrow(ph.lifts.L2, 'B', 'ss-deadstop', { load: '60%', note: 'deadstop off the box — relax, then contract everything at once' }),
         U1: mrow(ph.lifts.U1, 'B', 'ss-deadstop'), U2: mrow(ph.lifts.U2, 'B', 'ss-deadstop'),
         jump: lift('Squat Jump', 'A', 4, 3, 'BW', '2-3-X-0', '1:30', 'Paused squat jump (3-count) — starting strength, no countermovement'),
         ujump: lift('Med Ball Chest Pass', 'A', 4, 3, '8 lb MB', 'X-0-X-0', '1:30', 'From a dead stop — no wind-up') }; } },
