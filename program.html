@@ -6,7 +6,7 @@
 <title>Mark Weisman S&amp;C</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
-<script src="js/training-core.js?v=7"></script>
+<script src="js/training-core.js?v=8"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -481,7 +481,7 @@ function rxLine(block, ex, li){
   if (sets && reps) p.push('<b>'+sets+' × '+reps+'</b>'); else if (sets) p.push('<b>'+sets+' sets</b>'); else if (reps) p.push('<b>'+reps+'</b>');
   if (ex.distance) p.push(esc(ex.distance));
   var tl = li && li.lbs;
-  if (tl) p.push('@ <b>'+tl+' lbs'+TC.loadSuffix(ex)+'</b>');
+  if (tl) p.push('@ <b>'+tl+' lbs'+TC.loadSuffix(ex)+(TC.extText ? esc(TC.extText(ex)) : '')+'</b>');
   else if (ex.load) p.push('@ '+esc(TC.loadText(ex, ex.load)));
   return p.join(' ');
 }
@@ -1452,7 +1452,7 @@ function printProgram(){
                 if (!e || !dayHasWork(d)) return '<td class="na"></td>';
                 var li = TC.autoLoad(pbObj(), LOG, e, wi, di, sessCache());
                 var sr = [e.sets && e.reps ? e.sets + ' × ' + e.reps : (e.sets ? e.sets + ' sets' : e.reps || ''), e.distance || ''].filter(Boolean).join(' · ');
-                var load = li && li.lbs ? li.lbs + ' lb' + TC.loadSuffix(e) : (isBodyweight(e) ? 'BW' : TC.loadText(e, e.load || ''));
+                var load = li && li.lbs ? li.lbs + ' lb' + TC.loadSuffix(e) + (TC.extText ? TC.extText(e) : '') : (isBodyweight(e) ? 'BW' : TC.loadText(e, e.load || ''));
                 var alt = e.name !== rx.name ? '<span class="alt">' + esc(e.name) + '</span>' : '';
                 var chg = [tempoOf(e) && tempoOf(e) !== tempoOf(rx) ? 'Tempo ' + tempoOf(e) : '', e.rest && e.rest !== rx.rest ? 'Rest ' + e.rest : ''].filter(Boolean).join(' · ');
                 var showW = !TC.isRunEx(b, e) && !isBodyweight(e) && b.blockType !== 'mobility' && b.blockType !== 'prep';
