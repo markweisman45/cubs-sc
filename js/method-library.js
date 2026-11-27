@@ -21,11 +21,13 @@ function mtLoadScript(src, ok) {
 }
 // Both libraries: the method library and Mark's own (Spring ramp lives there)
 function mtEnsure(cb) {
-  if (typeof METHOD_TEMPLATES !== 'undefined' && typeof MW_TEMPLATES !== 'undefined') return cb();
+  if (typeof METHOD_TEMPLATES !== 'undefined' && typeof MW_TEMPLATES !== 'undefined') { if (typeof kiloApplyTemplates === 'function') kiloApplyTemplates(); return cb(); }
   if (MT.loading) { MT.loading.push(cb); return; }
   MT.loading = [cb];
   var done = function () {
     if (typeof METHOD_TEMPLATES === 'undefined' || typeof MW_TEMPLATES === 'undefined') return;
+    // KILO templates are built in the browser from the method spec table (js/kilo-gen.js)
+    if (typeof kiloApplyTemplates === 'function') kiloApplyTemplates();
     var q = MT.loading; MT.loading = null; q.forEach(function (f) { try { f(); } catch (e) { console.error(e); } });
   };
   if (typeof METHOD_TEMPLATES === 'undefined') mtLoadScript('data/method-templates.js?v=3', done);
