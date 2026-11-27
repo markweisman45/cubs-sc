@@ -42,13 +42,22 @@ var TC = (function () {
     for (var i = 0; i < LOAD_TYPES.length; i++) if (LOAD_TYPES[i].v === t) return LOAD_TYPES[i].suffix;
     return '';
   }
-  // "50" / "50 lbs" → "50 lbs/DB"; "70%", "BW", "RPE 8" etc. are left alone
+  // External load on top of the bar (Program Builder "External" dropdown): bands, chains, vest, weight releasers…
+  var EXT_LOADS = ['Light bands', 'Average bands', 'Heavy bands', 'Strong bands', 'Reverse bands', 'Mini bands', 'Chains', 'Bands + chains', 'Weight releasers', 'Weighted vest'];
+  function extText(ex) {
+    var x = ex && ex.ext ? String(ex.ext).trim() : '';
+    if (!x) return '';
+    // older rows already say "+ bands" in the load text — don't say it twice
+    if (/band|chain|hook|releaser|vest/i.test(String(ex.load || ''))) return '';
+    return ' + ' + x;
+  }
+  // "50" / "50 lbs" → "50 lbs/DB"; "70%", "BW", "RPE 8" etc. are left alone (+ external load if set)
   function loadText(ex, raw) {
     var s = String(raw == null ? '' : raw).trim();
     var suf = loadSuffix(ex);
-    if (!suf) return s;
+    if (!suf) return s + (s ? extText(ex) : '');
     var m = s.match(/^(\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?)\s*(lbs?|kg)?$/i);
-    return m ? m[1] + ' ' + (m[2] ? m[2].replace(/^lb$/i, 'lbs') : 'lbs') + suf : s;
+    return (m ? m[1] + ' ' + (m[2] ? m[2].replace(/^lb$/i, 'lbs') : 'lbs') + suf : s) + (s ? extText(ex) : '');
   }
 
   // ── Prescription parsing ──
@@ -403,6 +412,6 @@ var TC = (function () {
     readiness: readiness, readinessAdjust: readinessAdjust, bestJump: bestJump,
     dayLoad: dayLoad, plannedDayLoad: plannedDayLoad,
     newUid: newUid, ensureUids: ensureUids, buildRemap: buildRemap, applyRemap: applyRemap, upgradeLog: upgradeLog, rxText: rxText,
-    LOAD_TYPES: LOAD_TYPES, autoLoadType: autoLoadType, loadType: loadType, loadSuffix: loadSuffix, loadText: loadText
+    LOAD_TYPES: LOAD_TYPES, autoLoadType: autoLoadType, loadType: loadType, loadSuffix: loadSuffix, loadText: loadText, extText: extText, EXT_LOADS: EXT_LOADS
   };
 })();
