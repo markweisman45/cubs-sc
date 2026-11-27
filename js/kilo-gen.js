@@ -42,12 +42,19 @@
     'react-third':       { fam: 'Reactive', label: 'Myotatic ⅓ reps + bands', sets: 5, reps: 5, tempo: '2-0-X-0', rest: '2:00', load: '40% + bands', tut: null, note: 'Bottom third only — fast stretch-shortening' },
   };
 
+  // Single-digit tempos in the builder's compact style (4-0-X-0 → 40X0) so they match the Tempo presets
+  function compactTempo(t) { t = String(t == null ? '' : t); return /^[0-9X]-[0-9X]-[0-9X]-[0-9X]$/i.test(t.trim()) ? t.trim().replace(/-/g, '').toUpperCase() : t; }
+  Object.keys(KILO_METHODS).forEach(function (k) { KILO_METHODS[k].tempo = compactTempo(KILO_METHODS[k].tempo); });
+
   // Category and 1RM link for every exercise the generator uses (from the exercise library in index.html)
   var KILO_EX_META = {"2pt Start (LSV)":["Mobility"],"A-Skip":["Performance Prep"],"Alternating Push-Off":["LB Plyos"],"Arnold Press":["UB Vertical Push"],"B-Skip":["Performance Prep"],"Back Squat":["Squat Variations","Back Squat"],"Barbell Hip Thrust":["Hamstring"],"Bb Bench Press":["UB Horizontal Push"],"Bb Overhead Press":["UB Vertical Push"],"Bb RDL":["Hamstring"],"Bench Elevated Plyo Push-Up":["UB Horizontal Push"],"Biering-Sorensen Hold":["Core Anti-Flexion"],"Bird Dog":["Core Anti-Extension"],"Bounding":["Max Velocity Running"],"Box Jump":["LB Plyos"],"Box Squat":["Squat Variations","Box Squat"],"Broad Jump W/ Stick":["LB Plyos"],"Chin Up":["UB Vertical Pull"],"Clean Grip Deadlift":["Hamstring"],"Cone One-Leg Alternating Jumps":["LB Plyos"],"Conventional DL":["Deadlift Variations","Conventional DL"],"Copenhagen Plank":["Hip ABD_ADD"],"DB Incline Zottman Curl":["Biceps Triceps"],"DB Lateral Raise":["Shoulder Complex"],"DB Single Arm Row":["UB Horizontal Pull"],"Dead Bug":["Core Anti-Extension"],"Deca Jump":["LB Plyos"],"Depth Jump":["LB Plyos"],"Dip (Weighted)":["UB Vertical Push"],"Dribbles (Calf)":["Calf Ankle"],"Dribbles (Knee)":["LB Plyos"],"Drop Landing (Stick)":["LB Plyos"],"Elbow-on-Knee DB External Rotation":["Shoulder Complex"],"Farmer Carry":["Strongman Variations"],"Fly (variation)":["Max Velocity Running"],"Front Squat":["Squat Variations","Front Squat"],"Glute-Ham Raise":["Hamstring","Glute-Ham Raise"],"Goblet Lateral Lunge":["Squat Variations"],"Ground Start Chaser Variations":["Acceleration"],"Half Kneeling Cable Press":["UB Horizontal Pull"],"Half Kneeling Landmine Press":["UB Vertical Push","Landmine Press"],"Hang Clean":["Olympic Variations","Hang Clean"],"High Pull":["Olympic Variations"],"Hurdle Jump-Continuous":["LB Plyos"],"Incline Barbell Press":["UB Horizontal Push"],"Incline DB Curl":["Biceps Triceps"],"Incline Trap-3 Raise":["Shoulder Complex"],"MB Side Toss":["LB Plyos"],"MB Step Back Side Toss":["LB Plyos"],"Med Ball Chest Pass":["UB Plyos"],"Pallof Press":["Core Anti-Rotation"],"Penta Jump":["LB Plyos"],"Plate Pinch":["Grip"],"Plyo Push Up":["UB Plyos"],"Pogo Jumps":["LB Plyos"],"Power Skips- Distance":["LB Plyos"],"Prowler Sprint":["Acceleration"],"Pull Up (Weighted)":["UB Vertical Pull","Pull Up (weighted)"],"Push-Up":["UB Horizontal Push"],"RFE Split Squat (DB)":["Squat Variations"],"Russian Alt Split Jumps":["LB Plyos"],"SL DB RDL":["Hamstring"],"Safety Bar Squat":["Squat Variations","Safety Bar Squat"],"Seated Calf Raise":["Calf Ankle"],"Seated Leg Curl":["Hamstring"],"Side Plank":["Core Anti-Lateral Flexion"],"Squat 1 1/4":["Squat Variations"],"Squat Jump":["LB Plyos"],"Standing Jump and Reach":["LB Plyos"],"Steal Start (3 steps)":["Mobility"],"Supination/Pronation Club":["Mobility"],"TB Pendlay Row":["UB Horizontal Pull"],"Trap Bar Counter Movement Jump":["Olympic Variations"],"Trap Bar Deadlift":["Deadlift Variations","Trap Bar DL"],"Tuck Jump":["LB Plyos"],"Wickets":["Max Velocity Running"],"Wrist Radial/Ulnar Deviation":["Grip"]};
 
   // Seconds under tension for one set of a straight tempo (X = 1 s)
   function kiloTut(tempo, reps) {
-    var m = String(tempo || '').match(/^(\d+|X)-(\d+|X)-(\d+|X)-(\d+|X)$/);
+    var tt = String(tempo || '').trim().toUpperCase();
+    // compact presets ("40X0", "3010") → one digit per phase
+    if (/^[0-9X]{4}$/.test(tt)) tt = tt.split('').join('-');
+    var m = tt.match(/^(\d+|X)-(\d+|X)-(\d+|X)-(\d+|X)$/);
     if (!m) return null;
     var r = String(reps == null ? '' : reps).trim();
     // straight sets only: "5", "6–8", "8ea", "12, 10, 8, 8" — combos, holds and timed sets aren't checked
@@ -82,7 +89,7 @@
         notes = [notes, '≈' + load + ' 1RM'].filter(Boolean).join(' · ');
         load = RPE_OF(parseFloat(load));
       }
-      var o = { type: 'lift', name: name, cat: e.cat, pair: pair, sets: S(sets), reps: S(reps), load: load, tempo: tempo || '', rest: rest || '' };
+      var o = { type: 'lift', name: name, cat: e.cat, pair: pair, sets: S(sets), reps: S(reps), load: load, tempo: compactTempo(tempo || ''), rest: rest || '' };
       if (notes) o.notes = notes;
       if (method) o.method = method;
       return o;
@@ -157,7 +164,7 @@
           var o = Object.assign({}, ex, { name: s[0], cat: n.cat, notes: s[1] + (ex.notes ? ' · ' + ex.notes : '') });
           // Pressing methods (bands, hooks, iso contrast) don't carry to a landmine — straight effort sets
           if (o.method && b.blockType === 'lift' && /Press|Push-Up/.test(o.name)) {
-            o.reps = /\d/.test(String(o.reps)) && !/\+/.test(o.reps) ? o.reps : '5'; o.load = 'RPE 7'; o.tempo = '3-0-X-0'; delete o.method;
+            o.reps = /\d/.test(String(o.reps)) && !/\+/.test(o.reps) ? o.reps : '5'; o.load = 'RPE 7'; o.tempo = '30X0'; delete o.method;
             o.notes = s[1] + ' · straight sets, intent to accelerate';
           } else if (/%/.test(o.load || '')) o.load = 'RPE 7';
           return o;
@@ -541,6 +548,7 @@
 
   root.KILO_METHODS = KILO_METHODS;
   root.kiloTut = kiloTut;
+  root.kiloCompactTempo = compactTempo;
   root.kiloBuildTemplates = kiloBuildTemplates;
   root.kiloApplyTemplates = kiloApplyTemplates;
   if (typeof module !== 'undefined' && module.exports) module.exports = { KILO_METHODS: KILO_METHODS, kiloTut: kiloTut, kiloBuildTemplates: kiloBuildTemplates };
