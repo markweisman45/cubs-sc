@@ -946,7 +946,7 @@ function renderNav(){
   if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 function exHTML(wi, di, bi, ei, block, ex, tag){
-  var enr = ENRICH[String(ex.name).toLowerCase()] || {};
+  var enr = ENRICH[String(ex.name).toLowerCase()] || ENRICH['~' + String(ex.name).toLowerCase().replace(/[^a-z0-9]/g, '')] || {};
   var vurl = ex.video || enr.video || '';
   var vid = ytId(vurl);
   var id = wi + '-' + di + '-' + bi + '-' + ei;
@@ -1398,7 +1398,7 @@ async function init(){
       all = all.concat(er.data);
       if (er.data.length < 1000) break;
     }
-    all.forEach(function(e){ ENRICH[String(e.name).toLowerCase()] = e; });
+    all.forEach(function(e){ ENRICH[String(e.name).toLowerCase()] = e; ENRICH['~' + String(e.name).toLowerCase().replace(/[^a-z0-9]/g, '')] = e; });   // '~' key: 'Pull Up' finds 'Pull-Up'
     if (all.length) renderSession();
   } catch(e) {}
 }
