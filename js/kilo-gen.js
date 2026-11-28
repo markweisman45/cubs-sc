@@ -35,16 +35,24 @@
     'over-fi-contrast':  { fam: 'Isometric', label: 'Functional-iso contrast', sets: 3, reps: '2 + 2 (×2)', tempo: '1-0-1-6 / 2-0-X-0', rest: '2:30', load: '50%', tut: null, note: '2 reps with a 6 s pin push, 2 fast full-range reps, repeat' },
     'yield-stato':       { fam: 'Iso-dynamic', label: 'Stato-dynamic', sets: 5, reps: 3, tempo: '4-0-X-2', rest: '2:30', load: '60–70%', tut: null, note: '2 s pause at the sticking point on the way up, then explode' },
     'yield-stato-band':  { fam: 'Iso-dynamic', label: 'Stato-dynamic + bands', sets: 4, reps: 5, tempo: '2-0-X-2', rest: '2:30', load: '50%', ext: 'Average bands', tut: null, note: '~75% at the top with the band' },
-    'ss-variable':       { fam: 'Speed-strength', label: 'Variable resistance (bands / chains)', sets: 6, reps: 3, tempo: '1-0-X-0', rest: '1:30', load: '55%', ext: 'Average bands', tut: null, note: 'Chain rule 80/20 · stop at a 10% velocity drop' },
+    'ss-variable':       { fam: 'Speed-strength', label: 'Variable resistance (bands / chains)', sets: 6, reps: 3, tempo: '1-0-X-0', rest: '1:30', load: '55%', ext: 'Average bands', vel: '0.75–1.0 m/s', tut: null, note: 'Chain rule 80/20 · stop at a 10% velocity drop' },
     'ss-olympic':        { fam: 'Speed-strength', label: 'Olympic variation', sets: 5, reps: 3, tempo: 'X-0-X-0', rest: '2:00', load: '70%', tut: null, lower: true, note: '0.5–0.75 m/s · stop at a 7–10% velocity drop' },
-    'ss-deadstop':       { fam: 'Speed-strength', label: 'Deadstop + bands (starting strength)', sets: 6, reps: 2, tempo: '2-4-X-0', rest: '2:00', load: '55%', ext: 'Light bands', tut: null, note: 'Deadstop on pins, ~20% band tension at the top · relax fully, then contract everything at once' },
-    'react-myotatic':    { fam: 'Reactive', label: 'Myotatic 1¼ reps + bands', sets: 5, reps: 3, tempo: '2-0-X-0', rest: '2:00', load: '50%', ext: 'Light bands', tut: null, note: '1¼ reps — bridge from explosive to reactive' },
-    'react-third':       { fam: 'Reactive', label: 'Myotatic ⅓ reps + bands', sets: 5, reps: 5, tempo: '2-0-X-0', rest: '2:00', load: '40%', ext: 'Light bands', tut: null, note: 'Bottom third only — fast stretch-shortening' },
+    'ss-deadstop':       { fam: 'Speed-strength', label: 'Deadstop + bands (starting strength)', sets: 6, reps: 2, tempo: '2-4-X-0', rest: '2:00', load: '55%', ext: 'Light bands', vel: '0.75–1.0 m/s', tut: null, note: 'Deadstop on pins, ~20% band tension at the top · relax fully, then contract everything at once' },
+    'react-myotatic':    { fam: 'Reactive', label: 'Myotatic 1¼ reps + bands', sets: 5, reps: 3, tempo: '2-0-X-0', rest: '2:00', load: '50%', ext: 'Light bands', vel: '1.0–1.3 m/s', tut: null, note: '1¼ reps — bridge from explosive to reactive' },
+    'react-third':       { fam: 'Reactive', label: 'Myotatic ⅓ reps + bands', sets: 5, reps: 5, tempo: '2-0-X-0', rest: '2:00', load: '40%', ext: 'Light bands', vel: '1.0–1.3 m/s', tut: null, note: 'Bottom third only — fast stretch-shortening' },
   };
 
   // Single-digit tempos in the builder's compact style (4-0-X-0 → 40X0) so they match the Tempo presets
   function compactTempo(t) { t = String(t == null ? '' : t); return /^[0-9X]-[0-9X]-[0-9X]-[0-9X]$/i.test(t.trim()) ? t.trim().replace(/-/g, '').toUpperCase() : t; }
   Object.keys(KILO_METHODS).forEach(function (k) { KILO_METHODS[k].tempo = compactTempo(KILO_METHODS[k].tempo); });
+
+  // Mark's own exercise names for the generator's exercises — used whenever they're in the live library
+  var KILO_NAME_MAP = {
+    'Dip (Weighted)': 'Dips (weighted)', 'Chin Up': 'Chin-Up', 'Pull Up (Weighted)': 'Pull-Up', 'Plyo Push Up': 'Plyo Push-Up',
+    'DB Single Arm Row': 'DB Row 3pt', 'TB Pendlay Row': 'BB Pendlay Row', 'Half Kneeling Landmine Press': 'Landmine Press',
+    'Half Kneeling Cable Press': 'Seated SA Cable Press', 'Conventional DL': 'Conventional Deadlift', 'Incline Barbell Press': 'Bb Incline Press',
+    'Seated Leg Curl': 'Hamstring Curl (prone machine)',
+  };
 
   // Category and 1RM link for every exercise the generator uses (from the exercise library in index.html)
   var KILO_EX_META = {"2pt Start (LSV)":["Mobility"],"A-Skip":["Performance Prep"],"Alternating Push-Off":["LB Plyos"],"Arnold Press":["UB Vertical Push"],"B-Skip":["Performance Prep"],"Back Squat":["Squat Variations","Back Squat"],"Barbell Hip Thrust":["Hamstring"],"Bb Bench Press":["UB Horizontal Push"],"Bb Overhead Press":["UB Vertical Push"],"Bb RDL":["Hamstring"],"Bench Elevated Plyo Push-Up":["UB Horizontal Push"],"Biering-Sorensen Hold":["Core Anti-Flexion"],"Bird Dog":["Core Anti-Extension"],"Bounding":["Max Velocity Running"],"Box Jump":["LB Plyos"],"Box Squat":["Squat Variations","Box Squat"],"Broad Jump W/ Stick":["LB Plyos"],"Chin Up":["UB Vertical Pull"],"Clean Grip Deadlift":["Hamstring"],"Cone One-Leg Alternating Jumps":["LB Plyos"],"Conventional DL":["Deadlift Variations","Conventional DL"],"Copenhagen Plank":["Hip ABD_ADD"],"DB Incline Zottman Curl":["Biceps Triceps"],"DB Lateral Raise":["Shoulder Complex"],"DB Single Arm Row":["UB Horizontal Pull"],"Dead Bug":["Core Anti-Extension"],"Deca Jump":["LB Plyos"],"Depth Jump":["LB Plyos"],"Dip (Weighted)":["UB Vertical Push"],"Dribbles (Calf)":["Calf Ankle"],"Dribbles (Knee)":["LB Plyos"],"Drop Landing (Stick)":["LB Plyos"],"Elbow-on-Knee DB External Rotation":["Shoulder Complex"],"Farmer Carry":["Strongman Variations"],"Fly (variation)":["Max Velocity Running"],"Front Squat":["Squat Variations","Front Squat"],"Glute-Ham Raise":["Hamstring","Glute-Ham Raise"],"Goblet Lateral Lunge":["Squat Variations"],"Ground Start Chaser Variations":["Acceleration"],"Half Kneeling Cable Press":["UB Horizontal Pull"],"Half Kneeling Landmine Press":["UB Vertical Push","Landmine Press"],"Hang Clean":["Olympic Variations","Hang Clean"],"High Pull":["Olympic Variations"],"Hurdle Jump-Continuous":["LB Plyos"],"Incline Barbell Press":["UB Horizontal Push"],"Incline DB Curl":["Biceps Triceps"],"Incline Trap-3 Raise":["Shoulder Complex"],"MB Side Toss":["LB Plyos"],"MB Step Back Side Toss":["LB Plyos"],"Med Ball Chest Pass":["UB Plyos"],"Pallof Press":["Core Anti-Rotation"],"Penta Jump":["LB Plyos"],"Plate Pinch":["Grip"],"Plyo Push Up":["UB Plyos"],"Pogo Jumps":["LB Plyos"],"Power Skips- Distance":["LB Plyos"],"Prowler Sprint":["Acceleration"],"Pull Up (Weighted)":["UB Vertical Pull","Pull Up (weighted)"],"Push-Up":["UB Horizontal Push"],"RFE Split Squat (DB)":["Squat Variations"],"Russian Alt Split Jumps":["LB Plyos"],"SL DB RDL":["Hamstring"],"Safety Bar Squat":["Squat Variations","Safety Bar Squat"],"Seated Calf Raise":["Calf Ankle"],"Seated Leg Curl":["Hamstring"],"Side Plank":["Core Anti-Lateral Flexion"],"Squat 1 1/4":["Squat Variations"],"Squat Jump":["LB Plyos"],"Standing Jump and Reach":["LB Plyos"],"Steal Start (3 steps)":["Mobility"],"Supination/Pronation Club":["Mobility"],"TB Pendlay Row":["UB Horizontal Pull"],"Trap Bar Counter Movement Jump":["Olympic Variations"],"Trap Bar Deadlift":["Deadlift Variations","Trap Bar DL"],"Tuck Jump":["LB Plyos"],"Wickets":["Max Velocity Running"],"Wrist Radial/Ulnar Deviation":["Grip"]};
@@ -72,6 +80,8 @@
     // Your live library can spell an exercise differently — fall back to the built-in category / 1RM link.
     // Method Library adds any exercise you don't have when you load the template (same as before).
     function L(name) {
+      var mine = KILO_NAME_MAP[name];
+      if (mine && BY[mine]) return BY[mine];          // Mark's exercise first
       var e = BY[name]; if (e) return e;
       var m = KILO_EX_META[name]; if (!m) throw new Error('Not in library: ' + name);
       return { name: name, cat: m[0], liftKey: m[1] || null };
@@ -89,14 +99,14 @@
         notes = [notes, '≈' + load + ' 1RM'].filter(Boolean).join(' · ');
         load = RPE_OF(parseFloat(load));
       }
-      var o = { type: 'lift', name: name, cat: e.cat, pair: pair, sets: S(sets), reps: S(reps), load: load, tempo: compactTempo(tempo || ''), rest: rest || '' };
+      var o = { type: 'lift', name: e.name || name, cat: e.cat, pair: pair, sets: S(sets), reps: S(reps), load: load, tempo: compactTempo(tempo || ''), rest: rest || '' };
       if (notes) o.notes = notes;
       if (method) o.method = method;
       return o;
     }
     function spd(name, pair, sets, reps, distance, pct, rest, notes) {
       var e = L(name);
-      var o = { type: 'speed', name: name, cat: e.cat, pair: pair, sets: S(sets), reps: S(reps), distance: distance || '', pct: pct || '', rest: rest || '' };
+      var o = { type: 'speed', name: e.name || name, cat: e.cat, pair: pair, sets: S(sets), reps: S(reps), distance: distance || '', pct: pct || '', rest: rest || '' };
       if (notes) o.notes = notes;
       return o;
     }
@@ -107,6 +117,7 @@
       var row = lift(name, pair, ov.sets || m.sets, ov.reps || m.reps, load, ov.tempo || m.tempo, ov.rest || m.rest,
         [m.label + ' — ' + (ov.note || m.note)].concat(ov.extra ? [ov.extra] : []).join(' · '), key);
       if (m.ext) row.ext = m.ext;
+      if (m.vel) row.vel = m.vel;
       return row;
     }
     var blk = function (blockType, label, exercises) { return { blockType: blockType, label: label, exercises: exercises.filter(Boolean) }; };
@@ -122,7 +133,7 @@
       var v = [
         [spd('2pt Start (LSV)', 'C', 4, 1, '10yd', '85%', '1:30', 'Build-ups — technique before speed'), spd('2pt Start (LSV)', 'C', 2, 1, '20yd', '85%', '2:00')],
         [spd('2pt Start (LSV)', 'C', 4, 1, '10yd', '95%+', '1:30', 'Zone 5 — full rest'), spd('Ground Start Chaser Variations', 'C', 3, 1, '20yd', '95%+', '2:30', 'Rise smoothly — no early rise')],
-        [spd('2pt Start (LSV)', 'C', 4, 1, '10yd', '95%+', '1:30', 'Zone 5 — full rest'), spd('Steal Start (3 steps)', 'C', 3, 1, '20yd', '95%+', '2:30', 'Base-steal start'), spd('Prowler Sprint', 'D', 3, 1, '20yd', '95%+', '3:00', 'Projection — ~15% velocity loss')],
+        [spd('2pt Start (LSV)', 'C', 4, 1, '10yd', '95%+', '1:30', 'Zone 5 — full rest'), spd('Steal Start (3 steps)', 'C', 2, 1, '20yd', '95%+', '2:30', 'Base-steal start'), spd('Prowler Sprint', 'D', 2, 1, '20yd', '95%+', '3:00', 'Projection — ~15% velocity loss')],
         [spd('Steal Start (3 steps)', 'C', 3, 1, '15yd', '95%+', '2:00', 'Low volume — quality only'), spd('2pt Start (LSV)', 'C', 2, 1, '30yd', '95%+', '3:00')],
       ][lvl];
       return blk('speed', 'Warm-up A · Acceleration' + (note ? ' · ' + note : ''), [
@@ -135,7 +146,7 @@
       var v = [
         [spd('Wickets', 'C', 3, 1, '30yd', '85%', '1:30', 'Strike from above'), spd('Fly (variation)', 'C', 2, 1, '10yd fly', '90%', '3:00', '20–30 yd build-in')],
         [spd('Wickets', 'C', 3, 1, '30yd', '90%', '1:30'), spd('Fly (variation)', 'C', 4, 1, '10yd fly', '95%+', '3:30', 'Zone 5 — log the fly-10 (MSS test)')],
-        [spd('Wickets', 'C', 3, 1, '30yd', '90%', '1:30'), spd('Fly (variation)', 'C', 4, 1, '20yd fly', '95%+', '4:00', 'Zone 5 — 30–60 s rest per 1 s sprinting'), spd('Bounding', 'D', 2, 1, '30yd', '90%', '2:00', 'Scissor-bound bleeds')],
+        [spd('Wickets', 'C', 3, 1, '30yd', '90%', '1:30'), spd('Fly (variation)', 'C', 3, 1, '20yd fly', '95%+', '4:00', 'Zone 5 — 30–60 s rest per 1 s sprinting'), spd('Bounding', 'D', 2, 1, '30yd', '90%', '2:00', 'Scissor-bound bleeds')],
         [spd('Fly (variation)', 'C', 3, 1, '10yd fly', '95%+', '4:00', 'Low volume — one quality exposure')],
       ][lvl];
       return blk('speed', 'Warm-up B · Max Velocity' + (note ? ' · ' + note : ''), [
@@ -157,16 +168,18 @@
       'Plyo Push Up': ['MB Step Back Side Toss', 'Pitcher swap — rotational throw instead of plyo push-ups'],
       'Bench Elevated Plyo Push-Up': ['MB Step Back Side Toss', 'Pitcher swap — rotational throw'],
     };
+    var SWAP = {};
+    Object.keys(PITCHER_SWAP).forEach(function (k) { SWAP[k] = PITCHER_SWAP[k]; try { SWAP[L(k).name] = PITCHER_SWAP[k]; } catch (e) {} });
     function pitcherize(weeks) {
       var w = clone(weeks);
       w.forEach(function (wk) { wk.days.forEach(function (d) { d.blocks.forEach(function (b) {
         b.exercises = b.exercises.map(function (ex) {
-          var s = PITCHER_SWAP[ex.name]; if (!s) return ex;
+          var s = SWAP[ex.name]; if (!s) return ex;
           var n = L(s[0]);
-          var o = Object.assign({}, ex, { name: s[0], cat: n.cat, notes: s[1] + (ex.notes ? ' · ' + ex.notes : '') });
+          var o = Object.assign({}, ex, { name: n.name || s[0], cat: n.cat, notes: s[1] + (ex.notes ? ' · ' + ex.notes : '') });
           // Pressing methods (bands, hooks, iso contrast) don't carry to a landmine — straight effort sets
           if (o.method && b.blockType === 'lift' && /Press|Push-Up/.test(o.name)) {
-            o.reps = /\d/.test(String(o.reps)) && !/\+/.test(o.reps) ? o.reps : '5'; o.load = 'RPE 7'; o.tempo = '30X0'; delete o.method; delete o.ext;
+            o.reps = /\d/.test(String(o.reps)) && !/\+/.test(o.reps) ? o.reps : '5'; o.load = 'RPE 7'; o.tempo = '30X0'; delete o.method; delete o.ext; delete o.vel;
             o.notes = s[1] + ' · straight sets, intent to accelerate';
           } else if (/%/.test(o.load || '')) o.load = 'RPE 7';
           return o;
@@ -191,8 +204,10 @@
       var le = liftEx(Ld), ue = liftEx(Ud);
       var hasPlan = le.some(function (e) { return e.pair === 'A' && /plyo plan/i.test(e.notes || ''); });
       var main = hasPlan ? 'C' : 'B', asst = hasPlan ? 'D' : 'C', rem = hasPlan ? 'E' : 'D';
+      // Plyo plan in 3 days: Mon / Wed run plan jumps 1–2, the Friday volume day runs plan jump 3 (+ core) — weekly contacts stay on plan
+      var head = hasPlan && lighter ? byPair(le, 'B') : byPair(le, 'A');
       var lifts = [].concat(
-        repair(byPair(le, 'A'), 'A'),
+        repair(head, 'A'),
         repair(byPair(le, main), 'B'),
         repair(byPair(ue, 'B'), 'C'),
         repair([byPair(le, asst)[0], byPair(ue, 'C')[0]].filter(Boolean), 'D'),
@@ -238,9 +253,8 @@
     // One session's dose: half the weekly table, 3–6 sets
     function plyoRow(p, wn, pair) {
       var half = Math.max(1, Math.round(p.s * p.r / 2));
-      var reps = p.r, sets = Math.round(half / reps);
-      if (sets > 6) { sets = 6; reps = Math.round(half / 6); }
-      if (sets < 3) { sets = 3; reps = Math.max(1, Math.round(half / 3)); }
+      var sets = Math.min(6, Math.max(3, Math.round(half / p.r)));
+      var reps = Math.max(1, Math.round(half / sets));          // reps fit the session's dose, so weekly contacts track the KILO table
       if (p.r === 1) { sets = Math.min(6, Math.max(3, half)); reps = 1; }
       return lift(p.n, pair, sets, reps, 'BW', 'X-0-X-0', wn <= 6 ? '2:00' : '1:30',
         ['KILO plyo plan W' + wn + ' (~' + CONTACTS[wn - 1] + ' contacts a week, half each lower day)', p.note, 'never to failure'].filter(Boolean).join(' · '));
