@@ -493,6 +493,7 @@ function chipsHTML(ex, li){
   if (ex.swappedFrom) c.push(({hotel_gym:'Hotel gym swap',hotel_room:'Hotel room swap',home:'Home swap'}[ex.swapLoc]||'Home swap')+' for '+esc(ex.swappedFrom));
   if (ex.pct) c.push(esc(ex.pct)+(/%/.test(ex.pct)?'':'%')+' effort');
   if (ex.tempo && ex.tempo !== 'Tempo') c.push('Tempo '+esc(ex.tempo));
+  if (ex.vel) c.push('⚡ Bar speed '+esc(ex.vel));
   if (ex.rest) c.push('Rest '+esc(ex.rest));
   return c.length ? '<div class="ex-chips">'+c.map(function(x){ return '<span>'+x+'</span>'; }).join('')+'</div>' : '';
 }
